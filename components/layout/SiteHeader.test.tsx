@@ -14,7 +14,7 @@ describe('SiteHeader', () => {
     for (const logo of screen.getAllByRole('link', { name: 'Playroom' })) {
       expect(logo).toHaveAttribute('href', '/');
     }
-    for (const label of ['Home', 'Tracks', 'Problems', 'Profile']) {
+    for (const label of ['Home', 'DE', 'GCP', 'Profile']) {
       expect(screen.getByRole('link', { name: label })).toBeInTheDocument();
     }
   });

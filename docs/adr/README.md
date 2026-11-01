@@ -31,12 +31,13 @@ Do **not** write one for a routine choice with an obvious answer. An ADR per pul
 
 ## Index
 
-| ADR                                                                         | Title                                                                 | Status   |
-| --------------------------------------------------------------------------- | --------------------------------------------------------------------- | -------- |
-| [0001](./0001-use-cloud-run-for-hosting.md)                                 | Use Cloud Run for hosting                                             | Accepted |
-| [0002](./0002-use-workload-identity-federation.md)                          | Use Workload Identity Federation instead of service account keys      | Accepted |
-| [0003](./0003-scope-workload-identity-to-the-github-owner.md)               | Scope the WIF provider to the GitHub owner                            | Accepted |
-| [0004](./0004-use-firestore-and-cloud-storage.md)                           | Use Firestore and Cloud Storage for data and files                    | Accepted |
-| [0005](./0005-use-firebase-auth-for-sign-in.md)                             | Use Firebase Auth for sign-in, with server-side session cookies       | Accepted |
-| [0006](./0006-store-course-content-in-code-and-progress-in-one-document.md) | Store course content in code and progress in one document per learner | Accepted |
-| [0007](./0007-adopt-the-loop-ready-visual-language.md)                      | Adopt the Loop Ready visual language in place of Mochi                | Accepted |
+| ADR                                                                         | Title                                                                           | Status   |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | -------- |
+| [0001](./0001-use-cloud-run-for-hosting.md)                                 | Use Cloud Run for hosting                                                       | Accepted |
+| [0002](./0002-use-workload-identity-federation.md)                          | Use Workload Identity Federation instead of service account keys                | Accepted |
+| [0003](./0003-scope-workload-identity-to-the-github-owner.md)               | Scope the WIF provider to the GitHub owner                                      | Accepted |
+| [0004](./0004-use-firestore-and-cloud-storage.md)                           | Use Firestore and Cloud Storage for data and files                              | Accepted |
+| [0005](./0005-use-firebase-auth-for-sign-in.md)                             | Use Firebase Auth for sign-in, with server-side session cookies                 | Accepted |
+| [0006](./0006-store-course-content-in-code-and-progress-in-one-document.md) | Store course content in code and progress in one document per learner           | Accepted |
+| [0007](./0007-adopt-the-loop-ready-visual-language.md)                      | Adopt the Loop Ready visual language in place of Mochi                          | Accepted |
+| [0008](./0008-host-several-courses-with-one-learner-document.md)            | Host several courses, with one learner document that holds a tracker per course | Accepted |

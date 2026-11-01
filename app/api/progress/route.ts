@@ -1,20 +1,23 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { totalXp, xpForItem } from '@/lib/course/catalog';
-import { trustedDay } from '@/lib/course/progress';
+import { COURSE_SLUGS } from '@/lib/course/courses';
+import { courseRecord, trustedDay } from '@/lib/course/progress';
+import { COURSE_RULES, courseXp } from '@/lib/course/rules';
 import { mapHttpError } from '@/lib/http-errors';
 import { logger } from '@/lib/logger';
 import { requireUser } from '@/services/auth.service';
 import { recordCompletion } from '@/services/progress.service';
 
 /**
- * `POST /api/progress` — the caller marks a lesson or problem finished, or
- * takes the mark back.
+ * `POST /api/progress` — the caller marks an item of one course finished, or
+ * takes the mark back. Each course keeps its own tracker, so the body names
+ * the course. Finishing an item also enrolls the caller in that course.
  *
  * There is no uid in the body. The record to change is the session's, so a
  * learner can only ever change their own progress. The item id must exist in
- * the catalogue, and the XP comes from the catalogue, never from the client.
+ * that course's catalogue, and the XP comes from the catalogue, never from the
+ * client.
  *
  * The client may send its local day so a late-night session counts for the
  * day the learner lives in. `trustedDay` accepts it only within one day of
@@ -25,6 +28,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const bodySchema = z.object({
+  course: z.enum(COURSE_SLUGS),
   itemId: z.string().min(1).max(160),
   done: z.boolean(),
   day: z.string().max(10).optional(),
@@ -48,11 +52,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     const day = trustedDay(body.day, new Date());
-    const record = await recordCompletion(user, body.itemId, body.done, day);
+    const record = await recordCompletion(user, body.course, body.itemId, body.done, day);
+    const tracker = courseRecord(record, body.course);
     return NextResponse.json({
-      done: record.done[body.itemId] !== undefined,
-      xpGained: body.done ? xpForItem(body.itemId) : 0,
-      totalXp: totalXp(record.done),
+      done: tracker.done[body.itemId] !== undefined,
+      xpGained: body.done ? COURSE_RULES[body.course].xpForItem(body.itemId) : 0,
+      totalXp: courseXp(body.course, tracker.done),
     });
   } catch (error) {
     const mapped = mapHttpError(error);

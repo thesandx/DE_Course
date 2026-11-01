@@ -168,7 +168,7 @@ export function ProblemTable({
           {visible.map((row, index) => (
             <li key={row.slug} className={cn(index > 0 && 'border-line border-t')}>
               <Link
-                href={`/problems/${row.slug}`}
+                href={`/de/problems/${row.slug}`}
                 className={cn(
                   'hover:bg-sunken flex min-h-14 items-start gap-3 px-4 py-3.5 transition-colors',
                   !compact && 'md:grid md:grid-cols-12 md:items-center md:px-5',

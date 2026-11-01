@@ -1,22 +1,23 @@
 import type { Metadata } from 'next';
 
-import { Dashboard } from '@/components/course/Dashboard';
+import { CourseHub } from '@/components/course/CourseHub';
 import { Landing } from '@/components/course/Landing';
 import { AppShell } from '@/components/layout/AppShell';
+import { hubStats } from '@/lib/course/hub';
 import { getCurrentUser } from '@/services/auth.service';
 import { loadLearner } from '@/services/learner.service';
 
 /**
- * Home. A signed-out visitor sees the course: a live question, the tracks,
- * the loop guides and a slice of the problems. A signed-in learner sees their
- * dashboard: level, streak, solved counts, readiness and what to do next.
+ * Home. A signed-out visitor sees the platform: the courses, a live question
+ * and a slice of each course. A signed-in learner sees the course hub: each
+ * course they joined with its own tracker, and the courses they can join.
  *
  * It reads the session cookie, so it renders per request.
  */
 
 export const metadata: Metadata = {
   description:
-    'Lessons, interview problems and loop guides for senior data engineer interviews at Uber and Google.',
+    'Courses for data engineers: senior DE interview prep and the GCP Professional Data Engineer exam, each with its own progress tracker.',
 };
 
 export const dynamic = 'force-dynamic';
@@ -25,10 +26,10 @@ export default async function HomePage() {
   const user = await getCurrentUser();
   if (user === null) return <Landing signInHref="/sign-in?next=/" />;
 
-  const { name, progress, summary, today } = await loadLearner(user);
+  const { name, record, enrolled, today, shell } = await loadLearner(user);
   return (
-    <AppShell learnerName={name} summary={summary}>
-      <Dashboard name={name} progress={progress} summary={summary} today={today} />
+    <AppShell {...shell}>
+      <CourseHub name={name} joined={enrolled.map((course) => hubStats(record, course, today))} />
     </AppShell>
   );
 }

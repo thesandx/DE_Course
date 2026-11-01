@@ -4,11 +4,19 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 
-import { APP_TABS, isTabActive, type TabIcon, TABLESS_PATHS } from '@/lib/navigation';
+import { activeTabHref, type TabIcon, TABLESS_PATHS, tabsFor } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 
 const ICONS: Record<TabIcon, React.ReactNode> = {
   home: <path d="M4 11l8-7 8 7v8a1 1 0 01-1 1h-4v-6h-6v6H5a1 1 0 01-1-1z" />,
+  course: (
+    <>
+      <rect x="4" y="4" width="7" height="7" rx="1.5" />
+      <rect x="13" y="4" width="7" height="7" rx="1.5" />
+      <rect x="4" y="13" width="7" height="7" rx="1.5" />
+      <rect x="13" y="13" width="7" height="7" rx="1.5" />
+    </>
+  ),
   book: (
     <>
       <path d="M4 5.5C4 4.7 4.7 4 5.5 4H11v16H5.5A1.5 1.5 0 014 18.5z" />
@@ -64,9 +72,9 @@ export function TabBar({ className }: TabBarProps) {
 
   if (TABLESS_PATHS.includes(pathname)) return null;
 
-  const activeIndex = APP_TABS.findIndex((tab) =>
-    pressed !== null ? tab.href === pressed : isTabActive(tab.href, pathname),
-  );
+  const tabs = tabsFor(pathname);
+  const current = activeTabHref(pathname, tabs);
+  const activeIndex = tabs.findIndex((tab) => tab.href === (pressed ?? current));
 
   return (
     <nav
@@ -86,24 +94,24 @@ export function TabBar({ className }: TabBarProps) {
           )}
           style={{
             // 0.75rem is the ul's padding on both sides, p-1.5 twice.
-            width: `calc((100% - 0.75rem) / ${APP_TABS.length})`,
+            width: `calc((100% - 0.75rem) / ${tabs.length})`,
             transform: `translateX(${Math.max(activeIndex, 0) * 100}%)`,
           }}
         />
-        {APP_TABS.map((tab, index) => {
+        {tabs.map((tab, index) => {
           const active = index === activeIndex;
           return (
             <li key={tab.href} className="relative flex-1">
               <Link
                 href={tab.href}
-                aria-current={isTabActive(tab.href, pathname) ? 'page' : undefined}
+                aria-current={tab.href === current ? 'page' : undefined}
                 onClick={(event) => {
                   // A modified click opens a new browser tab; this page stays put.
                   const newTab = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
                   if (!newTab && event.button === 0) setPressed(tab.href);
                 }}
                 className={cn(
-                  'press rounded-pill flex min-h-13 flex-col items-center justify-center gap-0.5 px-2',
+                  'press rounded-pill flex min-h-13 flex-col items-center justify-center gap-0.5 px-1',
                   'text-small font-medium transition-colors duration-200',
                   active ? 'text-on-night' : 'text-ink-soft hover:text-ink',
                 )}

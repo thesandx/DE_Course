@@ -60,7 +60,14 @@ test('a write without a session is refused with 401', async ({ request }) => {
 });
 
 test('course pages send a signed-out visitor to sign in', async ({ page }) => {
-  for (const path of ['/tracks', '/problems', '/tracks/sql/window-functions', '/companies/uber']) {
+  for (const path of [
+    '/de/tracks',
+    '/de/problems',
+    '/de/tracks/sql/window-functions',
+    '/de/companies/uber',
+    '/gcp/lines',
+    '/gcp/practice/mock',
+  ]) {
     await page.goto(path);
     await expect(page, `redirect from ${path}`).toHaveURL(/\/sign-in\?next=/);
   }
@@ -68,8 +75,26 @@ test('course pages send a signed-out visitor to sign in', async ({ page }) => {
 
 test('saving progress without a session is refused with 401', async ({ request }) => {
   const response = await request.post('/api/progress', {
-    data: { itemId: 'problem:not-in-null-trap', done: true },
+    data: { course: 'de', itemId: 'problem:not-in-null-trap', done: true },
   });
+
+  expect(response.status()).toBe(401);
+});
+
+test('the old single-course paths move permanently to the DE course', async ({ request }) => {
+  for (const [from, to] of [
+    ['/tracks', '/de/tracks'],
+    ['/problems/latest-trip-status', '/de/problems/latest-trip-status'],
+    ['/companies/uber', '/de/companies/uber'],
+  ] as const) {
+    const response = await request.get(from, { maxRedirects: 0 });
+    expect(response.status(), `status for ${from}`).toBe(308);
+    expect(response.headers()['location'], `target for ${from}`).toBe(to);
+  }
+});
+
+test('joining a course without a session is refused with 401', async ({ request }) => {
+  const response = await request.post('/api/enrollments', { data: { course: 'gcp' } });
 
   expect(response.status()).toBe(401);
 });

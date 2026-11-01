@@ -53,6 +53,7 @@ export function LessonFinish({ itemId, checks, done, xp, previous }: LessonFinis
         className="bg-surface border-line rounded-card shadow-card flex flex-col gap-4 border p-5 sm:p-6"
       >
         <CompleteButton
+          course="de"
           itemId={itemId}
           done={done}
           xp={xp}

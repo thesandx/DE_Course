@@ -2,7 +2,9 @@ import Link from 'next/link';
 
 import { copyrightLine } from '@/lib/contact';
 import { PROBLEMS, TRACKS } from '@/lib/course/catalog';
-import type { LearnerSummary } from '@/lib/course/summary';
+import type { CourseSlug } from '@/lib/course/courses';
+import { CARDS, LINES } from '@/lib/course/gcp/catalog';
+import type { ShellStats } from '@/lib/course/shell-stats';
 import { env } from '@/lib/env';
 import { cn } from '@/lib/utils';
 
@@ -20,7 +22,12 @@ export interface AppShellProps {
   /** Default: the configured app name. */
   appName?: string;
   learnerName: string;
-  summary: LearnerSummary;
+  /** The courses the learner joined, for the sidebar's course list. */
+  enrolled: readonly CourseSlug[];
+  /** The course the page belongs to. Absent on the hub and the profile. */
+  course?: CourseSlug;
+  /** The course's streak and XP. Absent outside a course, where no tracker applies. */
+  stats?: ShellStats;
   /**
    * `sidebar`: the dashboard and lists — a sidebar from `md` up, search in the
    * top bar. `focus`: a lesson or a problem — no sidebar, a breadcrumb instead,
@@ -34,8 +41,9 @@ export interface AppShellProps {
 }
 
 const FOOTER_LINKS = [
-  { href: '/companies/uber', label: 'Uber loop guide' },
-  { href: '/companies/google', label: 'Google loop guide' },
+  { href: '/', label: 'All courses' },
+  { href: '/de/companies/uber', label: 'Uber loop guide' },
+  { href: '/gcp/practice/mock', label: 'GCP mock exam' },
   { href: '/design', label: 'Design system' },
 ] as const;
 
@@ -86,39 +94,50 @@ function StatPill({
  */
 /** Counts at the end of the sidebar rows. */
 const SIDEBAR_COUNTS: Readonly<Record<string, number>> = {
-  '/tracks': TRACKS.length,
-  '/problems': PROBLEMS.length,
+  '/de/tracks': TRACKS.length,
+  '/de/problems': PROBLEMS.length,
+  '/gcp/lines': LINES.length,
+  '/gcp/practice': CARDS.length,
 };
 
 export function AppShell({
   appName = env.appName,
   learnerName,
-  summary,
+  enrolled,
+  course,
+  stats,
   variant = 'sidebar',
   crumbs = [],
   back,
   children,
 }: AppShellProps) {
-  const { level } = summary;
-  const xpLabel = level.to === null ? `${summary.xp} XP` : `${summary.xp} / ${level.to} XP`;
-  const levelLine = `Level ${level.number} · ${level.title}`;
+  const xpLabel =
+    stats === undefined
+      ? ''
+      : stats.xpTarget === null
+        ? `${stats.xp} XP`
+        : `${stats.xp} / ${stats.xpTarget} XP`;
+  const levelLine =
+    stats?.levelLine ?? `${enrolled.length} ${enrolled.length === 1 ? 'course' : 'courses'}`;
 
   return (
     <div data-app-shell className="flex min-h-dvh flex-1 flex-col">
       {variant === 'sidebar' && (
         <aside className="border-line bg-paper fixed inset-y-0 left-0 z-20 hidden w-56 flex-col gap-6 border-r px-3 py-5 md:flex">
           <Logo appName={appName} className="px-2" />
-          <SidebarNav counts={SIDEBAR_COUNTS} />
+          <SidebarNav enrolled={enrolled} counts={SIDEBAR_COUNTS} />
           <div className="mt-auto flex flex-col gap-2">
-            <div className="bg-night-glow rounded-card text-on-night flex flex-col gap-1 p-4">
-              <Icon name="flame" filled className="text-gold-deep size-5" />
-              <p className="font-display text-key font-semibold">
-                {summary.streak} {summary.streak === 1 ? 'day' : 'days'}
-              </p>
-              <p className="text-small text-on-night-soft">
-                Current streak · best {summary.bestStreak}
-              </p>
-            </div>
+            {stats !== undefined && (
+              <div className="bg-night-glow rounded-card text-on-night flex flex-col gap-1 p-4">
+                <Icon name="flame" filled className="text-gold-deep size-5" />
+                <p className="font-display text-key font-semibold">
+                  {stats.streak} {stats.streak === 1 ? 'day' : 'days'}
+                </p>
+                <p className="text-small text-on-night-soft">
+                  {course === 'gcp' ? 'GCP' : 'DE'} streak · best {stats.bestStreak}
+                </p>
+              </div>
+            )}
             <Link
               href="/profile"
               className="bg-surface border-line rounded-card hover:border-line-strong flex items-center gap-3 border p-3 transition-colors"
@@ -157,8 +176,10 @@ export function AppShell({
               )}
             />
 
-            {variant === 'sidebar' ? (
-              <form action="/problems" role="search" className="hidden max-w-sm flex-1 md:block">
+            {variant === 'sidebar' && course !== 'de' ? (
+              <span className="hidden md:block" />
+            ) : variant === 'sidebar' ? (
+              <form action="/de/problems" role="search" className="hidden max-w-sm flex-1 md:block">
                 <label className="bg-surface border-line rounded-pill shadow-card focus-within:border-line-strong flex min-h-11 items-center gap-2.5 border px-4">
                   <Icon name="search" className="text-ink-faint size-4" />
                   <span className="sr-only">Search problems</span>
@@ -199,31 +220,39 @@ export function AppShell({
             )}
 
             <div className="ml-auto flex shrink-0 items-center gap-2">
-              {variant === 'sidebar' ? (
+              {stats === undefined ? (
+                <Link
+                  href="/profile"
+                  aria-label={`Profile: ${learnerName}`}
+                  className="bg-brand-gradient text-on-night text-small inline-grid size-9 place-items-center rounded-full font-semibold md:hidden"
+                >
+                  {initialOf(learnerName)}
+                </Link>
+              ) : variant === 'sidebar' ? (
                 <>
                   <span className="md:hidden">
                     <span className="bg-surface border-line rounded-pill text-small inline-flex min-h-9 items-center gap-1 border px-3 font-semibold">
                       <Icon name="flame" filled className="text-gold-deep size-4" />
-                      {summary.streak}
+                      {stats.streak}
                       <span className="sr-only"> day streak</span>
                     </span>
                   </span>
                   <span className="md:hidden">
                     <span className="bg-surface border-line rounded-pill text-small text-iris inline-flex min-h-9 items-center border px-3 font-semibold">
-                      {summary.xp} XP
+                      {stats.xp} XP
                     </span>
                   </span>
                   <span className="hidden items-center gap-2 md:flex">
                     <StatPill
                       icon="flame"
-                      value={String(summary.streak)}
+                      value={String(stats.streak)}
                       label="day streak"
                       tone="brand"
                     />
                     <StatPill
                       icon="star"
-                      value={String(summary.xp)}
-                      label={level.to === null ? 'XP' : `of ${level.to} XP`}
+                      value={String(stats.xp)}
+                      label={stats.xpTarget === null ? 'XP' : `of ${stats.xpTarget} XP`}
                       tone="iris"
                     />
                   </span>
@@ -232,7 +261,7 @@ export function AppShell({
                 <>
                   <span className="bg-surface border-line rounded-pill text-small inline-flex min-h-9 items-center gap-1 border px-3 font-semibold">
                     <Icon name="flame" filled className="text-gold-deep size-4" />
-                    {summary.streak}
+                    {stats.streak}
                     <span className="hidden sm:inline"> day streak</span>
                     <span className="sr-only sm:hidden"> day streak</span>
                   </span>

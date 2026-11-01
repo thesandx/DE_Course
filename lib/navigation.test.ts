@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { activeTabHref, isTabActive } from './navigation';
+import { activeTabHref, isTabActive, tabsFor } from './navigation';
 
 describe('isTabActive', () => {
   it('matches home only on the root', () => {
@@ -26,5 +26,34 @@ describe('activeTabHref', () => {
 
   it('names nothing for a page outside every destination', () => {
     expect(activeTabHref('/sign-in')).toBeUndefined();
+  });
+});
+
+describe('tabsFor', () => {
+  it('lists the hub, each open course and the profile outside a course', () => {
+    expect(tabsFor('/').map((tab) => tab.href)).toEqual(['/', '/de', '/gcp', '/profile']);
+    expect(tabsFor('/profile').map((tab) => tab.href)).toEqual(['/', '/de', '/gcp', '/profile']);
+  });
+
+  it("lists the course's own destinations inside a course", () => {
+    expect(tabsFor('/gcp/lines/design').map((tab) => tab.href)).toEqual([
+      '/',
+      '/gcp',
+      '/gcp/lines',
+      '/gcp/practice',
+      '/profile',
+    ]);
+    expect(tabsFor('/de/problems').map((tab) => tab.label)).toEqual([
+      'Home',
+      'DE',
+      'Tracks',
+      'Problems',
+      'Profile',
+    ]);
+  });
+
+  it('marks the most specific tab active', () => {
+    expect(activeTabHref('/de/tracks/sql')).toBe('/de/tracks');
+    expect(activeTabHref('/gcp')).toBe('/gcp');
   });
 });

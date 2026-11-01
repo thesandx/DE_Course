@@ -1,16 +1,29 @@
 # Course content
 
-This folder holds the Loop Ready course: the tracks, lessons, problems and company loop guides, and the pure functions that pages use to read them. The reasons for this design are in [ADR-0006](../../docs/adr/0006-store-course-content-in-code-and-progress-in-one-document.md).
+This folder holds the courses of the Loop Ready platform and the pure functions that pages use to read them. The reasons for this design are in [ADR-0006](../../docs/adr/0006-store-course-content-in-code-and-progress-in-one-document.md) and [ADR-0008](../../docs/adr/0008-host-several-courses-with-one-learner-document.md).
+
+The platform has these courses:
+
+- **DE** (`/de`): the senior data engineering course. Its tracks, lessons, problems and loop guides are in this folder.
+- **GCP** (`/gcp`): GCP Professional Data Engineer exam prep, as a metro map game. Its content and rules are in [`gcp/`](./gcp/README.md).
+- **K8s**: listed on the hub, not open yet.
+
+A learner joins each course separately. Each course keeps its own tracker in `learners/{uid}`.
 
 ## Files
 
-| File               | What it holds                                                                 |
-| ------------------ | ----------------------------------------------------------------------------- |
-| `tracks/<slug>.ts` | One track. It exports `track` (the lessons) and `problems`.                   |
-| `catalog.ts`       | The study order, the lookups, XP per item, track progress and loop readiness. |
-| `companies.ts`     | The Uber and Google loop guides: rounds and the weight of each track.         |
-| `markdown.ts`      | The parser for the prose dialect below.                                       |
-| `progress.ts`      | Item ids, XP values, levels, streaks and the activity grid.                   |
+| File               | What it holds                                                                   |
+| ------------------ | ------------------------------------------------------------------------------- |
+| `tracks/<slug>.ts` | One track. It exports `track` (the lessons) and `problems`.                     |
+| `catalog.ts`       | The study order, the lookups, XP per item, track progress and loop readiness.   |
+| `companies.ts`     | The Uber and Google loop guides: rounds and the weight of each track.           |
+| `markdown.ts`      | The parser for the prose dialect below.                                         |
+| `progress.ts`      | Item ids, XP values, levels, streaks, the activity grid and the learner record. |
+| `courses.ts`       | The course list: slugs, names, hues and links. Safe for client components.      |
+| `rules.ts`         | The item check and the XP table of each course.                                 |
+| `hub.ts`           | The numbers on each course card of the hub.                                     |
+| `shell-stats.ts`   | The streak and XP that the app shell shows for the current course.              |
+| `gcp/`             | The GCP course. See [`gcp/README.md`](./gcp/README.md).                         |
 
 The types are in [`types/course.ts`](../../types/course.ts).
 
@@ -65,3 +78,14 @@ Do not write backticks or `${` anywhere in content: they end or break the templa
 ## Progress and XP
 
 Item ids are `lesson:<track>:<lesson>` and `problem:<slug>`. A lesson is worth 40 XP. A problem is worth 20, 40 or 60 XP for easy, medium or hard. Do not rename a slug after release: progress records store the id, and a renamed item loses its completions.
+
+## Add a course
+
+1. Add the slug to `COURSE_SLUGS` and an entry to `COURSES` in `courses.ts`. Set `status: 'soon'` to list it on the hub before it opens.
+2. Put its content and rules in `lib/course/<slug>/`. Make item ids that include a kind, such as `station:<slug>`.
+3. Add an entry to `COURSE_RULES` in `rules.ts`. The server refuses every item id that `isKnownItem` does not accept.
+4. Add a case to `hubStats` in `hub.ts` and a shell stats function in `shell-stats.ts`.
+5. Add a `require<Course>Learner` function to `services/learner.service.ts`.
+6. Add the pages under `app/<slug>/`. Each page passes `course="<slug>"` to `CompleteButton` or `useRecordProgress`.
+7. Add the course's paths to `tabsFor` in `lib/navigation.ts` if its learn and practice links differ.
+8. Run `pnpm validate` and `pnpm test:e2e`.

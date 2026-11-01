@@ -125,7 +125,7 @@ export function Dashboard({ name, progress, summary, today }: DashboardProps) {
 
   const weekly = Math.min(summary.solvedThisWeek, WEEKLY_GOAL);
   const weeklyLeft = WEEKLY_GOAL - weekly;
-  const continueHref = next ? `/tracks/${next.track.slug}/${next.lesson.slug}` : '/problems';
+  const continueHref = next ? `/de/tracks/${next.track.slug}/${next.lesson.slug}` : '/de/problems';
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-5 md:gap-6 md:px-8 md:py-6">
@@ -202,7 +202,7 @@ export function Dashboard({ name, progress, summary, today }: DashboardProps) {
             {next !== undefined ? `Continue: ${next.lesson.title}` : 'Open the problems'}
             <Icon name="arrow-right" className="size-4" />
           </Link>
-          <Link href="/problems" className={buttonStyles({ variant: 'night' })}>
+          <Link href="/de/problems" className={buttonStyles({ variant: 'night' })}>
             Browse the {PROBLEMS.length} problems
           </Link>
         </div>
@@ -336,7 +336,7 @@ export function Dashboard({ name, progress, summary, today }: DashboardProps) {
               })}
             </ul>
           </div>
-          <Link href="/problems" className={buttonStyles({ variant: 'secondary', block: true })}>
+          <Link href="/de/problems" className={buttonStyles({ variant: 'secondary', block: true })}>
             Open the problem list
           </Link>
         </section>
@@ -399,7 +399,7 @@ export function Dashboard({ name, progress, summary, today }: DashboardProps) {
                     ))}
                   </ul>
                   <Link
-                    href={`/companies/${company.slug}`}
+                    href={`/de/companies/${company.slug}`}
                     className="text-small text-brand inline-flex min-h-11 w-fit items-center font-semibold hover:underline md:min-h-0"
                   >
                     Read the loop guide →
@@ -422,7 +422,7 @@ export function Dashboard({ name, progress, summary, today }: DashboardProps) {
               </h2>
             </div>
             <Link
-              href="/tracks"
+              href="/de/tracks"
               className="text-small text-brand-deep font-semibold hover:underline"
             >
               All {TRACKS.length} →
@@ -436,7 +436,7 @@ export function Dashboard({ name, progress, summary, today }: DashboardProps) {
               return (
                 <li key={track.slug}>
                   <Link
-                    href={`/tracks/${track.slug}`}
+                    href={`/de/tracks/${track.slug}`}
                     className={cn(
                       'bg-surface border-line rounded-input shadow-card hover:border-line-strong flex items-center gap-4 border border-l-4 py-3.5 pr-4 pl-4 transition-colors',
                       style.rail,
@@ -485,7 +485,7 @@ export function Dashboard({ name, progress, summary, today }: DashboardProps) {
                 {upNext.map((problem, index) => (
                   <li key={problem.slug}>
                     <Link
-                      href={`/problems/${problem.slug}`}
+                      href={`/de/problems/${problem.slug}`}
                       className="bg-surface border-line rounded-card shadow-card hover:border-line-strong flex items-start gap-3 border p-4 transition-colors"
                     >
                       <span className="bg-sunken rounded-box text-micro text-ink-soft mt-0.5 inline-grid size-6 shrink-0 place-items-center font-mono">

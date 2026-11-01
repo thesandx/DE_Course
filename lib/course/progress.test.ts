@@ -3,8 +3,13 @@ import { describe, expect, it } from 'vitest';
 import {
   activityGrid,
   applyCompletion,
+  applyCourseCompletion,
+  applyEnrollment,
   bestStreak,
+  courseRecord,
+  EMPTY_LEARNER,
   EMPTY_PROGRESS,
+  isEnrolled,
   isoDay,
   lessonId,
   levelFor,
@@ -12,6 +17,7 @@ import {
   problemId,
   streak,
   trustedDay,
+  xpOnDay,
 } from './progress';
 
 describe('item ids', () => {
@@ -134,5 +140,37 @@ describe('applyCompletion', () => {
     expect(Object.keys(next.days)).toHaveLength(MAX_DAYS_KEPT);
     expect(next.days['2025-01-01']).toBeUndefined();
     expect(next.days['2027-01-01']).toBe(1);
+  });
+});
+
+describe('learner records across courses', () => {
+  it('joins a course once and keeps the first day', () => {
+    const joined = applyEnrollment(EMPTY_LEARNER, 'gcp', '2026-11-01');
+    expect(isEnrolled(joined, 'gcp')).toBe(true);
+    expect(isEnrolled(joined, 'de')).toBe(false);
+    expect(applyEnrollment(joined, 'gcp', '2026-11-02')).toBe(joined);
+  });
+
+  it('keeps a separate tracker per course', () => {
+    let record = applyCourseCompletion(EMPTY_LEARNER, 'gcp', 'station:a', true, '2026-11-01');
+    record = applyCourseCompletion(record, 'de', 'problem:b', true, '2026-11-02');
+    expect(courseRecord(record, 'gcp').done).toEqual({ 'station:a': '2026-11-01' });
+    expect(courseRecord(record, 'gcp').days).toEqual({ '2026-11-01': 1 });
+    expect(courseRecord(record, 'de').done).toEqual({ 'problem:b': '2026-11-02' });
+  });
+
+  it('enrolls the learner in a course when they finish an item in it', () => {
+    const record = applyCourseCompletion(EMPTY_LEARNER, 'de', 'problem:b', true, '2026-11-01');
+    expect(record.enrolled).toEqual({ de: '2026-11-01' });
+  });
+
+  it('returns the same record when nothing changes', () => {
+    const record = applyCourseCompletion(EMPTY_LEARNER, 'de', 'problem:b', true, '2026-11-01');
+    expect(applyCourseCompletion(record, 'de', 'problem:b', true, '2026-11-02')).toBe(record);
+  });
+
+  it('counts the XP earned on one day', () => {
+    const tracker = { done: { a: '2026-11-01', b: '2026-11-01', c: '2026-10-31' }, days: {} };
+    expect(xpOnDay(tracker, '2026-11-01', () => 10)).toBe(20);
   });
 });

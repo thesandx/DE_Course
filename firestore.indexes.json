@@ -58,6 +58,16 @@
       "collectionGroup": "progress",
       "fieldPath": "days",
       "indexes": []
+    },
+    {
+      "collectionGroup": "learners",
+      "fieldPath": "enrolled",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "learners",
+      "fieldPath": "courses",
+      "indexes": []
     }
   ]
 }

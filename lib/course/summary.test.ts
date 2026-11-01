@@ -66,7 +66,7 @@ describe('summarize', () => {
     ]);
     expect(summary.recent[0]).toMatchObject({
       kind: 'problem',
-      href: '/problems/sessionize-app-events',
+      href: '/de/problems/sessionize-app-events',
       daysAgo: 0,
     });
     expect(summary.recent[1]?.daysAgo).toBe(1);
@@ -79,7 +79,7 @@ describe('summarize', () => {
     );
     expect(summary.recent[0]).toMatchObject({
       kind: 'lesson',
-      href: '/tracks/sql/window-functions',
+      href: '/de/tracks/sql/window-functions',
     });
     expect(summary.levelRatio).toBeGreaterThan(0);
     expect(summary.levelRatio).toBeLessThanOrEqual(1);
