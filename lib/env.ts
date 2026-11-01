@@ -265,7 +265,7 @@ export const env = {
   appUrl: optional(process.env.NEXT_PUBLIC_APP_URL, 'http://localhost:3000'),
 
   /** Human-readable name shown in the UI and in page titles. */
-  appName: optional(process.env.NEXT_PUBLIC_APP_NAME, 'Next.js on Cloud Run'),
+  appName: optional(process.env.NEXT_PUBLIC_APP_NAME, 'Loop Ready'),
 
   /** Commit SHA of the running build. Surfaced by /api/health for traceability. */
   appVersion: optional(process.env.NEXT_PUBLIC_APP_VERSION, 'dev'),

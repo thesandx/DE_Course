@@ -16,7 +16,7 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_APP_URL: http://localhost:8080
-        NEXT_PUBLIC_APP_NAME: Next.js on Cloud Run
+        NEXT_PUBLIC_APP_NAME: Loop Ready
         NEXT_PUBLIC_APP_VERSION: local
     image: nextjs-cloudrun-template:local
     container_name: nextjs-cloudrun-template

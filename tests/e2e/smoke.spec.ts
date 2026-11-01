@@ -58,3 +58,18 @@ test('a write without a session is refused with 401', async ({ request }) => {
   expect(response.status()).toBe(401);
   expect(await response.json()).toMatchObject({ error: 'unauthenticated' });
 });
+
+test('course pages send a signed-out visitor to sign in', async ({ page }) => {
+  for (const path of ['/tracks', '/problems', '/tracks/sql/window-functions', '/companies/uber']) {
+    await page.goto(path);
+    await expect(page, `redirect from ${path}`).toHaveURL(/\/sign-in\?next=/);
+  }
+});
+
+test('saving progress without a session is refused with 401', async ({ request }) => {
+  const response = await request.post('/api/progress', {
+    data: { itemId: 'problem:not-in-null-trap', done: true },
+  });
+
+  expect(response.status()).toBe(401);
+});

@@ -9,12 +9,18 @@ import { cn } from '@/lib/utils';
 
 const ICONS: Record<TabIcon, React.ReactNode> = {
   home: <path d="M4 11l8-7 8 7v8a1 1 0 01-1 1h-4v-6h-6v6H5a1 1 0 01-1-1z" />,
-  shapes: (
+  book: (
     <>
-      <circle cx="7.5" cy="7.5" r="3.5" />
-      <path d="M13 4h7v7h-7z" />
-      <path d="M7.5 13l4 7h-8z" />
-      <circle cx="16.5" cy="16.5" r="3.5" />
+      <path d="M4 5.5C4 4.7 4.7 4 5.5 4H11v16H5.5A1.5 1.5 0 014 18.5z" />
+      <path d="M20 5.5c0-.8-.7-1.5-1.5-1.5H13v16h5.5a1.5 1.5 0 001.5-1.5z" />
+    </>
+  ),
+  list: (
+    <>
+      <path d="M9 6h11M9 12h11M9 18h11" />
+      <circle cx="4.5" cy="6" r="1.5" />
+      <circle cx="4.5" cy="12" r="1.5" />
+      <circle cx="4.5" cy="18" r="1.5" />
     </>
   ),
   person: (

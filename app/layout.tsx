@@ -15,7 +15,8 @@ export const metadata: Metadata = {
     default: env.appName,
     template: `%s | ${env.appName}`,
   },
-  description: 'Production-ready Next.js App Router template deployed on Google Cloud Run.',
+  description:
+    'Senior data engineer interview prep: lessons, problems and loop guides for Uber and Google.',
   applicationName: env.appName,
   // iOS reads these, not the manifest, when the user adds the app to the home
   // screen. The manifest in app/manifest.ts serves every other browser.
@@ -103,8 +104,9 @@ export default function RootLayout({
         <Footer
           owner={env.appName}
           links={[
-            { href: '/design', label: 'Components' },
-            { href: '/api/health', label: 'Health' },
+            { href: '/companies/uber', label: 'Uber loop guide' },
+            { href: '/companies/google', label: 'Google loop guide' },
+            { href: '/design', label: 'Design system' },
           ]}
         />
         <TabBar />

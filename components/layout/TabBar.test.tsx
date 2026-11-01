@@ -34,7 +34,7 @@ describe('TabBar', () => {
     expect(pill.style.transform).toBe('translateX(0%)');
 
     fireEvent.click(screen.getByRole('link', { name: 'Profile' }));
-    expect(pill.style.transform).toBe('translateX(200%)');
+    expect(pill.style.transform).toBe('translateX(300%)');
     // aria-current still names the page actually shown.
     expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
   });

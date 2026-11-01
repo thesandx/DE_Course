@@ -15,6 +15,19 @@ Multi-stage Docker build · Keyless CI/CD via Workload Identity Federation · St
 
 ---
 
+## Loop Ready
+
+This repository serves **Loop Ready**, an interactive course for senior and staff data engineer interviews, with loop guides for Uber and Google. It runs on the template described below.
+
+- 11 tracks: the interview playbook, SQL, Python, data modeling, Spark, orchestration (Airflow and Prefect), streaming, storage and BigQuery, data quality, system design, and behavioral.
+- Lessons with quick checks, and interview problems with hints, model answers and senior signals.
+- Sign-in with Firebase Auth. Progress, XP, levels and streaks are saved per learner in Firestore.
+- A LeetCode-style dashboard, problem list and study calendar, built phone first.
+
+To write or change course content, read [`lib/course/README.md`](./lib/course/README.md). For the storage design, read [ADR-0006](./docs/adr/0006-store-course-content-in-code-and-progress-in-one-document.md).
+
+---
+
 ## Overview
 
 Most Next.js templates give you an application. This one also gives you **the path to production**. You get a container that runs on Cloud Run, a pipeline that deploys it without storing a single credential, and documentation that explains each decision.

@@ -40,6 +40,7 @@ const BY_NAME: Record<string, { status: number; code: string; exposeDetail: bool
   ForbiddenError: { status: 403, code: 'forbidden', exposeDetail: true },
   InvalidStoragePathError: { status: 400, code: 'invalid_path', exposeDetail: true },
   UploadRejectedError: { status: 400, code: 'upload_rejected', exposeDetail: true },
+  UnknownCourseItemError: { status: 400, code: 'unknown_item', exposeDetail: true },
   // A missing environment variable is an operator error. Telling a caller which
   // one is missing describes the deployment to anyone who asks.
   ConfigurationError: { status: 500, code: 'server_misconfigured', exposeDetail: false },

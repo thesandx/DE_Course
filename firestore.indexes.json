@@ -48,6 +48,16 @@
       "collectionGroup": "users",
       "fieldPath": "updatedAt",
       "indexes": []
+    },
+    {
+      "collectionGroup": "progress",
+      "fieldPath": "done",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "progress",
+      "fieldPath": "days",
+      "indexes": []
     }
   ]
 }
