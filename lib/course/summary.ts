@@ -68,11 +68,11 @@ function describe(
   const [kind, first, second] = id.split(':');
   if (kind === 'lesson' && first !== undefined && second !== undefined) {
     const found = getLesson(first, second);
-    return found && { kind, title: found.lesson.title, href: `/tracks/${first}/${second}` };
+    return found && { kind, title: found.lesson.title, href: `/de/tracks/${first}/${second}` };
   }
   if (kind === 'problem' && first !== undefined) {
     const problem = getProblem(first);
-    return problem && { kind, title: problem.title, href: `/problems/${first}` };
+    return problem && { kind, title: problem.title, href: `/de/problems/${first}` };
   }
   return undefined;
 }

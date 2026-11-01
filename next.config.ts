@@ -43,6 +43,16 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+
+  // The DE course moved under /de when the app became a multi-course
+  // platform. These keep old bookmarks and shared links working. Permanent,
+  // because the old paths will not come back.
+  async redirects() {
+    return ['tracks', 'problems', 'companies'].flatMap((section) => [
+      { source: `/${section}`, destination: `/de/${section}`, permanent: true },
+      { source: `/${section}/:path*`, destination: `/de/${section}/:path*`, permanent: true },
+    ]);
+  },
 };
 
 export default nextConfig;

@@ -8,6 +8,7 @@ import { ProfileForm } from '@/components/profile/ProfileForm';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { COURSES } from '@/lib/course/courses';
 import { formatPhoneForDisplay } from '@/lib/phone';
 import type { SessionUser } from '@/services/auth.service';
 import { requireLearner } from '@/services/learner.service';
@@ -41,13 +42,16 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function ProfilePage(): Promise<React.JSX.Element> {
-  const { user, name, summary } = await requireLearner('/profile');
+  const { user, enrolled, shell } = await requireLearner('/profile');
+  const courses = COURSES.filter((course) => (enrolled as readonly string[]).includes(course.slug));
 
   return (
-    <AppShell learnerName={name} summary={summary}>
+    <AppShell {...shell}>
       <div className="mx-auto w-full max-w-5xl px-4 pt-6 sm:px-8 md:pt-8">
         <PageHeading eyebrow="Account" title="Profile">
-          Level {summary.level.number} · {summary.level.title} · {summary.xp} XP
+          {courses.length === 0
+            ? 'No courses joined yet'
+            : `Enrolled in ${courses.map((course) => course.title).join(' and ')}`}
         </PageHeading>
       </div>
 

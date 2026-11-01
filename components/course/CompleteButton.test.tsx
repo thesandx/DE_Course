@@ -17,7 +17,13 @@ afterEach(() => {
   refresh.mockClear();
 });
 
-const props = { itemId: 'problem:a', xp: 40, label: 'Mark solved', doneLabel: 'Problem solved' };
+const props = {
+  course: 'de' as const,
+  itemId: 'problem:a',
+  xp: 40,
+  label: 'Mark solved',
+  doneLabel: 'Problem solved',
+};
 
 describe('CompleteButton', () => {
   it('saves, shows the XP win and refreshes the page', async () => {
@@ -27,7 +33,7 @@ describe('CompleteButton', () => {
     expect(await screen.findByText('+40 XP')).toBeInTheDocument();
     expect(refresh).toHaveBeenCalled();
     const body = JSON.parse(String((fetchMock.mock.calls[0]?.[1] as RequestInit).body)) as unknown;
-    expect(body).toMatchObject({ itemId: 'problem:a', done: true });
+    expect(body).toMatchObject({ course: 'de', itemId: 'problem:a', done: true });
   });
 
   it('asks the learner to sign in again on 401', async () => {

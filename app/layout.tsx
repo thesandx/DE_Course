@@ -120,8 +120,8 @@ export default function RootLayout({
           <Footer
             owner={env.appName}
             links={[
-              { href: '/companies/uber', label: 'Uber loop guide' },
-              { href: '/companies/google', label: 'Google loop guide' },
+              { href: '/de/companies/uber', label: 'Uber loop guide' },
+              { href: '/de/companies/google', label: 'Google loop guide' },
               { href: '/design', label: 'Design system' },
             ]}
           />

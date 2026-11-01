@@ -1,6 +1,6 @@
 # ADR-0006: Store course content in code and progress in one Firestore document per learner
 
-- **Status:** Accepted
+- **Status:** Accepted. The storage location is superseded by [ADR-0008](./0008-host-several-courses-with-one-learner-document.md).
 - **Date:** 2026-11-01
 - **Deciders:** repository owner
 

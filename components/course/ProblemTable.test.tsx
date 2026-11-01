@@ -35,11 +35,11 @@ describe('ProblemTable', () => {
     render(<ProblemTable rows={ROWS} tracks={TRACKS} />);
     expect(screen.getByRole('link', { name: /Latest status per trip/ })).toHaveAttribute(
       'href',
-      '/problems/a',
+      '/de/problems/a',
     );
     expect(screen.getByRole('link', { name: /Merge k sorted files/ })).toHaveAttribute(
       'href',
-      '/problems/b',
+      '/de/problems/b',
     );
   });
 

@@ -127,7 +127,7 @@ export function Landing({ signInHref }: LandingProps) {
             return (
               <li key={track.slug}>
                 <Link
-                  href={signInTo(`/tracks/${track.slug}`)}
+                  href={signInTo(`/de/tracks/${track.slug}`)}
                   className={cn(
                     'bg-surface border-line rounded-card shadow-card hover:shadow-raised flex h-full flex-col gap-2 border border-t-4 p-4 transition-shadow sm:p-5',
                     style.edge,
@@ -193,7 +193,7 @@ export function Landing({ signInHref }: LandingProps) {
                   ))}
                 </ol>
                 <Link
-                  href={signInTo(`/companies/${company.slug}`)}
+                  href={signInTo(`/de/companies/${company.slug}`)}
                   className={cn(buttonStyles({ variant: 'night' }), 'mt-auto w-fit')}
                 >
                   Read the {company.name} loop guide
@@ -230,7 +230,7 @@ export function Landing({ signInHref }: LandingProps) {
             {preview.map((problem, index) => (
               <li key={problem.slug} className={cn(index > 0 && 'border-line border-t')}>
                 <Link
-                  href={signInTo(`/problems/${problem.slug}`)}
+                  href={signInTo(`/de/problems/${problem.slug}`)}
                   className="hover:bg-sunken flex items-center gap-3 px-4 py-3.5 transition-colors md:grid md:grid-cols-12 md:gap-4 md:px-5"
                 >
                   <span className="text-micro text-ink-faint self-start pt-1 font-mono md:hidden">

@@ -26,7 +26,7 @@ describe('Dashboard', () => {
     expect(screen.getAllByText(/Intern/).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('link', { name: /Continue/ })[0]).toHaveAttribute(
       'href',
-      '/tracks/playbook/how-loops-work',
+      '/de/tracks/playbook/how-loops-work',
     );
   });
 
@@ -47,7 +47,7 @@ describe('Dashboard', () => {
     expect(screen.getAllByText('Riders who never cancelled').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('link', { name: /Continue/ })[0]).toHaveAttribute(
       'href',
-      '/tracks/sql/window-functions',
+      '/de/tracks/sql/window-functions',
     );
   });
 });

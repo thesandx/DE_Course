@@ -452,14 +452,15 @@ Full model in [`SECURITY.md`](./SECURITY.md).
 
 Recorded in [`docs/adr/`](./docs/adr/). Read before proposing a change to any of them.
 
-| ADR                                                                    | Decision                                                                             |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| [0001](./docs/adr/0001-use-cloud-run-for-hosting.md)                   | Cloud Run for hosting — over Vercel, GKE, App Engine, a VM                           |
-| [0002](./docs/adr/0002-use-workload-identity-federation.md)            | Workload Identity Federation — no service account keys, ever                         |
-| [0003](./docs/adr/0003-scope-workload-identity-to-the-github-owner.md) | WIF provider scoped to the GitHub owner; the repository pin lives in the IAM binding |
-| [0004](./docs/adr/0004-use-firestore-and-cloud-storage.md)             | Firestore + Cloud Storage — over Cloud SQL, over a per-app project                   |
-| [0005](./docs/adr/0005-use-firebase-auth-for-sign-in.md)               | Firebase Auth with server-side session cookies — over Auth.js, over client-only auth |
-| [0007](./docs/adr/0007-adopt-the-loop-ready-visual-language.md)        | The Loop Ready visual language replaces Mochi — to match the owner's mockups         |
+| ADR                                                                       | Decision                                                                                              |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| [0001](./docs/adr/0001-use-cloud-run-for-hosting.md)                      | Cloud Run for hosting — over Vercel, GKE, App Engine, a VM                                            |
+| [0002](./docs/adr/0002-use-workload-identity-federation.md)               | Workload Identity Federation — no service account keys, ever                                          |
+| [0003](./docs/adr/0003-scope-workload-identity-to-the-github-owner.md)    | WIF provider scoped to the GitHub owner; the repository pin lives in the IAM binding                  |
+| [0004](./docs/adr/0004-use-firestore-and-cloud-storage.md)                | Firestore + Cloud Storage — over Cloud SQL, over a per-app project                                    |
+| [0005](./docs/adr/0005-use-firebase-auth-for-sign-in.md)                  | Firebase Auth with server-side session cookies — over Auth.js, over client-only auth                  |
+| [0007](./docs/adr/0007-adopt-the-loop-ready-visual-language.md)           | The Loop Ready visual language replaces Mochi — to match the owner's mockups                          |
+| [0008](./docs/adr/0008-host-several-courses-with-one-learner-document.md) | Several courses, one `learners/{uid}` document with a tracker per course — over a document per course |
 
 Add an ADR when a decision is expensive to reverse, affects how everyone works, or rejects an obvious alternative. Never edit an accepted ADR to change its decision — write a new one that supersedes it, and link both ways.
 

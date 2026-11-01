@@ -7,6 +7,7 @@
  * and never drifts between the server and the screen.
  */
 
+import type { CourseSlug } from '@/lib/course/courses';
 import type { Difficulty } from '@/types/course';
 
 /** What a learner has finished: item id → the day they finished it (`YYYY-MM-DD`). */
@@ -183,4 +184,66 @@ export function applyCompletion(
   for (const key of kept) trimmed[key] = nextDays[key] ?? 0;
 
   return { done: nextDone, days: trimmed };
+}
+
+/**
+ * Everything one learner has across the platform: the courses they joined
+ * (slug → the day they joined) and one tracker per course. Each course's
+ * record has the same shape, so streaks, the calendar and XP are counted per
+ * course and never mix.
+ */
+export interface LearnerRecord {
+  enrolled: Readonly<Partial<Record<CourseSlug, string>>>;
+  courses: Readonly<Partial<Record<CourseSlug, ProgressRecord>>>;
+}
+
+export const EMPTY_LEARNER: LearnerRecord = { enrolled: {}, courses: {} };
+
+export function isEnrolled(record: LearnerRecord, course: CourseSlug): boolean {
+  return record.enrolled[course] !== undefined;
+}
+
+/** One course's tracker, or an empty one before the first finished item. */
+export function courseRecord(record: LearnerRecord, course: CourseSlug): ProgressRecord {
+  return record.courses[course] ?? EMPTY_PROGRESS;
+}
+
+/** Joins a course. Returns the same record when the learner is already in it. */
+export function applyEnrollment(
+  record: LearnerRecord,
+  course: CourseSlug,
+  day: string,
+): LearnerRecord {
+  if (isEnrolled(record, course)) return record;
+  return { ...record, enrolled: { ...record.enrolled, [course]: day } };
+}
+
+/**
+ * Applies a completion to one course's tracker. Finishing an item also joins
+ * the course, so a learner can never hold progress in a course they are not in.
+ * Returns the same record when nothing changed.
+ */
+export function applyCourseCompletion(
+  record: LearnerRecord,
+  course: CourseSlug,
+  itemId: string,
+  done: boolean,
+  day: string,
+): LearnerRecord {
+  const before = courseRecord(record, course);
+  const after = applyCompletion(before, itemId, done, day);
+  const joined = applyEnrollment(record, course, day);
+  if (after === before) return joined;
+  return { ...joined, courses: { ...joined.courses, [course]: after } };
+}
+
+/** XP earned today from a tracker, given each item's XP. For the daily goal. */
+export function xpOnDay(
+  record: ProgressRecord,
+  day: string,
+  xpFor: (id: string) => number,
+): number {
+  return Object.entries(record.done)
+    .filter(([, finished]) => finished === day)
+    .reduce((sum, [id]) => sum + xpFor(id), 0);
 }
