@@ -86,7 +86,7 @@ test('the old single-course paths move permanently to the DE course', async ({ r
     ['/tracks', '/de/tracks'],
     ['/problems/latest-trip-status', '/de/problems/latest-trip-status'],
     ['/companies/uber', '/de/companies/uber'],
-  ]) {
+  ] as const) {
     const response = await request.get(from, { maxRedirects: 0 });
     expect(response.status(), `status for ${from}`).toBe(308);
     expect(response.headers()['location'], `target for ${from}`).toBe(to);
