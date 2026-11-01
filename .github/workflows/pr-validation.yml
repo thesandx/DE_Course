@@ -67,7 +67,7 @@ jobs:
         # `next typegen`, so the order of these two steps no longer matters.
         run: pnpm build
         env:
-          NEXT_PUBLIC_APP_NAME: ${{ vars.APP_NAME || 'Next.js on Cloud Run' }}
+          NEXT_PUBLIC_APP_NAME: ${{ vars.APP_NAME || 'Loop Ready' }}
           NEXT_PUBLIC_APP_VERSION: ${{ github.sha }}
 
       - name: Type check
@@ -198,7 +198,9 @@ jobs:
           context: .
           push: false
           load: true
-          tags: ${{ github.event.repository.name }}:pr-${{ github.sha }}
+          # A fixed local name: Docker tags must be lowercase, and the
+          # repository name (DE_Course) is not. The image is never pushed.
+          tags: app:pr-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -211,7 +213,7 @@ jobs:
         # errors from running as a non-root user.
         run: |
           set -euo pipefail
-          IMAGE="${{ github.event.repository.name }}:pr-${{ github.sha }}"
+          IMAGE="app:pr-${{ github.sha }}"
           # The data-layer variables are required in production, so the
           # container refuses to start without them. Placeholder values are
           # enough: the smoke test probes /api/health, which is deliberately

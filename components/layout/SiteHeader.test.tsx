@@ -10,8 +10,11 @@ describe('SiteHeader', () => {
   it('lists the same destinations as the tab bar, with the logo linked home', () => {
     pathname = '/';
     render(<SiteHeader appName="Playroom" />);
-    expect(screen.getByRole('link', { name: 'Playroom' })).toHaveAttribute('href', '/');
-    for (const label of ['Home', 'Components', 'Profile']) {
+    // The logo appears twice: once in the phone bar and once in the desktop header.
+    for (const logo of screen.getAllByRole('link', { name: 'Playroom' })) {
+      expect(logo).toHaveAttribute('href', '/');
+    }
+    for (const label of ['Home', 'Tracks', 'Problems', 'Profile']) {
       expect(screen.getByRole('link', { name: label })).toBeInTheDocument();
     }
   });

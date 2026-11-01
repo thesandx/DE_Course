@@ -20,7 +20,7 @@ export interface EmptyStateProps {
 export function EmptyState({ title, children, action, className }: EmptyStateProps) {
   return (
     <div className={cn('flex flex-col items-center gap-3 py-8 text-center', className)}>
-      <span className="bg-brand-soft border-line inline-grid size-20 place-items-center rounded-full border-2">
+      <span className="bg-brand-soft border-line inline-grid size-20 place-items-center rounded-full border">
         <Face mood="sleepy" size={72} />
       </span>
       <p className="text-heading font-display">{title}</p>

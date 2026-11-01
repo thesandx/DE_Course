@@ -80,12 +80,12 @@ export function Tabs({ label, items, defaultTab, onChange, className }: TabsProp
       <div
         role="tablist"
         aria-label={label}
-        className="bg-sunken border-line rounded-pill relative flex max-w-full overflow-x-auto border-2 p-1"
+        className="bg-sunken border-line rounded-pill relative flex max-w-full overflow-x-auto border p-1"
       >
         {indicator !== null && (
           <span
             aria-hidden="true"
-            className="bg-surface border-line shadow-mochi-sm rounded-pill ease-spring absolute top-1 bottom-1 left-0 border-2 transition-[transform,width] duration-300"
+            className="bg-surface border-line shadow-card rounded-pill ease-spring absolute top-1 bottom-1 left-0 border transition-[transform,width] duration-300"
             style={{ width: indicator.width, transform: `translateX(${indicator.left}px)` }}
           />
         )}

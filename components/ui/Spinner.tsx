@@ -21,7 +21,7 @@ export function Spinner({ label, hideLabel = false, size = 'md', className }: Sp
       <span
         aria-hidden="true"
         className={cn(
-          'border-sunken border-t-line inline-block shrink-0 animate-spin rounded-full border-2',
+          'border-sunken border-t-ink inline-block shrink-0 animate-spin rounded-full border',
           SIZES[size],
         )}
       />

@@ -42,7 +42,7 @@ export function Avatar({ name, size = 'md', mood: moodOverride, className }: Ava
   return (
     <span
       className={cn(
-        'border-line inline-grid shrink-0 place-items-center rounded-full border-2',
+        'border-line inline-grid shrink-0 place-items-center rounded-full border',
         tone,
         className,
       )}

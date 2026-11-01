@@ -144,7 +144,7 @@ export function ExampleForm({ className }: ExampleFormProps): React.JSX.Element 
         type="file"
         accept={ACCEPTED_IMAGE_TYPES}
         onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-        className="file:bg-sunken file:text-small file:border-line file:rounded-pill file:mr-3 file:border-2 file:px-3 file:py-1"
+        className="file:bg-sunken file:text-small file:border-line file:rounded-pill file:mr-3 file:border file:px-3 file:py-1"
       />
 
       {status === 'saved' && <Alert tone="success" title="Example created." />}

@@ -34,10 +34,10 @@ describe('Button', () => {
 });
 
 describe('buttonStyles', () => {
-  it('gives the primary variant the ink outline and the squish', () => {
+  it('gives the primary variant the brand fill, the glow and the squish', () => {
     const classes = buttonStyles();
     expect(classes).toContain('squish');
-    expect(classes).toContain('border-line');
+    expect(classes).toContain('shadow-glow');
     expect(classes).toContain('bg-brand');
   });
 
@@ -46,9 +46,10 @@ describe('buttonStyles', () => {
   });
 
   it('meets the 44px touch target at every size', () => {
-    // min-h-12 = 48px, min-h-14 = 56px. See design-language.md rule 12.
-    expect(buttonStyles({ size: 'md' })).toContain('min-h-12');
-    expect(buttonStyles({ size: 'lg' })).toContain('min-h-14');
+    // min-h-11 = 44px on a phone. Only sm shrinks, from md, where a pointer is precise.
+    expect(buttonStyles({ size: 'sm' })).toContain('min-h-11');
+    expect(buttonStyles({ size: 'md' })).toContain('min-h-11');
+    expect(buttonStyles({ size: 'lg' })).toContain('min-h-12');
   });
 
   it('appends a caller className so a Link can be styled as a button', () => {

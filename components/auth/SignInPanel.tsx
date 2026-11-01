@@ -125,8 +125,19 @@ export function SignInPanel({ redirectTo = '/' }: SignInPanelProps): React.JSX.E
         On a desktop it is one narrow column on the page frame, under the same
         header as every other page: a 1000px-wide phone field helps nobody.
       */}
-      <main className="mx-auto w-full max-w-5xl px-5 py-8 sm:px-8 sm:py-12">
-        <div className="flex max-w-md flex-col gap-8">
+      <main className="mx-auto grid w-full max-w-5xl gap-6 px-4 py-6 sm:px-8 sm:py-12 md:grid-cols-2 md:items-stretch">
+        <aside className="bg-night-glow rounded-sheet text-on-night hidden flex-col gap-5 p-8 md:flex">
+          <p className="eyebrow text-gold">Senior data engineer prep</p>
+          <p className="text-display font-display font-semibold">
+            Pick up where you <span className="text-gradient-brand">left off</span>.
+          </p>
+          <ul className="text-body text-on-night-soft flex flex-col gap-3">
+            <li>Your streak, XP and solved problems on every device.</li>
+            <li>Readiness for the Uber and Google loops, round by round.</li>
+            <li>No password. Google or a code sent to your phone.</li>
+          </ul>
+        </aside>
+        <div className="bg-surface border-line rounded-sheet shadow-raised flex flex-col gap-8 border p-5 sm:p-8">
           {/*
           Each step is keyed, so a step change mounts a fresh subtree and the
           slide plays: forward from the right, back from the left, as a native

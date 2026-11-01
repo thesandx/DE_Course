@@ -8,7 +8,7 @@
  * back arrow instead.
  */
 
-export type TabIcon = 'home' | 'shapes' | 'person';
+export type TabIcon = 'home' | 'book' | 'list' | 'person';
 
 export interface AppTab {
   href: string;
@@ -18,7 +18,8 @@ export interface AppTab {
 
 export const APP_TABS: readonly AppTab[] = [
   { href: '/', label: 'Home', icon: 'home' },
-  { href: '/design', label: 'Components', icon: 'shapes' },
+  { href: '/tracks', label: 'Tracks', icon: 'book' },
+  { href: '/problems', label: 'Problems', icon: 'list' },
   { href: '/profile', label: 'Profile', icon: 'person' },
 ];
 

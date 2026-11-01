@@ -26,7 +26,7 @@ export function AppBar({ title, back, end, className }: AppBarProps) {
   return (
     <div
       className={cn(
-        'bg-paper border-line sticky top-0 z-20 border-b-2 md:static md:border-b-0',
+        'bg-paper border-line sticky top-0 z-20 border-b md:static md:border-b-0',
         className,
       )}
     >

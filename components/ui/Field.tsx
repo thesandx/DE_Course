@@ -63,7 +63,10 @@ export function FieldError({ id, children }: FieldErrorProps) {
       id={id}
       className="text-small text-ink animate-rise-in flex items-center gap-1.5 font-medium"
     >
-      <span aria-hidden="true" className="bg-danger inline-block size-2.5 shrink-0 rounded-full" />
+      <span
+        aria-hidden="true"
+        className="bg-hard-bar inline-block size-2.5 shrink-0 rounded-full"
+      />
       {children}
     </p>
   );
@@ -72,11 +75,11 @@ export function FieldError({ id, children }: FieldErrorProps) {
 /** The shared look of a text-like control. Exported so Select and Textarea match Input exactly. */
 export function controlStyles(invalid: boolean, className?: string): string {
   return cn(
-    'bg-surface text-ink rounded-input w-full border-2 px-4 transition-colors duration-200',
+    'bg-surface text-ink rounded-input w-full border px-4 transition-colors duration-200',
     // The wobble plays once, when the error first appears: the field that
     // needs fixing moves, so the eye finds it. See design-language.md > Motion.
-    invalid ? 'border-danger animate-wobble' : 'border-line',
-    'placeholder:text-ink-soft/70 focus-visible:outline-brand',
+    invalid ? 'border-hard-bar animate-wobble' : 'border-line-strong',
+    'placeholder:text-ink-faint focus-visible:outline-brand',
     'disabled:bg-sunken disabled:text-ink-soft disabled:cursor-not-allowed disabled:border-dashed',
     className,
   );

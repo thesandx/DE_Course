@@ -17,10 +17,10 @@ export interface SpeechProps {
 export function Speech({ children, mood = 'happy', className }: SpeechProps) {
   return (
     <div className={cn('flex items-end gap-3', className)}>
-      <span className="bg-brand-soft border-line inline-grid size-14 shrink-0 place-items-center rounded-full border-2">
+      <span className="bg-brand-soft border-line inline-grid size-14 shrink-0 place-items-center rounded-full border">
         <Face mood={mood} size={48} blink />
       </span>
-      <p className="border-line bg-surface shadow-mochi-sm rounded-card relative rounded-bl-md border-2 px-4 py-3">
+      <p className="border-line bg-surface shadow-card rounded-card relative rounded-bl-md border px-4 py-3">
         {children}
       </p>
     </div>

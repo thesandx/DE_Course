@@ -25,15 +25,15 @@ export interface FooterProps {
 }
 
 /**
- * The site footer: quiet, small text, a top outline. Nothing that competes with the page.
+ * The site footer: quiet, small muted text and links, a top outline. Nothing that competes with the page.
  *
  * The copyright year is never a literal in the source — see `copyrightLine`.
  */
 export function Footer({ children, links = [], owner, since, contact, className }: FooterProps) {
   const hasContact = contact?.phone !== undefined || contact?.email !== undefined;
   return (
-    <footer className={cn('border-line mt-auto border-t-2', className)}>
-      <div className="text-small text-ink-soft mx-auto flex w-full max-w-5xl flex-col gap-3 px-5 py-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-8">
+    <footer className={cn('border-line mt-auto border-t', className)}>
+      <div className="text-small text-ink-soft mx-auto flex w-full max-w-6xl flex-col gap-3 px-5 py-8 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-8">
         {(children !== undefined || owner !== undefined) && (
           <div className="flex flex-col gap-1">
             {children !== undefined && <div>{children}</div>}
@@ -51,7 +51,7 @@ export function Footer({ children, links = [], owner, since, contact, className 
             <ul className="flex flex-wrap gap-x-4 gap-y-1">
               {links.map((link) => {
                 const className =
-                  'text-ink decoration-brand inline-flex min-h-11 items-center underline decoration-2 underline-offset-4';
+                  'text-ink-soft hover:text-ink inline-flex min-h-11 items-center transition-colors';
                 return (
                   <li key={link.href}>
                     {isExternalHref(link.href) ? (

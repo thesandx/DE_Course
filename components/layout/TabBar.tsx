@@ -9,12 +9,18 @@ import { cn } from '@/lib/utils';
 
 const ICONS: Record<TabIcon, React.ReactNode> = {
   home: <path d="M4 11l8-7 8 7v8a1 1 0 01-1 1h-4v-6h-6v6H5a1 1 0 01-1-1z" />,
-  shapes: (
+  book: (
     <>
-      <circle cx="7.5" cy="7.5" r="3.5" />
-      <path d="M13 4h7v7h-7z" />
-      <path d="M7.5 13l4 7h-8z" />
-      <circle cx="16.5" cy="16.5" r="3.5" />
+      <path d="M4 5.5C4 4.7 4.7 4 5.5 4H11v16H5.5A1.5 1.5 0 014 18.5z" />
+      <path d="M20 5.5c0-.8-.7-1.5-1.5-1.5H13v16h5.5a1.5 1.5 0 001.5-1.5z" />
+    </>
+  ),
+  list: (
+    <>
+      <path d="M9 6h11M9 12h11M9 18h11" />
+      <circle cx="4.5" cy="6" r="1.5" />
+      <circle cx="4.5" cy="12" r="1.5" />
+      <circle cx="4.5" cy="18" r="1.5" />
     </>
   ),
   person: (
@@ -70,11 +76,11 @@ export function TabBar({ className }: TabBarProps) {
         className,
       )}
     >
-      <ul className="bg-surface border-line shadow-mochi rounded-pill relative flex border-2 p-1.5">
+      <ul className="bg-surface border-line shadow-raised rounded-pill relative flex border p-1.5">
         <span
           aria-hidden="true"
           className={cn(
-            'bg-brand border-line shadow-mochi-sm rounded-pill absolute top-1.5 bottom-1.5 left-1.5 border-2',
+            'bg-ink shadow-card rounded-pill absolute top-1.5 bottom-1.5 left-1.5',
             'ease-spring transition-[transform,opacity] duration-300',
             activeIndex === -1 && 'opacity-0',
           )}
@@ -99,7 +105,7 @@ export function TabBar({ className }: TabBarProps) {
                 className={cn(
                   'press rounded-pill flex min-h-13 flex-col items-center justify-center gap-0.5 px-2',
                   'text-small font-medium transition-colors duration-200',
-                  active ? 'text-ink' : 'text-ink-soft hover:text-ink',
+                  active ? 'text-on-night' : 'text-ink-soft hover:text-ink',
                 )}
               >
                 <svg

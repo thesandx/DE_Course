@@ -35,7 +35,7 @@ export function Card({
   return (
     <Tag
       className={cn(
-        'border-line shadow-mochi rounded-card relative border-2 p-5 sm:p-6',
+        'border-line shadow-card rounded-card relative border p-5 sm:p-6',
         TONE_CLASS[tone],
         peek !== undefined && 'mt-8 pt-11 sm:pt-12',
         className,

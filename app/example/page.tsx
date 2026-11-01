@@ -45,7 +45,7 @@ function ExampleCard({ item }: { item: ExampleView }): React.JSX.Element {
   return (
     <Card as="li" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
       {item.imageUrl === null ? (
-        <div className="border-line bg-sunken rounded-input flex h-24 w-full shrink-0 items-center justify-center border-2 border-dashed sm:w-24">
+        <div className="border-line bg-sunken rounded-input flex h-24 w-full shrink-0 items-center justify-center border border-dashed sm:w-24">
           <span className="text-small text-ink-soft">No image</span>
         </div>
       ) : (
@@ -56,7 +56,7 @@ function ExampleCard({ item }: { item: ExampleView }): React.JSX.Element {
         <img
           src={item.imageUrl}
           alt=""
-          className="border-line rounded-input h-24 w-full shrink-0 border-2 object-cover sm:w-24"
+          className="border-line rounded-input h-24 w-full shrink-0 border object-cover sm:w-24"
           loading="lazy"
         />
       )}
@@ -111,7 +111,7 @@ export default async function ExamplePage(): Promise<React.JSX.Element> {
           </Card>
         ) : (
           <>
-            <div className="border-line bg-sunken rounded-input flex flex-wrap items-center justify-between gap-3 border-2 px-4 py-3">
+            <div className="border-line bg-sunken rounded-input flex flex-wrap items-center justify-between gap-3 border px-4 py-3">
               <p className="text-small text-ink-soft">
                 Signed in as{' '}
                 <span className="text-ink font-medium">
