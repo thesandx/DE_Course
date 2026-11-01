@@ -27,6 +27,8 @@ export interface ProblemTableProps {
   tracks: ReadonlyArray<{ slug: string; title: string }>;
   /** Pre-selects a track, e.g. on a track page. */
   initialTrack?: string;
+  /** Pre-fills the search, e.g. from the top bar's search box (`?q=`). */
+  initialQuery?: string;
   /** Hides the filters, for a short list inside another page. */
   compact?: boolean;
   className?: string;
@@ -46,10 +48,11 @@ export function ProblemTable({
   rows,
   tracks,
   initialTrack = '',
+  initialQuery = '',
   compact = false,
   className,
 }: ProblemTableProps) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery);
   const [track, setTrack] = useState(initialTrack);
   const [difficulty, setDifficulty] = useState('');
   const [company, setCompany] = useState('');
@@ -59,7 +62,10 @@ export function ProblemTable({
     const needle = query.trim().toLowerCase();
     return rows.filter(
       (row) =>
-        (needle === '' || row.title.toLowerCase().includes(needle)) &&
+        (needle === '' ||
+          row.title.toLowerCase().includes(needle) ||
+          row.trackTitle.toLowerCase().includes(needle) ||
+          row.kindLabel.toLowerCase().includes(needle)) &&
         (track === '' || row.trackSlug === track) &&
         (difficulty === '' || row.difficulty === difficulty) &&
         (company === '' || row.companies.includes(company as Company)) &&
@@ -146,44 +152,63 @@ export function ProblemTable({
           }
         />
       ) : (
-        <ul className="border-line bg-surface rounded-card overflow-hidden border-2">
-          <li
-            aria-hidden="true"
-            className="bg-sunken border-line hidden grid-cols-12 gap-3 border-b-2 px-4 py-2 text-small font-bold md:grid"
-          >
-            <span className="col-span-1">Status</span>
-            <span className="col-span-5">Title</span>
-            <span className="col-span-3">Track</span>
-            <span className="col-span-1">Asked at</span>
-            <span className="col-span-2">Difficulty</span>
-          </li>
-          {visible.map((row, index) => (
+        <ul className="border-line bg-surface rounded-card shadow-card overflow-hidden border">
+          {compact ? null : (
             <li
-              key={row.slug}
-              className={cn(
-                index > 0 && 'border-line border-t-2',
-                index % 2 === 1 && 'md:bg-paper',
-              )}
+              aria-hidden="true"
+              className="bg-sunken border-line text-ink-faint eyebrow hidden grid-cols-12 gap-3 border-b px-5 py-3 md:grid"
             >
+              <span className="col-span-1">Status</span>
+              <span className="col-span-5">Problem</span>
+              <span className="col-span-3">Track</span>
+              <span className="col-span-1">Asked at</span>
+              <span className="col-span-2">Level</span>
+            </li>
+          )}
+          {visible.map((row, index) => (
+            <li key={row.slug} className={cn(index > 0 && 'border-line border-t')}>
               <Link
                 href={`/problems/${row.slug}`}
-                className="press flex min-h-14 flex-col gap-2 px-4 py-3 md:grid md:grid-cols-12 md:items-center md:gap-3"
+                className={cn(
+                  'hover:bg-sunken flex min-h-14 items-start gap-3 px-4 py-3.5 transition-colors',
+                  !compact && 'md:grid md:grid-cols-12 md:items-center md:px-5',
+                )}
               >
-                <span className="flex items-center gap-2 md:col-span-1">
+                <span
+                  className={cn('flex items-center pt-0.5', !compact && 'md:col-span-1 md:pt-0')}
+                >
                   <StatusMark done={row.done} />
                   <span className="sr-only">{row.done ? 'Solved.' : 'Not solved.'}</span>
                 </span>
-                <span className="font-bold break-words md:col-span-5">{row.title}</span>
-                <span className="text-small text-ink-soft md:col-span-3">
-                  {row.trackTitle}
-                  <span className="md:hidden"> · {row.kindLabel}</span>
+                <span
+                  className={cn(
+                    'flex min-w-0 flex-1 flex-col gap-1.5',
+                    !compact && 'md:col-span-5 md:flex-row md:items-center',
+                  )}
+                >
+                  <span className="font-semibold break-words">{row.title}</span>
+                  <span
+                    className={cn('flex flex-wrap items-center gap-2', !compact && 'md:hidden')}
+                  >
+                    <DifficultyTag difficulty={row.difficulty} />
+                    <span className="text-small text-ink-soft">
+                      {compact ? row.kindLabel : `${row.trackTitle} · ${row.kindLabel}`}
+                    </span>
+                  </span>
                 </span>
-                <span className="text-small text-ink-soft md:col-span-1">
-                  {row.companies.map((item) => COMPANY_LABEL[item]).join(', ')}
-                </span>
-                <span className="md:col-span-2">
-                  <DifficultyTag difficulty={row.difficulty} />
-                </span>
+                {compact ? null : (
+                  <>
+                    <span className="text-small text-ink-soft hidden md:col-span-3 md:block">
+                      {row.trackTitle}
+                    </span>
+                    <span className="text-small text-ink-soft hidden md:col-span-1 md:block">
+                      {row.companies.map((item) => COMPANY_LABEL[item]).join(', ')}
+                    </span>
+                    <span className="hidden md:col-span-2 md:block">
+                      <DifficultyTag difficulty={row.difficulty} />
+                    </span>
+                  </>
+                )}
               </Link>
             </li>
           ))}
@@ -203,12 +228,12 @@ function StatusMark({ done }: { done: boolean }) {
     <span
       aria-hidden="true"
       className={cn(
-        'border-line inline-grid size-6 place-items-center rounded-full border-2',
-        done ? 'bg-success' : 'bg-surface',
+        'inline-grid size-6 shrink-0 place-items-center rounded-full',
+        done ? 'bg-easy-bar' : 'border-line-strong border',
       )}
     >
       {done ? (
-        <svg viewBox="0 0 16 16" className="size-3.5 fill-none stroke-ink" strokeWidth={2.5}>
+        <svg viewBox="0 0 16 16" className="stroke-on-night size-3.5 fill-none" strokeWidth={2.5}>
           <path d="M3 8.5l3.2 3L13 4.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       ) : null}

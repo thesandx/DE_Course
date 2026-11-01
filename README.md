@@ -45,7 +45,7 @@ The app itself is one page. That is the point — everything else is the reusabl
 | 🚀 **CI/CD that verifies**   | PR validation builds and smoke-tests the real container; deploys probe the live URL |
 | ☁️ **Cloud Run native**      | Honours `$PORT`, binds `0.0.0.0`, autoscales, scales to zero                        |
 | 🧭 **AI-assistant ready**    | `.github/instructions/` — rules that keep generated code consistent across projects |
-| 🎨 **A design language**     | Mochi: tokens, 21 primitives, a living reference at `/design`, enforced by lint     |
+| 🎨 **A design language**     | Loop Ready: tokens, 21 primitives, a living reference at `/design`, lint-enforced   |
 | 📐 **Enterprise structure**  | Clear layer boundaries, absolute imports, enforced import ordering                  |
 | 📚 **Documented**            | Runbooks, ADRs, troubleshooting — not just a list of commands                       |
 
@@ -546,7 +546,7 @@ Full runbook, including moving a domain that is already serving traffic: [`cloud
 │   └── not-found.tsx       #   404
 │
 ├── components/             # Reusable components (ui/, layout/, <feature>/)
-│   └── ui/                 #   Mochi primitives: Button, Card, Input, Face …
+│   └── ui/                 #   Design primitives: Button, Card, Input, Face …
 ├── hooks/                  # Reusable React hooks
 ├── lib/                    # Pure utilities — no I/O
 │   ├── env.ts              #   Validated env vars; the ONLY reader of process.env
@@ -563,7 +563,7 @@ Full runbook, including moving a domain that is already serving traffic: [`cloud
 ├── types/                  # Shared TypeScript types
 │
 ├── public/                 # Static assets
-│   └── fonts/              #   Self-hosted Mochi typefaces, so builds work offline
+│   └── fonts/              #   Self-hosted typefaces, so builds work offline
 ├── styles/                 # globals.css and design tokens
 ├── tests/                  # Test setup
 │

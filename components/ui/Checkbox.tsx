@@ -28,8 +28,8 @@ export function Checkbox({ label, hint, className, disabled, ...rest }: Checkbox
           disabled={disabled}
           aria-describedby={hint ? hintId : undefined}
           className={cn(
-            'peer bg-surface border-line rounded-box shadow-mochi-sm size-7 cursor-pointer appearance-none border-2',
-            'checked:bg-brand transition-colors duration-200',
+            'peer bg-surface border-line-strong rounded-box size-5 cursor-pointer appearance-none border',
+            'checked:bg-easy-bar checked:border-easy-bar transition-colors duration-200',
             'disabled:bg-sunken disabled:cursor-not-allowed disabled:border-dashed',
           )}
           {...rest}
@@ -37,7 +37,7 @@ export function Checkbox({ label, hint, className, disabled, ...rest }: Checkbox
         <svg
           viewBox="0 0 24 24"
           aria-hidden="true"
-          className="stroke-ink pointer-events-none absolute hidden size-5 peer-checked:block peer-checked:animate-check"
+          className="stroke-on-night pointer-events-none absolute hidden size-3.5 peer-checked:block peer-checked:animate-check"
           fill="none"
           strokeWidth="3.2"
           strokeLinecap="round"

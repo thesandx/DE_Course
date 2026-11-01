@@ -4,9 +4,10 @@ import { notFound } from 'next/navigation';
 
 import { ProgressRing } from '@/components/course/ProgressRing';
 import { Prose } from '@/components/course/Prose';
-import { AppBar } from '@/components/layout/AppBar';
-import { Card } from '@/components/ui/Card';
+import { AppShell } from '@/components/layout/AppShell';
 import { getCompany, getTrack, readiness } from '@/lib/course/catalog';
+import { trackStyle } from '@/lib/course/track-style';
+import { cn } from '@/lib/utils';
 import { requireLearner } from '@/services/learner.service';
 
 interface Props {
@@ -30,68 +31,97 @@ export default async function CompanyPage({ params }: Props) {
   const company = getCompany(slug);
   if (company === undefined) notFound();
 
-  const { progress } = await requireLearner(`/companies/${slug}`);
+  const { name, progress, summary } = await requireLearner(`/companies/${slug}`);
   const ready = readiness(company, progress.done);
 
+  const minutes = company.rounds.reduce((sum, round) => sum + round.minutes, 0);
+
   return (
-    <>
-      <AppBar
-        title={`${company.name} loop guide`}
-        back={{ fallbackHref: '/', label: 'Back to home' }}
-      />
-      <main className="mx-auto grid w-full max-w-5xl gap-10 px-5 py-8 sm:px-8 sm:py-10 lg:grid-cols-3 lg:items-start lg:gap-12">
-        <Card tone="brand-soft" className="flex flex-col gap-4 lg:sticky lg:top-24">
-          <div className="flex items-center gap-4">
-            <ProgressRing ratio={ready} label={`${company.name} readiness`} />
-            <p className="text-small">
-              Your readiness, from your progress in the tracks this loop tests, weighted by how much
-              each round leans on them.
+    <AppShell learnerName={name} summary={summary}>
+      <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-8 md:py-8">
+        <header
+          className={cn(
+            'rounded-sheet text-on-night flex flex-col gap-5 p-6 sm:p-8 md:flex-row md:items-center md:justify-between',
+            slug === 'uber' ? 'bg-night-violet' : 'bg-night-glow',
+          )}
+        >
+          <div className="flex min-w-0 flex-col gap-3">
+            <p className="eyebrow text-on-night-soft">Loop guide</p>
+            <h1 className="text-display">{company.name} loop guide</h1>
+            <p className="text-body text-on-night-soft max-w-2xl">{company.summary}</p>
+            <p className="text-micro text-on-night-soft font-mono">
+              {company.rounds.length} rounds · about {Math.round(minutes / 60)} hours
             </p>
           </div>
-          <p>{company.summary}</p>
-        </Card>
+          <div className="flex items-center gap-4 md:flex-col md:items-center">
+            <ProgressRing
+              ratio={ready}
+              label={`${company.name} readiness`}
+              size={104}
+              thickness={9}
+              tone={slug === 'uber' ? 'brand' : 'blue'}
+              surface="night"
+              shape="wedge"
+            >
+              <span className="text-title">{Math.round(ready * 100)}%</span>
+            </ProgressRing>
+            <p className="text-small text-on-night-soft max-w-56 md:text-center">
+              Readiness, from the tracks this loop tests, weighted by each round.
+            </p>
+          </div>
+        </header>
 
-        <div className="flex min-w-0 flex-col gap-10 lg:col-span-2">
+        <section className="bg-surface border-line rounded-card shadow-card flex min-w-0 flex-col gap-4 border p-5 sm:p-6">
           <Prose source={company.overview} />
+        </section>
 
-          <section aria-labelledby="rounds-heading" className="flex flex-col gap-4">
-            <h2 id="rounds-heading" className="text-title">
-              The rounds
-            </h2>
-            <ol className="flex flex-col gap-4">
-              {company.rounds.map((round, index) => (
-                <li
-                  key={round.name}
-                  className="border-line bg-surface rounded-card flex flex-col gap-3 border-2 p-5"
-                >
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <h3 className="text-heading">
-                      {index + 1}. {round.name}
-                    </h3>
-                    <span className="text-small text-ink-soft">About {round.minutes} minutes</span>
-                  </div>
-                  <Prose source={round.focus} />
-                  <ul className="flex flex-wrap gap-2" aria-label="Tracks that prepare you">
-                    {round.tracks.map((trackSlug) => {
-                      const track = getTrack(trackSlug);
-                      return track === undefined ? null : (
-                        <li key={trackSlug}>
-                          <Link
-                            href={`/tracks/${trackSlug}`}
-                            className="squish border-line bg-sunken shadow-mochi-sm rounded-pill inline-flex min-h-11 items-center border-2 px-4 text-small font-bold"
-                          >
-                            {track.title}
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </li>
-              ))}
-            </ol>
-          </section>
-        </div>
+        <section aria-labelledby="rounds-heading" className="flex flex-col gap-3">
+          <h2 id="rounds-heading" className="text-title">
+            The rounds
+          </h2>
+          <ol className="flex flex-col gap-3">
+            {company.rounds.map((round, index) => (
+              <li
+                key={round.name}
+                className="bg-surface border-line rounded-card shadow-card flex flex-col gap-3 border p-5 sm:p-6"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-heading flex items-center gap-3">
+                    <span
+                      aria-hidden="true"
+                      className="bg-ink text-on-night text-small rounded-box inline-grid size-8 shrink-0 place-items-center font-mono font-semibold"
+                    >
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    {round.name}
+                  </h3>
+                  <span className="text-micro text-ink-faint font-mono">~{round.minutes} min</span>
+                </div>
+                <Prose source={round.focus} />
+                <ul className="flex flex-wrap gap-2" aria-label="Tracks that prepare you">
+                  {round.tracks.map((trackSlug) => {
+                    const track = getTrack(trackSlug);
+                    return track === undefined ? null : (
+                      <li key={trackSlug}>
+                        <Link
+                          href={`/tracks/${trackSlug}`}
+                          className="border-line bg-surface hover:border-line-strong rounded-pill text-small inline-flex min-h-10 items-center gap-2 border px-3 font-medium transition-colors"
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={cn('size-2 rounded-full', trackStyle(trackSlug).fill)}
+                          />
+                          {track.title}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </li>
+            ))}
+          </ol>
+        </section>
       </main>
-    </>
+    </AppShell>
   );
 }

@@ -1,6 +1,8 @@
-# Design language: Mochi
+# Design language: Loop Ready
 
-The visual and verbal rules for every product built from this template. Read this **before you write or change any UI**. The tokens live in `styles/globals.css`. The primitives live in `components/ui/`. The living reference renders at `/design`.
+The visual and verbal rules for every screen in Loop Ready. Read this **before you write or change any UI**. The tokens live in `styles/globals.css`. The primitives live in `components/ui/`. The app shell lives in `components/layout/AppShell.tsx`. The living reference renders at `/design`.
+
+This language replaces the template's Mochi language. [ADR-0007](../../docs/adr/0007-adopt-the-loop-ready-visual-language.md) records why.
 
 If a rule here conflicts with your training defaults, this file wins. If it blocks a task, say so and propose a change to this file. Do not work around it silently.
 
@@ -8,30 +10,30 @@ If a rule here conflicts with your training defaults, this file wins. If it bloc
 
 ## The idea in one paragraph
 
-Mochi is soft on the outside and firm underneath. The **structure** is neo-brutalist: ink outlines, a hard shadow straight down, flat colour, clear hierarchy. The **details** are kawaii: faces, blush, rounded type, and a small bounce when something is pressed. Structure makes the product clear. Details make it friendly. When the two compete, clarity wins.
+Loop Ready is a calm study desk with a bright signal on it. The **desk** is a warm paper page, white cards with a 1px hairline and a soft shadow, and clear type. The **signal** is a dark navy band with a pink glow: the hero of each page, the streak and the senior signals. Pink means "do this next". Each track has its own colour, and that colour marks the track everywhere.
 
-Three words to test every decision against: **squishy, honest, playful.**
+Three words to test every decision against: **focused, honest, motivating.**
 
-- Squishy — things you press react physically. They sink onto their base.
-- Honest — no decoration that pretends to be information. No fake stats, no filler labels.
-- Playful — one moment of delight per screen, placed where the user did something.
+- Focused: one dark band and one primary action per screen. Everything else is quiet.
+- Honest: every number comes from the learner's record or the catalogue. No fake stats.
+- Motivating: progress is visible. Rings, bars, streaks and XP answer "how far am I?".
 
 ---
 
 ## The twelve rules
 
-1. **Use the primitives.** `components/ui/` holds them — see [The primitives](#the-primitives). Do not re-create them inline. If one is missing a variant, add the variant to the primitive and show it on `/design`.
-2. **Use tokens only.** No raw hex, no arbitrary `shadow-[...]`, no arbitrary radius. If you need a value that does not exist, stop and ask. `pnpm lint` fails on each of these — see [Enforcement](#enforcement).
-3. **Ink is not black.** Text and outlines use `ink` / `line`. Never `black`, `#000`, `#111` or `neutral-900`.
-4. **Outlines are 2px.** `border-2 border-line`. Never 1px hairlines, never 3px+.
-5. **Shadows go straight down.** `shadow-mochi` (4px), `shadow-mochi-sm` (2px), `shadow-mochi-lg` (6px). No blur, no diagonal offsets, no grey `rgba` shadows, no glows.
-6. **Radius follows hierarchy.** Inputs `rounded-input`, cards `rounded-card`, sheets and modals `rounded-sheet`, buttons and chips `rounded-pill`. Never one radius for everything.
-7. **One primary action per screen.** Exactly one `Button variant="primary"` is visible in any viewport. Everything else is `secondary` or `quiet`.
-8. **Two typefaces, fixed roles.** Headings and big numbers use `font-display` (Mochiy Pop One, weight 400 only). Everything else uses `font-sans` (Zen Maru Gothic, 400/500/700). No third font. No fake bold on the display face.
-9. **Colour has a job.** `brand` means "do this". Candy tones (`butter`, `soda`, `grape`, `peach`) mean identity — this game, this player, this category. Never pick a candy tone "because it looks nice here".
-10. **Faces are the signature — use them on purpose.** A face appears on avatars, the mascot, empty states, errors and wins. Never on buttons, form fields, navigation, or body text.
-11. **Motion answers the user.** Press, navigate, open, select, join, win, error. The only ambient motion is the mascot's blink and a loading skeleton. No scroll-triggered fade-ins, no looping decoration. See [Motion](#motion).
-12. **Mobile first, 320px up, then a real desktop.** A phone gets an app. From `md` (768px) up, the same screen is a website. Tap targets ≥ 44px (buttons are 48px or 56px). No horizontal scroll. Left-aligned text. See [Responsive](#responsive-an-app-on-a-phone-a-website-on-a-desktop).
+1. **Use the primitives.** `components/ui/` holds them. See [The primitives](#the-primitives). Do not re-create them inline. If one is missing a variant, add the variant to the primitive and show it on `/design`.
+2. **Use tokens only.** No raw hex, no arbitrary `shadow-[...]`, no arbitrary radius, no default Tailwind colour. If you need a value that does not exist, add a token and say why. `pnpm lint` fails on each of these. See [Enforcement](#enforcement).
+3. **Ink is not black.** Text uses `ink`, `ink-soft` and `ink-faint`. Never `black`, `#000` or `neutral-900`.
+4. **Outlines are 1px hairlines.** `border border-line` on cards, `border-line-strong` on inputs and secondary buttons. A coloured rail is `border-l-4`; a coloured tile edge is `border-t-4`. No other widths.
+5. **Shadows are soft and token-only.** `shadow-card` on cards, `shadow-raised` on a lifted element, `shadow-float` on a sheet, `shadow-glow` on the primary button and the logo only.
+6. **Radius follows hierarchy.** `rounded-dot` on calendar cells and checkboxes, `rounded-box` on badges, `rounded-input` on inputs, `rounded-card` on cards, `rounded-sheet` on hero bands, `rounded-pill` on buttons and chips.
+7. **One primary action per screen.** Exactly one `Button variant="primary"` (pink) is visible in any viewport. The rest are `secondary`, `dark`, `night` or `quiet`.
+8. **Three typefaces, fixed roles.** `font-display` (Space Grotesk, 500 to 700) for headings and big numbers. `font-sans` (Inter, 400 to 600) for text. `font-mono` (JetBrains Mono, 400 and 500) for code, counts and short metadata. No fourth face.
+9. **Colour has a job.** `brand` means "do this". `night` means "this matters most on the page". `track-1` to `track-11` mean "this track". `easy`, `medium` and `hard` mean difficulty, and also right (`easy`) and wrong (`hard`) answers. `gold` means XP and milestones. Never pick a colour because it looks nice.
+10. **One dark band per section.** A page has one `bg-night-glow` hero. A second dark element, such as the loop readiness band or a senior signal, uses `bg-night-soft` or sits inside a white card.
+11. **Motion answers the user.** Press, navigate, open, select, finish, error. No scroll-triggered fade-ins, no looping decoration. See [Motion](#motion).
+12. **Mobile first, 320px up, then a real desktop.** A phone gets an app. From `md` (768px) up, the same screen is a website with a sidebar. Tap targets are 44px or more on a phone. No horizontal scroll. See [Responsive](#responsive-an-app-on-a-phone-a-website-on-a-desktop).
 
 A site built from this template also passes [the site checklist](#the-site-checklist): working links, a mobile menu, a favicon, titles and descriptions, a 404 page, clear feedback, and contact details you can tap.
 
@@ -43,61 +45,77 @@ All tokens are in `styles/globals.css`. Tailwind v4 generates the utilities.
 
 ### Colour
 
-| Token                           | Utility examples             | Use it for                                      |
-| ------------------------------- | ---------------------------- | ----------------------------------------------- |
-| `paper`                         | `bg-paper`                   | The page. Nothing else.                         |
-| `surface`                       | `bg-surface`                 | Cards, inputs, sheets, bubbles                  |
-| `sunken`                        | `bg-sunken`                  | Wells, empty slots, disabled fills              |
-| `ink`                           | `text-ink`, `fill-ink`       | Body text, headings, face features              |
-| `ink-soft`                      | `text-ink-soft`              | Secondary text. Never for anything tappable.    |
-| `line`                          | `border-line`                | Every outline                                   |
-| `brand`                         | `bg-brand`                   | The primary action, focus rings, selected state |
-| `brand-soft`                    | `bg-brand-soft`              | Highlight fills, the mascot's background        |
-| `butter` `soda` `grape` `peach` | `bg-butter` …                | Identity only (see rule 9)                      |
-| `blush`                         | `fill-blush`                 | Cheeks on faces. Nowhere else.                  |
-| `danger`                        | `bg-danger`, `border-danger` | Errors — always with words, never colour alone  |
-| `success`                       | `bg-success`                 | Confirmations — always with words               |
+| Token                                     | Utility examples                 | Use it for                                          |
+| ----------------------------------------- | -------------------------------- | --------------------------------------------------- |
+| `paper`                                   | `bg-paper`                       | The page. Nothing else.                             |
+| `surface`                                 | `bg-surface`                     | Cards, inputs, sheets                               |
+| `sunken`                                  | `bg-sunken`                      | Wells, table heads, empty slots, disabled fills     |
+| `ink` `ink-soft` `ink-faint`              | `text-ink`, `text-ink-soft`      | Headings and labels, body text, metadata            |
+| `line` `line-strong`                      | `border-line`                    | Card hairlines; input and secondary button outlines |
+| `brand` `brand-deep` `brand-soft`         | `bg-brand`, `text-brand-deep`    | The primary action, links, the current item         |
+| `iris`                                    | `text-iris`                      | XP, and the second stop of the brand gradient       |
+| `night` `night-deep` `night-raised`       | `bg-night`, `bg-night-raised`    | Hero bands, dark cards, code blocks                 |
+| `night-line` `on-night` `on-night-soft`   | `border-night-line`              | Outlines and text on a night surface                |
+| `gold` `gold-deep` `gold-ink`             | `bg-gold`, `text-gold-ink`       | XP rings, milestones, the warm call to action       |
+| `easy` `medium` `hard` (+ `-bar` `-soft`) | `bg-easy-soft text-easy`         | Difficulty tags and bars; right and wrong answers   |
+| `track-1` … `track-11`                    | `bg-track-2`, `border-l-track-2` | One colour per track. Use `lib/course/track-style`. |
+| `heat-0` … `heat-4`                       | `bg-heat-3`                      | The study calendar only                             |
 
-Text on a coloured fill is always `text-ink`. Never white text on `brand` or a candy tone — the contrast fails.
+White text (`text-on-night`) goes on `night`, `ink` and `brand`. Text on `gold` is `text-gold-ink`. Text on a `-soft` fill uses the matching dark tone.
 
 ### Type
 
-| Utility        | Face         | Use it for                                          |
-| -------------- | ------------ | --------------------------------------------------- |
-| `text-hero`    | display      | One per page. The page's single biggest statement.  |
-| `text-title`   | display      | Section headings                                    |
-| `text-heading` | display/sans | Card titles, large buttons                          |
-| `text-body`    | sans         | Everything you read                                 |
-| `text-small`   | sans         | Hints, captions, metadata                           |
-| `text-key`     | display      | Room keys, scores, countdowns — big glanceable data |
+| Utility        | Face    | Use it for                                          |
+| -------------- | ------- | --------------------------------------------------- |
+| `text-hero`    | display | The landing headline only                           |
+| `text-display` | display | A page title and section titles on the landing page |
+| `text-title`   | display | Card and section headings                           |
+| `text-heading` | display | Small card titles, list item titles                 |
+| `text-lead`    | sans    | The line under a page title                         |
+| `text-body`    | sans    | Everything you read                                 |
+| `text-small`   | sans    | Hints, captions, metadata                           |
+| `text-micro`   | sans    | Chips, table heads, eyebrows                        |
+| `text-key`     | display | Big glanceable numbers: streak, XP, counts          |
+| `eyebrow`      | sans    | The small uppercase label above a section title     |
 
-- Sentence case everywhere. No ALL-CAPS labels, no tracked-out small caps. The only uppercase text is a room key.
-- Body line length stays under ~70 characters (`max-w-prose`).
-- Do not emphasise a single word inside a headline with colour, italic or a highlight.
+- Sentence case for every heading, button and label. The only uppercase text is an `eyebrow` and a table head.
+- Body line length stays under about 70 characters (`max-w-prose` or `max-w-2xl`).
+- One word in the landing headline can carry `text-gradient-brand`. Nothing else uses a gradient on text.
 
 ### Radius, shadow, motion
 
-| Token              | Value                    | Use                                      |
-| ------------------ | ------------------------ | ---------------------------------------- |
-| `rounded-box`      | 8px                      | Checkboxes only                          |
-| `rounded-input`    | 14px                     | Inputs, small wells                      |
-| `rounded-card`     | 22px                     | Cards, bubbles                           |
-| `rounded-sheet`    | 32px                     | Modals, bottom sheets, hero panels       |
-| `rounded-pill`     | 999px                    | Buttons, chips, avatars (`rounded-full`) |
-| `shadow-mochi-sm`  | 0 2px 0 ink              | Chips, bubbles, small pressables         |
-| `shadow-mochi`     | 0 4px 0 ink              | Cards, buttons                           |
-| `shadow-mochi-lg`  | 0 6px 0 ink              | One hero element per page, open sheets   |
-| `squish` (utility) | hover lifts, press sinks | Anything pressable. Buttons have it.     |
-| `ease-squish`      | overshoot curve          | Things that pop in or get pressed        |
-| `ease-settle`      | no overshoot             | Things that move from A to B             |
-| `ease-spring`      | soft overshoot           | A selection that slides into place       |
-| `animate-pop`      | 420ms scale-in           | A win, a new player joining              |
-| `animate-wobble`   | 520ms                    | A wrong answer, an invalid key           |
-| `animate-blink`    | every 6s                 | The mascot's eyes. Only the mascot.      |
+| Token              | Value                   | Use                                  |
+| ------------------ | ----------------------- | ------------------------------------ |
+| `rounded-dot`      | 3px                     | Calendar cells, checkboxes           |
+| `rounded-box`      | 6px                     | Number badges, keyboard hints        |
+| `rounded-input`    | 12px                    | Inputs, options, small wells         |
+| `rounded-card`     | 18px                    | Cards                                |
+| `rounded-sheet`    | 26px                    | Hero bands, sheets, call to action   |
+| `rounded-pill`     | 999px                   | Buttons, chips, pills                |
+| `shadow-card`      | soft, 1 to 3px          | Cards                                |
+| `shadow-raised`    | soft, larger            | A lifted card, the sample question   |
+| `shadow-float`     | soft, largest           | Sheets and dialogs                   |
+| `shadow-glow`      | pink glow               | The primary button and the logo only |
+| `squish` (utility) | hover lifts, press dips | Anything pressable. Buttons have it. |
+| `ease-settle`      | no overshoot            | Things that move from A to B         |
+| `ease-spring`      | soft overshoot          | A selection that slides into place   |
+| `animate-pop`      | 420ms scale-in          | A finish, the XP win                 |
+| `animate-wobble`   | 520ms                   | A wrong answer, an invalid field     |
+| `animate-check`    | 320ms                   | A tick or a cross that appears       |
+
+Background utilities: `bg-night-glow` (the hero), `bg-night-soft` (a second dark band), `bg-night-violet` (the Uber card), `bg-sun` (the warm call to action and the next milestone), `bg-milestone` (a pink-to-orange bar), `bg-brand-gradient` (the learner's initial), `bg-wash` (the landing corner glow).
 
 The full motion set is in [Motion](#motion).
 
-Not every card needs a shadow. A shadow says "this is an object you can press or pick up". Static information inside a card sits flat.
+---
+
+## The app shell
+
+A signed-in page renders `AppShell`. It replaces the public `SiteHeader` and `Footer` with CSS (`body:has([data-app-shell])` in `globals.css`), so the server sends one HTML and nothing flashes.
+
+- `variant="sidebar"` for the dashboard and list pages. From `md` up: a fixed 224px sidebar with the destinations, the streak card and the learner card, and a top bar with search, the streak and the XP. On a phone: a slim top bar with the logo, a streak pill and an XP pill. The `TabBar` stays at the bottom.
+- `variant="focus"` for a lesson or a problem. No sidebar; a breadcrumb, the streak, the XP and the learner's initial. On a phone, a back arrow replaces the logo.
+- A list page starts with `PageHeading` (eyebrow, title, lead). A detail page starts with a `bg-night-glow` hero.
 
 ---
 
@@ -199,30 +217,32 @@ A product sets its theme once, with `THEME` in `app/layout.tsx`. The theme re-as
 | `calm`     | Wellness, habits, focus, utilities             | **Medium** — mascot on empty states and completions only, no stickers          |
 | `night`    | Dark products: map trackers, gaming companions | **Low** — mascot on loading, empty and error states only; faces on avatars     |
 
-Products with a formal or ceremonial tone (a wedding site, a legal page, a portfolio for employers) do **not** use Mochi. They use the same structure tokens (spacing, radius, type scale discipline) with their own palette and type. Say so in that project's `CLAUDE.md`.
+Products with a formal or ceremonial tone (a wedding site, a legal page, a portfolio for employers) do **not** use this language. They use the same structure tokens (spacing, radius, type scale discipline) with their own palette and type. Say so in that project's `CLAUDE.md`.
 
 Budget limits per viewport, all themes:
 
 - One `peek` card.
 - One `Speech` bubble.
 - Two `Sticker`s (zero in `calm` and `night`).
-- One `shadow-mochi-lg` element.
+- One `bg-night-glow` hero.
 
 ---
 
 ## Signature patterns
 
-These make Mochi recognisable. Use them; do not invent new decorative devices.
+These make Loop Ready recognisable. Use them; do not invent new decorative devices.
 
-**The face.** `<Face mood="happy" />`. Two dot eyes, a small mouth, blush. Moods: `happy`, `wow`, `wink`, `sleepy`, `sad`. Pick the mood from the situation: `wow` for a win, `sad` for an error, `sleepy` for an empty or idle state.
+**The hero band.** A `bg-night-glow` band at the top of a page with an eyebrow chip, the title, one line of context, one primary action and a row of stats. The dashboard, the track, the lesson, the problem and the loop guide each have one.
 
-**The peek.** `<Card peek={<Avatar name={player} size="lg" />}>`. A face sits over the top edge of a card, as if it is looking in. Use it for the one card that matters most on the screen — the join form, the winner, the current player.
+**The track colour.** Each track has a hue from `trackStyle(slug)` in `lib/course/track-style.ts`: a `border-l-4` rail on a list row, a `border-t-4` edge on a tile, a dot in a chip. Never assemble the class name at runtime.
 
-**The squish.** Every pressable surface uses the `squish` utility. On press it sinks 3px onto its base. Never change the distance or add a scale effect on top.
+**The ring.** `ProgressRing` shows a ratio: gold for XP on night, brand for problems solved, a wedge for loop readiness. The number in the middle always says the same value in words for a screen reader.
 
-**The moment.** When the user achieves something (joins, wins, completes), the screen reacts once: `animate-pop` on the result, the mascot changes mood, maybe one `Speech` line. Then it is quiet again.
+**Numbered sections.** A lesson body is a stack of white cards, one per `##` heading, each with a number badge and a rail in a repeating hue (`Prose sectioned`). A senior signal is a dark card inside the stack.
 
-**Generated avatars.** `<Avatar name="momo" />` derives colour and mood from the name. Never use letter initials in circles. Never use random avatars that change between renders.
+**The moment.** When the learner finishes something, the screen reacts once: `animate-pop` on the XP, the mascot changes mood, one `Speech` line. Then it is quiet again.
+
+**The learner's initial.** The sidebar and the focus top bar show the learner's initial on `bg-brand-gradient`. Elsewhere, `<Avatar name={uid} />` derives a stable face from the uid.
 
 ---
 
@@ -313,7 +333,7 @@ The source order is the phone order. Screen readers and the keyboard follow it a
 
 ## Layout
 
-- **Left-aligned** text and forms. Centre only a room key, a single score, or a lone empty-state message.
+- **Left-aligned** text and forms. Centre only a single score, or a lone empty-state message.
 - **Show the product first.** The hero shows the real thing working — a board, a map, the key entry — not a description of it. On a party game, the first viewport contains the key input.
 - **Vertical rhythm.** Sections are separated by `gap-16` (mobile) to `gap-24` (desktop). Inside a card, `gap-4`.
 - **No card grids for the sake of it.** Three identical cards in a row is not a layout. Use cards only when each one is a distinct object the user can act on (a game, a player, a room).
@@ -330,7 +350,7 @@ The interface speaks plainly. The mascot speaks warmly. Keep the two voices sepa
 - Say what the thing is or does, in the user's words. "Join with a key", not "Enter lobby credentials".
 - Buttons are verb phrases that name the result: "Create room", "Start round", "Save nickname". The same action keeps the same name everywhere — the button "Create room" produces the toast "Room created".
 - Errors say what happened and how to fix it: "Keys are 6 letters or numbers." No apologies, no "Oops".
-- Sentence case. No trailing arrows (`→`) on buttons or links. No emoji in interface text.
+- Sentence case. An arrow may follow a link or button that goes somewhere ("Read the loop guide →"), never one that saves or deletes. No emoji in interface text.
 
 **Mascot voice** (only inside `Speech`):
 
@@ -350,7 +370,7 @@ The interface speaks plainly. The mascot speaks warmly. Keep the two voices sepa
 
 If your output contains any of these, remove it before you report the task as done. Each one is a default that generated UIs produce whatever the subject.
 
-- An ALL-CAPS tracked-out label above a heading ("LIVE", "UP TO 20 PLAYERS", "FEATURES").
+- An uppercase label that is not an `eyebrow`, or an eyebrow that repeats the heading under it.
 - Numbered `01 / 02 / 03` markers on content that is not a real sequence.
 - A "How it works" section of three equal cards as the default second section.
 - Cream background with a terracotta or clay accent. Near-black with an acid-green accent.
@@ -380,48 +400,44 @@ This is the minimum, not a goal.
 
 ## Recipes
 
-**Party-game landing page, phone (first viewport, 390px wide):**
+**Signed-in dashboard, phone (390px wide):**
 
 ```
 ┌──────────────────────────────┐
-│ ◉ Playroom                   │  logo = mascot face, not a letter
-│                              │
-│ Bingo for your group chat    │  text-hero, left aligned
-│                              │
-│ ┌─(face peeks)─────────────┐ │
-│ │ Room key                 │ │  Card peek + Input code
-│ │ [ P L Z 4 K 9 ]          │ │
-│ │ [ Join game            ] │ │  the one primary
+│ ◉ Loop Ready     🔥 7  300 XP │  AppShell top bar, phone
+│ ┌──────────────────────────┐ │
+│ │ Level 2 · Data analyst   │ │  bg-night-glow hero
+│ │ Hi, Sandeep              │ │
+│ │ (60%) 300 of 400 XP      │ │  gold ring
+│ │ Streak  Best  Solved     │ │
+│ │ [ Continue: next lesson ]│ │  the one primary, full width
 │ └──────────────────────────┘ │
-│ Hosting? Create a room       │  Button quiet
-│                              │
-│ ( Home )  Games   Profile    │  TabBar, in thumb reach
+│ Problems solved · calendar   │  white cards
+│ ( Home )  Tracks  Problems   │  TabBar
 └──────────────────────────────┘
 ```
 
 **The same page, desktop (1440px wide):**
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│ ◉ Playroom                         Home   Games   Profile    │  SiteHeader, sticky
-├──────────────────────────────────────────────────────────────┤
-│                                                              │
-│   Bingo for your             ┌─(face peeks)──────────────┐   │
-│   group chat                 │ Room key                  │   │  the hero: words left,
-│                              │ [ P L Z 4 K 9 ]           │   │  the product right
-│   One line on what it is.    │ [ Join game ]             │   │
-│   Hosting? Create a room     └───────────────────────────┘   │
-│                                                              │
-└──────────────────────────────────────────────────────────────┘
+┌────────┬─────────────────────────────────────────────────────┐
+│ ◉ Loop │ [ Search problems, tracks, concepts ⌘K ]  🔥 7  ☆ 300 │
+│ Home   ├─────────────────────────────────────────────────────┤
+│ Tracks │ ┌ night hero: greeting, Continue, ring, 4 stats ──┐ │
+│ Probs  │ └─────────────────────────────────────────────────┘ │
+│        │ [ Problems solved ]  [ Study calendar ]             │
+│ 🔥 7d  │ [ Loop readiness: Uber · Google, dark band ]        │
+│ Sandeep│ [ Your tracks ]          [ Problems to try next ]   │
+└────────┴─────────────────────────────────────────────────────┘
 ```
 
-Below the fold: a live, playable mini board. Then the list of games as distinct cards, each with its own candy tone.
+**Lesson page:** the focus shell with a breadcrumb. A night hero with the lesson chip, the title and four stats. Then one white card per `##` section. Then "Check yourself" and the finish card. From `lg`, an aside with the lessons in the track, previous and next, the next milestone and "How to use this lesson".
 
-**Empty state:** a `Face mood="sleepy"` at 72px, one line of interface voice saying what goes here, one button that fills it. "No rounds yet. Start round".
+**Empty state:** a `Face mood="sleepy"` at 72px, one line saying what goes here, one button that fills it.
 
-**Error state:** `Speech mood="sad"` with the cause and the fix, plus the action as a `Button`. `animate-wobble` on the field that caused it.
+**Error state:** an `Alert tone="danger"` with the cause and the fix, plus the action as a `Button`. `animate-wobble` on the field that caused it.
 
-**Win state:** the result in `text-key` with `animate-pop`, the winner's `Avatar` as a peek, the mascot's `wow` face, one `Speech` line, one or two `Sticker`s (playroom only).
+**Finish state:** the XP in `text-key` with `animate-pop`, the mascot's `wow` face, one `Speech` line, a success `Alert`.
 
 ---
 
@@ -491,7 +507,7 @@ Rules 2 to 6 are lint checks, not reminders. The `template/design-language` bloc
 | ------------------------------------------------------------------------ | ---- |
 | A raw hex value, or an arbitrary `bg-[…]` / `shadow-[…]` / `rounded-[…]` | 2    |
 | A default Tailwind colour: `text-gray-500`, `bg-white`, `border-black`   | 3, 9 |
-| A 1px `border`, or `border-4` and wider                                  | 4    |
+| A `border-2`, `border-4` or `border-8` width (rails use `border-l-4`)    | 4    |
 | A blurred shadow: bare `shadow`, `shadow-sm`, `shadow-lg`                | 5    |
 | A default radius: `rounded-md`, `rounded-xl`                             | 6    |
 | A size outside the scale: `text-sm`, `text-2xl`                          | Type |
@@ -501,9 +517,10 @@ Each message names the rule it enforces. To step outside one, say why on the lin
 Two limits to know:
 
 - The checks read literal strings. A class name built at runtime from a variable escapes them.
-- They read `className` only. An SVG `fill` attribute is not a class name, which is why the white specular dot in `Face.tsx` is a literal `#fff` — it is a highlight on an ink pupil, not a theme colour, and it stays white in every theme.
+- They read `className` only. An SVG `fill` attribute is not a class name, which is why the white specular dot in `Face.tsx` is a literal `#fff`. It is a highlight on an ink pupil, not a theme colour, and it stays white in every theme.
+- Hex values inside `styles/globals.css` are the tokens themselves, so the check does not read that file.
 
-Everything else on this page — one primary action, the cute budget, the words, the anti-slop list — is a human judgement. No check replaces looking at the screen.
+Everything else on this page is a human judgement: one primary action, one dark band, the words and the anti-slop list. No check replaces looking at the screen.
 
 ---
 

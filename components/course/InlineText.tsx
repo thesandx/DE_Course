@@ -12,7 +12,7 @@ export function InlineText({ text }: { text: string }) {
           return (
             <code
               key={index}
-              className="bg-sunken rounded-input px-1.5 py-0.5 font-mono text-small break-words"
+              className="bg-ink/5 text-brand-deep rounded-box px-1.5 py-0.5 font-mono text-small break-words"
             >
               {run.text}
             </code>

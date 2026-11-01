@@ -39,7 +39,7 @@ export function Progress({ label, value, max = 100, valueText, className }: Prog
         aria-valuemax={safeMax}
         aria-valuenow={clamped}
         aria-valuetext={text}
-        className="bg-sunken border-line rounded-pill h-4 overflow-hidden border-2"
+        className="bg-sunken rounded-pill h-1.5 overflow-hidden"
       >
         {/* scaleX, not width: a transform animates on the compositor, a width re-lays out the page. */}
         <div

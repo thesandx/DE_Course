@@ -81,6 +81,8 @@ export interface CompanyGuide {
   slug: Company;
   name: string;
   summary: string;
+  /** Two or three short topic tags the loop leans on, shown on readiness cards. */
+  highlights: readonly string[];
   /** The guide body, in the course Markdown dialect. */
   overview: string;
   rounds: readonly LoopRound[];

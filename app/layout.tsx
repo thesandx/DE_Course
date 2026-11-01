@@ -39,24 +39,38 @@ export const viewport: Viewport = {
 };
 
 /**
- * Mochi typefaces, self-hosted from public/fonts (Latin subsets, ~72 KB total).
- * Self-hosting means the build never calls Google Fonts, so the Docker build
- * works offline. See .github/instructions/design-language.md, "Type".
+ * Loop Ready typefaces, self-hosted from public/fonts (Latin subsets, ~180 KB
+ * total, each weight loaded only when a page uses it). Space Grotesk sets the
+ * headings, Inter the text, JetBrains Mono the code. Self-hosting means the
+ * build never calls Google Fonts, so the Docker build works offline. All three
+ * are under the SIL Open Font License. See design-language.md, "Type".
  */
-const mochiy = localFont({
-  src: '../public/fonts/mochiypopone-400.woff2',
-  weight: '400',
-  variable: '--font-mochiy',
+const spaceGrotesk = localFont({
+  src: [
+    { path: '../public/fonts/space-grotesk-500.woff2', weight: '500' },
+    { path: '../public/fonts/space-grotesk-600.woff2', weight: '600' },
+    { path: '../public/fonts/space-grotesk-700.woff2', weight: '700' },
+  ],
+  variable: '--font-space-grotesk',
   display: 'swap',
 });
 
-const zenMaru = localFont({
+const inter = localFont({
   src: [
-    { path: '../public/fonts/zenmarugothic-400.woff2', weight: '400' },
-    { path: '../public/fonts/zenmarugothic-500.woff2', weight: '500' },
-    { path: '../public/fonts/zenmarugothic-700.woff2', weight: '700' },
+    { path: '../public/fonts/inter-400.woff2', weight: '400' },
+    { path: '../public/fonts/inter-500.woff2', weight: '500' },
+    { path: '../public/fonts/inter-600.woff2', weight: '600' },
   ],
-  variable: '--font-zen-maru',
+  variable: '--font-inter',
+  display: 'swap',
+});
+
+const jetbrainsMono = localFont({
+  src: [
+    { path: '../public/fonts/jetbrains-mono-400.woff2', weight: '400' },
+    { path: '../public/fonts/jetbrains-mono-500.woff2', weight: '500' },
+  ],
+  variable: '--font-jetbrains-mono',
   display: 'swap',
 });
 
@@ -88,7 +102,7 @@ export default function RootLayout({
     <html
       lang="en"
       data-theme={THEME}
-      className={`${mochiy.variable} ${zenMaru.variable}`}
+      className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
       {/*
@@ -101,14 +115,17 @@ export default function RootLayout({
       <body className="flex min-h-dvh flex-col pb-28 antialiased md:pb-0">
         <SiteHeader appName={env.appName} />
         {children}
-        <Footer
-          owner={env.appName}
-          links={[
-            { href: '/companies/uber', label: 'Uber loop guide' },
-            { href: '/companies/google', label: 'Google loop guide' },
-            { href: '/design', label: 'Design system' },
-          ]}
-        />
+        {/* Hidden while a signed-in page renders AppShell, which has its own footer. */}
+        <div data-site-chrome className="contents">
+          <Footer
+            owner={env.appName}
+            links={[
+              { href: '/companies/uber', label: 'Uber loop guide' },
+              { href: '/companies/google', label: 'Google loop guide' },
+              { href: '/design', label: 'Design system' },
+            ]}
+          />
+        </div>
         <TabBar />
       </body>
     </html>

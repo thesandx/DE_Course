@@ -46,13 +46,13 @@ export function Alert({ title, children, tone = 'info', action, className }: Ale
     <div
       role={tone === 'danger' ? 'alert' : 'status'}
       className={cn(
-        'border-line text-ink rounded-card animate-rise-in flex flex-col gap-3 border-2 p-4 sm:flex-row sm:items-start',
+        'border-line text-ink rounded-card animate-rise-in flex flex-col gap-3 border p-4 sm:flex-row sm:items-start',
         TONE_CLASS[tone],
         className,
       )}
     >
       <div className="flex flex-1 items-start gap-3">
-        <span className="bg-surface border-line inline-grid size-8 shrink-0 place-items-center rounded-full border-2">
+        <span className="bg-surface border-line inline-grid size-8 shrink-0 place-items-center rounded-full border">
           <svg
             viewBox="0 0 24 24"
             aria-hidden="true"

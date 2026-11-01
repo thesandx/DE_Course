@@ -4,9 +4,9 @@ import { notFound } from 'next/navigation';
 
 import { ProblemTable } from '@/components/course/ProblemTable';
 import { ProgressRing } from '@/components/course/ProgressRing';
-import { AppBar } from '@/components/layout/AppBar';
+import { AppShell } from '@/components/layout/AppShell';
+import { Icon } from '@/components/layout/Icon';
 import { buttonStyles } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import {
   getTrack,
   KIND_LABELS,
@@ -15,6 +15,7 @@ import {
   TRACKS,
 } from '@/lib/course/catalog';
 import { lessonId, problemId } from '@/lib/course/progress';
+import { trackNumber, trackStyle } from '@/lib/course/track-style';
 import { cn } from '@/lib/utils';
 import { requireLearner } from '@/services/learner.service';
 
@@ -36,7 +37,7 @@ export default async function TrackPage({ params }: Props) {
   const track = getTrack(slug);
   if (track === undefined) notFound();
 
-  const { progress } = await requireLearner(`/tracks/${slug}`);
+  const { name, progress, summary } = await requireLearner(`/tracks/${slug}`);
   const stats = trackProgress(track, progress.done);
   const problems = problemsForTrack(slug);
   const firstOpen =
@@ -44,34 +45,61 @@ export default async function TrackPage({ params }: Props) {
     track.lessons[0];
 
   return (
-    <>
-      <AppBar title={track.title} back={{ fallbackHref: '/tracks', label: 'Back to tracks' }} />
-      <main className="mx-auto grid w-full max-w-5xl gap-10 px-5 py-8 sm:px-8 sm:py-10 lg:grid-cols-3 lg:items-start lg:gap-12">
-        <Card tone={track.tone} className="flex flex-col gap-5 lg:sticky lg:top-24">
-          <div className="flex items-center gap-4">
-            <ProgressRing ratio={stats.ratio} label={`${track.title} progress`} />
-            <div className="flex flex-col gap-1 text-small">
-              <span>
-                <b>{stats.lessonsDone}</b> of {stats.lessonsTotal} lessons
-              </span>
-              <span>
-                <b>{stats.problemsDone}</b> of {stats.problemsTotal} problems
-              </span>
-            </div>
+    <AppShell learnerName={name} summary={summary}>
+      <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-8 md:py-8">
+        <header className="bg-night-glow rounded-sheet text-on-night flex flex-col gap-5 p-6 sm:p-8 md:flex-row md:items-center md:justify-between">
+          <div className="flex min-w-0 flex-col gap-3">
+            <p className="flex items-center gap-2">
+              <span
+                aria-hidden="true"
+                className={cn('size-2.5 rounded-full', trackStyle(slug).fill)}
+              />
+              <span className="eyebrow text-on-night-soft">Track {trackNumber(slug)}</span>
+            </p>
+            <h1 className="text-display">{track.title}</h1>
+            <p className="text-body text-on-night-soft max-w-2xl">{track.why}</p>
+            {firstOpen !== undefined ? (
+              <Link
+                href={`/tracks/${slug}/${firstOpen.slug}`}
+                className={cn(buttonStyles({ size: 'lg' }), 'mt-1 w-full sm:w-fit')}
+              >
+                {stats.lessonsDone === 0 ? 'Start the track' : 'Continue the track'}
+                <Icon name="arrow-right" className="size-4" />
+              </Link>
+            ) : null}
           </div>
-          <p>{track.why}</p>
-          {firstOpen !== undefined ? (
-            <Link
-              href={`/tracks/${slug}/${firstOpen.slug}`}
-              className={buttonStyles({ block: true })}
+          <div className="flex items-center gap-4 md:flex-col md:items-end">
+            <ProgressRing
+              ratio={stats.ratio}
+              label={`${track.title} progress`}
+              size={96}
+              thickness={9}
+              tone="gold"
+              surface="night"
             >
-              {stats.lessonsDone === 0 ? 'Start the track' : 'Continue the track'}
-            </Link>
-          ) : null}
-        </Card>
+              <span className="text-title">{Math.round(stats.ratio * 100)}%</span>
+            </ProgressRing>
+            <dl className="text-small text-on-night-soft flex flex-col gap-0.5 md:text-right">
+              <div>
+                <dt className="sr-only">Lessons</dt>
+                <dd>
+                  <b className="text-on-night">{stats.lessonsDone}</b> of {stats.lessonsTotal}{' '}
+                  lessons
+                </dd>
+              </div>
+              <div>
+                <dt className="sr-only">Problems</dt>
+                <dd>
+                  <b className="text-on-night">{stats.problemsDone}</b> of {stats.problemsTotal}{' '}
+                  problems
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </header>
 
-        <div className="flex min-w-0 flex-col gap-10 lg:col-span-2">
-          <section aria-labelledby="lessons-heading" className="flex flex-col gap-4">
+        <div className="grid gap-6 lg:grid-cols-12 lg:items-start">
+          <section aria-labelledby="lessons-heading" className="flex flex-col gap-3 lg:col-span-7">
             <h2 id="lessons-heading" className="text-title">
               Lessons
             </h2>
@@ -82,22 +110,25 @@ export default async function TrackPage({ params }: Props) {
                   <li key={lesson.slug}>
                     <Link
                       href={`/tracks/${slug}/${lesson.slug}`}
-                      className="squish border-line bg-surface shadow-mochi-sm rounded-card flex items-center gap-4 border-2 p-4"
+                      className={cn(
+                        'border-line bg-surface shadow-card hover:shadow-raised rounded-card flex items-center gap-4 border border-l-4 p-4 transition-shadow',
+                        trackStyle(slug).rail,
+                      )}
                     >
                       <span
                         aria-hidden="true"
                         className={cn(
-                          'border-line font-display inline-grid size-10 shrink-0 place-items-center rounded-full border-2',
-                          done ? 'bg-success' : 'bg-sunken',
+                          'text-small inline-grid size-9 shrink-0 place-items-center rounded-full font-mono font-semibold',
+                          done ? 'bg-easy-bar text-on-night' : 'bg-sunken text-ink-soft',
                         )}
                       >
-                        {done ? '✓' : index + 1}
+                        {done ? <Icon name="check" className="size-4" /> : index + 1}
                       </span>
                       <span className="flex min-w-0 grow flex-col gap-0.5">
-                        <span className="font-bold break-words">{lesson.title}</span>
+                        <span className="font-semibold break-words">{lesson.title}</span>
                         <span className="text-small text-ink-soft">{lesson.summary}</span>
                       </span>
-                      <span className="text-small text-ink-soft hidden shrink-0 sm:block">
+                      <span className="text-micro text-ink-faint hidden shrink-0 font-mono sm:block">
                         {lesson.minutes} min
                       </span>
                       <span className="sr-only">{done ? 'Finished.' : 'Not finished.'}</span>
@@ -108,7 +139,10 @@ export default async function TrackPage({ params }: Props) {
             </ol>
           </section>
 
-          <section aria-labelledby="problems-heading" className="flex flex-col gap-4">
+          <section
+            aria-labelledby="problems-heading"
+            className="flex min-w-0 flex-col gap-3 lg:col-span-5"
+          >
             <h2 id="problems-heading" className="text-title">
               Interview problems
             </h2>
@@ -129,6 +163,6 @@ export default async function TrackPage({ params }: Props) {
           </section>
         </div>
       </main>
-    </>
+    </AppShell>
   );
 }

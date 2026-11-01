@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 
 import { Dashboard } from '@/components/course/Dashboard';
 import { Landing } from '@/components/course/Landing';
-import { isoDay } from '@/lib/course/progress';
+import { AppShell } from '@/components/layout/AppShell';
 import { getCurrentUser } from '@/services/auth.service';
-import { getProgress } from '@/services/progress.service';
+import { loadLearner } from '@/services/learner.service';
 
 /**
  * Home. A signed-out visitor sees the course: a live question, the tracks,
@@ -25,8 +25,10 @@ export default async function HomePage() {
   const user = await getCurrentUser();
   if (user === null) return <Landing signInHref="/sign-in?next=/" />;
 
-  const progress = await getProgress(user.uid);
+  const { name, progress, summary, today } = await loadLearner(user);
   return (
-    <Dashboard name={user.displayName ?? 'there'} progress={progress} today={isoDay(new Date())} />
+    <AppShell learnerName={name} summary={summary}>
+      <Dashboard name={name} progress={progress} summary={summary} today={today} />
+    </AppShell>
   );
 }

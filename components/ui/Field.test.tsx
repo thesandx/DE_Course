@@ -29,8 +29,8 @@ describe('Field', () => {
 
 describe('controlStyles', () => {
   it('uses the danger outline only when invalid', () => {
-    expect(controlStyles(true)).toContain('border-danger');
-    expect(controlStyles(false)).toContain('border-line');
+    expect(controlStyles(true)).toContain('border-hard-bar');
+    expect(controlStyles(false)).toContain('border-line-strong');
   });
 
   it('wobbles an invalid control once, so the eye finds it', () => {

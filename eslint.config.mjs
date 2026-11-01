@@ -83,22 +83,22 @@ const designTokenSelectors = [
   {
     pattern: `${DESIGN.head}(bg|text|border|fill|stroke|ring|decoration|outline|divide|accent|caret|from|via|to)-(black|white|slate|gray|grey|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)(-\\d{2,3})?${DESIGN.tail}`,
     message:
-      'That is a default Tailwind colour, not a Mochi one. Text and outlines use `ink` and `line` — never black, white or a grey. Fills use `paper`, `surface`, `sunken`, `brand` or a candy tone. See design-language.md rules 3 and 9.',
+      'That is a default Tailwind colour, not a Loop Ready one. Text uses `ink`, `ink-soft` or `on-night`; outlines use `line`. Fills use `paper`, `surface`, `sunken`, `night`, `brand`, a track hue or a candy tone. See design-language.md rules 3 and 9.',
   },
   {
     pattern: `${DESIGN.head}text-(xs|sm|base|lg|xl|[2-9]xl)${DESIGN.tail}`,
     message:
-      'Only six text sizes exist: `text-hero`, `text-title`, `text-heading`, `text-body`, `text-small`, `text-key`. See design-language.md > Type.',
+      'Only the token text sizes exist: `text-hero`, `text-display`, `text-title`, `text-heading`, `text-lead`, `text-body`, `text-small`, `text-micro`, `text-key`. See design-language.md > Type.',
   },
   {
-    pattern: `${DESIGN.head}border(-[0148])?${DESIGN.tail}`,
+    pattern: `${DESIGN.head}border-[0248]${DESIGN.tail}`,
     message:
-      'Outlines are 2px: `border-2 border-line`. Never a 1px hairline, never 4px or more. See design-language.md rule 4.',
+      'Outlines are 1px hairlines: `border border-line`. Never 2px or more. A track rail is `border-l-4` on a list row only. See design-language.md rule 4.',
   },
   {
     pattern: `${DESIGN.head}shadow(-(2xs|xs|sm|md|lg|xl|2xl|inner|none))?${DESIGN.tail}`,
     message:
-      'Shadows are hard and straight down: `shadow-mochi-sm`, `shadow-mochi`, `shadow-mochi-lg`. A blurred grey shadow is not part of this language. See design-language.md rule 5.',
+      'Shadows are tokens: `shadow-card`, `shadow-raised`, `shadow-float`, `shadow-glow`. A default Tailwind shadow is not part of this language. See design-language.md rule 5.',
   },
   {
     pattern: `${DESIGN.head}rounded-(none|xs|sm|md|lg|xl|[2-4]xl)${DESIGN.tail}`,

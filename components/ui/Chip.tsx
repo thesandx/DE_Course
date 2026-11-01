@@ -17,8 +17,8 @@ export function Chip({ children, leading, as: Tag = 'span', className }: ChipPro
   return (
     <Tag
       className={cn(
-        'border-line bg-surface rounded-pill inline-flex min-h-10 items-center gap-2 border-2 font-medium',
-        leading !== undefined ? 'py-0.5 pr-4 pl-0.5' : 'px-4',
+        'border-line bg-surface rounded-pill text-small inline-flex min-h-8 items-center gap-1.5 border font-semibold',
+        leading !== undefined ? 'py-0.5 pr-3 pl-0.5' : 'px-3',
         className,
       )}
     >

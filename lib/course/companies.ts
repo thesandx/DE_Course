@@ -11,6 +11,7 @@ export const COMPANIES: readonly CompanyGuide[] = [
     name: 'Uber',
     summary:
       'Real-time marketplace data at huge scale: trips, pricing, payments and maps, fed by Kafka and a Hudi lakehouse.',
+    highlights: ['Streaming', 'Modeling'],
     overview: `
       Uber's data platform serves a two-sided marketplace that changes every second. Interviewers
       care about freshness, correctness of money, and systems that keep working while thousands of
@@ -101,6 +102,7 @@ export const COMPANIES: readonly CompanyGuide[] = [
     name: 'Google',
     summary:
       'Planet-scale analytics on BigQuery, Dataflow and Pub/Sub, with a structured loop and a hiring committee.',
+    highlights: ['BigQuery', 'SQL'],
     overview: `
       Google's loop is structured. Each interviewer scores you against fixed attributes, writes
       detailed feedback, and a hiring committee decides from those notes. That means every round

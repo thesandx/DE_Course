@@ -21,6 +21,8 @@ export interface CompleteButtonProps {
   doneLabel: string;
   /** Disables the button until the learner meets a condition, with the reason shown. */
   blockedReason?: string;
+  /** A second, quieter action before the button, such as a link to the previous lesson. */
+  secondary?: React.ReactNode;
   className?: string;
 }
 
@@ -41,6 +43,7 @@ export function CompleteButton({
   label,
   doneLabel,
   blockedReason,
+  secondary,
   className,
 }: CompleteButtonProps) {
   const router = useRouter();
@@ -80,7 +83,7 @@ export function CompleteButton({
       {won ? (
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-4">
-            <span className="bg-brand-soft border-line animate-pop inline-grid size-16 shrink-0 place-items-center rounded-full border-2">
+            <span className="bg-brand-soft border-line animate-pop inline-grid size-16 shrink-0 place-items-center rounded-full border">
               <Face mood="wow" size={48} />
             </span>
             <p className="text-key font-display animate-pop">+{xp} XP</p>
@@ -96,17 +99,20 @@ export function CompleteButton({
           </Button>
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
-          <Button
-            size="lg"
-            onClick={() => void save(true)}
-            disabled={busy || blockedReason !== undefined}
-            className="w-full sm:w-auto"
-          >
-            {busy ? 'Saving' : `${label} for ${xp} XP`}
-          </Button>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+            {secondary ?? <span />}
+            <Button
+              size="lg"
+              onClick={() => void save(true)}
+              disabled={busy || blockedReason !== undefined}
+              className="w-full sm:w-auto"
+            >
+              {busy ? 'Saving' : `${label} · +${xp} XP`}
+            </Button>
+          </div>
           {blockedReason !== undefined ? (
-            <p className="text-small text-ink-soft">{blockedReason}</p>
+            <p className="text-small text-ink-soft sm:text-right">{blockedReason}</p>
           ) : null}
         </div>
       )}

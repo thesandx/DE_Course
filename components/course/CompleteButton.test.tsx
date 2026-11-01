@@ -23,7 +23,7 @@ describe('CompleteButton', () => {
   it('saves, shows the XP win and refreshes the page', async () => {
     const fetchMock = mockFetch(200);
     render(<CompleteButton {...props} done={false} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Mark solved for 40 XP' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mark solved · +40 XP' }));
     expect(await screen.findByText('+40 XP')).toBeInTheDocument();
     expect(refresh).toHaveBeenCalled();
     const body = JSON.parse(String((fetchMock.mock.calls[0]?.[1] as RequestInit).body)) as unknown;

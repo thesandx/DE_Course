@@ -52,7 +52,7 @@ export function BackButton({
       onClick={goBack}
       aria-label={label}
       className={cn(
-        'squish border-line bg-surface inline-grid size-11 shrink-0 place-items-center rounded-full border-2',
+        'squish border-line bg-surface inline-grid size-11 shrink-0 place-items-center rounded-full border',
         className,
       )}
     >

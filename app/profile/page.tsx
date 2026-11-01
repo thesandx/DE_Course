@@ -1,15 +1,16 @@
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 
 import { SignOutButton } from '@/components/auth/SignOutButton';
-import { AppBar } from '@/components/layout/AppBar';
+import { AppShell } from '@/components/layout/AppShell';
+import { PageHeading } from '@/components/layout/PageHeading';
 import { ProfileForm } from '@/components/profile/ProfileForm';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { formatPhoneForDisplay } from '@/lib/phone';
-import { getCurrentUser, type SessionUser } from '@/services/auth.service';
+import type { SessionUser } from '@/services/auth.service';
+import { requireLearner } from '@/services/learner.service';
 import { requireUserProfile } from '@/services/user.service';
 
 /**
@@ -19,10 +20,10 @@ import { requireUserProfile } from '@/services/user.service';
  * arrives filled in. Only the form is client code. A signed-out visitor goes
  * to sign-in and comes back here afterwards.
  *
- * The session check comes first, outside any Suspense boundary. It reads only
- * the cookie, so it is fast, and a signed-out visitor gets a real 307. The
- * Firestore read is slower, so it streams in behind a skeleton in the page's
- * shape while the app bar is already on screen. Nothing jumps when it lands.
+ * The session check comes first, outside any Suspense boundary, so a
+ * signed-out visitor gets a real 307. It also reads the learner's progress,
+ * which the shell's streak and XP need. The profile read streams in behind a
+ * skeleton in the page's shape while the shell is already on screen.
  *
  * Do not add a `loading.tsx` here. It wraps the whole page in Suspense, so
  * the response starts before `redirect()` runs. The redirect then becomes a
@@ -40,23 +41,26 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function ProfilePage(): Promise<React.JSX.Element> {
-  const user = await getCurrentUser();
-  if (user === null) redirect('/sign-in?next=/profile');
+  const { user, name, summary } = await requireLearner('/profile');
 
   return (
-    <>
-      <AppBar title="Profile" back={{ fallbackHref: '/', label: 'Back to home' }} />
+    <AppShell learnerName={name} summary={summary}>
+      <div className="mx-auto w-full max-w-5xl px-4 pt-6 sm:px-8 md:pt-8">
+        <PageHeading eyebrow="Account" title="Profile">
+          Level {summary.level.number} · {summary.level.title} · {summary.xp} XP
+        </PageHeading>
+      </div>
 
       {/*
         One column on a phone. From lg, the page frame splits: the identity
         card stays in view on the left while the details scroll on the right.
       */}
-      <main className="mx-auto grid w-full max-w-5xl gap-8 px-5 py-8 sm:px-8 sm:py-12 lg:grid-cols-3 lg:items-start lg:gap-12">
+      <main className="mx-auto grid w-full max-w-5xl gap-8 px-4 py-6 sm:px-8 md:py-8 lg:grid-cols-3 lg:items-start lg:gap-12">
         <Suspense fallback={<ProfileSkeleton />}>
           <ProfileDetails user={user} />
         </Suspense>
       </main>
-    </>
+    </AppShell>
   );
 }
 

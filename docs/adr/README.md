@@ -39,3 +39,4 @@ Do **not** write one for a routine choice with an obvious answer. An ADR per pul
 | [0004](./0004-use-firestore-and-cloud-storage.md)                           | Use Firestore and Cloud Storage for data and files                    | Accepted |
 | [0005](./0005-use-firebase-auth-for-sign-in.md)                             | Use Firebase Auth for sign-in, with server-side session cookies       | Accepted |
 | [0006](./0006-store-course-content-in-code-and-progress-in-one-document.md) | Store course content in code and progress in one document per learner | Accepted |
+| [0007](./0007-adopt-the-loop-ready-visual-language.md)                      | Adopt the Loop Ready visual language in place of Mochi                | Accepted |

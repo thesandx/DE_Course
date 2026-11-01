@@ -104,7 +104,7 @@ export default function DesignPage() {
   return (
     <PageShell>
       <header className="flex flex-col gap-4">
-        <span className="bg-brand-soft border-line shadow-mochi inline-grid size-20 place-items-center rounded-full border-2">
+        <span className="bg-brand-soft border-line shadow-card inline-grid size-20 place-items-center rounded-full border">
           <Face size={64} blink label="The Mochi face" />
         </span>
         <h1 className="text-hero">Mochi</h1>
@@ -137,7 +137,7 @@ export default function DesignPage() {
               {SWATCHES.map((swatch) => (
                 <li key={swatch.name} className="flex flex-col gap-2">
                   <span
-                    className={`border-line rounded-input block h-16 border-2 ${swatch.className}`}
+                    className={`border-line rounded-input block h-16 border ${swatch.className}`}
                   />
                   <span className="font-medium">{swatch.name}</span>
                   <span className="text-small text-ink-soft">{swatch.use}</span>
@@ -298,7 +298,7 @@ export default function DesignPage() {
 
           <section id="page-chrome" className="flex flex-col gap-5">
             <h2 className="text-title">Page chrome</h2>
-            <div className="border-line bg-paper rounded-card overflow-hidden border-2">
+            <div className="border-line bg-paper rounded-card overflow-hidden border">
               <Header
                 appName="Playroom"
                 links={[

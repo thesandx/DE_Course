@@ -2,13 +2,33 @@ import 'server-only';
 
 import { redirect } from 'next/navigation';
 
-import type { ProgressRecord } from '@/lib/course/progress';
+import { isoDay, type ProgressRecord } from '@/lib/course/progress';
+import { type LearnerSummary, summarize } from '@/lib/course/summary';
 import { getCurrentUser, type SessionUser } from '@/services/auth.service';
 import { getProgress } from '@/services/progress.service';
 
 export interface Learner {
   user: SessionUser;
+  /** The name the shell and the dashboard greet. */
+  name: string;
   progress: ProgressRecord;
+  /** XP, level, streaks and recent items, derived once for the page. */
+  summary: LearnerSummary;
+  /** `YYYY-MM-DD`, the day the summary was derived for. */
+  today: string;
+}
+
+/** The learner, for a signed-in user. Shared by `requireLearner` and the home page. */
+export async function loadLearner(user: SessionUser): Promise<Learner> {
+  const progress = await getProgress(user.uid);
+  const today = isoDay(new Date());
+  return {
+    user,
+    name: user.displayName ?? 'Learner',
+    progress,
+    summary: summarize(progress, today),
+    today,
+  };
 }
 
 /**
@@ -22,5 +42,5 @@ export interface Learner {
 export async function requireLearner(returnTo: string): Promise<Learner> {
   const user = await getCurrentUser();
   if (user === null) redirect(`/sign-in?next=${encodeURIComponent(returnTo)}`);
-  return { user, progress: await getProgress(user.uid) };
+  return loadLearner(user);
 }

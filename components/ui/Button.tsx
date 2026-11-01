@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'quiet';
-export type ButtonSize = 'md' | 'lg';
+export type ButtonVariant = 'primary' | 'secondary' | 'dark' | 'night' | 'quiet';
+export type ButtonSize = 'sm' | 'md' | 'lg';
 
 export interface ButtonStyleOptions {
   variant?: ButtonVariant;
@@ -21,13 +21,18 @@ export function buttonStyles({
   className,
 }: ButtonStyleOptions = {}): string {
   return cn(
-    'inline-flex items-center justify-center gap-2 rounded-pill font-medium select-none',
-    'disabled:bg-sunken disabled:text-ink-soft disabled:cursor-not-allowed disabled:border-dashed',
-    'aria-disabled:bg-sunken aria-disabled:text-ink-soft aria-disabled:border-dashed',
-    size === 'md' && 'min-h-12 px-5 text-body',
-    size === 'lg' && 'min-h-14 px-7 text-heading',
-    variant === 'primary' && 'squish border-line bg-brand text-ink border-2',
-    variant === 'secondary' && 'squish border-line bg-surface text-ink border-2',
+    'inline-flex items-center justify-center gap-2 rounded-pill text-center font-semibold select-none',
+    'disabled:bg-sunken disabled:text-ink-faint disabled:cursor-not-allowed disabled:border-transparent disabled:shadow-none',
+    'aria-disabled:bg-sunken aria-disabled:text-ink-faint aria-disabled:shadow-none',
+    size === 'sm' && 'min-h-11 px-4 text-small md:min-h-9',
+    size === 'md' && 'min-h-11 px-5 text-body',
+    size === 'lg' && 'min-h-12 px-6 text-body',
+    variant === 'primary' && 'squish bg-brand text-on-night shadow-glow hover:bg-brand-deep',
+    variant === 'secondary' &&
+      'squish border-line-strong bg-surface text-ink hover:border-ink-faint border',
+    variant === 'dark' && 'squish bg-ink text-on-night shadow-raised',
+    variant === 'night' &&
+      'squish border-night-line bg-night-raised text-on-night hover:border-on-night-soft border',
     variant === 'quiet' &&
       'text-ink decoration-brand underline decoration-2 underline-offset-4 hover:decoration-4',
     block && 'w-full',

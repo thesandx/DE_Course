@@ -52,7 +52,7 @@ export function Header({
       )}
     >
       <Link href="/" className="font-display flex min-h-11 min-w-0 items-center gap-2">
-        <span className="bg-brand-soft border-line inline-grid size-10 shrink-0 place-items-center rounded-full border-2">
+        <span className="bg-brand-soft border-line inline-grid size-10 shrink-0 place-items-center rounded-full border">
           <Face size={32} blush={false} />
         </span>
         <span className="truncate">{appName}</span>

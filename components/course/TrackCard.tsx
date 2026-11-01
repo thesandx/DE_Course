@@ -1,23 +1,15 @@
 import Link from 'next/link';
 
 import { ProgressRing } from '@/components/course/ProgressRing';
+import { trackNumber, trackStyle } from '@/lib/course/track-style';
 import { cn } from '@/lib/utils';
-import type { TrackTone } from '@/types/course';
-
-const TONE_CLASS: Record<TrackTone, string> = {
-  butter: 'bg-butter',
-  soda: 'bg-soda',
-  grape: 'bg-grape',
-  peach: 'bg-peach',
-};
 
 export interface TrackCardProps {
   href: string;
+  /** The track's slug. It picks the track's number and colour. */
+  slug: string;
   title: string;
   summary: string;
-  tone: TrackTone;
-  /** "Track 2", so the study order is visible. */
-  eyebrow: string;
   lessons: number;
   problems: number;
   /** 0 to 1. Omit for a signed-out preview. */
@@ -26,15 +18,14 @@ export interface TrackCardProps {
 }
 
 /**
- * One track as a card you press. The candy tone is the track's identity and
- * stays the same everywhere the track appears.
+ * One track as a card you press: a white card with the track's colour on the
+ * top edge, the same colour the track has everywhere else.
  */
 export function TrackCard({
   href,
+  slug,
   title,
   summary,
-  tone,
-  eyebrow,
   lessons,
   problems,
   ratio,
@@ -44,28 +35,25 @@ export function TrackCard({
     <Link
       href={href}
       className={cn(
-        'squish border-line shadow-mochi rounded-card flex h-full flex-col gap-4 border-2 p-5',
-        TONE_CLASS[tone],
+        'bg-surface border-line shadow-card hover:shadow-raised rounded-card flex h-full flex-col gap-3 border border-t-4 p-5 transition-shadow',
+        trackStyle(slug).edge,
         className,
       )}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-1">
-          <span className="text-small font-bold">{eyebrow}</span>
-          <h3 className="text-heading font-display break-words">{title}</h3>
+          <span className="eyebrow text-ink-faint">Track {trackNumber(slug)}</span>
+          <h2 className="text-heading break-words">{title}</h2>
         </div>
         {ratio !== undefined ? (
-          <ProgressRing
-            ratio={ratio}
-            label={`${title} progress`}
-            size={64}
-            className="text-small"
-          />
+          <ProgressRing ratio={ratio} label={`${title} progress`} size={52} thickness={5}>
+            <span className="text-micro">{Math.round(ratio * 100)}%</span>
+          </ProgressRing>
         ) : null}
       </div>
-      <p className="text-small grow">{summary}</p>
-      <p className="text-small font-bold">
-        {lessons} lessons and {problems} problems
+      <p className="text-small text-ink-soft grow">{summary}</p>
+      <p className="text-micro text-ink-faint font-mono">
+        {lessons} lessons · {problems} problems
       </p>
     </Link>
   );
