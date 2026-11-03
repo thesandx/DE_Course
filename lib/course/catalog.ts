@@ -7,6 +7,7 @@
 
 import { COMPANIES } from '@/lib/course/companies';
 import { type DoneMap, LESSON_XP, lessonId, PROBLEM_XP, problemId } from '@/lib/course/progress';
+import * as ai from '@/lib/course/tracks/ai';
 import * as architecture from '@/lib/course/tracks/architecture';
 import * as behavioral from '@/lib/course/tracks/behavioral';
 import * as dbt from '@/lib/course/tracks/dbt';
@@ -37,6 +38,7 @@ const MODULES = [
   quality,
   architecture,
   systemDesign,
+  ai,
   behavioral,
 ] as const;
 
