@@ -16,6 +16,7 @@ import * as orchestration from '@/lib/course/tracks/orchestration';
 import * as playbook from '@/lib/course/tracks/playbook';
 import * as python from '@/lib/course/tracks/python';
 import * as quality from '@/lib/course/tracks/quality';
+import * as snowflakeDatabricks from '@/lib/course/tracks/snowflake-databricks';
 import * as spark from '@/lib/course/tracks/spark';
 import * as sql from '@/lib/course/tracks/sql';
 import * as streaming from '@/lib/course/tracks/streaming';
@@ -32,6 +33,7 @@ const MODULES = [
   dbt,
   streaming,
   lakehouse,
+  snowflakeDatabricks,
   quality,
   architecture,
   systemDesign,

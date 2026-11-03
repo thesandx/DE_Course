@@ -34,6 +34,7 @@ const STYLES: readonly Omit<TrackStyle, 'number'>[] = [
   { fill: 'bg-track-11', rail: 'border-l-track-11', edge: 'border-t-track-11' },
   { fill: 'bg-track-12', rail: 'border-l-track-12', edge: 'border-t-track-12' },
   { fill: 'bg-track-13', rail: 'border-l-track-13', edge: 'border-t-track-13' },
+  { fill: 'bg-track-15', rail: 'border-l-track-15', edge: 'border-t-track-15' },
 ];
 
 export function trackStyle(slug: string): TrackStyle {
