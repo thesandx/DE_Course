@@ -290,6 +290,248 @@ export const track: Track = {
         },
       ],
     },
+    {
+      slug: 'kafka-connect-cdc',
+      title: 'Kafka Connect and change data capture',
+      summary:
+        'Run source and sink connectors, capture database changes with Debezium, and handle bad records without stopping.',
+      minutes: 15,
+      body: `
+        Most data does not enter Kafka from code a team wrote. It enters through **Kafka Connect**,
+        a framework that runs reusable connectors: a source connector reads a system and writes
+        to topics, a sink connector reads topics and writes to a system.
+
+        ## How Connect runs
+
+        - A **worker** is a JVM process. In distributed mode, workers with the same group id form
+          a cluster and share the work.
+        - A **connector** is a configuration (JSON over a REST API). It splits itself into
+          **tasks**, the units of parallelism. A JDBC source might run one task per table; a sink
+          runs up to one task per partition.
+        - The cluster stores connector configs, source offsets and status in three internal
+          topics. Kill a worker and its tasks restart on the others from the stored offsets.
+        - **Converters** turn records into bytes: Avro, Protobuf or JSON Schema with a schema
+          registry, or plain JSON. **Single message transforms (SMTs)** make small per-record
+          changes: rename a field, mask a column, route by a value.
+
+        ## CDC with Debezium
+
+        Debezium source connectors read the database’s own change log: the MySQL binlog, the
+        Postgres write-ahead log through a replication slot, the SQL Server change tables. A new
+        connector first takes a **snapshot** of the existing rows, then streams changes. Each
+        event carries the row «before» and «after», the operation (create, update, delete), and
+        the log position. A delete is followed by a **tombstone** (a record with the key and a
+        null value), so a compacted topic drops the key.
+
+        > [!trap] A stopped Postgres connector can fill the database disk
+        > A replication slot keeps WAL until its consumer confirms it. If the connector is down
+        > for a day, the primary keeps a day of WAL. Alert on slot lag, and set
+        > «max_slot_wal_keep_size» so the database protects itself.
+
+        ## The outbox pattern
+
+        Capturing raw tables couples consumers to a service’s private schema. With the
+        **outbox pattern**, the service writes its business event to an «outbox» table in the
+        same transaction as the state change, and Debezium publishes only that table. The event
+        is a public contract, and it cannot be lost or sent for a rolled-back transaction.
+
+        ## Errors without stopping the pipeline
+
+        | Setting | Effect |
+        |---|---|
+        | «errors.tolerance=none» | Default. The first bad record fails the task. |
+        | «errors.tolerance=all» | Skip records that fail conversion or transforms |
+        | «errors.deadletterqueue.topic.name» | Sink only: send failed records to a DLQ topic with headers that say why |
+
+        > [!senior] What a senior answer adds
+        > Say how the pipeline restarts (offsets in Kafka, so a worker loss is a rebalance), how
+        > schema changes are governed (registry compatibility mode, usually backward), how deletes
+        > flow (tombstones), and that someone owns the dead letter queue. A DLQ nobody reads is
+        > silent data loss.
+      `,
+      checks: [
+        {
+          question:
+            'Debezium on Postgres has been stopped for 20 hours. What is the main operational risk?',
+          options: [
+            'Kafka deletes the topic',
+            'The replication slot retains WAL on the primary, which can fill its disk',
+            'The connector loses its snapshot',
+            'Consumers see duplicate tombstones',
+          ],
+          answer: 1,
+          why: 'Postgres keeps WAL until the slot’s consumer confirms it, so a stopped connector grows WAL on the primary.',
+        },
+        {
+          question: 'Why publish an outbox table instead of capturing the orders table directly?',
+          options: [
+            'It is faster to snapshot',
+            'The event becomes a stable contract written in the same transaction as the change',
+            'Debezium cannot read normal tables',
+            'It removes the need for a schema registry',
+          ],
+          answer: 1,
+          why: 'The outbox decouples consumers from internal tables, and the same transaction guarantees the event matches committed state.',
+        },
+      ],
+    },
+    {
+      slug: 'kafka-streams-ksqldb',
+      title: 'Kafka Streams and ksqlDB',
+      summary:
+        'Explain streams and tables, state stores, co-partitioning and when a library beats a cluster like Flink.',
+      minutes: 15,
+      body: `
+        **Kafka Streams** is a Java library, not a cluster. You embed it in an ordinary service,
+        run several copies, and Kafka’s consumer group protocol shares the input partitions
+        between them. There is no job manager to operate, which is its main appeal.
+
+        ## Streams and tables
+
+        | Abstraction | Meaning | Example |
+        |---|---|---|
+        | «KStream» | Every record is an event | Each trip request |
+        | «KTable» | The latest value per key; a record is an update | Each driver’s current status |
+        | «GlobalKTable» | A KTable copied in full to every instance | A small list of cities |
+
+        A stream aggregated by key becomes a table. A table’s change log is a stream. This
+        **stream-table duality** is the core idea, and it is also how state survives a crash.
+
+        ## State stores and changelogs
+
+        Aggregations and joins keep state in a local store (RocksDB by default). Every write to
+        the store is also written to a compacted **changelog topic**. When an instance dies, the
+        partition moves and the new owner rebuilds the store from the changelog. Restoring a
+        large store can take minutes, so production apps set **standby replicas**, which keep a
+        warm copy on another instance.
+
+        ## Co-partitioning
+
+        A stream-table join is local: each instance joins the partitions it owns. That works only
+        if both topics have the **same number of partitions and the same key**. If not, Kafka
+        Streams writes a **repartition topic** first, which doubles the traffic for that step. A
+        GlobalKTable avoids the requirement because every instance has all of it.
+
+        ## Exactly once
+
+        «processing.guarantee=exactly_once_v2» wraps the input offsets, state store changelog
+        writes and output records in one Kafka transaction. It holds inside Kafka. A call to an
+        external API is still at least once.
+
+        ## ksqlDB
+
+        ksqlDB puts SQL on top of Kafka Streams: «CREATE STREAM», «CREATE TABLE AS SELECT» and
+        windowed aggregations run as persistent queries on a ksqlDB cluster. It is quick for
+        simple transformations and filters. For new work, many teams now pick Flink SQL, which
+        Confluent Cloud also leads with; know both names and the trade-off.
+
+        | Choose | When |
+        |---|---|
+        | Kafka Streams | Input and output are Kafka, logic lives in a service your team runs, state fits per instance |
+        | Flink | Many sources and sinks, very large state, event-time windows over long periods, SQL for analysts |
+        | ksqlDB or Flink SQL | Simple filters, projections and aggregations owned by people who prefer SQL |
+
+        > [!senior] Say what the library costs
+        > No cluster to run, but scaling is capped by the input partition count, a rebalance
+        > pauses processing while stores restore, and large state means long restores. Standby
+        > replicas and static membership are the usual fixes.
+      `,
+      checks: [
+        {
+          question:
+            'A Kafka Streams app joins a trips topic (64 partitions, key trip_id) with a drivers table (32 partitions, key driver_id). What happens?',
+          options: [
+            'The join fails at startup forever',
+            'Kafka Streams repartitions the trips stream by driver_id through an internal topic before joining',
+            'It joins only the first 32 partitions',
+            'It uses a GlobalKTable automatically',
+          ],
+          answer: 1,
+          why: 'Joins need co-partitioned inputs. The library re-keys and writes a repartition topic, which costs extra traffic.',
+        },
+      ],
+    },
+    {
+      slug: 'kraft-and-rebalancing',
+      title: 'KRaft, rebalancing and running Kafka',
+      summary:
+        'Know how Kafka manages metadata without ZooKeeper and how consumer groups rebalance without stalling.',
+      minutes: 13,
+      body: `
+        ## KRaft replaced ZooKeeper
+
+        Kafka used to keep cluster metadata (topics, partitions, leaders, configs) in ZooKeeper.
+        In **KRaft** mode, a small quorum of **controllers** stores metadata in an internal Raft
+        log, and brokers follow that log. Kafka 4.0 (2025) removed ZooKeeper entirely. A
+        ZooKeeper cluster must migrate on a 3.x bridge release before it can move to 4.x.
+
+        | | ZooKeeper era | KRaft |
+        |---|---|---|
+        | Systems to run | Kafka plus ZooKeeper | Kafka only |
+        | Controller failover | Reloads all metadata, slow on big clusters | A standby controller already has the log |
+        | Partitions per cluster | Limited by metadata load | Far higher |
+
+        Run three or five controllers, on separate machines or zones, for the same reason you
+        ran an odd ZooKeeper ensemble: a majority must survive.
+
+        ## Consumer group rebalancing
+
+        A rebalance reassigns partitions when a consumer joins, leaves or misses heartbeats.
+
+        | Protocol | Behaviour |
+        |---|---|
+        | Eager (old default) | Every member gives up every partition, then gets a new set. Everyone stops. |
+        | Cooperative sticky | Members keep what they can and give up only partitions that move |
+        | **Static membership** («group.instance.id») | A restarted pod with the same id gets its partitions back without a rebalance, within the session timeout |
+        | **Next-gen protocol (KIP-848)** | Generally available in Kafka 4.0 with «group.protocol=consumer». The broker computes assignments and changes them incrementally, with no group-wide barrier. |
+
+        > [!trap] Rolling deploys cause rebalance storms
+        > Restart 50 consumers one by one with the eager protocol and the group rebalances about
+        > 50 times, each time stopping everyone. Use cooperative or the new protocol, add static
+        > membership, and keep processing per poll well below «max.poll.interval.ms».
+
+        ## Running Kafka well
+
+        - **Replication:** factor 3, «min.insync.replicas=2», racks set so replicas spread across
+          zones («broker.rack»).
+        - **Retention:** by time and size per topic; compaction for changelog and «latest value»
+          topics; tiered storage for long replay windows.
+        - **Watch:** consumer lag per group, under-replicated partitions, offline partitions,
+          request latency, disk usage per broker.
+        - **Managed options:** Amazon MSK, Confluent Cloud, Google Cloud Managed Service for
+          Apache Kafka, Aiven. They remove broker operations, not partition design.
+
+        > [!senior] Mention the new primitives
+        > Kafka 4.0 also brought **share groups** (KIP-932, early access), which let several
+        > consumers read one partition like a queue, with per-record acknowledgement. Knowing
+        > where the project is going is a cheap senior signal.
+      `,
+      checks: [
+        {
+          question:
+            'Pods in a consumer group restart during every deploy and each restart stalls the whole group. What helps most?',
+          options: [
+            'More partitions',
+            'Static membership plus the cooperative or KIP-848 protocol',
+            'acks=all on the producers',
+            'A larger retention period',
+          ],
+          answer: 1,
+          why: 'Static membership lets a returning member keep its partitions, and incremental protocols avoid stopping everyone.',
+        },
+        {
+          question: 'What does a KRaft controller quorum replace?',
+          options: [
+            'The schema registry',
+            'ZooKeeper, for storing and serving cluster metadata',
+            'The consumer group coordinator',
+            'Tiered storage',
+          ],
+          answer: 1,
+          why: 'In KRaft mode, controllers keep metadata in a Raft log inside Kafka; Kafka 4.0 removed ZooKeeper.',
+        },
+      ],
+    },
   ],
 };
 
@@ -486,5 +728,164 @@ export const problems: Problem[] = [
     followUps: [
       'How does this design change if impressions are 10 times larger than clicks in bytes?',
     ],
+  },
+  {
+    slug: 'cdc-orders-into-lake',
+    title: 'Stream a Postgres orders table into the lake',
+    track: 'streaming',
+    kind: 'design',
+    difficulty: 'hard',
+    companies: ['uber', 'google'],
+    prompt: `
+      The orders service runs on Postgres (2 TB, about 3,000 writes per second at peak). Analysts
+      want an orders table in the lakehouse that is at most five minutes behind, includes
+      deletes, and survives schema changes. Design the pipeline from the database to the table.
+    `,
+    hints: [
+      'Do not query the primary on a schedule.',
+      'How does the first load happen, and how do you switch to changes?',
+      'What key do the Kafka records use, and why?',
+      'What happens to a delete, and to a new column?',
+    ],
+    answer: `
+      **Capture:** Debezium Postgres connector on Kafka Connect, reading a logical replication
+      slot. It snapshots the table first, then streams changes from the WAL with no query load
+      on the primary. For 2 TB, use an incremental snapshot (chunked, resumable, runs alongside
+      streaming) instead of one long blocking snapshot.
+
+      **Topic:** key = the order’s primary key, so every change of one order lands in one
+      partition in order. Avro or Protobuf with a schema registry in backward-compatible mode.
+      Size partitions for peak plus replay: 3,000 changes per second is small; 12 to 24
+      partitions leave room for parallel sinks.
+
+      **Apply:** a streaming job (Flink or Spark Structured Streaming) runs a MERGE into an
+      Iceberg or Delta table every one to two minutes: per key, keep the change with the highest
+      log position (LSN) in the batch, then insert, update or delete. Ordering by LSN, not by
+      arrival, makes replays and duplicates harmless.
+
+      **Deletes:** Debezium emits a delete event and a tombstone. The MERGE deletes the row, or
+      sets «is_deleted» if analysts need history; keep an append-only change table too, for
+      audit and rebuilds.
+
+      **Schema changes:** an added nullable column flows through the registry and is added to
+      the table by the job. A dropped or retyped column breaks compatibility and is stopped at
+      the registry: that is a deliberate migration with the owning team.
+
+      **Operations:** alert on replication slot lag on the primary and set
+      «max_slot_wal_keep_size»; alert on end-to-end freshness, not just consumer lag; compact
+      the table’s small files on a schedule. Reconcile row counts and a checksum against a
+      replica daily.
+    `,
+    signals: [
+      'Uses log-based CDC instead of polling queries',
+      'Handles the initial load with an incremental snapshot',
+      'Keys by primary key and orders applies by log position',
+      'Explains delete handling with tombstones and MERGE',
+      'Governs schema changes with a registry compatibility mode',
+      'Monitors replication slot lag on the source',
+    ],
+    followUps: [
+      'The orders table gets a new partitioned child table. What changes in the pipeline?',
+      'Analysts need the order’s status as of any past minute. What do you add?',
+    ],
+  },
+  {
+    slug: 'streams-enrich-trips',
+    title: 'Enrich trip events with driver status',
+    track: 'streaming',
+    kind: 'concept',
+    difficulty: 'medium',
+    companies: ['uber'],
+    prompt: `
+      A team wants to add each driver’s current vehicle type to every trip event in real time.
+      Trips arrive on «trip-events» (96 partitions, key «trip_id»). Driver profiles are on a
+      compacted topic «drivers» (24 partitions, key «driver_id»), about 5 million drivers.
+      They plan a Kafka Streams app. What does the topology look like, and what goes wrong?
+    `,
+    hints: [
+      'Is the drivers topic a stream or a table?',
+      'Which key does the join need on both sides?',
+      'What happens when an instance dies and its state moves?',
+    ],
+    answer: `
+      Read «drivers» as a **KTable** (latest profile per driver) and trips as a **KStream**.
+
+      The join key is «driver_id», but trips are keyed by «trip_id» and the partition counts
+      differ. Kafka Streams will re-key trips by «driver_id» and write a repartition topic with
+      the drivers topic’s 24 partitions, then join locally. That adds a full copy of the trip
+      traffic and caps parallelism at 24.
+
+      Alternatives:
+      - **GlobalKTable** for drivers: every instance holds all 5 million profiles (a few GB at
+        most if the value is small), so no repartition is needed and trips keep 96-way
+        parallelism. The cost is memory and startup time on every instance.
+      - Increase «drivers» to 96 partitions and key the trip stream by driver upstream, only if
+        other consumers do not need per-trip order.
+
+      **Failure:** state lives in RocksDB with a changelog topic. When an instance dies, its
+      partitions move and the new owner restores the store from the changelog, which can take
+      minutes for large state. Configure standby replicas and static membership so a restart
+      does not trigger a full restore.
+
+      **Semantics:** a stream-table join uses the table value at the time the trip is
+      processed. If a profile update arrives late, early trips get the old vehicle type. That is
+      usually acceptable for enrichment, and it should be stated.
+    `,
+    signals: [
+      'Identifies drivers as a table and trips as a stream',
+      'Spots the co-partitioning problem and the hidden repartition topic',
+      'Weighs GlobalKTable memory against repartition traffic',
+      'Explains state restore and standby replicas',
+      'States the timing semantics of a stream-table join',
+    ],
+    followUps: [
+      'Finance needs the vehicle type exactly as of the trip time, even for late data. What changes?',
+    ],
+  },
+  {
+    slug: 'rebalance-storm-on-deploy',
+    title: 'Lag spikes on every deploy',
+    track: 'streaming',
+    kind: 'concept',
+    difficulty: 'medium',
+    companies: ['uber', 'google'],
+    prompt: `
+      A consumer group of 40 pods reads a 240-partition topic. During every rolling deploy,
+      lag jumps from seconds to 15 minutes, and some records are processed twice. Logs show many
+      "rebalance in progress" messages. Explain the cause and the fixes, in order of impact.
+    `,
+    hints: [
+      'How many rebalances does a rolling restart of 40 pods cause?',
+      'What does each rebalance do to every member under the eager protocol?',
+      'Why the duplicates?',
+    ],
+    answer: `
+      **Cause:** each pod leaving and returning triggers a rebalance; a rolling deploy of 40
+      pods causes about 80. With the eager protocol, every rebalance revokes every partition
+      from every member, so the whole group stops each time. Records processed but not yet
+      committed when partitions are revoked are processed again by the new owner, which explains
+      the duplicates.
+
+      **Fixes, by impact:**
+      1. **Static membership:** set «group.instance.id» to the pod’s stable name (a StatefulSet
+         ordinal) and a session timeout longer than a restart. A pod that returns in time keeps
+         its partitions and causes no rebalance.
+      2. **Incremental protocol:** the KIP-848 consumer protocol on Kafka 4.x, or the
+         cooperative sticky assignor on older clients, so the rebalances that remain move only
+         a few partitions and nobody else stops.
+      3. **Commit on revoke:** commit processed offsets in the rebalance listener’s revoke
+         callback, and make the sink idempotent for the duplicates that still happen.
+      4. **Short polls:** keep work per poll well under «max.poll.interval.ms» so slow batches
+         do not get members kicked out mid-deploy.
+      5. **Deploy pacing:** surge one pod at a time and wait for it to be ready and assigned.
+    `,
+    signals: [
+      'Counts rebalances caused by a rolling restart',
+      'Explains stop-the-world eager rebalancing',
+      'Uses static membership with a stable instance id',
+      'Moves to cooperative or KIP-848 incremental assignment',
+      'Links duplicates to uncommitted offsets on revoke and fixes both sides',
+    ],
+    followUps: ['The group must scale from 40 to 120 pods for a peak. What limits you?'],
   },
 ];

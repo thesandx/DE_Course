@@ -325,6 +325,352 @@ export const track: Track = {
         },
       ],
     },
+    {
+      slug: 'airflow-taskflow-and-trigger-rules',
+      title: 'Airflow hands-on: TaskFlow, mapping and trigger rules',
+      summary:
+        'Write a modern Airflow DAG with TaskFlow, dynamic task mapping, branching, trigger rules and setup and teardown tasks.',
+      minutes: 17,
+      body: `
+        Interviewers who use Airflow every day ask you to write a DAG on a whiteboard, then ask
+        what happens when one task fails. This lesson is that DAG.
+
+        ## TaskFlow
+
+        The **TaskFlow API** turns Python functions into tasks with «@task». Return values pass
+        to the next task through **XCom**, and the dependency is inferred from the call. In
+        Airflow 3, DAG authors import from «airflow.sdk».
+
+        ~~~python
+        import pendulum
+        from airflow.sdk import dag, task
+
+
+        @dag(
+            schedule="@daily",
+            start_date=pendulum.datetime(2026, 1, 1, tz="UTC"),
+            catchup=False,
+            max_active_runs=1,
+            default_args={"retries": 2, "retry_delay": pendulum.duration(minutes=5)},
+            tags=["trips"],
+        )
+        def city_trip_metrics():
+            @task
+            def list_cities(data_interval_start=None) -> list[str]:
+                # Small metadata only. XCom lives in the metadata database.
+                return ["nyc", "sfo", "lon", "blr"]
+
+            @task(max_active_tis_per_dag=2)
+            def build_city(city: str, ds=None) -> str:
+                # Idempotent: overwrite the partition for this city and this day.
+                return f"s3://lake/metrics/dt={ds}/city={city}/"
+
+            @task
+            def publish(paths: list[str]) -> None:
+                print(f"published {len(paths)} partitions")
+
+            publish(build_city.expand(city=list_cities()))
+
+
+        city_trip_metrics()
+        ~~~
+
+        ## Dynamic task mapping
+
+        «build_city.expand(city=...)» creates one task instance per element at run time, so the
+        number of cities can change between runs without a code change. «partial()» fixes the
+        arguments that do not vary. The downstream task receives the list of results. Limit the
+        fan-out with «max_active_tis_per_dag» or a **pool**, or a list of 5,000 elements becomes
+        5,000 simultaneous queries against the warehouse.
+
+        > [!trap] XCom is not a data channel
+        > XCom values are stored in the metadata database. Pass paths, ids and counts, never a
+        > DataFrame. A large XCom slows the scheduler for every DAG. If you must pass data, use an
+        > object storage XCom backend, and still prefer passing a path.
+
+        ## Trigger rules
+
+        A task runs when its upstream tasks reach the state its **trigger rule** asks for.
+
+        | Rule | Runs when | Typical use |
+        |---|---|---|
+        | «all_success» | Default. Every upstream succeeded | Normal steps |
+        | «all_done» | Every upstream finished, in any state | Cleanup, notifications |
+        | «one_failed» | At least one upstream failed | Alert or rollback task |
+        | «none_failed» | No upstream failed; skips are fine | Join after a branch |
+        | «none_failed_min_one_success» | As above, and at least one succeeded | The usual join after a branch |
+        | «all_skipped» | Every upstream was skipped | "Nothing to do" path |
+        | «always» | Always, even with no upstream run | Rarely right; prefer all_done |
+
+        ## Branching
+
+        «@task.branch» returns the task id (or ids) to follow; the other direct paths are
+        **skipped**. Skips propagate: a join task with the default «all_success» rule is skipped
+        too, which is the classic bug. Give the join «none_failed_min_one_success».
+
+        ~~~python
+        @task.branch
+        def full_or_incremental(ds=None) -> str:
+            return "full_reload" if ds.endswith("-01") else "incremental_load"
+        ~~~
+
+        ## Setup and teardown
+
+        Mark a task that creates a resource with «as_setup()» and the one that removes it with
+        «as_teardown(setups=...)». Airflow runs the teardown even when work in between fails, and
+        the teardown’s own result does not fail the run by default. Use it for a temporary
+        cluster or a scratch schema, instead of a cleanup task with «all_done» that someone forgets
+        to wire.
+
+        > [!senior] The failure walk-through
+        > Be ready to say, for your DAG: which task retries and how often, which tasks are
+        > skipped when a branch is not taken, what the join does, what runs on failure (an
+        > «on_failure_callback» or a «one_failed» task), and why rerunning the whole run is safe
+        > (each task overwrites its partition).
+      `,
+      checks: [
+        {
+          question:
+            'A branch task chooses path A, so path B is skipped. The join task after both paths never runs. Why?',
+          options: [
+            'Branching is not supported with TaskFlow',
+            'The join has the default all_success rule, and the skip of path B propagates to it',
+            'XCom is too large',
+            'The join needs max_active_runs=1',
+          ],
+          answer: 1,
+          why: 'Skips propagate under all_success. Use none_failed_min_one_success on the join.',
+        },
+        {
+          question:
+            'A mapped task fans out over 3,000 table names and overloads the warehouse. What is the right fix?',
+          options: [
+            'Remove the mapping and use a for loop inside one task',
+            'Limit concurrency with max_active_tis_per_dag or a pool',
+            'Pass the tables through a larger XCom',
+            'Set catchup=True',
+          ],
+          answer: 1,
+          why: 'Mapping keeps per-table retries and visibility. A pool or a per-task concurrency limit caps the load.',
+        },
+      ],
+    },
+    {
+      slug: 'sensors-operators-hooks',
+      title: 'Sensors, custom operators and hooks',
+      summary:
+        'Wait on external events without wasting workers, and package reusable integrations as operators and hooks.',
+      minutes: 14,
+      body: `
+        ## Sensors: three ways to wait
+
+        A sensor is a task that waits until a condition is true: a file lands, a partition
+        appears, another DAG finishes.
+
+        | Mode | How it waits | Cost |
+        |---|---|---|
+        | «poke» | Holds a worker slot and checks every «poke_interval» | One slot per waiting sensor. Fine for short waits only. |
+        | «reschedule» | Checks, then frees the slot and is rescheduled | No slot between checks; each check is a new task start |
+        | **Deferrable** («deferrable=True») | Hands the wait to the **triggerer**, an async process | Thousands of waits in one process. The default choice for long waits. |
+
+        Always set «timeout» (how long to wait in total) and decide what a timeout means: fail
+        and alert, or «soft_fail=True» to skip. A sensor without a timeout waits seven days by
+        default, holding up the run behind it.
+
+        ~~~python
+        from airflow.providers.amazon.aws.sensors.s3 import S3KeySensor
+
+        wait_for_export = S3KeySensor(
+            task_id="wait_for_partner_export",
+            bucket_key="s3://partner-drop/trips/{{ ds }}/_SUCCESS",
+            deferrable=True,
+            timeout=60 * 60 * 6,
+            poke_interval=300,
+        )
+        ~~~
+
+        > [!tip] Prefer events over polling
+        > If the producer is your own pipeline, have it update an **asset** and schedule the
+        > consumer on that asset. Polling is for systems you do not control.
+
+        ## Hooks and operators
+
+        A **hook** wraps a connection to an external system: it reads credentials from an Airflow
+        **connection** (or a secrets backend) and exposes methods. An **operator** is a reusable
+        task: it takes parameters, uses hooks, and does its work in «execute».
+
+        ~~~python
+        from airflow.sdk import BaseHook, BaseOperator
+
+
+        class TripApiHook(BaseHook):
+            def __init__(self, conn_id: str = "trip_api"):
+                super().__init__()
+                self.conn_id = conn_id
+
+            def fetch_day(self, day: str) -> list[dict]:
+                conn = self.get_connection(self.conn_id)
+                # Call conn.host with conn.password, with a timeout and retries.
+                return []
+
+
+        class TripApiToLakeOperator(BaseOperator):
+            template_fields = ("day", "target_path")
+
+            def __init__(self, *, day: str, target_path: str, conn_id: str = "trip_api", **kwargs):
+                super().__init__(**kwargs)
+                self.day = day
+                self.target_path = target_path
+                self.conn_id = conn_id
+
+            def execute(self, context):
+                rows = TripApiHook(self.conn_id).fetch_day(self.day)
+                # Write to a temporary path, then rename into target_path: idempotent.
+                return len(rows)
+        ~~~
+
+        - «template_fields» lists the arguments Airflow renders with Jinja at run time, so
+          «day="{{ ds }}"» becomes the run’s date.
+        - The constructor runs every time the scheduler parses the file. Do no I/O there; do it in
+          «execute».
+        - Package operators and hooks in an internal provider package with tests, not copied
+          between DAG folders.
+
+        > [!senior] When not to write an operator
+        > A custom operator is worth it when several teams repeat the same integration. For one
+        > DAG, a «@task» function is simpler. For heavy or conflicting dependencies, run the work
+        > in a container with «KubernetesPodOperator» or «@task.docker», so the Airflow image stays
+        > small.
+      `,
+      checks: [
+        {
+          question:
+            'Two hundred sensors wait up to five hours each for partner files. Workers are full. What do you change?',
+          options: [
+            'Increase poke_interval to one second',
+            'Make the sensors deferrable so the triggerer holds the waits',
+            'Add retries to the sensors',
+            'Use mode poke with soft_fail',
+          ],
+          answer: 1,
+          why: 'Deferrable sensors free worker slots and wait asynchronously in the triggerer.',
+        },
+        {
+          question: 'Why must an operator’s constructor avoid calling external APIs?',
+          options: [
+            'Constructors cannot use hooks',
+            'The scheduler parses DAG files often, so constructor code runs on every parse',
+            'Templates are not rendered yet, so it is a style rule only',
+            'XCom is not available',
+          ],
+          answer: 1,
+          why: 'Top-level and constructor code runs at parse time, repeatedly. Network calls there slow parsing for every DAG.',
+        },
+      ],
+    },
+    {
+      slug: 'testing-and-deploying-airflow',
+      title: 'Testing DAGs and running Airflow in production',
+      summary:
+        'Test DAGs at three levels, ship them through CI, and choose an executor and a managed service.',
+      minutes: 15,
+      body: `
+        ## Three levels of tests
+
+        1. **Integrity tests** load every DAG file the way the scheduler does and fail on import
+           errors, cycles, or missing conventions such as owners, tags and retries.
+        2. **Unit tests** call the task logic directly. Keep logic in plain functions in a
+           package, and keep the task a thin wrapper, so tests need no Airflow at all.
+        3. **Run tests** execute a whole DAG for one logical date in a single process with
+           «dag.test()», against a test warehouse or local fakes.
+
+        ~~~python
+        import pytest
+        from airflow.models import DagBag
+
+
+        @pytest.fixture(scope="session")
+        def dagbag():
+            return DagBag(dag_folder="dags/", include_examples=False)
+
+
+        def test_no_import_errors(dagbag):
+            assert dagbag.import_errors == {}
+
+
+        @pytest.mark.parametrize("dag_id", ["city_trip_metrics"])
+        def test_retries_and_tags(dagbag, dag_id):
+            dag = dagbag.get_dag(dag_id)
+            assert dag.tags, "every DAG needs tags"
+            for task in dag.tasks:
+                assert task.retries >= 1, task.task_id
+        ~~~
+
+        Run these in CI on every pull request, then deploy DAG files and the image. A DAG that
+        fails to import in production does not fail loudly: it disappears from the UI.
+
+        ## Parse time is a budget
+
+        The DAG processor re-parses files continuously. Top-level code (database calls, API
+        calls, reading a big config) runs on every parse and slows scheduling for everyone.
+        Generate DAGs from a small static config, and do the real work inside tasks.
+
+        ## Executors
+
+        | Executor | How tasks run | Fits |
+        |---|---|---|
+        | «LocalExecutor» | Processes on the scheduler machine | Small installs, development |
+        | «CeleryExecutor» | A pool of long-running workers fed by a queue | Many short tasks, fast start |
+        | «KubernetesExecutor» | One pod per task | Isolation, per-task resources, uneven load |
+
+        Since Airflow 2.10 one deployment can configure several executors and choose per task.
+        Separately, «KubernetesPodOperator» runs any container image as a task, whatever the
+        executor, which keeps heavy dependencies out of the Airflow image.
+
+        ## Managed Airflow
+
+        | Service | Notes |
+        |---|---|
+        | Amazon MWAA | DAGs and requirements from S3; Celery workers with autoscaling |
+        | Google Cloud Composer 3 | Runs on GKE managed by Google; DAGs in a Cloud Storage bucket |
+        | Astronomer (Astro) | Image-based deploys with a CLI, multiple executors, hosted on several clouds |
+        | Self-managed on Kubernetes | The official Helm chart; you own upgrades and the metadata database |
+
+        Managed versions trail open source releases. Check that your target service supports
+        the Airflow version and provider versions you test against.
+
+        > [!senior] What a platform owner says
+        > "DAG code and the runtime image are versioned and deployed separately; CI runs the
+        > integrity and unit tests; heavy work runs in pods; the metadata database is backed up
+        > and its old rows are cleaned with «airflow db clean»; and we alert on scheduler
+        > heartbeat, DAG processor errors and queued tasks, not only task failures."
+      `,
+      checks: [
+        {
+          question: 'What is the cheapest test that catches a DAG that would vanish from the UI?',
+          options: [
+            'A full end-to-end run in staging',
+            'An integrity test that loads the DagBag and asserts there are no import errors',
+            'A unit test of one task function',
+            'Checking the scheduler logs after deploy',
+          ],
+          answer: 1,
+          why: 'A DAG with an import error is not registered. Loading the DagBag in CI catches it before deploy.',
+        },
+        {
+          question:
+            'A team needs one task with a GPU and a conflicting library version. What fits best?',
+          options: [
+            'Install the library into the shared Airflow image',
+            'Run that task in its own container with KubernetesPodOperator',
+            'Use a larger Celery worker for every task',
+            'Split the DAG into two DAG files',
+          ],
+          answer: 1,
+          why: 'A pod per task gives its own image and resources without changing the Airflow image.',
+        },
+      ],
+    },
   ],
 };
 
@@ -537,5 +883,195 @@ export const problems: Problem[] = [
       'States the trade-off accepted',
     ],
     followUps: ['How do you prevent 300 DAGs written by 40 people from becoming unmaintainable?'],
+  },
+  {
+    slug: 'airflow-branch-join-skipped',
+    title: 'The report never sends after a branch',
+    track: 'orchestration',
+    kind: 'concept',
+    difficulty: 'easy',
+    companies: ['uber', 'google'],
+    prompt: `
+      A DAG runs «check_volume», a branch task that returns «full_reload» on the first day of the
+      month and «incremental_load» otherwise. Both lead to «send_report». Since the change,
+      «send_report» is skipped every day. A teammate proposes «trigger_rule="always"». What is
+      happening, and what is the right fix?
+    `,
+    hints: [
+      'What state does the branch give the path it did not choose?',
+      'What does the default trigger rule do with a skipped upstream?',
+    ],
+    answer: `
+      The branch skips the path it did not choose. «send_report» has the default «all_success»
+      rule, and one of its upstreams is skipped, so the skip propagates and the report is skipped
+      too.
+
+      Set «trigger_rule="none_failed_min_one_success"» on «send_report». It runs when no upstream
+      failed and at least one succeeded, which is exactly "whichever path ran, it worked".
+
+      «always» is wrong: it would send the report even when the load failed, which publishes bad
+      numbers. «all_done» has the same problem.
+    `,
+    signals: [
+      'Explains skip propagation under all_success',
+      'Chooses none_failed_min_one_success for the join',
+      'Explains why always and all_done would send a report after a failure',
+    ],
+    followUps: ['How would you also alert the on-call engineer when either load fails?'],
+  },
+  {
+    slug: 'partner-api-operator',
+    title: 'Write a reusable operator for a partner API',
+    track: 'orchestration',
+    kind: 'coding',
+    difficulty: 'medium',
+    companies: ['uber'],
+    prompt: `
+      Five teams each copied a 200-line Python task that pulls one day of data from a partner’s
+      paginated REST API and writes JSON lines to object storage. Two copies have a bug that
+      writes partial files on failure. Write the operator and hook they should share, and say
+      how you test it.
+    `,
+    hints: [
+      'Where do credentials come from?',
+      'What makes a rerun of the same day safe?',
+      'Which arguments must be templated?',
+    ],
+    answer: `
+      A hook owns the connection and the HTTP details; the operator owns the task contract.
+
+      ~~~python
+      import json
+      import time
+      import urllib.request
+
+      from airflow.sdk import BaseHook, BaseOperator
+
+
+      class PartnerApiHook(BaseHook):
+          def __init__(self, conn_id: str = "partner_api", timeout_s: int = 30):
+              super().__init__()
+              self.conn_id = conn_id
+              self.timeout_s = timeout_s
+
+          def pages(self, day: str):
+              conn = self.get_connection(self.conn_id)
+              cursor = ""
+              while True:
+                  url = f"https://{conn.host}/v1/trips?day={day}&cursor={cursor}"
+                  request = urllib.request.Request(url, headers={"Authorization": f"Bearer {conn.password}"})
+                  for attempt in range(5):
+                      try:
+                          with urllib.request.urlopen(request, timeout=self.timeout_s) as response:
+                              body = json.load(response)
+                          break
+                      except OSError:
+                          if attempt == 4:
+                              raise
+                          time.sleep(2 ** attempt)
+                  yield body["items"]
+                  cursor = body.get("next_cursor") or ""
+                  if not cursor:
+                      return
+
+
+      class PartnerApiToStorageOperator(BaseOperator):
+          template_fields = ("day", "target_uri")
+
+          def __init__(self, *, day: str, target_uri: str, writer, conn_id: str = "partner_api", **kwargs):
+              super().__init__(**kwargs)
+              self.day = day
+              self.target_uri = target_uri
+              self.writer = writer  # an object with write_temp(lines) -> uri and promote(temp, final)
+              self.conn_id = conn_id
+
+          def execute(self, context):
+              hook = PartnerApiHook(self.conn_id)
+              lines = (json.dumps(item) for page in hook.pages(self.day) for item in page)
+              temp_uri = self.writer.write_temp(lines)
+              self.writer.promote(temp_uri, self.target_uri)
+              return self.target_uri
+      ~~~
+
+      **What makes it safe:**
+      - Credentials come from an Airflow connection or secrets backend, never the DAG file.
+      - Every request has a timeout and bounded retries with backoff.
+      - The output is written to a temporary object, then promoted to the final path in one
+        step, so a failure never leaves a partial file and a rerun overwrites the same day.
+      - «day» and «target_uri» are templated, so «day="{{ ds }}"» follows the run’s interval and
+        backfills work.
+
+      **Tests:** unit-test the hook against a fake HTTP server (pages, a timeout, a 500 then
+      success); unit-test the operator with a fake writer and assert promote is called only
+      after all pages; one DagBag integrity test per team’s DAG. Ship both in an internal
+      provider package with a version, so a fix reaches all five teams.
+    `,
+    signals: [
+      'Separates the hook (connection, HTTP) from the operator (task contract)',
+      'Templates the date and path so backfills work',
+      'Writes to a temporary location and promotes atomically',
+      'Puts timeouts and bounded retries on every call',
+      'Tests with fakes and ships as a versioned package',
+    ],
+    followUps: [
+      'The partner limits you to 10 requests per second across all teams. Where do you enforce it?',
+    ],
+  },
+  {
+    slug: 'airflow-platform-for-teams',
+    title: 'Run Airflow for fifteen teams',
+    track: 'orchestration',
+    kind: 'design',
+    difficulty: 'hard',
+    companies: ['uber', 'google'],
+    prompt: `
+      You own the Airflow platform. Fifteen teams run about 600 DAGs and 40,000 task runs a
+      day. Problems this quarter: one team’s DAG file made a database call at the top level and
+      slowed scheduling for everyone; a library upgrade for one team broke another; a sensor
+      storm filled every worker. Design the platform for the next two years.
+    `,
+    hints: [
+      'Separate what teams control from what the platform controls.',
+      'Where do conflicting dependencies run?',
+      'What do you check before a DAG reaches production?',
+      'Managed or self-run?',
+    ],
+    answer: `
+      **Runtime:** Airflow 3 on Kubernetes, managed (Composer, MWAA or Astro) unless a hard
+      requirement says otherwise; the team’s time goes to the platform, not to running the
+      metadata database. Celery workers for the many short tasks; heavy or dependency-specific
+      work runs in pods via «KubernetesPodOperator» with each team’s own image. The shared
+      Airflow image stays small and owned by the platform.
+
+      **Isolation:**
+      - Pools and per-team concurrency limits, so one team cannot take every slot.
+      - Sensors must be deferrable, enforced by a CI check; waits run in the triggerer.
+      - Team ownership through tags and folders, with access control on DAGs in the UI.
+      - Dependencies between teams through assets, not cross-DAG sensors.
+
+      **Delivery:** each team’s DAGs live in its own repo or folder. CI runs the integrity test
+      (import errors, cycles, owners, retries, tags), a parse-time budget test (fail a file that
+      takes more than about a second to import), lint rules that forbid top-level I/O, and
+      unit tests. Deploys sync the DAG folder; the image changes through a separate release.
+
+      **Operations:** alert on scheduler heartbeat, DAG processor import errors, queued task
+      age, triggerer capacity and metadata database size. Run «airflow db clean» on a schedule.
+      Track freshness SLOs per important dataset, not only task success. Publish a paved-road
+      DAG template and a shared operator package.
+
+      **Upgrades:** a staging environment where every team’s DAGs parse and integrity-test
+      against the next version before production moves.
+    `,
+    signals: [
+      'Moves conflicting dependencies into per-task containers',
+      'Enforces parse-time hygiene and deferrable sensors in CI',
+      'Isolates teams with pools and concurrency limits',
+      'Uses assets for cross-team dependencies',
+      'Monitors the scheduler and data freshness, not only task failures',
+      'Has an upgrade path that tests every team’s DAGs',
+    ],
+    followUps: [
+      'Two teams ask to move to Dagster. How do you decide whether the platform supports two orchestrators?',
+    ],
   },
 ];
