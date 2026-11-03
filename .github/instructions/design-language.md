@@ -30,7 +30,7 @@ Three words to test every decision against: **focused, honest, motivating.**
 6. **Radius follows hierarchy.** `rounded-dot` on calendar cells and checkboxes, `rounded-box` on badges, `rounded-input` on inputs, `rounded-card` on cards, `rounded-sheet` on hero bands, `rounded-pill` on buttons and chips.
 7. **One primary action per screen.** Exactly one `Button variant="primary"` (pink) is visible in any viewport. The rest are `secondary`, `dark`, `night` or `quiet`.
 8. **Three typefaces, fixed roles.** `font-display` (Space Grotesk, 500 to 700) for headings and big numbers. `font-sans` (Inter, 400 to 600) for text. `font-mono` (JetBrains Mono, 400 and 500) for code, counts and short metadata. No fourth face.
-9. **Colour has a job.** `brand` means "do this". `night` means "this matters most on the page". `track-1` to `track-12` mean "this track". `easy`, `medium` and `hard` mean difficulty, and also right (`easy`) and wrong (`hard`) answers. `gold` means XP and milestones. Never pick a colour because it looks nice.
+9. **Colour has a job.** `brand` means "do this". `night` means "this matters most on the page". `track-1` to `track-13` mean "this track". `easy`, `medium` and `hard` mean difficulty, and also right (`easy`) and wrong (`hard`) answers. `gold` means XP and milestones. Never pick a colour because it looks nice.
 10. **One dark band per section.** A page has one `bg-night-glow` hero. A second dark element, such as the loop readiness band or a senior signal, uses `bg-night-soft` or sits inside a white card.
 11. **Motion answers the user.** Press, navigate, open, select, finish, error. No scroll-triggered fade-ins, no looping decoration. See [Motion](#motion).
 12. **Mobile first, 320px up, then a real desktop.** A phone gets an app. From `md` (768px) up, the same screen is a website with a sidebar. Tap targets are 44px or more on a phone. No horizontal scroll. See [Responsive](#responsive-an-app-on-a-phone-a-website-on-a-desktop).
@@ -58,7 +58,7 @@ All tokens are in `styles/globals.css`. Tailwind v4 generates the utilities.
 | `night-line` `on-night` `on-night-soft`   | `border-night-line`              | Outlines and text on a night surface                |
 | `gold` `gold-deep` `gold-ink`             | `bg-gold`, `text-gold-ink`       | XP rings, milestones, the warm call to action       |
 | `easy` `medium` `hard` (+ `-bar` `-soft`) | `bg-easy-soft text-easy`         | Difficulty tags and bars; right and wrong answers   |
-| `track-1` … `track-12`                    | `bg-track-2`, `border-l-track-2` | One colour per track. Use `lib/course/track-style`. |
+| `track-1` … `track-13`                    | `bg-track-2`, `border-l-track-2` | One colour per track. Use `lib/course/track-style`. |
 | `heat-0` … `heat-4`                       | `bg-heat-3`                      | The study calendar only                             |
 
 White text (`text-on-night`) goes on `night`, `ink` and `brand`. Text on `gold` is `text-gold-ink`. Text on a `-soft` fill uses the matching dark tone.

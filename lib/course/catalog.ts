@@ -7,6 +7,7 @@
 
 import { COMPANIES } from '@/lib/course/companies';
 import { type DoneMap, LESSON_XP, lessonId, PROBLEM_XP, problemId } from '@/lib/course/progress';
+import * as architecture from '@/lib/course/tracks/architecture';
 import * as behavioral from '@/lib/course/tracks/behavioral';
 import * as dbt from '@/lib/course/tracks/dbt';
 import * as lakehouse from '@/lib/course/tracks/lakehouse';
@@ -32,6 +33,7 @@ const MODULES = [
   streaming,
   lakehouse,
   quality,
+  architecture,
   systemDesign,
   behavioral,
 ] as const;
