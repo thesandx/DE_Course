@@ -66,7 +66,7 @@ export const COMPANIES: readonly CompanyGuide[] = [
         minutes: 60,
         focus:
           'Design a pipeline end to end, often real-time: surge signals, trip analytics or event ingestion. Scale numbers, failure modes and trade-offs.',
-        tracks: ['system-design', 'streaming', 'spark', 'quality'],
+        tracks: ['system-design', 'streaming', 'spark', 'quality', 'ai'],
       },
       {
         name: 'Onsite: coding',
@@ -93,8 +93,12 @@ export const COMPANIES: readonly CompanyGuide[] = [
       dbt: 0.5,
       streaming: 1,
       lakehouse: 0.8,
+      'snowflake-databricks': 0.4,
+      cloud: 0.5,
       quality: 0.6,
+      architecture: 0.7,
       'system-design': 1.2,
+      ai: 0.4,
       behavioral: 1,
     },
   },
@@ -167,7 +171,7 @@ export const COMPANIES: readonly CompanyGuide[] = [
         minutes: 45,
         focus:
           'An end-to-end pipeline with batch and streaming paths. Watermarks, exactly-once claims, backfills and cost.',
-        tracks: ['system-design', 'streaming', 'spark', 'orchestration', 'quality'],
+        tracks: ['system-design', 'streaming', 'spark', 'orchestration', 'quality', 'ai'],
       },
       {
         name: 'Onsite: Googleyness and leadership',
@@ -187,8 +191,12 @@ export const COMPANIES: readonly CompanyGuide[] = [
       dbt: 0.4,
       streaming: 0.8,
       lakehouse: 0.7,
+      'snowflake-databricks': 0.2,
+      cloud: 0.4,
       quality: 0.6,
+      architecture: 0.7,
       'system-design': 1.2,
+      ai: 0.4,
       behavioral: 1,
     },
   },

@@ -7,7 +7,10 @@
 
 import { COMPANIES } from '@/lib/course/companies';
 import { type DoneMap, LESSON_XP, lessonId, PROBLEM_XP, problemId } from '@/lib/course/progress';
+import * as ai from '@/lib/course/tracks/ai';
+import * as architecture from '@/lib/course/tracks/architecture';
 import * as behavioral from '@/lib/course/tracks/behavioral';
+import * as cloud from '@/lib/course/tracks/cloud';
 import * as dbt from '@/lib/course/tracks/dbt';
 import * as lakehouse from '@/lib/course/tracks/lakehouse';
 import * as modeling from '@/lib/course/tracks/modeling';
@@ -15,6 +18,7 @@ import * as orchestration from '@/lib/course/tracks/orchestration';
 import * as playbook from '@/lib/course/tracks/playbook';
 import * as python from '@/lib/course/tracks/python';
 import * as quality from '@/lib/course/tracks/quality';
+import * as snowflakeDatabricks from '@/lib/course/tracks/snowflake-databricks';
 import * as spark from '@/lib/course/tracks/spark';
 import * as sql from '@/lib/course/tracks/sql';
 import * as streaming from '@/lib/course/tracks/streaming';
@@ -31,8 +35,12 @@ const MODULES = [
   dbt,
   streaming,
   lakehouse,
+  snowflakeDatabricks,
+  cloud,
   quality,
+  architecture,
   systemDesign,
+  ai,
   behavioral,
 ] as const;
 

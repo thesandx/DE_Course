@@ -306,6 +306,357 @@ export const track: Track = {
         },
       ],
     },
+    {
+      slug: 'decorators-and-context-managers',
+      title: 'Decorators and context managers',
+      summary:
+        'Write a retry decorator and an atomic-write context manager, and explain what each line does.',
+      minutes: 15,
+      body: `
+        Two language features show up again and again in pipeline code, and interviewers ask you
+        to write both from memory: a decorator that adds behaviour around a function, and a
+        context manager that guarantees cleanup.
+
+        ## Decorators
+
+        A **decorator** is a function that takes a function and returns a new one. «@retry(...)»
+        above a definition is shorthand for «fetch_page = retry(...)(fetch_page)». A decorator
+        with arguments therefore has three layers: the arguments, the function, the call.
+
+        ~~~python
+        import functools
+        import logging
+        import random
+        import time
+
+        log = logging.getLogger("pipeline")
+
+
+        def retry(times: int = 3, base_delay_s: float = 0.5, retry_on: tuple = (ConnectionError, TimeoutError)):
+            def decorator(func):
+                @functools.wraps(func)
+                def wrapper(*args, **kwargs):
+                    for attempt in range(1, times + 1):
+                        try:
+                            return func(*args, **kwargs)
+                        except retry_on as error:
+                            if attempt == times:
+                                raise
+                            delay = base_delay_s * 2 ** (attempt - 1) * random.uniform(0.5, 1.5)
+                            log.warning("retry %s after %s: attempt %d", func.__name__, error, attempt)
+                            time.sleep(delay)
+                return wrapper
+            return decorator
+
+
+        @retry(times=4)
+        def fetch_page(cursor: str) -> dict:
+            ...
+        ~~~
+
+        What the interviewer listens for:
+
+        - «functools.wraps» copies the name, docstring and signature, so logs, stack traces and
+          tools that inspect the function still see «fetch_page», not «wrapper».
+        - Retry **only** errors that can succeed on a second try. Retrying a «ValueError» from bad
+          data wastes time and hides the bug.
+        - **Exponential backoff with jitter** stops a thousand workers from retrying in step and
+          knocking the service over again.
+        - The last attempt re-raises the original error with its traceback («raise» on its own).
+        - Retrying is only safe if the call is idempotent. Say so.
+
+        Other decorators you will write or meet: timing and metrics, caching
+        («functools.lru_cache» for pure functions only), registering functions in a dictionary
+        (how «@task» and «@app.route» work), and input validation.
+
+        ## Context managers
+
+        A **context manager** runs setup on entry to a «with» block and cleanup on exit, even
+        when the block raises. «__exit__» receives the exception, if any, and returns «True» only
+        to swallow it, which you almost never want.
+
+        ~~~python
+        import contextlib
+        import os
+        from pathlib import Path
+
+
+        @contextlib.contextmanager
+        def atomic_write(path: Path):
+            tmp = path.with_suffix(path.suffix + ".tmp")
+            handle = open(tmp, "w", encoding="utf-8")
+            try:
+                yield handle
+                handle.close()
+                os.replace(tmp, path)  # atomic on the same file system
+            except BaseException:
+                handle.close()
+                tmp.unlink(missing_ok=True)
+                raise
+        ~~~
+
+        A reader sees either the old file or the complete new one, never half a file. The same
+        idea, write somewhere private then publish in one step, is how idempotent tasks write to
+        object storage and tables.
+
+        | Use a context manager for | Example |
+        |---|---|
+        | Resources that must be released | Files, database connections, locks |
+        | A unit of work that commits or rolls back | A transaction |
+        | Temporary state | A temporary directory, a changed working directory, an env var in a test |
+        | Measuring a block | A timer that logs the duration |
+
+        «contextlib.ExitStack» manages a variable number of resources, such as one open file per
+        input partition.
+
+        > [!senior] Connect the feature to the failure
+        > "The decorator makes transient failures invisible to the caller but keeps permanent
+        > ones loud. The context manager means a crash never leaves a partial output." Naming
+        > the failure each one prevents is the senior part.
+      `,
+      checks: [
+        {
+          question: 'What does functools.wraps do in a decorator?',
+          options: [
+            'Makes the wrapper run faster',
+            'Copies the wrapped function’s name, docstring and metadata onto the wrapper',
+            'Retries the function automatically',
+            'Turns the decorator into a context manager',
+          ],
+          answer: 1,
+          why: 'Without it, every decorated function reports itself as wrapper in logs, traces and introspection.',
+        },
+        {
+          question: 'Which error should a retry decorator around an HTTP call usually not retry?',
+          options: [
+            'A connection reset',
+            'A timeout',
+            'A 400 Bad Request caused by invalid input',
+            'A 503 Service Unavailable',
+          ],
+          answer: 2,
+          why: 'A 400 will fail the same way every time. Retry transient errors only.',
+        },
+      ],
+    },
+    {
+      slug: 'pytest-for-pipelines',
+      title: 'Testing pipelines with pytest',
+      summary:
+        'Structure pipeline code so it can be tested, and use fixtures, parametrize, tmp_path and monkeypatch well.',
+      minutes: 14,
+      body: `
+        Pipeline code is hard to test when reading, transforming and writing are mixed in one
+        function. The first move is structural: keep **transformations pure** (data in, data
+        out) and push I/O to thin edges. Then most tests need no database, no cloud and no
+        network.
+
+        ## A pure transform and its tests
+
+        ~~~python
+        from datetime import datetime, timezone
+
+
+        def clean_trip(raw: dict) -> dict | None:
+            if raw.get("status") == "test":
+                return None
+            fare = round(float(raw["fare"]), 2)
+            if fare < 0:
+                raise ValueError(f"negative fare in trip {raw['trip_id']}")
+            started = datetime.fromtimestamp(raw["started_ms"] / 1000, tz=timezone.utc)
+            return {"trip_id": raw["trip_id"], "fare": fare, "started_at": started.isoformat()}
+        ~~~
+
+        ~~~python
+        import pytest
+
+        from transforms import clean_trip
+
+
+        @pytest.fixture
+        def raw_trip():
+            return {"trip_id": "t1", "fare": "12.499", "started_ms": 1793318400000, "status": "completed"}
+
+
+        def test_rounds_fare_and_converts_time(raw_trip):
+            row = clean_trip(raw_trip)
+            assert row == {"trip_id": "t1", "fare": 12.5, "started_at": "2026-10-30T00:00:00+00:00"}
+
+
+        @pytest.mark.parametrize("status, kept", [("completed", True), ("cancelled", True), ("test", False)])
+        def test_drops_only_test_trips(raw_trip, status, kept):
+            raw_trip["status"] = status
+            assert (clean_trip(raw_trip) is not None) == kept
+
+
+        def test_negative_fare_fails_loudly(raw_trip):
+            raw_trip["fare"] = "-3"
+            with pytest.raises(ValueError, match="negative fare"):
+                clean_trip(raw_trip)
+        ~~~
+
+        ## The pytest tools that matter
+
+        | Tool | Use it for |
+        |---|---|
+        | **Fixtures** | Shared setup: a sample record, a Spark session («scope="session"»), a test database |
+        | «@pytest.mark.parametrize» | One test, many cases: edge values, every status, every time zone |
+        | «tmp_path» | A fresh directory per test for files the job writes |
+        | «monkeypatch» | Replace an environment variable, a clock or a client for one test |
+        | «pytest.raises» | Assert that bad input fails, and with which message |
+        | Markers | Separate fast unit tests from slow integration tests in CI |
+
+        ## What to test in a data pipeline
+
+        1. **Transform logic:** nulls, duplicates, time zones and daylight saving changes, empty
+           input, a late record, a schema with an extra field.
+        2. **Idempotency:** run the job twice on the same input and assert the output is the
+           same, not doubled.
+        3. **Contracts:** the output schema and types, checked in the test, not only in
+           production.
+        4. **Integration:** against a real but local engine (DuckDB, a Postgres container, a
+           local Spark session) for the SQL and the writes. Mark these as slow.
+
+        Data tests in production (row counts, uniqueness, freshness) are a different layer.
+        They catch bad data; unit tests catch bad code. A senior engineer wants both.
+
+        > [!trap] Mocking everything tests nothing
+        > A test that mocks the database client and asserts it was called with a string only
+        > proves you wrote that string. Test SQL against a real engine, even a small local one.
+
+        > [!senior] How you would say it
+        > "I keep transforms pure so they are unit-tested with plain dictionaries, I run the SQL
+        > against DuckDB or a container in CI, I test reruns for idempotency, and I let data
+        > tests in the warehouse catch what code tests cannot."
+      `,
+      checks: [
+        {
+          question: 'Which design makes a pipeline easiest to unit-test?',
+          options: [
+            'One function that reads, transforms and writes',
+            'Pure transform functions with I/O kept in thin functions at the edges',
+            'Global database connections created at import time',
+            'Mocking every library call',
+          ],
+          answer: 1,
+          why: 'Pure functions take data and return data, so tests need no infrastructure.',
+        },
+        {
+          question: 'Which pytest feature runs one test against ten edge cases?',
+          options: ['tmp_path', '@pytest.mark.parametrize', 'monkeypatch', 'pytest.raises'],
+          answer: 1,
+          why: 'parametrize generates one test case per set of arguments.',
+        },
+      ],
+    },
+    {
+      slug: 'concurrency-and-packaging',
+      title: 'Concurrency, the GIL and packaging',
+      summary:
+        'Pick threads, processes or asyncio for a workload, and ship pipeline code as a versioned package.',
+      minutes: 14,
+      body: `
+        ## The GIL in one paragraph
+
+        In the standard CPython build, the **global interpreter lock (GIL)** lets one thread run
+        Python bytecode at a time. Threads still help when they wait on I/O, because a thread
+        releases the GIL while it waits. They do not speed up CPU-bound Python code. Python 3.13
+        added an experimental free-threaded build, and Python 3.14 made it officially supported
+        but not the default, so most production code still runs with the GIL.
+
+        | Workload | Choose | Why |
+        |---|---|---|
+        | Many network calls (APIs, object storage) | Threads, or asyncio | Waiting releases the GIL |
+        | Thousands of concurrent connections | asyncio | One thread, cheap tasks, needs async libraries |
+        | CPU-bound pure Python (parsing, hashing) | Processes | Each process has its own interpreter and GIL |
+        | NumPy, pandas, Polars, PyArrow work | Usually one process | They run in C and release the GIL themselves |
+        | Data bigger than one machine | Spark, Beam, Dask | Not a threading question |
+
+        ~~~python
+        import hashlib
+        import time
+        from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
+
+
+        def fetch(url: str) -> int:
+            time.sleep(0.2)  # stands in for a network call with a timeout
+            return len(url)
+
+
+        def hash_chunk(lines: list[str]) -> str:
+            digest = hashlib.sha256()
+            for line in lines:
+                digest.update(line.encode())
+            return digest.hexdigest()
+
+
+        if __name__ == "__main__":
+            urls = [f"https://api.example.com/p/{i}" for i in range(20)]
+            with ThreadPoolExecutor(max_workers=10) as pool:
+                sizes = list(pool.map(fetch, urls))  # about 0.4 s instead of 4 s
+
+            chunks = [[str(i * j) for j in range(50_000)] for i in range(8)]
+            with ProcessPoolExecutor(max_workers=4) as pool:
+                futures = {pool.submit(hash_chunk, chunk): n for n, chunk in enumerate(chunks)}
+                for future in as_completed(futures):
+                    future.result()  # re-raises a worker’s exception here
+        ~~~
+
+        **Process pool costs:** arguments and results are pickled and copied between processes,
+        so send file paths or chunk ids, not large objects. The «if __name__ == "__main__"» guard
+        is required where processes start with spawn (macOS and Windows defaults). Always call
+        «result()», or a worker’s exception disappears.
+
+        > [!trap] Bound the concurrency
+        > Fifty threads against an API that allows ten requests per second gets you throttled.
+        > Size the pool from the downstream limit, not from your CPU count.
+
+        ## Packaging pipeline code
+
+        Copying helper files between DAG folders and notebooks is how five teams end up with
+        five versions of one bug. Ship shared code as a package.
+
+        - **pyproject.toml** declares the name, version, dependencies and build backend. It
+          replaces «setup.py» for new projects.
+        - Use a **src layout** («src/tripkit/»), so tests import the installed package, not the
+          files next to them.
+        - Build a **wheel** and publish it to a private index (Artifact Registry, CodeArtifact),
+          with semantic versions.
+        - **Lock** the exact dependency tree for applications and images («uv lock», pip-tools
+          or Poetry). Keep library dependency ranges loose so they install next to other code.
+        - Pin the Python version in the image, and run tests in CI on the version you deploy.
+
+        > [!senior] The production answer
+        > "Shared logic is a versioned package with tests and a changelog. Each job image pins
+        > it with a lock file, so a fix is a version bump that teams adopt on purpose, and a bad
+        > release rolls back by pinning the old version."
+      `,
+      checks: [
+        {
+          question:
+            'A job parses 2,000 large JSON files with pure Python and is CPU-bound. What speeds it up on one machine?',
+          options: [
+            'A ThreadPoolExecutor with 32 threads',
+            'A ProcessPoolExecutor, passing file paths to workers',
+            'asyncio with aiofiles',
+            'Increasing the GIL switch interval',
+          ],
+          answer: 1,
+          why: 'CPU-bound pure Python needs separate processes, each with its own GIL. Passing paths keeps pickling cheap.',
+        },
+        {
+          question: 'Why use a src layout for a shared pipeline package?',
+          options: [
+            'It makes the wheel smaller',
+            'Tests import the installed package, so packaging mistakes show up in CI',
+            'It is required by pip',
+            'It removes the need for pyproject.toml',
+          ],
+          answer: 1,
+          why: 'With a flat layout, tests can import local files that were never packaged, hiding a broken release.',
+        },
+      ],
+    },
   ],
 };
 
@@ -717,5 +1068,249 @@ export const problems: Problem[] = [
       'Uses backoff with jitter',
     ],
     followUps: ['The payments API has no idempotency key. What can you do instead?'],
+  },
+  {
+    slug: 'retry-decorator-with-budget',
+    title: 'A retry decorator with a time budget',
+    track: 'python',
+    kind: 'coding',
+    difficulty: 'medium',
+    companies: ['uber', 'google'],
+    prompt: `
+      Write a decorator «retry» for calls to a flaky service. It retries only the exception types
+      it is given, uses exponential backoff with jitter capped at a maximum delay, and never spends
+      more than a total time budget. When the budget runs out it raises a clear error that keeps
+      the original cause. Then show how you would test it without sleeping.
+    `,
+    hints: [
+      'A decorator with arguments has three nested functions.',
+      'Check the budget before you sleep, not after.',
+      'Inject the clock and the sleep function so tests control time.',
+    ],
+    answer: `
+      ~~~python
+      import functools
+      import random
+      import time
+
+
+      class RetryBudgetExceeded(Exception):
+          pass
+
+
+      def retry(*, retry_on: tuple, attempts: int = 5, base_s: float = 0.2, cap_s: float = 10.0,
+                budget_s: float = 60.0, sleep=time.sleep, clock=time.monotonic):
+          def decorator(func):
+              @functools.wraps(func)
+              def wrapper(*args, **kwargs):
+                  deadline = clock() + budget_s
+                  for attempt in range(1, attempts + 1):
+                      try:
+                          return func(*args, **kwargs)
+                      except retry_on as error:
+                          if attempt == attempts:
+                              raise
+                          delay = random.uniform(0, min(cap_s, base_s * 2 ** (attempt - 1)))
+                          if clock() + delay > deadline:
+                              raise RetryBudgetExceeded(f"{func.__name__}: budget of {budget_s}s spent") from error
+                          sleep(delay)
+              return wrapper
+          return decorator
+      ~~~
+
+      - «time.monotonic», not «time.time»: a wall clock can jump when NTP corrects it.
+      - "Full jitter" (a random delay between zero and the backoff) spreads retries from many
+        workers best.
+      - «raise ... from error» keeps the last real failure in the traceback.
+      - Errors outside «retry_on» propagate on the first try.
+
+      **Tests without sleeping:** pass a fake clock whose «sleep» advances its own time.
+
+      ~~~python
+      import pytest
+
+
+      class FakeClock:
+          def __init__(self):
+              self.now = 0.0
+
+          def __call__(self):
+              return self.now
+
+          def sleep(self, seconds):
+              self.now += seconds
+
+
+      def test_stops_when_budget_is_spent(monkeypatch):
+          clock = FakeClock()
+          monkeypatch.setattr("random.uniform", lambda low, high: high)
+          calls = {"n": 0}
+
+          def always_fails():
+              calls["n"] += 1
+              raise ConnectionError("reset")
+
+          wrapped = retry(retry_on=(ConnectionError,), attempts=10, base_s=1, budget_s=5,
+                          sleep=clock.sleep, clock=clock)(always_fails)
+          with pytest.raises(RetryBudgetExceeded):
+              wrapped()
+          assert clock.now <= 5
+      ~~~
+
+      Add tests for: success after two failures, no retry on «ValueError», and re-raise of the
+      original error after the last attempt.
+    `,
+    signals: [
+      'Writes the three-layer decorator with functools.wraps',
+      'Retries only listed transient errors',
+      'Uses capped exponential backoff with jitter and a monotonic clock',
+      'Checks the budget before sleeping and chains the original error',
+      'Makes time injectable so tests run instantly',
+    ],
+    followUps: [
+      'Every worker in a fleet of 500 uses this against one API during an outage. What else do you need?',
+    ],
+  },
+  {
+    slug: 'test-latest-per-trip',
+    title: 'Write the tests for a dedup function',
+    track: 'python',
+    kind: 'coding',
+    difficulty: 'medium',
+    companies: ['google'],
+    prompt: `
+      This function keeps the latest event per trip. Events can arrive out of order, can share a
+      timestamp, and can be delivered twice. Write the pytest tests you would ship with it.
+
+      ~~~python
+      def latest_per_trip(events: list[dict]) -> dict[str, dict]:
+          latest: dict[str, dict] = {}
+          for event in events:
+              key = event["trip_id"]
+              rank = (event["event_ts"], event["seq"])
+              current = latest.get(key)
+              if current is None or rank > (current["event_ts"], current["seq"]):
+                  latest[key] = event
+          return latest
+      ~~~
+    `,
+    hints: [
+      'List the ways real event data misbehaves.',
+      'Which property should hold for any input order?',
+      'What happens if the job runs twice?',
+    ],
+    answer: `
+      Test the behaviours the data forces on you, plus two properties.
+
+      ~~~python
+      import random
+
+      import pytest
+
+      from dedup import latest_per_trip
+
+
+      def ev(trip, ts, seq, status):
+          return {"trip_id": trip, "event_ts": ts, "seq": seq, "status": status}
+
+
+      def test_empty_input():
+          assert latest_per_trip([]) == {}
+
+
+      def test_keeps_latest_by_event_time_not_arrival_order():
+          events = [ev("t1", 20, 1, "completed"), ev("t1", 10, 2, "accepted")]
+          assert latest_per_trip(events)["t1"]["status"] == "completed"
+
+
+      def test_breaks_timestamp_ties_with_sequence():
+          events = [ev("t1", 10, 2, "completed"), ev("t1", 10, 1, "accepted")]
+          assert latest_per_trip(events)["t1"]["status"] == "completed"
+
+
+      def test_exact_duplicates_are_harmless():
+          event = ev("t1", 10, 1, "accepted")
+          assert latest_per_trip([event, dict(event)]) == {"t1": event}
+
+
+      @pytest.mark.parametrize("seed", range(20))
+      def test_result_does_not_depend_on_order(seed):
+          events = [ev(f"t{i % 3}", i % 5, i, f"s{i}") for i in range(30)]
+          shuffled = events[:]
+          random.Random(seed).shuffle(shuffled)
+          assert latest_per_trip(shuffled) == latest_per_trip(events)
+
+
+      def test_rerun_on_own_output_is_stable():
+          events = [ev("t1", 10, 1, "a"), ev("t2", 5, 1, "b"), ev("t1", 12, 3, "c")]
+          once = latest_per_trip(events)
+          assert latest_per_trip(list(once.values())) == once
+      ~~~
+
+      - **Order independence** is the property that matters for a stream: the same events in any
+        order give the same answer. A seeded shuffle keeps failures reproducible; Hypothesis
+        would generate the inputs for you.
+      - **Idempotency:** running on its own output changes nothing, so a rerun is safe.
+      - Then name what is not tested and should be decided: a missing «seq» raises «KeyError»,
+        and two events with equal «event_ts» and «seq» but different content keep the first one
+        seen, which is order-dependent. Ask whether that can happen upstream.
+    `,
+    signals: [
+      'Covers out-of-order, ties and duplicate delivery explicitly',
+      'Tests order independence as a property, with reproducible randomness',
+      'Tests idempotency of a rerun',
+      'Finds the remaining ambiguity (full ties) instead of only confirming the happy path',
+    ],
+    followUps: ['How would this test change when the function becomes a Spark job?'],
+  },
+  {
+    slug: 'parallel-file-parsing',
+    title: 'Parse 50,000 files faster on one machine',
+    track: 'python',
+    kind: 'concept',
+    difficulty: 'medium',
+    companies: ['uber'],
+    prompt: `
+      A daily job downloads 50,000 gzipped JSON files (about 4 MB each) from object storage,
+      parses and validates every record in pure Python, and writes Parquet. It runs in one
+      process and takes six hours on a 16-core machine. Make it faster without moving to Spark,
+      and say what limits you hit.
+    `,
+    hints: [
+      'Which part waits and which part computes?',
+      'The GIL treats those two parts differently.',
+      'What do you send between processes?',
+    ],
+    answer: `
+      Profile first: time the download, the decompress and parse, and the write. Usually the
+      download is I/O-bound and the parse is CPU-bound, so they need different tools.
+
+      1. **Downloads:** a thread pool of about 32 to 64, bounded by the storage client’s
+         connection limit and throttling. Threads wait on the network with the GIL released.
+      2. **Parsing:** a process pool with about one worker per core (15 here). Send each worker
+         a **file path**, not file contents, so nothing large is pickled. Each worker downloads,
+         parses and writes its own Parquet part file, which also removes a single-writer
+         bottleneck.
+      3. **Faster parsing:** «orjson» or «msgspec» parse several times faster than the standard
+         library; PyArrow’s JSON reader or Polars can read newline-delimited JSON in C and skip
+         Python objects entirely.
+      4. **Memory:** stream each file with «gzip.open» and process in batches of records,
+         instead of loading 50,000 files of results into one list.
+      5. **Correctness:** call «result()» on every future so failures surface; write part files
+         to a temporary prefix and publish the batch only when every file succeeded; record
+         which files failed so a rerun handles only those.
+
+      Expected outcome: close to linear in cores for the parse stage, so six hours becomes
+      well under one. If the job still grows, the next step is a distributed engine, because
+      one machine’s cores and network are now the limit.
+    `,
+    signals: [
+      'Profiles and separates I/O-bound from CPU-bound stages',
+      'Uses threads for downloads and processes for parsing, with reasons tied to the GIL',
+      'Sends paths, not data, to worker processes',
+      'Mentions faster parsers or a columnar reader',
+      'Keeps output atomic and failures visible',
+    ],
+    followUps: ['The free-threaded Python build is available. Would you switch this job to it?'],
   },
 ];

@@ -440,6 +440,288 @@ export const track: Track = {
         },
       ],
     },
+    {
+      slug: 'recursive-ctes',
+      title: 'Recursive CTEs: hierarchies, graphs and series',
+      summary:
+        'Walk org charts, category trees and referral chains in SQL, and stop recursion that never ends.',
+      minutes: 14,
+      body: `
+        A **recursive CTE** repeats a query, feeding each round’s output into the next round,
+        until a round returns no rows. It is how SQL walks a hierarchy of unknown depth.
+
+        ## The shape
+
+        ~~~sql
+        WITH RECURSIVE chain AS (
+          -- Anchor: the starting rows
+          SELECT employee_id, name, manager_id, 0 AS depth,
+                 CAST(name AS VARCHAR) AS path
+          FROM employees
+          WHERE manager_id IS NULL
+          UNION ALL
+          -- Recursive step: join the table to the previous round
+          SELECT e.employee_id, e.name, e.manager_id, c.depth + 1,
+                 c.path || ' > ' || e.name
+          FROM employees e
+          JOIN chain c ON e.manager_id = c.employee_id
+          WHERE c.depth < 20
+        )
+        SELECT employee_id, name, depth, path FROM chain ORDER BY path;
+        ~~~
+
+        | employee_id | name | depth | path |
+        |---|---|---|---|
+        | 1 | Asha | 0 | Asha |
+        | 2 | Ben | 1 | Asha > Ben |
+        | 4 | Dev | 2 | Asha > Ben > Dev |
+        | 3 | Chen | 1 | Asha > Chen |
+
+        1. The **anchor** runs once.
+        2. The **recursive member** joins the base table to the rows produced by the previous
+           round only, not to everything so far.
+        3. It stops when a round adds nothing. «UNION ALL» keeps duplicates and is faster;
+           «UNION» removes them, which also stops some cycles.
+
+        ## Uses that come up
+
+        - **Hierarchies:** everyone under a manager, a product category tree, a bill of materials.
+        - **Graphs:** referral chains, "which accounts are reachable from this one", the shortest
+          number of transfers between two airports.
+        - **Series:** generate every date in a range to fill gaps, where the engine has no
+          «generate_series» or «GENERATE_DATE_ARRAY».
+
+        ~~~sql
+        WITH RECURSIVE days AS (
+          SELECT DATE '2026-10-01' AS day
+          UNION ALL
+          SELECT day + 1 FROM days WHERE day < DATE '2026-10-07'
+        )
+        SELECT day FROM days;
+        ~~~
+
+        ## Stopping safely
+
+        Real data has cycles: a manager record pointing back down the chain, two accounts that
+        referred each other. Without a guard, recursion runs until the engine’s limit.
+
+        - A **depth cap** in the recursive member («WHERE c.depth < 20»).
+        - A **visited path**: carry an array or string of visited ids and skip a row whose id is
+          already in it. Postgres 14 and later also offer a «CYCLE» clause.
+        - Know the engine limit: BigQuery stops at 500 iterations, SQL Server at 100 by default
+          («MAXRECURSION»), Postgres has no limit.
+
+        > [!trap] Recursion in a warehouse is a loop of joins
+        > Each round is a full join. A graph that fans out widely produces huge intermediate
+        > results by round four or five. For deep or wide graphs, precompute a closure table
+        > (every ancestor and descendant pair) in a batch job, or use a graph engine.
+
+        > [!senior] Mention the closure table
+        > If the hierarchy is read far more often than it changes, store the transitive closure:
+        > one row per (ancestor, descendant, depth). "Everyone under Asha" becomes a single
+        > equi-join, with no recursion at query time.
+      `,
+      checks: [
+        {
+          question: 'In a recursive CTE, what does the recursive member join to in each round?',
+          options: [
+            'All rows produced so far',
+            'Only the rows produced by the previous round',
+            'Only the anchor rows',
+            'The final result',
+          ],
+          answer: 1,
+          why: 'Each iteration sees only the previous iteration’s output, which is why it terminates when a round adds nothing.',
+        },
+        {
+          question:
+            'A referral table has a cycle (A referred B, B referred A). How do you make the query safe?',
+          options: [
+            'Use UNION ALL',
+            'Add a depth limit or track visited ids and skip repeats',
+            'Add ORDER BY to the anchor',
+            'Use a window function in the anchor',
+          ],
+          answer: 1,
+          why: 'Cycles make recursion endless. A depth cap or a visited-path check stops it.',
+        },
+      ],
+    },
+    {
+      slug: 'grouping-sets-rollup-cube',
+      title: 'GROUPING SETS, ROLLUP and CUBE',
+      summary:
+        'Compute subtotals and grand totals in one pass, and tell a real NULL from a subtotal row.',
+      minutes: 12,
+      body: `
+        Reports want totals at several levels: revenue per city and product, per city, and
+        overall. Three queries joined with «UNION ALL» scan the table three times. **Grouping
+        sets** compute all levels in one scan.
+
+        ## The three forms
+
+        | Syntax | Levels it produces |
+        |---|---|
+        | «GROUPING SETS ((city, product), (city), ())» | Exactly the listed levels |
+        | «ROLLUP (city, product)» | (city, product), (city), () : a hierarchy, right to left |
+        | «CUBE (city, product)» | Every combination: (city, product), (city), (product), () |
+
+        «ROLLUP» suits hierarchies (country, city, zone). «CUBE» suits independent dimensions,
+        but its size is 2 to the power of the column count, so keep it to two or three columns.
+
+        ## Which NULL is which
+
+        In a subtotal row, the rolled-up column is NULL. If the data has real NULLs too, the
+        report shows two rows that look the same. «GROUPING(col)» returns 1 when the column was
+        rolled up in that row, 0 otherwise.
+
+        ~~~sql
+        SELECT CASE WHEN GROUPING(city) = 1 THEN 'All cities' ELSE COALESCE(city, 'Unknown') END AS city,
+               CASE WHEN GROUPING(product) = 1 THEN 'All products' ELSE product END AS product,
+               COUNT(*) AS trips
+        FROM trips
+        GROUP BY CUBE (city, product)
+        ORDER BY 1, 2;
+        ~~~
+
+        The first rows of the result:
+
+        | city | product | trips |
+        |---|---|---|
+        | All cities | All products | 5 |
+        | All cities | black | 1 |
+        | All cities | x | 4 |
+        | Unknown | All products | 1 |
+        | Unknown | x | 1 |
+
+        Without «GROUPING()», the trip with no city and the grand total both print as NULL, NULL.
+
+        ## Where it matters for a data engineer
+
+        - **Pre-aggregated tables for dashboards:** one job writes every level the dashboard
+          needs, with a «grouping_id» column (some engines name it «GROUPING_ID») to filter on.
+        - **Distinct counts do not add up.** A city’s distinct riders is not the sum of its
+          products’ distinct riders. Grouping sets compute each level correctly from raw rows;
+          summing a lower level does not.
+
+        > [!senior] Say why not UNION ALL
+        > "One scan instead of three, totals guaranteed consistent with the detail rows, and
+        > GROUPING() to label subtotals so real NULLs stay visible." That sentence covers what
+        > the interviewer wants.
+      `,
+      checks: [
+        {
+          question: 'What does ROLLUP (country, city) produce?',
+          options: [
+            '(country, city) only',
+            '(country, city), (country) and the grand total',
+            'Every combination including (city) alone',
+            '(city) and (country) only',
+          ],
+          answer: 1,
+          why: 'ROLLUP removes columns from the right, one at a time, down to the grand total.',
+        },
+        {
+          question: 'Why is GROUPING(city) needed in a subtotal report?',
+          options: [
+            'It speeds up the query',
+            'It tells a subtotal row apart from rows where city is really NULL',
+            'It sorts subtotals last',
+            'It is required by the SQL standard for CUBE',
+          ],
+          answer: 1,
+          why: 'Both show NULL in the city column. GROUPING returns 1 only for the rolled-up row.',
+        },
+      ],
+    },
+    {
+      slug: 'indexes-and-procedures',
+      title: 'Indexes, clustering and stored procedures',
+      summary:
+        'Choose indexes for an OLTP source and clustering for a warehouse, and know when procedural SQL helps.',
+      minutes: 13,
+      body: `
+        Data engineers sit between two kinds of database. A row store (Postgres, MySQL) serves
+        the app with indexes. A columnar warehouse (BigQuery, Snowflake, Redshift) serves
+        analysis with partitions, clustering and pruning. Interviewers check that you know which
+        tool fits which side.
+
+        ## Indexes in a row store
+
+        A **B-tree index** keeps keys sorted, so a lookup or a range scan reads a few pages
+        instead of the table.
+
+        - **Composite index order matters.** An index on «(rider_id, created_at)» serves
+          «WHERE rider_id = ? ORDER BY created_at DESC LIMIT 20». It does not serve a filter on
+          «created_at» alone. Put equality columns first, then the range or sort column.
+        - A **covering index** includes every column the query reads, so the table is never
+          touched (Postgres «INCLUDE», MySQL secondary indexes that hold the needed columns).
+        - A **partial index** («WHERE status = 'open'») stays small when queries touch a small
+          slice.
+        - Every index slows writes and takes space. An extract query that scans «updated_at»
+          each hour needs one index; ten speculative ones hurt the service you extract from.
+
+        > [!trap] Functions hide the index
+        > «WHERE DATE(created_at) = '2026-10-01'» cannot use an index on «created_at». Write a
+        > range: «created_at >= '2026-10-01' AND created_at < '2026-10-02'».
+
+        ## The warehouse equivalent
+
+        Warehouses have no B-trees to tune. They skip data instead.
+
+        | Engine | Skips data with |
+        |---|---|
+        | BigQuery | Partitioning (by date or integer range) and clustering on up to four columns |
+        | Snowflake | Micro-partition min and max pruning; optional clustering keys; search optimization for point lookups |
+        | Redshift | Sort keys and distribution keys |
+        | Iceberg and Delta | Partition transforms, file statistics, Z-order or liquid clustering |
+
+        The rule is the same in all of them: filter on the partition column, cluster on the next
+        most selective filters, and read the query plan’s bytes-scanned number.
+
+        ## Stored procedures
+
+        A **stored procedure** keeps procedural logic (variables, loops, IF, transactions) in
+        the database. BigQuery scripting, Snowflake Scripting and Postgres PL/pgSQL all have one.
+
+        | Use it for | Avoid it for |
+        |---|---|
+        | A short multi-statement step that must be one transaction | Business logic nobody can test or review |
+        | Admin tasks close to the data, such as partition maintenance | Orchestration: retries, dependencies, alerts |
+        | Loops the SQL engine runs well, such as a batch MERGE per partition | Logic you want in version control with tests |
+
+        > [!senior] Where logic should live
+        > "Transformations go in versioned SQL models (dbt or similar) with tests; orchestration
+        > goes in the orchestrator; a procedure is acceptable for a small transactional step,
+        > kept in the repository and deployed by CI." That shows you have inherited a database
+        > full of untested procedures before.
+      `,
+      checks: [
+        {
+          question:
+            'The query is WHERE rider_id = 42 ORDER BY created_at DESC LIMIT 20. Which index serves it best?',
+          options: [
+            '(created_at, rider_id)',
+            '(rider_id, created_at)',
+            'Two separate indexes on rider_id and created_at',
+            'An index on status',
+          ],
+          answer: 1,
+          why: 'Equality column first, then the sort column. The engine jumps to rider 42 and reads 20 entries in order.',
+        },
+        {
+          question: 'Which filter lets an index on created_at be used?',
+          options: [
+            "DATE(created_at) = '2026-10-01'",
+            "created_at >= '2026-10-01' AND created_at < '2026-10-02'",
+            "CAST(created_at AS VARCHAR) LIKE '2026-10-01%'",
+            'EXTRACT(DAY FROM created_at) = 1',
+          ],
+          answer: 1,
+          why: 'A function on the column hides it from the index. A half-open range on the raw column uses it.',
+        },
+      ],
+    },
   ],
 };
 
@@ -949,6 +1231,203 @@ export const problems: Problem[] = [
     ],
     followUps: [
       'How would you make this real-time with Dataflow and still correct after late clicks?',
+    ],
+  },
+  {
+    slug: 'org-chart-span-of-control',
+    title: 'Total reports under every manager',
+    track: 'sql',
+    kind: 'sql',
+    difficulty: 'medium',
+    companies: ['google'],
+    prompt: `
+      «employees(employee_id, name, manager_id)» holds the org chart. «manager_id» is NULL for
+      the CEO. For every employee, return the number of direct reports, the number of all reports
+      at any depth, and how many levels sit below them.
+    `,
+    hints: [
+      'A self-join counts direct reports only. The depth is unknown.',
+      'Build every (ancestor, descendant) pair with a recursive CTE.',
+      'Carry the depth so you can count direct reports from the same pairs.',
+    ],
+    answer: `
+      Build the transitive closure: one row per (ancestor, descendant, depth). Then aggregate per
+      ancestor. A left join keeps people with no reports.
+
+      ~~~sql
+      WITH RECURSIVE reports AS (
+        SELECT manager_id AS ancestor_id, employee_id, 1 AS depth
+        FROM employees
+        WHERE manager_id IS NOT NULL
+        UNION ALL
+        SELECT r.ancestor_id, e.employee_id, r.depth + 1
+        FROM reports r
+        JOIN employees e ON e.manager_id = r.employee_id
+        WHERE r.depth < 30
+      )
+      SELECT m.employee_id, m.name,
+             COUNT(CASE WHEN r.depth = 1 THEN 1 END) AS direct_reports,
+             COUNT(r.employee_id) AS total_reports,
+             COALESCE(MAX(r.depth), 0) AS levels_below
+      FROM employees m
+      LEFT JOIN reports r ON r.ancestor_id = m.employee_id
+      GROUP BY m.employee_id, m.name
+      ORDER BY total_reports DESC, m.employee_id;
+      ~~~
+
+      | employee_id | name | direct_reports | total_reports | levels_below |
+      |---|---|---|---|---|
+      | 1 | Asha | 2 | 5 | 3 |
+      | 2 | Ben | 1 | 2 | 2 |
+      | 5 | Eli | 0 | 0 | 0 |
+
+      The anchor starts from every employee-manager edge, not only the CEO, so each manager is
+      an ancestor of their whole subtree. The depth cap guards against a bad record that
+      creates a cycle.
+    `,
+    signals: [
+      'Builds ancestor and descendant pairs instead of walking from the root only',
+      'Uses a left join so leaves report zero',
+      'Adds a depth cap or cycle guard',
+      'Suggests storing the closure table if this runs often',
+    ],
+    followUps: [
+      'The org chart changes daily and HR needs it as of any past date. What do you store?',
+    ],
+  },
+  {
+    slug: 'regional-subtotals-report',
+    title: 'Revenue report with subtotals and shares',
+    track: 'sql',
+    kind: 'sql',
+    difficulty: 'medium',
+    companies: ['uber'],
+    prompt: `
+      From «trips(region, city, fare)», produce one result with revenue per city, a subtotal per
+      region and a grand total. Each row also shows its share of the grand total and its share of
+      its region. Some trips have a NULL city and must show as «unknown», not be mistaken for a
+      subtotal.
+    `,
+    hints: [
+      'One scan with ROLLUP.',
+      'GROUPING() tells subtotal rows from real NULLs.',
+      'Window functions over the rolled-up result give the shares.',
+    ],
+    answer: `
+      ~~~sql
+      WITH rolled AS (
+        SELECT region, city,
+               GROUPING(region) AS g_region,
+               GROUPING(city) AS g_city,
+               SUM(fare) AS revenue
+        FROM trips
+        GROUP BY ROLLUP (region, city)
+      )
+      SELECT CASE WHEN g_region = 1 THEN 'TOTAL' ELSE region END AS region,
+             CASE WHEN g_city = 1 THEN 'ALL' ELSE COALESCE(city, 'unknown') END AS city,
+             revenue,
+             ROUND(100.0 * revenue / SUM(CASE WHEN g_region = 1 THEN revenue END) OVER (), 1) AS pct_of_total,
+             ROUND(100.0 * revenue / MAX(CASE WHEN g_city = 1 THEN revenue END) OVER (PARTITION BY region, g_region), 1) AS pct_of_region
+      FROM rolled
+      ORDER BY g_region, region, g_city, revenue DESC;
+      ~~~
+
+      | region | city | revenue | pct_of_total | pct_of_region |
+      |---|---|---|---|---|
+      | EU | lon | 14.00 | 16.1 | 56.0 |
+      | EU | unknown | 5.00 | 5.7 | 20.0 |
+      | EU | ALL | 25.00 | 28.7 | 100.0 |
+      | NA | nyc | 50.00 | 57.5 | 80.6 |
+      | TOTAL | ALL | 87.00 | 100.0 | 100.0 |
+
+      - «ROLLUP (region, city)» gives city rows, region subtotals and the grand total in one scan.
+      - «GROUPING(city) = 1» marks the subtotal, so the trip with a NULL city stays a separate
+        «unknown» row.
+      - The grand total is the row where «g_region = 1»; a window over all rows picks it up.
+        The region total is the «g_city = 1» row within each region.
+    `,
+    signals: [
+      'Uses ROLLUP or GROUPING SETS instead of three scans',
+      'Uses GROUPING() to separate real NULLs from subtotal rows',
+      'Computes shares with window functions over the rolled-up result',
+      'Notes that distinct counts cannot be summed up the hierarchy',
+    ],
+    followUps: [
+      'Add distinct riders per row. Why can you not sum the city values to get the region value?',
+    ],
+  },
+  {
+    slug: 'referral-chain-root',
+    title: 'Find the original referrer',
+    track: 'sql',
+    kind: 'sql',
+    difficulty: 'hard',
+    companies: ['uber', 'google'],
+    prompt: `
+      «referrals(user_id, referred_by)» records who invited whom. «referred_by» is NULL for users
+      who signed up on their own. Growth wants, for every user, the root of their referral chain
+      and the chain length. Bad data contains cycles (7 referred 8 and 8 referred 7). The query
+      must finish and flag those users.
+    `,
+    hints: [
+      'Walk upward from each user, one hop per round.',
+      'Carry the path of visited ids as a string or array.',
+      'Keep the deepest row per user. Was it the true root?',
+    ],
+    answer: `
+      Walk up from every user. Each round moves to the next referrer and appends it to a path.
+      A referrer already in the path means a cycle, so the walk stops.
+
+      ~~~sql
+      WITH RECURSIVE walk AS (
+        SELECT user_id, user_id AS ancestor_id, 0 AS hops,
+               '/' || CAST(user_id AS VARCHAR) || '/' AS path
+        FROM referrals
+        UNION ALL
+        SELECT w.user_id, r.referred_by, w.hops + 1,
+               w.path || CAST(r.referred_by AS VARCHAR) || '/'
+        FROM walk w
+        JOIN referrals r ON r.user_id = w.ancestor_id
+        WHERE r.referred_by IS NOT NULL
+          AND w.path NOT LIKE '%/' || CAST(r.referred_by AS VARCHAR) || '/%'
+          AND w.hops < 50
+      ),
+      deepest AS (
+        SELECT user_id, ancestor_id, hops,
+               ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY hops DESC) AS rn
+        FROM walk
+      )
+      SELECT d.user_id,
+             d.ancestor_id AS root_user,
+             d.hops AS chain_length,
+             r.referred_by IS NOT NULL AS stopped_early
+      FROM deepest d
+      JOIN referrals r ON r.user_id = d.ancestor_id
+      WHERE d.rn = 1
+      ORDER BY d.user_id;
+      ~~~
+
+      | user_id | root_user | chain_length | stopped_early |
+      |---|---|---|---|
+      | 4 | 1 | 3 | false |
+      | 6 | 5 | 1 | false |
+      | 7 | 8 | 1 | true |
+      | 8 | 7 | 1 | true |
+
+      «stopped_early» is true when the last ancestor still has a referrer, which means the walk
+      hit a cycle or the depth cap. Those users go to a data quality queue rather than into a
+      growth report. In BigQuery, use an «ARRAY» of ids and «IN UNNEST(path)» instead of string
+      matching, and remember its 500-iteration limit.
+    `,
+    signals: [
+      'Walks upward from every user rather than downward from roots',
+      'Detects cycles with a visited path, not only a depth cap',
+      'Picks the deepest row per user with a window function',
+      'Flags rows that ended on a cycle instead of silently returning them',
+      'Knows the engine’s recursion limit',
+    ],
+    followUps: [
+      'There are 400 million users. How do you compute this daily without recursion at all?',
     ],
   },
 ];

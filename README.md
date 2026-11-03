@@ -19,7 +19,7 @@ Multi-stage Docker build · Keyless CI/CD via Workload Identity Federation · St
 
 This repository serves **Loop Ready**, an interactive course for senior and staff data engineer interviews, with loop guides for Uber and Google. It runs on the template described below.
 
-- 12 tracks: the interview playbook, SQL, Python, data modeling, Spark, orchestration (Airflow and Prefect), dbt, streaming, storage and BigQuery, data quality, system design, and behavioral.
+- 16 tracks: the interview playbook, SQL, Python, data modeling, Spark, orchestration (Airflow and Prefect), dbt, streaming, storage and BigQuery, Snowflake and Databricks, AWS, Azure and cloud DevOps, data quality, architecture patterns, system design, AI for data engineering, and behavioral.
 - Lessons with quick checks, and interview problems with hints, model answers and senior signals.
 - Sign-in with Firebase Auth. Progress, XP, levels and streaks are saved per learner in Firestore.
 - A LeetCode-style dashboard, problem list and study calendar, built phone first.

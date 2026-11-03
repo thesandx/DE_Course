@@ -266,6 +266,285 @@ export const track: Track = {
         },
       ],
     },
+    {
+      slug: 'data-vault',
+      title: 'Data Vault: hubs, links and satellites',
+      summary:
+        'Model an integration layer that absorbs many changing sources, keeps full history and stays insert-only.',
+      minutes: 16,
+      body: `
+        A star schema is built for people who ask questions. **Data Vault** is built for the layer
+        under it: the place where twenty source systems land, each with its own keys, its own
+        schema changes and its own release calendar. It trades query comfort for three things:
+        every source loads in parallel, history is never overwritten, and a new source adds
+        tables instead of changing old ones.
+
+        ## The three table types
+
+        | Table | Holds | Example |
+        |---|---|---|
+        | **Hub** | One row per business key, ever. Nothing else. | «hub_rider»: rider key, hash key, first load time, source |
+        | **Link** | One row per relationship between hubs | «link_trip»: rider, driver and vehicle hash keys |
+        | **Satellite** | Descriptive attributes of one hub or link, with history | «sat_rider_profile»: name, rating, city, load time, hash diff |
+
+        Hubs and links never change after insert. Satellites add a row when the attributes change,
+        which a **hash diff** (a hash of all descriptive columns) detects cheaply. The result is
+        an insert-only model: a load is a set of appends, so you can rerun it and replay it.
+
+        ~~~sql
+        CREATE TABLE hub_rider (
+          rider_hk      CHAR(32)    NOT NULL PRIMARY KEY,  -- md5 of the business key
+          rider_id      VARCHAR     NOT NULL,              -- the business key
+          load_ts       TIMESTAMP   NOT NULL,
+          record_source VARCHAR     NOT NULL
+        );
+
+        CREATE TABLE sat_rider_profile (
+          rider_hk      CHAR(32)    NOT NULL,
+          load_ts       TIMESTAMP   NOT NULL,
+          hash_diff     CHAR(32)    NOT NULL,
+          full_name     VARCHAR,
+          home_city     VARCHAR,
+          record_source VARCHAR     NOT NULL,
+          PRIMARY KEY (rider_hk, load_ts)
+        );
+        ~~~
+
+        ## Why hash keys
+
+        Data Vault 2.0 replaces sequence surrogate keys with a hash of the business key. Every
+        loader can compute the key on its own, so the hub, the link and the satellite load in
+        parallel without a lookup. The cost: 16 to 32 bytes per key instead of 8, and a
+        collision risk that is real only at absurd volumes. Normalise the business key first
+        (trim, upper case, a fixed separator for composite keys), or the same rider gets two
+        hashes.
+
+        ## Raw vault, business vault, marts
+
+        1. **Raw vault:** the sources as they are, split into hubs, links and satellites. No
+           business rules, so it is auditable.
+        2. **Business vault:** derived satellites with rules applied, such as a resolved
+           customer, and helper tables. A **point-in-time (PIT)** table lists, for each key and
+           snapshot date, the satellite row that was current. A **bridge** table pre-joins hubs
+           and links along a common path.
+        3. **Marts:** star schemas on top, built from PIT and bridge tables. Analysts never query
+           the vault directly.
+
+        > [!senior] When to choose it, and when not
+        > Choose Data Vault when there are many sources that change often, when auditors must
+        > trace every value to its source and load, and when several teams load in parallel. Banks
+        > and insurers fit. For one product database feeding dashboards, it is three times the
+        > tables for no gain: build staging and a star schema. Say that the vault is an
+        > integration layer and that you still build dimensional marts on top.
+
+        > [!trap] Satellites split by rate of change
+        > Put a rider's name and their live rating in one satellite and the rating's daily change
+        > copies the name every day. Split satellites by source and by how often the columns
+        > change.
+      `,
+      checks: [
+        {
+          question:
+            'Where does a rider’s home city, which changes over time, live in a Data Vault?',
+          options: [
+            'In the hub, updated in place',
+            'In a satellite on the rider hub, with a new row per change',
+            'In a link between rider and city',
+            'In the point-in-time table only',
+          ],
+          answer: 1,
+          why: 'Hubs hold only the business key. Descriptive attributes and their history live in satellites, which are insert-only.',
+        },
+        {
+          question: 'Why does Data Vault 2.0 use a hash of the business key instead of a sequence?',
+          options: [
+            'Hashes are smaller than integers',
+            'Each table can compute keys without a lookup, so hubs, links and satellites load in parallel',
+            'Hashes hide personal data',
+            'Sequences cannot be joined',
+          ],
+          answer: 1,
+          why: 'A deterministic hash removes the dependency on the hub load, so all tables load at once.',
+        },
+      ],
+    },
+    {
+      slug: 'activity-schema-and-graphs',
+      title: 'Activity schema and graph models',
+      summary:
+        'Model customer journeys as one activity stream, and relationships as nodes and edges, and know when each fits.',
+      minutes: 15,
+      body: `
+        Two shapes answer questions that a star schema answers badly: "what did this customer do
+        before and after X" and "who is connected to whom, in several hops".
+
+        ## Activity schema: one stream per entity
+
+        An **activity schema** stores everything a customer does in one narrow table, with a
+        fixed set of columns, instead of one fact table per process.
+
+        | Column | Meaning |
+        |---|---|
+        | «activity_id» | Unique id of the event |
+        | «ts» | When it happened |
+        | «customer» | The entity the stream is about |
+        | «activity» | A short name: «signed_up», «requested_trip», «completed_trip» |
+        | «feature_json» | A few attributes specific to that activity |
+        | «revenue_impact» | Money, if any |
+        | «activity_occurrence» | 1 for the customer’s first time, 2 for the second |
+        | «activity_repeated_at» | When the customer next did the same activity |
+
+        Each new activity is a new value of «activity», not a new table. Questions become
+        **temporal joins** between two activities of the same customer: "first completed trip
+        after signing up", "last support ticket before cancelling". The two precomputed columns
+        make the common ones cheap: «activity_occurrence = 1» is a first-ever filter, and
+        «activity_repeated_at» bounds "in between" joins.
+
+        ~~~sql
+        -- Days from signup to first completed trip
+        SELECT s.customer,
+               MIN(c.ts) - s.ts AS time_to_first_trip
+        FROM activity_stream s
+        JOIN activity_stream c
+          ON c.customer = s.customer
+         AND c.activity = 'completed_trip'
+         AND c.ts >= s.ts
+        WHERE s.activity = 'signed_up' AND s.activity_occurrence = 1
+        GROUP BY s.customer, s.ts;
+        ~~~
+
+        It suits journey and funnel analysis, and it makes a new source cheap. It suits money and
+        inventory badly: those need typed columns, constraints and a clear grain, so keep a star
+        schema for them.
+
+        ## Graph models: when relationships are the data
+
+        A **property graph** has nodes (rider, device, card, address) and edges (USED, PAID_WITH,
+        LIVES_AT), and both carry properties. In a warehouse the same graph is two tables: a node
+        table and an edge table with «src», «dst», «type» and validity times.
+
+        | Store it as | Good at | Weak at |
+        |---|---|---|
+        | Edge table in the warehouse | Batch analytics, one or two hops, recursive CTEs | Deep traversals at request time |
+        | Graph database (Neo4j, Amazon Neptune, Spanner Graph) | Many hops with low latency, path queries | Wide aggregations, scans |
+        | Adjacency lists in a key-value store | One-hop lookups at huge scale | Anything multi-hop |
+
+        A fraud team asking "which accounts share a device or a card with this banned account,
+        within three hops" is a graph question. A dashboard counting accounts per city is not.
+
+        > [!senior] Model edges with time
+        > A rider shared a device with a fraudster last year, not today. Give each edge
+        > «valid_from» and «valid_to», like an SCD type 2 row. Without it, old links pull innocent
+        > accounts into every ring, and a model trained on the graph leaks the future.
+
+        > [!trap] Super nodes
+        > A shared office Wi-Fi address or a default device id connects thousands of accounts.
+        > One traversal through it touches everything. Cap the degree, or drop edges to nodes
+        > above a threshold, before you run multi-hop queries.
+      `,
+      checks: [
+        {
+          question: 'Product adds a new event, "rated_driver". What changes in an activity schema?',
+          options: [
+            'A new fact table and a new dimension',
+            'Nothing structural: rows with activity = rated_driver appear in the same stream',
+            'A new column on the stream table',
+            'A new satellite',
+          ],
+          answer: 1,
+          why: 'The schema is fixed. A new activity is a new value in the activity column, with its specifics in feature_json.',
+        },
+        {
+          question: 'Which question most needs a graph store rather than a warehouse table?',
+          options: [
+            'Daily trips per city',
+            'At request time, find accounts within three hops of a banned card',
+            'Revenue by product line by month',
+            'The top 10 drivers by rating',
+          ],
+          answer: 1,
+          why: 'Low-latency multi-hop traversal is what graph stores are built for. The others are scans and aggregations.',
+        },
+      ],
+    },
+    {
+      slug: 'normalization-and-special-dimensions',
+      title: 'Normal forms and the special dimensions',
+      summary:
+        'Explain why sources normalize and warehouses do not, and use junk, role-playing, mini and bridge dimensions correctly.',
+      minutes: 14,
+      body: `
+        ## Normal forms in one minute
+
+        Operational databases normalize so each fact is stored once and an update touches one row.
+
+        - **1NF:** every column holds one value; no repeating groups such as «phone1», «phone2».
+        - **2NF:** every non-key column depends on the whole key, not part of a composite key.
+        - **3NF:** no non-key column depends on another non-key column. A city name stored next
+          to a city id on every trip breaks it.
+
+        A warehouse denormalizes on purpose. It is read far more than it is written, columns
+        compress repeated values well, and a join avoided is a shuffle avoided. The interview
+        point is that you know which rule you are breaking and why. An ER diagram of the source
+        is still where modeling starts, because it shows the real keys and cardinalities.
+
+        ## The special dimensions
+
+        | Pattern | Problem it solves | Example |
+        |---|---|---|
+        | **Junk dimension** | Many low-cardinality flags clutter the fact | «dim_trip_flags»: one row per combination of is_pool, is_scheduled, payment_type |
+        | **Role-playing dimension** | One dimension used several times by one fact | «dim_date» as request date, pickup date and payout date, through views |
+        | **Degenerate dimension** | An id with no attributes of its own | «order_id» kept on the fact, no table |
+        | **Mini-dimension** | A few attributes change too often for SCD 2 | Rider rating band and tenure band split out of «dim_rider» |
+        | **Bridge table** | A many-to-many between a fact and a dimension | A trip with several promotions: «bridge_trip_promo» with a weight per row |
+        | **Outrigger** | A dimension that references another dimension | «dim_driver» pointing at «dim_vehicle» |
+
+        A junk dimension with five flags of two to four values each has at most a few hundred
+        rows. The fact carries one small key instead of five columns, and the flag
+        combinations get readable labels.
+
+        ~~~sql
+        -- Role-playing: one physical table, three views with clear names
+        CREATE VIEW dim_request_date AS SELECT date_key AS request_date_key, calendar_date AS request_date FROM dim_date;
+        CREATE VIEW dim_pickup_date  AS SELECT date_key AS pickup_date_key,  calendar_date AS pickup_date  FROM dim_date;
+        ~~~
+
+        > [!trap] Bridge tables double count
+        > Join a trip to its two promotions and the fare appears twice. Either allocate with a
+        > weight column that sums to 1 per trip, or tell users that the bridge answers "trips
+        > touched by promo X", not "revenue from promo X".
+
+        > [!senior] Name the pattern, then the cost
+        > "That is a mini-dimension: the rating band changes weekly, so in SCD 2 it would create a
+        > new rider row each week. I split it out and put its key on the fact." Naming the
+        > pattern and the reason is what interviewers listen for.
+      `,
+      checks: [
+        {
+          question:
+            'A trip fact needs request date, pickup date and payout date. What is the standard design?',
+          options: [
+            'Three separate date dimension tables with copied data',
+            'One date dimension used in three roles, usually through views',
+            'Store the three dates as strings on the fact',
+            'A bridge table between trips and dates',
+          ],
+          answer: 1,
+          why: 'That is a role-playing dimension: one physical table, joined three times under different names.',
+        },
+        {
+          question: 'A trip can have several promotions. What is the risk of a bridge table?',
+          options: [
+            'It cannot be indexed',
+            'Additive measures such as fare are counted once per promotion unless weighted',
+            'It breaks SCD type 2',
+            'It forces a snowflake schema',
+          ],
+          answer: 1,
+          why: 'A many-to-many join multiplies fact rows. A weight column or a clear meaning prevents double counting.',
+        },
+      ],
+    },
   ],
 };
 
@@ -504,5 +783,169 @@ export const problems: Problem[] = [
       'Writes the anti-join',
     ],
     followUps: ['How would you measure promotion lift, not just usage?'],
+  },
+  {
+    slug: 'data-vault-rider-integration',
+    title: 'Integrate rider data from four systems',
+    track: 'modeling',
+    kind: 'modeling',
+    difficulty: 'hard',
+    companies: ['uber', 'google'],
+    prompt: `
+      Rider data comes from four systems: the app database (rider id), payments (card holder id),
+      the support CRM (email-based contact id) and a recently acquired scooter company (its own
+      user id). Each changes schema a few times a year. Auditors want every number in the rider
+      mart traced to its source row and load. Design the integration layer and say how the
+      rider dimension is built on top.
+    `,
+    hints: [
+      'What is the one thing that never changes for a rider in each system?',
+      'How do you record that two keys are the same person without merging them?',
+      'Think about point-in-time tables for the mart.',
+    ],
+    answer: `
+      A **Data Vault** raw layer, because there are many sources, schema churn and an audit need.
+
+      **Hubs:** «hub_rider» keyed by the app rider id. The other systems’ keys get their own hubs
+      («hub_payment_account», «hub_crm_contact», «hub_scooter_user») because their keys are not
+      the same business key.
+
+      **Links:**
+      - «link_rider_payment_account», «link_rider_crm_contact», loaded from the systems that know
+        the mapping.
+      - A **same-as link** («sal_rider») for identity resolution with the acquired company: two
+        hub keys, a match rule id and a confidence. A wrong match is fixed by adding a new link
+        row with an end date, never by deleting.
+
+      **Satellites:** one per source per hub, split by rate of change: «sat_rider_app_profile»,
+      «sat_rider_app_rating», «sat_payment_account», «sat_crm_contact». Each has «load_ts»,
+      «record_source» and «hash_diff». A schema change in the CRM adds columns to its satellite
+      or a new satellite; nothing else moves.
+
+      **Business vault:** a computed satellite that resolves the golden record (which source wins
+      for name, email, home city) with the rule recorded per column, and a **PIT table** with
+      one row per rider per day naming the current row of each satellite.
+
+      **Mart:** «dim_rider» as SCD type 2, built from the PIT table with simple equi-joins. Every
+      column carries lineage back to a satellite row, and the satellite row to a source and a
+      load time, which is the audit answer.
+    `,
+    signals: [
+      'Justifies Data Vault from many sources, churn and audit, not fashion',
+      'Keeps different business keys in different hubs and links them',
+      'Uses a same-as link for identity resolution that can be corrected without deletes',
+      'Splits satellites by source and rate of change',
+      'Builds the dimensional mart from PIT tables, not directly on the raw vault',
+    ],
+    followUps: [
+      'The match rule merged two different riders for six months. How do you correct history in the mart?',
+      'How do you handle a GDPR erasure request in an insert-only model?',
+    ],
+  },
+  {
+    slug: 'fraud-ring-graph-model',
+    title: 'Find accounts linked to a banned card',
+    track: 'modeling',
+    kind: 'modeling',
+    difficulty: 'medium',
+    companies: ['uber'],
+    prompt: `
+      Risk wants a nightly list of accounts within two hops of any banned account, where a hop is
+      a shared device, payment card or phone number. Design the tables in the warehouse and write
+      the query. What breaks at scale?
+    `,
+    hints: [
+      'Accounts are not linked to each other directly. What sits between them?',
+      'Model it as nodes and edges.',
+      'A shared office device links thousands of accounts.',
+    ],
+    answer: `
+      **Model:** an edge table between accounts and identifiers, with time.
+
+      ~~~sql
+      CREATE TABLE account_identifier_edge (
+        account_id  VARCHAR NOT NULL,
+        id_type     VARCHAR NOT NULL,   -- device, card, phone
+        id_value    VARCHAR NOT NULL,   -- hashed
+        valid_from  TIMESTAMP NOT NULL,
+        valid_to    TIMESTAMP           -- NULL while current
+      );
+      ~~~
+
+      Two accounts are one hop apart when they share an identifier. Two hops is one more round.
+
+      ~~~sql
+      WITH current_edges AS (
+        SELECT account_id, id_type, id_value
+        FROM account_identifier_edge
+        WHERE valid_to IS NULL OR valid_to > CURRENT_DATE - INTERVAL 90 DAY
+      ),
+      hop1 AS (
+        SELECT DISTINCT b.account_id
+        FROM banned_accounts x
+        JOIN current_edges a ON a.account_id = x.account_id
+        JOIN current_edges b ON b.id_type = a.id_type AND b.id_value = a.id_value
+      ),
+      hop2 AS (
+        SELECT DISTINCT d.account_id
+        FROM hop1 h
+        JOIN current_edges c ON c.account_id = h.account_id
+        JOIN current_edges d ON d.id_type = c.id_type AND d.id_value = c.id_value
+      )
+      SELECT account_id FROM hop1
+      UNION
+      SELECT account_id FROM hop2
+      EXCEPT
+      SELECT account_id FROM banned_accounts;
+      ~~~
+
+      **At scale:**
+      - **Super nodes:** an identifier shared by thousands of accounts (a rental car’s device,
+        a corporate card) explodes the join. Compute the degree per identifier and drop edges
+        above a threshold, or flag them for review.
+      - **Time:** old shared devices create false rings. Keep a recency window on edges.
+      - **Request-time checks** (at signup) need a graph store or precomputed neighbour lists in
+        a key-value store; the warehouse query is for the nightly batch.
+    `,
+    signals: [
+      'Models identifiers as nodes between accounts, not account-to-account edges only',
+      'Keeps validity times on edges',
+      'Handles super nodes by degree before traversing',
+      'Separates nightly batch from request-time lookups',
+    ],
+    followUps: ['Risk now wants five hops. What do you change?'],
+  },
+  {
+    slug: 'junk-and-mini-dimensions',
+    title: 'Tame a trip fact with twelve flags',
+    track: 'modeling',
+    kind: 'modeling',
+    difficulty: 'easy',
+    companies: ['uber', 'google'],
+    prompt: `
+      The trip fact has twelve boolean and small-enum columns (is_pool, is_scheduled,
+      payment_type, surge_band and others). «dim_rider» is SCD type 2 and has a «rating_band»
+      that changes most weeks, so the dimension grows by millions of rows a week. Fix both.
+    `,
+    hints: ['One problem is clutter, the other is churn.', 'Both fixes are small dimensions.'],
+    answer: `
+      **The flags:** move them to a **junk dimension**, «dim_trip_profile», with one row per
+      combination that actually occurs and readable labels. The fact keeps one small key.
+      Twelve low-cardinality columns usually produce a few thousand real combinations.
+
+      **The rating band:** split it into a **mini-dimension**, «dim_rider_band», with one row per
+      combination of rating band and tenure band. Put «rider_band_key» on the trip fact, so each
+      trip records the band at the time of the trip. «dim_rider» stays SCD 2 only for the slow
+      attributes and stops growing every week.
+
+      If analysts need the current band per rider, keep it as a type 1 column on «dim_rider» as
+      well, and name it clearly («current_rating_band»).
+    `,
+    signals: [
+      'Names the junk dimension and builds it from existing combinations',
+      'Names the mini-dimension and explains the SCD 2 churn it stops',
+      'Records the band on the fact so history is still right',
+    ],
+    followUps: ['A new flag arrives. What happens to the junk dimension and the existing facts?'],
   },
 ];

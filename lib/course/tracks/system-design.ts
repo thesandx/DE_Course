@@ -1,3 +1,4 @@
+import { designQuestions } from '@/lib/course/tracks/system-design-questions';
 import type { Problem, Track } from '@/types/course';
 
 export const track: Track = {
@@ -385,7 +386,7 @@ export const track: Track = {
   ],
 };
 
-export const problems: Problem[] = [
+const coreProblems: Problem[] = [
   {
     slug: 'design-real-time-surge',
     title: 'Design the data pipeline for surge pricing',
@@ -739,3 +740,5 @@ export const problems: Problem[] = [
     ],
   },
 ];
+
+export const problems: Problem[] = [...coreProblems, ...designQuestions];

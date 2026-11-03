@@ -259,7 +259,7 @@ export function browseEntries(course: CourseSlug): readonly SearchEntry[] {
 
 /** Example searches for each course. Each one must find something; a test checks it. */
 export const SEARCH_EXAMPLES: Readonly<Record<CourseSlug, readonly string[]>> = {
-  de: ['window functions', 'SCD type 2', 'dbt incremental', 'watermarks', 'skew', 'Prefect'],
+  de: ['window functions', 'SCD type 2', 'dbt incremental', 'watermarks', 'RAG', 'Prefect'],
   gcp: [
     'Bigtable row key',
     'CMEK',
