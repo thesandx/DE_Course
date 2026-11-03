@@ -59,7 +59,7 @@ export const COMPANIES: readonly CompanyGuide[] = [
         minutes: 60,
         focus:
           'Model a marketplace domain such as trips, deliveries or payments. Grain, facts, dimensions, slowly changing attributes and the queries the model must serve.',
-        tracks: ['modeling', 'lakehouse'],
+        tracks: ['modeling', 'dbt', 'lakehouse'],
       },
       {
         name: 'Onsite: data system design',
@@ -90,6 +90,7 @@ export const COMPANIES: readonly CompanyGuide[] = [
       modeling: 1,
       spark: 0.8,
       orchestration: 0.5,
+      dbt: 0.5,
       streaming: 1,
       lakehouse: 0.8,
       quality: 0.6,
@@ -159,7 +160,7 @@ export const COMPANIES: readonly CompanyGuide[] = [
         minutes: 45,
         focus:
           'Design a schema for a product such as ads or YouTube, then query it. Grain, keys and BigQuery-friendly layouts.',
-        tracks: ['sql', 'modeling', 'lakehouse'],
+        tracks: ['sql', 'modeling', 'dbt', 'lakehouse'],
       },
       {
         name: 'Onsite: data system design',
@@ -183,6 +184,7 @@ export const COMPANIES: readonly CompanyGuide[] = [
       modeling: 1,
       spark: 0.6,
       orchestration: 0.5,
+      dbt: 0.4,
       streaming: 0.8,
       lakehouse: 0.7,
       quality: 0.6,
