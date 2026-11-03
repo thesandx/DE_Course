@@ -23,6 +23,8 @@ A learner joins each course separately. Each course keeps its own tracker in `le
 | `rules.ts`         | The item check and the XP table of each course.                                 |
 | `hub.ts`           | The numbers on each course card of the hub.                                     |
 | `shell-stats.ts`   | The streak and XP that the app shell shows for the current course.              |
+| `search-index.ts`  | The search index of each course: its entries, examples and browse list.         |
+| `search.ts`        | Search matching and ranking. Safe for client components.                        |
 | `gcp/`             | The GCP course. See [`gcp/README.md`](./gcp/README.md).                         |
 
 The types are in [`types/course.ts`](../../types/course.ts).
@@ -75,6 +77,14 @@ All prose fields (`body`, `prompt`, `answer`, `overview`, `focus`) use this dial
 
 Do not write backticks or `${` anywhere in content: they end or break the template literal.
 
+## Search
+
+Each course has a search page at `/<slug>/search`. The top bar opens it: a search button on a phone, a search box from `md` up, and ⌘K or `/` on a keyboard.
+
+The index is built on the server from the catalogue and sent to the page. The page filters it in the browser, so results change on each keystroke. An entry holds the title, where the item sits, and the terms inside it: headings, **bold** terms, «code» and table headers. The full text of a lesson does not ship. So a term that a learner will search for must be marked in the text, as a heading, bold or code.
+
+A `##` section of a DE lesson is a topic entry. It opens the lesson at `#section-<n>`, which `Prose sectioned` sets. A GCP concept opens its station at `#concept-<n>`.
+
 ## Progress and XP
 
 Item ids are `lesson:<track>:<lesson>` and `problem:<slug>`. A lesson is worth 40 XP. A problem is worth 20, 40 or 60 XP for easy, medium or hard. Do not rename a slug after release: progress records store the id, and a renamed item loses its completions.
@@ -88,4 +98,5 @@ Item ids are `lesson:<track>:<lesson>` and `problem:<slug>`. A lesson is worth 4
 5. Add a `require<Course>Learner` function to `services/learner.service.ts`.
 6. Add the pages under `app/<slug>/`. Each page passes `course="<slug>"` to `CompleteButton` or `useRecordProgress`.
 7. Add the course's paths to `tabsFor` in `lib/navigation.ts` if its learn and practice links differ.
-8. Run `pnpm validate` and `pnpm test:e2e`.
+8. Add the course to search: a builder and a case in `searchIndex`, and entries in `SEARCH_EXAMPLES` and `SEARCH_SCOPE`, all in `search-index.ts`. Add `app/<slug>/search/page.tsx`, which renders `CourseSearchScreen`. The top bar links to it. Extend `resolves` in `search.test.ts` for the course's paths.
+9. Run `pnpm validate` and `pnpm test:e2e`.

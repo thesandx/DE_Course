@@ -1,5 +1,6 @@
 import { InlineText } from '@/components/course/InlineText';
 import { type Block, type CalloutKind, parseMarkdown } from '@/lib/course/markdown';
+import { sectionAnchor } from '@/lib/course/search';
 import { cn } from '@/lib/utils';
 
 export interface ProseProps {
@@ -75,8 +76,9 @@ export function Prose({ source, sectioned = false, className }: ProseProps) {
           return (
             <section
               key={index}
+              id={sectionAnchor(number)}
               className={cn(
-                'bg-surface border-line rounded-card shadow-card flex min-w-0 flex-col gap-4 border border-l-4 p-5 sm:p-6',
+                'bg-surface border-line rounded-card shadow-card flex min-w-0 scroll-mt-20 flex-col gap-4 border border-l-4 p-5 sm:p-6',
                 hue?.rail,
               )}
             >
