@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 import { copyrightLine } from '@/lib/contact';
 import { PROBLEMS, TRACKS } from '@/lib/course/catalog';
-import type { CourseSlug } from '@/lib/course/courses';
+import { type CourseSlug, getCourse } from '@/lib/course/courses';
 import { CARDS, LINES } from '@/lib/course/gcp/catalog';
 import type { ShellStats } from '@/lib/course/shell-stats';
 import { env } from '@/lib/env';
@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { BackButton, type BackButtonProps } from './BackButton';
 import { Icon } from './Icon';
 import { Logo } from './Logo';
+import { SearchShortcut } from './SearchShortcut';
 import { SidebarNav } from './SidebarNav';
 
 export interface Crumb {
@@ -46,6 +47,9 @@ const FOOTER_LINKS = [
   { href: '/gcp/practice/mock', label: 'GCP mock exam' },
   { href: '/design', label: 'Design system' },
 ] as const;
+
+/** The top bar's search box, which the ⌘K shortcut focuses. */
+const SHELL_SEARCH_ID = 'shell-search';
 
 function initialOf(name: string): string {
   return name.trim().charAt(0).toUpperCase() || '?';
@@ -117,6 +121,7 @@ export function AppShell({
       : stats.xpTarget === null
         ? `${stats.xp} XP`
         : `${stats.xp} / ${stats.xpTarget} XP`;
+  const courseShort = course === undefined ? '' : getCourse(course).short;
   const levelLine =
     stats?.levelLine ?? `${enrolled.length} ${enrolled.length === 1 ? 'course' : 'courses'}`;
 
@@ -176,17 +181,22 @@ export function AppShell({
               )}
             />
 
-            {variant === 'sidebar' && course !== 'de' ? (
+            {variant === 'sidebar' && course === undefined ? (
               <span className="hidden md:block" />
             ) : variant === 'sidebar' ? (
-              <form action="/de/problems" role="search" className="hidden max-w-sm flex-1 md:block">
+              <form
+                action={`/${course}/search`}
+                role="search"
+                className="hidden max-w-sm flex-1 md:block"
+              >
                 <label className="bg-surface border-line rounded-pill shadow-card focus-within:border-line-strong flex min-h-11 items-center gap-2.5 border px-4">
                   <Icon name="search" className="text-ink-faint size-4" />
-                  <span className="sr-only">Search problems</span>
+                  <span className="sr-only">Search {courseShort}</span>
                   <input
+                    id={SHELL_SEARCH_ID}
                     type="search"
                     name="q"
-                    placeholder="Search problems, tracks, concepts"
+                    placeholder={`Search the ${courseShort} course`}
                     className="text-body placeholder:text-ink-faint min-w-0 flex-1 bg-transparent outline-none"
                   />
                   <kbd className="border-line text-micro text-ink-faint rounded-box bg-sunken border px-1.5 py-0.5 font-mono">
@@ -220,6 +230,21 @@ export function AppShell({
             )}
 
             <div className="ml-auto flex shrink-0 items-center gap-2">
+              {course !== undefined && (
+                <>
+                  <Link
+                    href={`/${course}/search`}
+                    aria-label={`Search ${courseShort}`}
+                    className={cn(
+                      'bg-surface border-line text-ink-soft hover:text-ink inline-grid size-11 place-items-center rounded-full border',
+                      variant === 'sidebar' && 'md:hidden',
+                    )}
+                  >
+                    <Icon name="search" className="size-5" />
+                  </Link>
+                  <SearchShortcut href={`/${course}/search`} inputId={SHELL_SEARCH_ID} />
+                </>
+              )}
               {stats === undefined ? (
                 <Link
                   href="/profile"
