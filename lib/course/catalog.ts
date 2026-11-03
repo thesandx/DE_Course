@@ -10,6 +10,7 @@ import { type DoneMap, LESSON_XP, lessonId, PROBLEM_XP, problemId } from '@/lib/
 import * as ai from '@/lib/course/tracks/ai';
 import * as architecture from '@/lib/course/tracks/architecture';
 import * as behavioral from '@/lib/course/tracks/behavioral';
+import * as cloud from '@/lib/course/tracks/cloud';
 import * as dbt from '@/lib/course/tracks/dbt';
 import * as lakehouse from '@/lib/course/tracks/lakehouse';
 import * as modeling from '@/lib/course/tracks/modeling';
@@ -35,6 +36,7 @@ const MODULES = [
   streaming,
   lakehouse,
   snowflakeDatabricks,
+  cloud,
   quality,
   architecture,
   systemDesign,
