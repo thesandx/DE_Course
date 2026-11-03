@@ -42,9 +42,9 @@ function proseFields(): Array<[string, string]> {
 }
 
 describe('catalogue integrity', () => {
-  it('has twelve tracks with unique, URL-safe slugs', () => {
+  it('has thirteen tracks with unique, URL-safe slugs', () => {
     const slugs = TRACKS.map((track) => track.slug);
-    expect(slugs).toHaveLength(12);
+    expect(slugs).toHaveLength(13);
     expect(new Set(slugs).size).toBe(slugs.length);
     for (const slug of slugs) expect(slug).toMatch(SLUG);
   });
