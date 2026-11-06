@@ -13,6 +13,7 @@ import { Icon } from './Icon';
 import { Logo } from './Logo';
 import { SearchShortcut } from './SearchShortcut';
 import { SidebarNav } from './SidebarNav';
+import { ThemeToggle } from './ThemeToggle';
 
 export interface Crumb {
   label: string;
@@ -175,6 +176,7 @@ export function AppShell({
             )}
             <Logo
               appName={appName}
+              compact={stats !== undefined}
               className={cn(
                 variant === 'sidebar' && 'md:hidden',
                 variant === 'focus' && back !== undefined && 'hidden md:flex',
@@ -230,6 +232,7 @@ export function AppShell({
             )}
 
             <div className="ml-auto flex shrink-0 items-center gap-2">
+              <ThemeToggle />
               {course !== undefined && (
                 <>
                   <Link

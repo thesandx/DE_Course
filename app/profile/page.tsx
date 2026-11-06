@@ -5,6 +5,7 @@ import { SignOutButton } from '@/components/auth/SignOutButton';
 import { AppShell } from '@/components/layout/AppShell';
 import { PageHeading } from '@/components/layout/PageHeading';
 import { ProfileForm } from '@/components/profile/ProfileForm';
+import { ThemePicker } from '@/components/profile/ThemePicker';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -151,6 +152,7 @@ async function ProfileDetails({ user }: { user: SessionUser }): Promise<React.JS
         <p className="text-small text-ink-soft">
           Your phone number and email come from how you sign in, so they are not edited here.
         </p>
+        <ThemePicker className="mt-2" />
         <SignOutButton redirectTo="/" variant="secondary" block />
       </section>
     </>

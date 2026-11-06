@@ -170,7 +170,7 @@ export function TryQuestion() {
               className={cn(
                 'rounded-pill text-small inline-flex min-h-10 shrink-0 items-center gap-1.5 border px-3 font-medium transition-colors',
                 active
-                  ? 'bg-ink border-ink text-on-night'
+                  ? 'bg-ink border-ink text-on-ink'
                   : 'border-line text-ink-soft hover:text-ink hover:border-line-strong',
               )}
             >
@@ -222,7 +222,7 @@ export function TryQuestion() {
             type="button"
             onClick={() => setShown(shown === 'model' ? null : 'model')}
             aria-pressed={shown === 'model'}
-            className="squish bg-ink text-on-night rounded-pill text-small inline-flex min-h-11 items-center px-5 font-semibold"
+            className="squish bg-ink text-on-ink rounded-pill text-small inline-flex min-h-11 items-center px-5 font-semibold"
           >
             {shown === 'model' ? 'Hide model' : 'Reveal model'}
           </button>

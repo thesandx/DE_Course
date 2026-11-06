@@ -87,7 +87,7 @@ export function Flashcards({ cards, lines, known, xpPerCard }: FlashcardsProps) 
                 className={cn(
                   'rounded-pill text-small inline-flex min-h-11 items-center gap-2 border px-3.5 font-medium',
                   filter === line.slug
-                    ? 'bg-ink text-on-night border-ink'
+                    ? 'bg-ink text-on-ink border-ink'
                     : 'bg-surface border-line text-ink-soft hover:text-ink',
                 )}
               >

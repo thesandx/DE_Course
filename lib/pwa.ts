@@ -6,12 +6,14 @@
  * See design-language.md > Responsive: an app on a phone, a website on a desktop.
  */
 
+import { THEME_COLORS } from '@/lib/theme';
+
 /**
- * The browser chrome and the splash screen colour. It matches `--color-paper`
- * for the active theme in `styles/globals.css`; `tests/site-checklist.test.ts`
- * fails when the two differ. Change both together.
+ * The splash screen colour of the installed app: the light `--color-paper`.
+ * The manifest takes one colour, so it is the light one. The browser chrome
+ * follows the mode through the `theme-color` meta tags (see lib/theme.ts).
  */
-export const THEME_COLOR = '#f8f5f0';
+export const THEME_COLOR = THEME_COLORS.light;
 
 /**
  * PNG icons in `public/icons/`, drawn from `app/icon.svg`. `any` icons keep

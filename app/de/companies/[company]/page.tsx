@@ -89,7 +89,7 @@ export default async function CompanyPage({ params }: Props) {
                   <h3 className="text-heading flex items-center gap-3">
                     <span
                       aria-hidden="true"
-                      className="bg-ink text-on-night text-small rounded-box inline-grid size-8 shrink-0 place-items-center font-mono font-semibold"
+                      className="bg-ink text-on-ink text-small rounded-box inline-grid size-8 shrink-0 place-items-center font-mono font-semibold"
                     >
                       {String(index + 1).padStart(2, '0')}
                     </span>

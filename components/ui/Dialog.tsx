@@ -51,7 +51,7 @@ export function Dialog({ open, onClose, title, children, actions, className }: D
       }}
       className={cn(
         'bg-surface text-ink border-line shadow-raised rounded-sheet border',
-        'backdrop:bg-ink/40',
+        'backdrop:bg-night-deep/60',
         'inset-x-4 mx-auto mt-auto mb-4 max-w-lg p-0 sm:my-auto',
         'sheet-motion',
         className,

@@ -27,10 +27,10 @@ export function buttonStyles({
     size === 'sm' && 'min-h-11 px-4 text-small md:min-h-9',
     size === 'md' && 'min-h-11 px-5 text-body',
     size === 'lg' && 'min-h-12 px-6 text-body',
-    variant === 'primary' && 'squish bg-brand text-on-night shadow-glow hover:bg-brand-deep',
+    variant === 'primary' && 'squish bg-brand text-on-night shadow-glow hover:bg-brand-hover',
     variant === 'secondary' &&
       'squish border-line-strong bg-surface text-ink hover:border-ink-faint border',
-    variant === 'dark' && 'squish bg-ink text-on-night shadow-raised',
+    variant === 'dark' && 'squish bg-ink text-on-ink shadow-raised',
     variant === 'night' &&
       'squish border-night-line bg-night-raised text-on-night hover:border-on-night-soft border',
     variant === 'quiet' &&
