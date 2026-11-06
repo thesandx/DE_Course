@@ -61,7 +61,7 @@ All tokens are in `styles/globals.css`. Tailwind v4 generates the utilities.
 | `track-1` … `track-16`                    | `bg-track-2`, `border-l-track-2` | One colour per track. Use `lib/course/track-style`. |
 | `heat-0` … `heat-4`                       | `bg-heat-3`                      | The study calendar only                             |
 
-White text (`text-on-night`) goes on `night`, `ink` and `brand`. Text on `gold` is `text-gold-ink`. Text on a `-soft` fill uses the matching dark tone.
+White text (`text-on-night`) goes on `night` and `brand`. Text on an `ink` fill is `text-on-ink`, because `ink` turns light in dark mode. Text on `gold` is `text-gold-ink`. Text on a `-soft` fill uses the matching dark tone.
 
 ### Type
 
@@ -228,6 +228,21 @@ Budget limits per viewport, all themes:
 
 ---
 
+## Light and dark
+
+The learner chooses light or dark. Both modes use the same tokens, so a component never knows the mode.
+
+- **Where the tokens change.** `[data-mode='dark']` in `styles/globals.css` gives each token a dark value. The mode is separate from the product theme (`data-theme`).
+- **No flash.** An inline script in `<head>` sets `data-mode` before the first paint. It reads the saved choice, else the device setting. The script is `THEME_INIT_SCRIPT` in `lib/theme.ts`.
+- **The choice.** `ThemeToggle` in every header flips light and dark. `ThemePicker` on the profile page also offers "Device", which follows the device setting. The choice is saved in `localStorage` on the device, not in Firestore, because each device can use a different mode.
+- **Use the tokens, not `dark:`.** Add a dark value for a token before you add a `dark:` utility. Use `dark:` only when the change is not a colour, such as the icon swap in `ThemeToggle`.
+- **Night bands stay dark in both modes.** In dark mode they sit one step above the page. Text on them is always `text-on-night`.
+- **An `ink` fill inverts.** In dark mode, an active pill or the `dark` button is light with dark text. Put `text-on-ink` on it, never `text-on-night`.
+- **Wells are lighter in dark mode.** `sunken` sits a step above `surface`, so an empty progress bar still shows.
+- **Check both.** Look at a new screen in both modes, on a phone and a desktop, before the pull request.
+
+---
+
 ## Signature patterns
 
 These make Loop Ready recognisable. Use them; do not invent new decorative devices.
@@ -317,7 +332,7 @@ The source order is the phone order. Screen readers and the keyboard follow it a
 - **Thumb reach.** Navigation is at the bottom. The primary action is at the end of the form, at full width.
 - **Safe areas.** The page draws under the notch (`viewportFit: 'cover'`). Fixed chrome pads itself with `env(safe-area-inset-*)`, as `TabBar` does.
 - **Press feedback, not a tap flash.** The base styles remove the grey tap highlight. `squish` and `press` answer the tap.
-- **Installable.** `app/manifest.ts` sets `display: 'standalone'`. The icons are in `public/icons/` (192px, 512px and a maskable 512px) and `app/apple-icon.png`. `THEME_COLOR` in `lib/pwa.ts` matches `--color-paper`. When you change the mark, export `app/icon.svg` again at each size.
+- **Installable.** `app/manifest.ts` sets `display: 'standalone'`. The icons are in `public/icons/` (192px, 512px and a maskable 512px) and `app/apple-icon.png`. `THEME_COLORS` in `lib/theme.ts` match `--color-paper` in each mode, and the manifest uses the light one. When you change the mark, export `app/icon.svg` again at each size.
 - **No service worker.** The template has none, on purpose. A browser cache keeps the old build after a deploy: the same failure as trap 26 in a CDN. Add one only with a versioned cache and an update prompt. Record that decision in an ADR.
 
 ### Never

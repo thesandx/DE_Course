@@ -13,6 +13,7 @@ import { describe, expect, it } from 'vitest';
 
 import manifest from '@/app/manifest';
 import { THEME_COLOR } from '@/lib/pwa';
+import { THEME_COLORS } from '@/lib/theme';
 
 const ROOT = join(__dirname, '..');
 
@@ -178,6 +179,12 @@ describe('site checklist', () => {
     const css = readFileSync(join(ROOT, 'styles/globals.css'), 'utf8');
     const paper = /--color-paper:\s*(#[0-9a-f]{3,8})/i.exec(css)?.[1];
     expect(paper?.toLowerCase()).toBe(THEME_COLOR.toLowerCase());
+  });
+
+  it('keeps the dark theme colour equal to the dark --color-paper', () => {
+    const css = readFileSync(join(ROOT, 'styles/globals.css'), 'utf8');
+    const dark = /\[data-mode='dark'\]\s*\{[^}]*?--color-paper:\s*(#[0-9a-f]{3,8})/i.exec(css)?.[1];
+    expect(dark?.toLowerCase()).toBe(THEME_COLORS.dark.toLowerCase());
   });
 
   it('prints no phone number or email address as plain text', () => {

@@ -47,13 +47,13 @@ function NavRow({
       className={cn(
         'rounded-input text-body flex min-h-10 items-center gap-3 px-3 font-medium transition-colors',
         nested && 'ml-4',
-        active ? 'bg-ink text-on-night' : 'text-ink-soft hover:bg-sunken hover:text-ink',
+        active ? 'bg-ink text-on-ink' : 'text-ink-soft hover:bg-sunken hover:text-ink',
       )}
     >
       <Icon name={icon} className="size-4.5" />
       <span className="grow">{label}</span>
       {count !== undefined && (
-        <span className={cn('text-small', active ? 'text-on-night-soft' : 'text-ink-faint')}>
+        <span className={cn('text-small', active ? 'text-on-ink/70' : 'text-ink-faint')}>
           {count}
         </span>
       )}

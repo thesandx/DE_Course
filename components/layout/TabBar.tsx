@@ -113,7 +113,7 @@ export function TabBar({ className }: TabBarProps) {
                 className={cn(
                   'press rounded-pill flex min-h-13 flex-col items-center justify-center gap-0.5 px-1',
                   'text-small font-medium transition-colors duration-200',
-                  active ? 'text-on-night' : 'text-ink-soft hover:text-ink',
+                  active ? 'text-on-ink' : 'text-ink-soft hover:text-ink',
                 )}
               >
                 <svg

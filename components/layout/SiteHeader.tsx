@@ -8,6 +8,7 @@ import { activeTabHref, APP_TABS, TABLESS_PATHS } from '@/lib/navigation';
 import { cn } from '@/lib/utils';
 
 import { Logo } from './Logo';
+import { ThemeToggle } from './ThemeToggle';
 
 export interface SiteHeaderProps {
   appName: string;
@@ -33,14 +34,14 @@ export function SiteHeader({ appName, className }: SiteHeaderProps) {
     <div data-site-chrome className={cn('bg-paper/90 sticky top-0 z-30 backdrop-blur', className)}>
       <div className="flex items-center gap-3 px-4 py-3 md:hidden">
         <Logo appName={appName} />
-        {!onSignIn && (
-          <Link
-            href="/sign-in"
-            className={buttonStyles({ variant: 'secondary', size: 'sm', className: 'ml-auto' })}
-          >
-            Sign in
-          </Link>
-        )}
+        <div className="ml-auto flex items-center gap-2">
+          <ThemeToggle />
+          {!onSignIn && (
+            <Link href="/sign-in" className={buttonStyles({ variant: 'secondary', size: 'sm' })}>
+              Sign in
+            </Link>
+          )}
+        </div>
       </div>
       <div className="hidden md:block">
         <header className="mx-auto flex w-full max-w-6xl items-center gap-8 px-8 py-4">
@@ -68,16 +69,22 @@ export function SiteHeader({ appName, className }: SiteHeaderProps) {
               })}
             </ul>
           </nav>
-          {!onSignIn && (
-            <div className="ml-auto flex items-center gap-2">
-              <Link href="/sign-in" className={buttonStyles({ variant: 'secondary', size: 'sm' })}>
-                Sign in
-              </Link>
-              <Link href="/sign-in?next=/" className={buttonStyles({ size: 'sm' })}>
-                Start learning
-              </Link>
-            </div>
-          )}
+          <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle />
+            {!onSignIn && (
+              <>
+                <Link
+                  href="/sign-in"
+                  className={buttonStyles({ variant: 'secondary', size: 'sm' })}
+                >
+                  Sign in
+                </Link>
+                <Link href="/sign-in?next=/" className={buttonStyles({ size: 'sm' })}>
+                  Start learning
+                </Link>
+              </>
+            )}
+          </div>
         </header>
       </div>
     </div>

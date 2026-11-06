@@ -7,7 +7,7 @@ import { Footer } from '@/components/layout/Footer';
 import { SiteHeader } from '@/components/layout/SiteHeader';
 import { TabBar } from '@/components/layout/TabBar';
 import { env } from '@/lib/env';
-import { THEME_COLOR } from '@/lib/pwa';
+import { THEME_COLORS, THEME_INIT_SCRIPT } from '@/lib/theme';
 
 export const metadata: Metadata = {
   metadataBase: new URL(env.appUrl),
@@ -34,8 +34,12 @@ export const viewport: Viewport = {
   // Lets the page draw under a phone's notch and home indicator, so TabBar can
   // pad itself with env(safe-area-inset-bottom) like a native nav bar.
   viewportFit: 'cover',
-  // Matches --color-paper for the active theme. See lib/pwa.ts.
-  themeColor: THEME_COLOR,
+  // Matches --color-paper for the device's mode. The head script corrects it
+  // when the learner picked a mode by hand. See lib/theme.ts.
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: THEME_COLORS.light },
+    { media: '(prefers-color-scheme: dark)', color: THEME_COLORS.dark },
+  ],
 };
 
 /**
@@ -103,8 +107,19 @@ export default function RootLayout({
       lang="en"
       data-theme={THEME}
       className={`${spaceGrotesk.variable} ${inter.variable} ${jetbrainsMono.variable}`}
+      // The head script sets data-mode before React hydrates, so the server's
+      // <html> attributes differ from the browser's on purpose.
       suppressHydrationWarning
     >
+      <head>
+        {/*
+          Light or dark, before the first paint: the stored choice, else the
+          device setting. Inline and blocking on purpose, because a deferred
+          script would paint the light page first and then flash. It reads
+          localStorage only. See lib/theme.ts.
+        */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       {/*
         pb-28 keeps the last line of every page clear of the floating TabBar,
         on a phone only: from md up the TabBar hides. The flex column lets a
