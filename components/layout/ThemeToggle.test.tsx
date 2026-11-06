@@ -41,7 +41,7 @@ describe('ThemeToggle', () => {
     render(<ThemeToggle />);
     localStorage.setItem(THEME_STORAGE_KEY, 'dark');
     act(() => {
-      window.dispatchEvent(new StorageEvent('storage', { key: THEME_STORAGE_KEY }));
+      window.dispatchEvent(new Event('storage'));
     });
     expect(root).toHaveAttribute('data-mode', 'dark');
     expect(screen.getByRole('button', { name: 'Switch to light mode' })).toBeInTheDocument();

@@ -58,6 +58,12 @@ describe('THEME_INIT_SCRIPT', () => {
     expect(resolveThemeMode(parseThemeChoice(stored), prefersDark)).toBe(mode);
   });
 
+  it('spells the same key and colours as the constants', () => {
+    expect(THEME_INIT_SCRIPT).toContain(`'${THEME_STORAGE_KEY}'`);
+    expect(THEME_INIT_SCRIPT).toContain(`'${THEME_COLORS.dark}'`);
+    expect(THEME_INIT_SCRIPT).toContain(`'${THEME_COLORS.light}'`);
+  });
+
   it('sets the browser chrome colour for the mode', () => {
     document.head.innerHTML =
       '<meta name="theme-color" content="#000000"><meta name="theme-color" content="#000000">';
