@@ -396,6 +396,414 @@ export const track: Track = {
         },
       ],
     },
+    {
+      slug: 'block-file-object-storage',
+      title: 'Block, file and object storage',
+      summary:
+        'Compare block, file and object storage by interface, latency, sharing and cost, and explain why the lake lives on object storage.',
+      minutes: 13,
+      body: `
+        Every byte in a data platform sits on one of three kinds of storage. Each one exposes a
+        different interface, and that interface explains a lot of lakehouse design.
+
+        ## The three kinds
+
+        | | **Block** | **File** | **Object** |
+        |---|---|---|---|
+        | Examples | EBS, GCP Persistent Disk, Azure Managed Disks, SAN | NFS, SMB, EFS, Filestore, Azure Files, HDFS | S3, GCS, Azure Blob and ADLS Gen2 |
+        | Interface | Numbered blocks; the OS puts a file system on top | Directories and files (POSIX): open, seek, append, rename | HTTP: PUT, GET, LIST, DELETE whole objects by key |
+        | Shared by | Usually one machine at a time | Many machines, with locks | Any number of clients |
+        | Latency | Sub-millisecond to a few ms | A few ms | Tens of ms per request; high throughput in parallel |
+        | Scale | Up to tens of TB per volume | Up to petabytes, with limits | Practically unlimited |
+        | Typical cost | Highest per GB | Middle | Lowest per GB, plus per-request fees |
+        | DE use | Database data files, Spark shuffle and spill disks | Shared notebooks, legacy tools, HDFS clusters | The data lake, backups, landing zones |
+
+        ## What object storage does not give you
+
+        - **No in-place update.** You rewrite the whole object. That is why lake files are immutable
+          and tables change by adding new files.
+        - **No atomic rename of a folder.** A "folder" is only a key prefix. Renaming one is a copy and
+          delete of every object, which is slow and not atomic. Old Hadoop jobs that commit by
+          renaming a temporary folder are slow and unsafe on S3. ADLS Gen2 with a hierarchical
+          namespace is the exception: it renames directories atomically.
+        - **Listing is slow and costs money.** Listing millions of keys to plan a query is the
+          problem that table formats solve with manifests.
+        - **Request limits per prefix.** S3 supports about 3,500 writes and 5,500 reads per second
+          per prefix, and scales by splitting busy prefixes. A sudden burst can get 503 SlowDown errors.
+
+        S3 has given strong read-after-write consistency for all operations since December 2020,
+        and GCS has always been strongly consistent for object reads. Old advice about eventual
+        consistency on S3 is out of date.
+
+        ## Why the lake is on object storage
+
+        - Storage and compute **scale apart**: ten clusters can read the same files.
+        - It is the cheapest durable tier (S3 Standard is about 0.02 USD per GB-month, block storage
+          is several times more).
+        - Lifecycle rules move cold data to cheaper classes automatically.
+
+        Table formats (Iceberg, Delta, Hudi) add what the object store lacks: atomic commits,
+        snapshots and a file list that does not need «LIST».
+
+        > [!trap] Local disks still matter
+        > Spark shuffles and spills to local block storage, not to the lake. A job with small or slow
+        > local disks fails or crawls even when the lake is fast. Size executor disks for the shuffle.
+
+        > [!senior] Explain the design through the interface
+        > "Object stores cannot rename a folder atomically, so Iceberg commits by swapping one
+        > metadata pointer in the catalog" links storage to table format design. That link is the
+        > senior signal.
+      `,
+      checks: [
+        {
+          question: 'Why is renaming a "folder" on S3 a poor way to commit a job output?',
+          options: [
+            'S3 does not allow folders',
+            'A folder is a key prefix, so a rename copies and deletes every object, slowly and not atomically',
+            'S3 is eventually consistent',
+            'Renames cost more than 1 USD each',
+          ],
+          answer: 1,
+          why: 'Object stores have no real directories. A partial rename can leave readers seeing half the output, which is why table formats commit through metadata instead.',
+        },
+        {
+          question: 'Where should Spark shuffle files be written?',
+          options: [
+            'The object store bucket of the lake',
+            'Fast local block storage on each executor',
+            'An NFS share',
+            'The driver memory',
+          ],
+          answer: 1,
+          why: 'Shuffle is many small random reads and writes during the job. Local block storage gives the latency and IOPS it needs.',
+        },
+      ],
+    },
+    {
+      slug: 'compression-and-encoding',
+      title: 'Compression codecs and encodings',
+      summary:
+        'Choose a codec and encoding per layer, explain splittability, and trade CPU for bytes on purpose.',
+      minutes: 13,
+      body: `
+        Compression cuts storage cost and, more important, the bytes each query reads. It costs CPU
+        to write and to read. A senior engineer picks it per layer instead of keeping the default.
+
+        ## Two layers of saving
+
+        1. **Encodings** work on the values of one column, inside Parquet or ORC pages. They are
+           cheap to decode and some engines run filters on encoded data directly.
+        2. **Codecs** compress the encoded bytes of each page with a general algorithm.
+
+        | Encoding | Best for | Idea |
+        |---|---|---|
+        | **Dictionary** | Low to medium distinct values: status, city, country | Store each distinct value once, then small integer ids |
+        | **RLE / bit-packing** | Repeated values, booleans, dictionary ids | "4,000 times id 3", and ids packed in few bits |
+        | **Delta** | Sorted integers and timestamps | Store differences between neighbours, which are small |
+        | **Byte stream split** | Floating point measures | Groups the bytes of floats so the codec finds patterns |
+
+        Parquet writers fall back from dictionary to plain encoding when a column chunk has too many
+        distinct values for the dictionary page (about 1 MB by default in many writers). A UUID
+        column will never dictionary-encode well.
+
+        ## Codecs
+
+        | Codec | Speed | Ratio | Use |
+        |---|---|---|---|
+        | **LZ4** | Fastest | Lower | Hot data where CPU is the limit |
+        | **Snappy** | Very fast | Lower | Spark's default for Parquet; safe general choice |
+        | **ZSTD** | Fast at low levels, tunable 1 to 22 | High | Iceberg's default for Parquet since 1.4; good default for the lake |
+        | **GZIP** | Slow | High | Legacy and interchange; avoid for hot tables |
+
+        On typical event data, ZSTD at a low level often makes files noticeably smaller than Snappy
+        at a similar read speed. Measure on your own data before you change a large table.
+
+        ## Splittability
+
+        A file is **splittable** when many tasks can read parts of it in parallel.
+
+        - A 10 GB «.json.gz» or «.csv.gz» file is **not** splittable: one task must read it from the
+          start. bzip2 is splittable but slow.
+        - Parquet, ORC and Avro compress inside blocks or pages, so they stay splittable with any codec.
+
+        So the codec matters most for raw text files in the landing zone. Convert them to a
+        columnar format early.
+
+        ## Sorting multiplies compression
+
+        Sorting rows by a low-cardinality column puts equal values next to each other, so RLE and
+        dictionary encoding shrink them further, and min/max statistics get tighter. Sorting by
+        «country, city, event_date» before writing can cut file size and scan time together.
+
+        > [!trap] Compressing an already compressed column
+        > Images, encrypted fields and already-zipped blobs do not compress again. Paying ZSTD level
+        > 19 CPU on them buys nothing.
+
+        > [!senior] A codec per layer
+        > "Landing: whatever the source sends, converted to Parquet at once. Bronze and silver: ZSTD
+        > level 3. Gold tables read by dashboards all day: ZSTD or Snappy, sorted on the filter
+        > columns. Archive: a high ZSTD level." That answer shows deliberate trade-offs.
+      `,
+      checks: [
+        {
+          question:
+            'A daily 20 GB file arrives as one events.json.gz. Why does the Spark read use only one task?',
+          options: [
+            'JSON cannot be read in parallel',
+            'GZIP-compressed text is not splittable, so one task must read it from the start',
+            'The file is too small',
+            'Spark disables parallelism for JSON',
+          ],
+          answer: 1,
+          why: 'A gzip stream can only be decompressed from its beginning. Ask the source for smaller files or a splittable format, or convert once to Parquet.',
+        },
+        {
+          question: 'Which column will benefit least from dictionary encoding?',
+          options: ['order_status', 'country_code', 'request_uuid', 'payment_method'],
+          answer: 2,
+          why: 'A UUID is almost always unique, so the dictionary would be as big as the data. Writers fall back to plain encoding.',
+        },
+      ],
+    },
+    {
+      slug: 'warehouse-lake-lakehouse',
+      title: 'Warehouses, lakes and lakehouses',
+      summary:
+        'Compare the three architectures by storage, format, governance and cost, and say which one fits a given company.',
+      minutes: 14,
+      body: `
+        "Warehouse or lakehouse?" is a common opening question in a design round. A good answer
+        compares them on concrete properties and then chooses for the company in front of you.
+
+        ## Three architectures
+
+        | | **Data warehouse** | **Data lake** | **Lakehouse** |
+        |---|---|---|---|
+        | Storage | Managed, proprietary | Object storage | Object storage |
+        | Format | Internal columnar format | Open files: Parquet, JSON, CSV | Open files plus an open table format (Iceberg, Delta, Hudi) |
+        | Transactions | Full ACID | None: files appear one by one | ACID per table through the table format |
+        | Schema | On write, enforced | On read, often drifting | On write, with evolution rules |
+        | Engines | One (the vendor's) | Many, but each must guess the table state | Many, sharing one table state through a catalog |
+        | Governance | Built in: grants, masking, audit | Bucket permissions only | A catalog with grants, row filters and masks |
+        | Strength | Fast SQL, low operations work | Cheap, any data type, ML access | Open, one copy, many engines |
+        | Weakness | Lock-in, cost of compute and copies | "Data swamp", no updates, no consistency | You run more pieces: compaction, catalog, engines |
+
+        ## How we got here
+
+        1. **Warehouses** (Teradata, then Redshift, BigQuery, Snowflake) gave fast SQL on structured data.
+        2. **Lakes** (HDFS, then S3) stored everything cheaply, including logs and images for ML.
+        3. Most companies ran **both**: raw data in the lake, a copy in the warehouse for BI. That
+           two-tier design doubled storage, added a copy pipeline and gave two answers to one question.
+        4. **Lakehouses** put warehouse features (ACID, schema, time travel, governance) on the open
+           files, so one copy serves BI, data science and streaming.
+
+        ## The lines are blurring
+
+        - Warehouses read and write open tables: BigQuery tables for Apache Iceberg, Snowflake
+          Iceberg tables, Redshift reading Iceberg through the Glue catalog.
+        - Lakehouse engines give warehouse speed: Databricks SQL with Photon, Trino, StarRocks.
+
+        So the real choice is often **who owns the storage and the catalog**: the vendor, or you.
+
+        ## How to choose
+
+        - **A small team, mostly BI, one cloud:** a warehouse. Fewer moving parts, quick value.
+        - **Large scale, ML and streaming, several engines, cost pressure:** a lakehouse on open tables.
+        - **Both:** open tables as the single copy, with the warehouse reading them for BI.
+
+        > [!trap] "The lake is cheaper" is half the story
+        > Storage is cheap in both. The bill is compute and people. A lakehouse that needs three
+        > engineers for compaction and catalog work can cost more than a warehouse for a small team.
+
+        > [!senior] Choose for the company, not the trend
+        > "With 6 analysts, 2 data engineers and 3 TB, I choose BigQuery and keep raw files in GCS.
+        > If we add streaming and ML at 500 TB, I move the core tables to Iceberg so Spark and
+        > BigQuery share one copy." Naming the trigger for change is the senior part.
+      `,
+      checks: [
+        {
+          question:
+            'What problem of the two-tier lake plus warehouse design does a lakehouse remove?',
+          options: [
+            'The need for SQL',
+            'Keeping two copies of the data and a pipeline between them',
+            'The need for object storage',
+            'The need for schemas',
+          ],
+          answer: 1,
+          why: 'With ACID tables on open files, BI and ML read one copy, so the copy pipeline and the two versions of the truth go away.',
+        },
+      ],
+    },
+    {
+      slug: 'catalogs',
+      title: 'Catalogs: Hive Metastore, Glue, Unity and REST',
+      summary:
+        'Explain what a catalog stores, how it makes a table commit atomic, and how to choose one for several engines.',
+      minutes: 15,
+      body: `
+        A lakehouse table is a set of files plus metadata. The **catalog** tells every engine which
+        metadata is current. Without one shared catalog, two engines see two different tables.
+
+        ## What a catalog does
+
+        1. **Names:** maps «catalog.schema.table» to a location and a current metadata pointer.
+        2. **Atomic commits:** a writer commits by changing that pointer only if nobody else changed
+           it first (compare and swap).
+        3. **Access control:** who can read or write which table, column or row.
+        4. **Discovery and lineage:** descriptions, owners, tags and usage.
+
+        ## How a commit works
+
+        ~~~text
+        writer reads current pointer → v41.metadata.json
+        writer writes new data files and v42.metadata.json
+        writer asks catalog: set pointer to v42 IF it is still v41
+          success → readers now see v42
+          conflict → another writer committed v42 first: re-read, check for conflicts, retry
+        ~~~
+
+        This is **optimistic concurrency**. Two appends rarely conflict and both succeed after a
+        retry. Two jobs rewriting the same files (a compaction and a «MERGE») can conflict, and one
+        must redo its work. Delta Lake commits a different way: it writes the next numbered file in
+        «_delta_log» with "create only if absent", so the object store or a coordinator acts as
+        the arbiter.
+
+        ## The catalogs you will meet
+
+        | Catalog | What it is | Notes |
+        |---|---|---|
+        | **Hive Metastore** | A Thrift service on a relational database | The old default. Knows tables and partitions; no fine-grained access control |
+        | **AWS Glue Data Catalog** | Managed, Hive-compatible, serverless | Used by Athena, EMR, Redshift Spectrum; Lake Formation adds grants |
+        | **Unity Catalog** | Databricks' catalog for tables, volumes, models and functions | Grants, row filters, column masks, lineage; an open source version exists |
+        | **Iceberg REST catalog** | An open HTTP API spec | Any engine speaks it; implementations include Apache Polaris, Unity, Glue and others |
+        | **Nessie** | A catalog with git-like branches and tags | Commit to a branch, test, then merge |
+        | **Managed table services** | S3 Tables, BigLake metastore | The cloud runs the catalog and table maintenance |
+
+        ## Choosing
+
+        - **Which engines must read and write?** If Spark, Trino, Snowflake and BigQuery all need the
+          tables, pick a catalog every one of them supports, which today usually means the Iceberg
+          REST protocol.
+        - **Where do grants live?** Access rules belong in one place. If each engine has its own
+          grants, they drift.
+        - **One writer per table.** Many readers are fine, but one engine should own writes to a
+          table, so commit conflicts and semantics stay simple.
+
+        > [!trap] Two catalogs for one table
+        > If Spark registers a table in Hive Metastore and Trino uses a different catalog that also
+        > points at the same files, each commit updates only one of them. The other engine reads a
+        > stale snapshot or, after an expiry, missing files.
+
+        > [!senior] Make the catalog an explicit design box
+        > Draw the catalog in your design, name it, and say who may write each table. Interviewers
+        > notice when a lakehouse answer has engines and files but no catalog.
+      `,
+      checks: [
+        {
+          question: 'Two jobs commit to the same Iceberg table at once. What usually happens?',
+          options: [
+            'Both overwrite each other and data is lost',
+            'The second commit sees the pointer changed, re-checks for conflicts and retries',
+            'The table locks for an hour',
+            'The catalog merges the files',
+          ],
+          answer: 1,
+          why: 'Iceberg uses optimistic concurrency. A compare-and-swap on the metadata pointer fails for the second writer, which retries if its changes do not conflict.',
+        },
+        {
+          question: 'Why prefer one shared catalog for all engines?',
+          options: [
+            'It is free',
+            'Every engine then sees the same current snapshot and the same access rules',
+            'It removes the need for a table format',
+            'It makes queries faster',
+          ],
+          answer: 1,
+          why: 'The catalog holds the current metadata pointer. Separate catalogs give separate truths and separate grants.',
+        },
+      ],
+    },
+    {
+      slug: 'clustering-and-z-ordering',
+      title: 'Partitioning, clustering and Z-ordering',
+      summary:
+        'Lay out a table for its filters: partition for coarse pruning, sort or Z-order for skipping inside partitions, and know when liquid clustering fits.',
+      minutes: 14,
+      body: `
+        Partitioning prunes whole folders. Inside a partition, the order of rows decides how many
+        files and row groups a filter can skip. That second layer is **clustering**.
+
+        ## Linear sort order
+
+        Sorting by «(city, event_ts)» makes every file cover one or a few cities, so «city = 'SF'»
+        skips most files. But a filter on «event_ts» alone gets little help, because each city's
+        rows span the full time range. A linear sort serves the **first** column well and later
+        columns poorly.
+
+        ## Z-ordering
+
+        A Z-order curve interleaves the bits of several columns into one value and sorts by it.
+        Rows close in **any** of the columns end up close on disk.
+
+        ~~~text
+        x = 2 → 10, y = 3 → 11
+        interleave y1 x1 y0 x0 → 1 1 1 0 → z = 14
+        sort rows by z → files cover small squares of the (x, y) space
+        ~~~
+
+        - Good for 2 to 4 columns that are filtered **independently**, such as «pickup_zone» and
+          «driver_id».
+        - Each extra column weakens the benefit for every column.
+        - Use high-cardinality columns. A boolean or a three-value column gains little.
+
+        ## How each platform does it
+
+        | Platform | Feature |
+        |---|---|
+        | Delta Lake | «OPTIMIZE t ZORDER BY (a, b)»; or **liquid clustering** with «CLUSTER BY (a, b)» |
+        | Iceberg | A table sort order; «rewrite_data_files» with a «sort» or «zorder(a, b)» strategy |
+        | BigQuery | «CLUSTER BY» up to four columns, re-clustered automatically |
+        | Snowflake | Micro-partitions with a clustering key, maintained by Automatic Clustering (billed) |
+
+        ## Liquid clustering
+
+        Delta's liquid clustering replaces fixed partitions and Z-order for many tables. You
+        declare clustering columns, it clusters data incrementally (with a Hilbert curve), and you
+        can **change the columns later** without rewriting the table. It cannot be combined with
+        partitioning or Z-order on the same table.
+
+        ## A decision path
+
+        1. Is there a column in almost every filter with modest cardinality (a date)? Partition on it.
+        2. Is there one more dominant filter column? Sort by it within partitions.
+        3. Are there 2 to 4 columns filtered separately? Z-order or cluster on them.
+        4. Do access patterns change, or is the table small to medium? Prefer liquid or automatic clustering.
+
+        > [!trap] Clustering is not free or permanent
+        > New writes arrive unsorted, so the layout decays. Clustering rewrites data and costs
+        > compute. Schedule it on the partitions that are queried, not on ten years of history.
+
+        > [!senior] Prove it with file skipping
+        > Measure files scanned before and after: "The query read 1,800 of 2,000 files; after
+        > Z-ordering on pickup_zone and driver_id it reads 140." Numbers like this show you
+        > validated the layout instead of applying it by habit.
+      `,
+      checks: [
+        {
+          question:
+            'Queries filter by pickup_zone in some dashboards and by driver_id in others, each alone. Which layout helps both?',
+          options: [
+            'Partition by driver_id',
+            'Sort by pickup_zone then driver_id',
+            'Z-order (or multi-column clustering) on pickup_zone and driver_id',
+            'No layout can help both',
+          ],
+          answer: 2,
+          why: 'A linear sort serves mostly the first column. Z-order keeps rows close in both columns, so each filter alone can skip files.',
+        },
+      ],
+    },
   ],
 };
 
@@ -684,5 +1092,216 @@ export const problems: Problem[] = [
       'Deleted drivers must stay queryable for audits. How do you change the model?',
       'The target is 2 TB and each batch touches 0.01%. How do you keep MERGE cheap?',
     ],
+  },
+  {
+    slug: 'lakehouse-storage-for-each-need',
+    title: 'Pick the storage type for five needs',
+    track: 'lakehouse',
+    kind: 'concept',
+    difficulty: 'easy',
+    companies: ['google', 'uber'],
+    prompt: `
+      For each need, choose block, file or object storage and give one reason:
+
+      1. The raw event lake, 4 PB and growing.
+      2. Spark shuffle and spill space on each executor.
+      3. The data files of the Postgres orders database.
+      4. A legacy tool on 20 VMs that reads and writes the same folder with file locks.
+      5. Nightly database backups kept for a year.
+    `,
+    hints: ['Which needs are shared by many machines?', 'Which needs low-latency random I/O?'],
+    answer: `
+      1. **Object storage.** Cheapest per GB, practically unlimited, read by many engines at once.
+         Use a table format for commits.
+      2. **Block storage** (local NVMe or attached disks). Shuffle is random, latency-sensitive I/O
+         during the job; the lake is too slow and charges per request.
+      3. **Block storage.** A database needs low-latency random reads and writes and «fsync»
+         semantics on one machine.
+      4. **File storage** (NFS, EFS, Filestore). Many machines share a POSIX folder with locks and
+         renames, which object storage does not offer.
+      5. **Object storage** with a lifecycle rule to a cold storage class, plus versioning or an
+         object lock so backups cannot be deleted by mistake.
+    `,
+    signals: [
+      'Matches each need to the storage interface',
+      'Keeps shuffle on local block storage',
+      'Uses file storage only for shared POSIX needs',
+      'Adds lifecycle and immutability for backups',
+    ],
+    followUps: [
+      'The legacy tool must move to object storage. What changes in how it commits files?',
+    ],
+  },
+  {
+    slug: 'lakehouse-gzip-json-landing',
+    title: 'One task reads a 30 GB gzip file',
+    track: 'lakehouse',
+    kind: 'concept',
+    difficulty: 'medium',
+    companies: ['uber'],
+    prompt: `
+      A partner drops one «events.json.gz» file of 30 GB each night. The Spark job that parses it
+      runs for 3 hours with one busy task while 199 cores sit idle. The bronze table it writes
+      uses Snappy Parquet. What is going on, and how do you fix the pipeline end to end?
+    `,
+    hints: [
+      'Can a gzip stream be split?',
+      'What can you change at the source, and what if you cannot?',
+      'Is Snappy the right codec for bronze?',
+    ],
+    answer: `
+      GZIP text is **not splittable**: decompression must start at the beginning, so Spark gives
+      the whole file to one task. The other cores have nothing to do.
+
+      Fixes, best first:
+
+      1. **Change the source:** ask the partner for many files of about 256 MB to 1 GB, or for a
+         splittable format (Parquet, Avro, or JSON with ZSTD in multiple files).
+      2. **If the source cannot change:** run one cheap step that only decompresses and re-splits
+         the file (or reads it once and repartitions to 200 partitions right after the read), then
+         parse in parallel. The single-task part becomes plain decompression, which is fast.
+      3. **Write bronze as Parquet with ZSTD**, which usually stores the same data smaller than
+         Snappy at a similar read speed. Columnar files stay splittable with any codec.
+
+      Measure: runtime, task count after the read, and bytes stored before and after.
+    `,
+    signals: [
+      'Explains that gzip text is not splittable',
+      'Asks the source for smaller or splittable files',
+      'Repartitions right after the single read as a fallback',
+      'Chooses the bronze codec deliberately',
+      'Proposes measuring the change',
+    ],
+    followUps: [
+      'The partner sends a 2 GB zip archive of 50,000 small JSON files instead. Now what?',
+    ],
+  },
+  {
+    slug: 'lakehouse-zorder-trips',
+    title: 'Lay out a trips table for two kinds of filter',
+    track: 'lakehouse',
+    kind: 'concept',
+    difficulty: 'medium',
+    companies: ['uber'],
+    prompt: `
+      A Delta table of trips holds 3 years, 20 TB, partitioned by «trip_date». Operations
+      dashboards filter on the last 7 days and «pickup_zone». Support tools filter on one
+      «driver_id» over 90 days. Both are slow and scan most files in each date. What layout do you
+      propose, and how do you prove it works?
+    `,
+    hints: [
+      'Both filters are used alone.',
+      'A sort serves the first column best.',
+      'Which partitions need the rewrite?',
+    ],
+    answer: `
+      Keep the date partitions (every query filters on date) and **Z-order the files within each
+      date on «pickup_zone» and «driver_id»**: «OPTIMIZE trips WHERE trip_date >= ... ZORDER BY
+      (pickup_zone, driver_id)». A linear sort by zone would help the dashboards and leave the
+      driver lookup scanning every file.
+
+      Alternative: move to **liquid clustering** «CLUSTER BY (trip_date, pickup_zone, driver_id)»,
+      which clusters incrementally and lets the columns change later. It replaces the date
+      partitioning, so this is a table migration, not a setting.
+
+      Operations:
+
+      - Run the rewrite only on recent and frequently queried dates, then nightly on yesterday's
+        partition. Old cold dates do not repay the compute.
+      - Prove it: compare files and bytes scanned for both query shapes before and after (from the
+        query profile or «DESCRIBE HISTORY» and the scan metrics). Target a drop from "most files"
+        to a few percent.
+      - For the support lookup, also consider a small driver-keyed serving table if latency must
+        be under a second.
+    `,
+    signals: [
+      'Keeps date partitioning for the universal filter',
+      'Chooses multi-column clustering for independent filters',
+      'Knows liquid clustering and that it replaces partitioning',
+      'Limits the rewrite to hot partitions',
+      'Proves the result with files scanned',
+    ],
+    followUps: ['Why would adding a fifth Z-order column make every query slower?'],
+  },
+  {
+    slug: 'lakehouse-catalog-for-engines',
+    title: 'One Iceberg lake for Spark, Trino and Snowflake',
+    track: 'lakehouse',
+    kind: 'design',
+    difficulty: 'hard',
+    companies: ['google', 'uber'],
+    prompt: `
+      Today Spark writes Iceberg tables registered in a Hive Metastore. Trino reads them through
+      the same metastore. The finance team now wants Snowflake to query the gold tables, and the
+      ML team wants to write feature tables from Python. Design the catalog layer.
+    `,
+    hints: [
+      'What can every engine speak?',
+      'Who may write each table?',
+      'Where do access rules live?',
+    ],
+    answer: `
+      **Move to one Iceberg REST catalog** (for example Apache Polaris, Unity Catalog, Glue's
+      Iceberg REST endpoint or a managed equivalent). Spark, Trino, Snowflake and PyIceberg all
+      speak the REST protocol, so every engine sees the same current snapshot.
+
+      Design points:
+
+      1. **Write ownership:** Spark owns writes to bronze, silver and gold. The ML team writes only
+         to its own «features» namespace. Snowflake reads gold only. One writer per table keeps
+         commit conflicts rare.
+      2. **Credentials:** the catalog vends short-lived, table-scoped storage credentials, so engines
+         do not hold broad bucket keys.
+      3. **Grants in one place:** namespaces and roles in the catalog (finance reads gold; ML writes
+         features). Avoid a second set of grants in each engine.
+      4. **Migration:** register existing tables in the new catalog pointing at their current
+         metadata, freeze writes for a short window, switch Spark and Trino, then retire the
+         Hive Metastore entries so no one commits to the old pointer.
+      5. **Maintenance:** one owner runs snapshot expiry and compaction, coordinated with the
+         writers to avoid commit conflicts.
+    `,
+    signals: [
+      'Chooses a catalog every engine supports',
+      'Assigns one writer per table',
+      'Centralises grants and uses vended credentials',
+      'Plans a migration that avoids two live pointers',
+      'Names who runs table maintenance',
+    ],
+    followUps: [
+      'A compaction job and a MERGE keep failing with commit conflicts. What do you change?',
+    ],
+  },
+  {
+    slug: 'lakehouse-warehouse-or-lakehouse',
+    title: 'Warehouse or lakehouse for a growing startup',
+    track: 'lakehouse',
+    kind: 'concept',
+    difficulty: 'easy',
+    companies: ['google'],
+    prompt: `
+      A 60-person delivery startup has 2 TB of data, 5 analysts and 1 data engineer. They plan
+      real-time ETAs and an ML team next year. The CTO asks: "Warehouse or lakehouse?"
+    `,
+    hints: ['Who will operate it?', 'What would make you change the answer later?'],
+    answer: `
+      **Start with a managed warehouse** (BigQuery or Snowflake), with raw files landed in object
+      storage first. With one data engineer and 2 TB, the team should spend time on models and
+      data quality, not on compaction, catalogs and engines.
+
+      Keep the door open:
+
+      - Land raw data in open formats (Parquet in GCS or S3) before loading the warehouse.
+      - Keep transformations in dbt so they can move.
+      - Watch the triggers: streaming at scale, ML training on large raw data, several engines, or
+        compute costs that grow faster than value. When they appear, move the core tables to an
+        open table format (Iceberg) that the warehouse can still read.
+    `,
+    signals: [
+      'Fits the choice to team size and data size',
+      'Keeps raw data in open formats',
+      'Names concrete triggers to move later',
+      'Avoids choosing by trend',
+    ],
+    followUps: ['A year later, compute cost has tripled. What do you look at first?'],
   },
 ];

@@ -342,6 +342,134 @@ export const track: Track = {
         },
       ],
     },
+    {
+      slug: 'anomaly-detection',
+      title: 'Anomaly detection for data pipelines',
+      summary:
+        'Catch silent data problems with seasonal baselines and robust statistics, and tune alerts so on-call trusts them.',
+      minutes: 15,
+      body: `
+        Rule-based tests catch what you predicted: nulls, duplicates, broken keys. The worst
+        incidents are the ones nobody predicted: a mobile release that halves events from Android,
+        or a currency field that silently switches from dollars to cents. **Anomaly detection**
+        watches metrics about the data and flags values that do not fit their history.
+
+        ## What to monitor
+
+        | Metric | Catches |
+        |---|---|
+        | **Volume:** rows per load, per day, per segment | Lost partitions, a dead source, duplicate loads |
+        | **Freshness:** time since the latest event | Stalled pipelines |
+        | **Distribution:** null rate, distinct count, mean, percentiles of key columns | Unit changes, broken mappings, default values |
+        | **Schema:** columns added, removed, retyped | Upstream changes |
+        | **Business KPIs:** orders, revenue, conversion | Problems that pass every technical check |
+
+        Segment the metric. Total orders can look normal while one city drops to zero, because
+        another city grew.
+
+        ## Baselines: compare like with like
+
+        Most data has **weekly seasonality**: Saturday is not Tuesday. Compare a day with the same
+        weekday over the last several weeks, not with yesterday. Mark holidays and known events, or
+        the detector learns them as normal one week and alerts the next.
+
+        ## Robust scores
+
+        A plain z-score uses the mean and standard deviation, and one past outage inflates both.
+        The **median** and the **median absolute deviation (MAD)** ignore a few bad points.
+        «robust_z = (value - median) / (1.4826 × MAD)». The constant makes MAD comparable to a
+        standard deviation for normal data. A threshold of about 3.5 to 4 is a common start.
+
+        ~~~sql
+        WITH daily AS (
+          SELECT city, CAST(created_at AS DATE) AS d, count(*) AS orders
+          FROM orders
+          GROUP BY city, CAST(created_at AS DATE)
+        ),
+        history AS (
+          SELECT cur.city, cur.d, cur.orders, prev.orders AS prev_orders
+          FROM daily AS cur
+          JOIN daily AS prev
+            ON prev.city = cur.city
+           AND prev.d < cur.d
+           AND prev.d >= cur.d - INTERVAL 56 DAY
+           AND dayofweek(prev.d) = dayofweek(cur.d)
+        ),
+        baseline AS (
+          SELECT city, d, orders, median(prev_orders) AS base, count(*) AS weeks
+          FROM history
+          GROUP BY city, d, orders
+        ),
+        spread AS (
+          SELECT b.city, b.d, b.orders, b.base, b.weeks,
+                 median(abs(h.prev_orders - b.base)) AS mad
+          FROM baseline AS b
+          JOIN history AS h ON h.city = b.city AND h.d = b.d
+          GROUP BY b.city, b.d, b.orders, b.base, b.weeks
+        )
+        SELECT city, d, orders, base,
+               round((orders - base) / greatest(1.4826 * mad, 0.02 * base), 1) AS robust_z
+        FROM spread
+        WHERE weeks >= 4
+          AND abs(orders - base) / greatest(1.4826 * mad, 0.02 * base) > 4
+        ORDER BY d, city;
+        ~~~
+
+        The «greatest(..., 0.02 * base)» floor stops a very stable series (MAD near zero) from
+        alerting on a tiny change. «weeks >= 4» skips series without enough history.
+
+        ## Beyond simple statistics
+
+        - **Seasonal decomposition (STL)** or forecasting models (Prophet-style, ARIMA) for series
+          with trend and several seasons.
+        - **Tools:** Elementary and dbt packages for tests in the warehouse; Monte Carlo, Anomalo,
+          Bigeye and the native monitors in Databricks and BigQuery for managed detection.
+
+        The method matters less than the next part.
+
+        ## Make alerts trustworthy
+
+        - **Route by owner and severity.** A gold revenue table pages; a sandbox table posts a message.
+        - **Alert on the cause once,** not on 40 downstream tables. Use lineage to group them.
+        - **Track precision.** Ask on-call to label each alert useful or noise, and tune thresholds
+          per metric. Under about 50 percent useful, people stop reading alerts.
+        - **Block or warn:** stop publishing a gold table on a severe anomaly (circuit breaker), and
+          let warnings through with a note on the dashboard.
+
+        > [!trap] Detecting on the totals only
+        > A total hides a segment that went to zero. Monitor key segments (platform, country,
+        > source) where the business acts on them, and cap the number of series to keep cost sane.
+
+        > [!senior] Anomalies complement contracts
+        > "Contracts and tests stop what we can name. Seasonal, segmented anomaly checks catch what we
+        > did not foresee. Severe ones hold the gold publish; the rest alert the owner with lineage
+        > context." That puts detection in a system, not a tool list.
+      `,
+      checks: [
+        {
+          question: 'Why use the median and MAD instead of the mean and standard deviation?',
+          options: [
+            'They are faster to compute',
+            'A few past outliers barely move them, so one old outage does not hide new anomalies',
+            'They work only on weekends',
+            'They need no history',
+          ],
+          answer: 1,
+          why: 'The mean and standard deviation are pulled by extreme values. Robust statistics keep the baseline stable.',
+        },
+        {
+          question: 'Orders on a Saturday are 40 percent above Friday. Is that an anomaly?',
+          options: [
+            'Yes, always',
+            'Not necessarily; compare with previous Saturdays, because order volume has weekly seasonality',
+            'Only if it is a holiday',
+            'Only for one city',
+          ],
+          answer: 1,
+          why: 'The right baseline is the same weekday in past weeks. Comparing with yesterday flags normal weekly patterns.',
+        },
+      ],
+    },
   ],
 };
 
@@ -598,5 +726,53 @@ export const problems: Problem[] = [
       'Alerts on risk before breach and uses an error budget',
     ],
     followUps: ['How do you measure the ledger difference without slowing the pipeline?'],
+  },
+  {
+    slug: 'quality-noisy-anomaly-alerts',
+    title: 'Volume alerts page on-call 30 times a week',
+    track: 'quality',
+    kind: 'concept',
+    difficulty: 'medium',
+    companies: ['google', 'uber'],
+    prompt: `
+      A team added a volume monitor on 400 tables: alert when today's row count differs from
+      yesterday's by more than 20%. It now pages on-call about 30 times a week, nearly all false.
+      Last month it still missed a real problem: iOS events from one country fell to zero for
+      two days. Redesign the monitoring.
+    `,
+    hints: [
+      'What is the wrong baseline?',
+      'Why did the real problem not move the total?',
+      'Does every table deserve a page?',
+    ],
+    answer: `
+      Three design faults: the baseline ignores seasonality, the threshold ignores each series'
+      normal spread, and the metric is a total that hides segments.
+
+      1. **Seasonal baseline:** compare with the same weekday over the last 6 to 8 weeks, and mark
+         holidays and launches.
+      2. **Robust, per-series threshold:** a robust z-score from the median and MAD, with a floor,
+         instead of a flat 20%. Stable tables get tight bands; noisy ones get wide bands.
+      3. **Segments where it matters:** for the event tables, monitor rows per platform and
+         country (the top segments by volume, a few hundred series), not just the total.
+      4. **Tiering and routing:** page only for tier-1 tables (those behind revenue, finance or
+         ML features). Tier 2 posts to the owner's channel. Tier 3 goes to a weekly digest.
+      5. **Group by lineage:** one upstream drop alerts once, at the source, with the affected
+         downstream tables listed.
+      6. **Measure it:** label every alert useful or noise for a month, tune per series, and set a
+         target such as "at least 70% of pages are actionable".
+
+      For the critical event tables, a severe anomaly blocks the gold publish, so dashboards do
+      not show the bad numbers while someone investigates.
+    `,
+    signals: [
+      'Replaces day-over-day with a weekly seasonal baseline',
+      'Uses robust per-series thresholds',
+      'Monitors key segments, not only totals',
+      'Tiers tables and routes alerts by severity',
+      'Deduplicates alerts with lineage',
+      'Measures alert precision',
+    ],
+    followUps: ['How do you stop a planned marketing launch from paging everyone?'],
   },
 ];

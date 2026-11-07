@@ -1002,6 +1002,352 @@ export const track: Track = {
         },
       ],
     },
+    {
+      slug: 'lab-databricks-medallion',
+      title: 'Hands-on: build a medallion pipeline on Databricks',
+      summary:
+        'Build bronze, silver and gold tables on Databricks Free Edition with Auto Loader, a MERGE and a scheduled job, then break it with duplicate files and prove it holds.',
+      minutes: 18,
+      body: `
+        This lab builds a small but real pipeline: raw JSON files land in a volume, Auto Loader
+        ingests them into bronze, a «MERGE» builds a deduplicated silver table, and a gold table
+        serves a dashboard. A job runs the three steps in order. It takes about 45 minutes.
+
+        ## Before you start
+
+        - Sign up for **Databricks Free Edition** (free, no cloud account needed). It runs on
+          serverless compute with usage limits, which is plenty for this lab.
+        - The lab uses the default catalog «workspace». If your workspace has a different default,
+          replace «workspace» everywhere.
+        - Create a notebook named «00_setup» and run each step in its own cell.
+
+        ## Step 1: a schema, two volumes and raw files
+
+        ~~~sql
+        CREATE SCHEMA IF NOT EXISTS workspace.taxi_lab;
+        CREATE VOLUME IF NOT EXISTS workspace.taxi_lab.raw;
+        CREATE VOLUME IF NOT EXISTS workspace.taxi_lab.chk;
+        ~~~
+
+        Now pretend to be the source system. Write two batches of trips from the built-in sample
+        table as JSON files:
+
+        ~~~python
+        from pyspark.sql import functions as F
+
+        trips = spark.table("samples.nyctaxi.trips")
+        RAW = "/Volumes/workspace/taxi_lab/raw/trips"
+
+        day1 = trips.filter(F.to_date("tpep_pickup_datetime") == "2016-02-14")
+        day1.write.mode("append").json(f"{RAW}/batch=1")
+        ~~~
+
+        **Predict:** how many files did Spark write, and why more than one? Open the volume in
+        Catalog Explorer to check.
+
+        ## Step 2: bronze with Auto Loader
+
+        Create a notebook «01_bronze»:
+
+        ~~~python
+        from pyspark.sql import functions as F
+
+        RAW = "/Volumes/workspace/taxi_lab/raw/trips"
+        CHK = "/Volumes/workspace/taxi_lab/chk/bronze_trips"
+
+        (
+            spark.readStream.format("cloudFiles")
+            .option("cloudFiles.format", "json")
+            .option("cloudFiles.schemaLocation", CHK)
+            .option("cloudFiles.inferColumnTypes", "true")
+            .load(RAW)
+            .withColumn("_ingested_at", F.current_timestamp())
+            .withColumn("_source_file", F.col("_metadata.file_path"))
+            .writeStream.option("checkpointLocation", CHK)
+            .trigger(availableNow=True)
+            .toTable("workspace.taxi_lab.bronze_trips")
+        )
+        ~~~
+
+        - «cloudFiles» is Auto Loader. It remembers which files it has ingested in the checkpoint,
+          so a rerun reads only new files.
+        - «availableNow» processes everything new, then stops. That makes a stream behave like an
+          incremental batch, which suits a scheduled job and serverless compute.
+        - Bronze keeps the data as received, plus where and when it came from.
+
+        Run it twice. **Predict:** what does the second run add? (Nothing: no new files.)
+
+        ## Step 3: silver with a MERGE
+
+        The source has no trip id, so build one from the fields that identify a trip. Create a SQL
+        notebook «02_silver»:
+
+        ~~~sql
+        CREATE TABLE IF NOT EXISTS workspace.taxi_lab.silver_trips (
+          trip_id STRING,
+          pickup_ts TIMESTAMP,
+          dropoff_ts TIMESTAMP,
+          pickup_zip INT,
+          dropoff_zip INT,
+          trip_distance DOUBLE,
+          fare_amount DOUBLE,
+          _ingested_at TIMESTAMP
+        );
+
+        MERGE INTO workspace.taxi_lab.silver_trips AS s
+        USING (
+          SELECT * FROM (
+            SELECT
+              sha2(to_json(struct(tpep_pickup_datetime, tpep_dropoff_datetime,
+                                  pickup_zip, dropoff_zip, trip_distance, fare_amount)), 256) AS trip_id,
+              to_timestamp(tpep_pickup_datetime) AS pickup_ts,
+              to_timestamp(tpep_dropoff_datetime) AS dropoff_ts,
+              CAST(pickup_zip AS INT) AS pickup_zip,
+              CAST(dropoff_zip AS INT) AS dropoff_zip,
+              CAST(trip_distance AS DOUBLE) AS trip_distance,
+              CAST(fare_amount AS DOUBLE) AS fare_amount,
+              _ingested_at
+            FROM workspace.taxi_lab.bronze_trips
+            WHERE fare_amount > 0
+          )
+          QUALIFY row_number() OVER (PARTITION BY trip_id ORDER BY _ingested_at DESC) = 1
+        ) AS b
+        ON s.trip_id = b.trip_id
+        WHEN MATCHED AND b._ingested_at > s._ingested_at THEN UPDATE SET *
+        WHEN NOT MATCHED THEN INSERT *;
+        ~~~
+
+        - «QUALIFY» keeps one row per trip inside the batch; the «MERGE» keeps one row per trip
+          across batches. Running it again changes nothing, so the step is **idempotent**.
+        - For a large bronze table, filter the source to recent «_ingested_at» values instead of
+          reading all of bronze each time.
+
+        ## Step 4: gold
+
+        Create «03_gold»:
+
+        ~~~sql
+        CREATE OR REPLACE TABLE workspace.taxi_lab.gold_daily_zip AS
+        SELECT
+          to_date(pickup_ts) AS trip_date,
+          pickup_zip,
+          count(*) AS trips,
+          round(sum(fare_amount), 2) AS revenue,
+          round(avg(trip_distance), 2) AS avg_miles
+        FROM workspace.taxi_lab.silver_trips
+        GROUP BY ALL;
+        ~~~
+
+        ## Step 5: a job
+
+        1. Open **Jobs & Pipelines**, choose **Create**, then **Job**.
+        2. Add three notebook tasks: «bronze» (01_bronze), «silver» (02_silver, depends on bronze)
+           and «gold» (03_gold, depends on silver). Use serverless compute.
+        3. Run the job now and watch each task turn green. Then add a daily schedule if you like.
+
+        ## Step 6: break it
+
+        A partner re-sends yesterday's data under a new folder name. Simulate it:
+
+        ~~~python
+        day1.write.mode("append").json(f"{RAW}/batch=1-resent")
+        ~~~
+
+        **Predict** before you run the job: will bronze grow? Will silver? Will gold change?
+
+        Run the job, then check:
+
+        ~~~sql
+        SELECT
+          (SELECT count(*) FROM workspace.taxi_lab.bronze_trips) AS bronze_rows,
+          (SELECT count(*) FROM workspace.taxi_lab.silver_trips) AS silver_rows,
+          (SELECT sum(trips) FROM workspace.taxi_lab.gold_daily_zip) AS gold_trips;
+        ~~~
+
+        Bronze doubles, because Auto Loader tracks files by path and these are new files. Silver and
+        gold do not change, because the «MERGE» deduplicates by trip id. This is why bronze keeps
+        everything and silver enforces the business key.
+
+        ## Clean up
+
+        ~~~sql
+        DROP SCHEMA workspace.taxi_lab CASCADE;
+        ~~~
+
+        > [!senior] What to say about this pipeline
+        > "Auto Loader with availableNow gives incremental, exactly-once file ingestion into bronze.
+        > Silver is an idempotent MERGE on a business key, so replays and re-sent files are safe.
+        > Gold is rebuilt from silver. A job orders the steps, and each step can be rerun alone."
+      `,
+      checks: [
+        {
+          question:
+            'Why does bronze double after the partner re-sends files, while silver does not?',
+          options: [
+            'Auto Loader is broken',
+            'Auto Loader tracks files by path, so new paths are new input; the MERGE on trip_id removes the duplicates',
+            'Silver is a view',
+            'Gold deletes duplicates',
+          ],
+          answer: 1,
+          why: 'File-level exactly-once is not record-level deduplication. The business key in silver is what makes replays safe.',
+        },
+        {
+          question: 'What does trigger(availableNow=True) do?',
+          options: [
+            'Runs forever with a 1 second trigger',
+            'Processes all data available now in one or more batches, then stops',
+            'Processes only the newest file',
+            'Disables checkpoints',
+          ],
+          answer: 1,
+          why: 'It gives a stream incremental batch behaviour, so a scheduled job can run it and stop.',
+        },
+      ],
+    },
+    {
+      slug: 'lab-databricks-declarative-pipeline',
+      title: 'Hands-on: the same pipeline as a declarative pipeline',
+      summary:
+        'Rebuild the medallion lab with Lakeflow Declarative Pipelines: streaming tables, expectations, AUTO CDC and a materialized view, and read the data quality metrics.',
+      minutes: 15,
+      body: `
+        The first lab wired every step by hand: checkpoints, «MERGE» logic and task order. A
+        **declarative pipeline** lets you state the tables you want. The platform works out the
+        order, the checkpoints, retries and incremental refresh. On Databricks this is **Lakeflow
+        Declarative Pipelines**, formerly called Delta Live Tables (DLT). The same model is now part
+        of open source Spark as Spark Declarative Pipelines.
+
+        Do the first lab's Step 1 first, so the raw files exist.
+
+        ## Step 1: create the pipeline
+
+        1. Open **Jobs & Pipelines**, choose **Create**, then **ETL pipeline**.
+        2. Name it «taxi_declarative». Set the default catalog to «workspace» and the schema to
+           «taxi_dlp» (create it if needed).
+        3. Add a SQL file to the pipeline and paste the steps below into it.
+
+        ## Step 2: bronze as a streaming table
+
+        ~~~sql
+        CREATE OR REFRESH STREAMING TABLE bronze_trips
+        COMMENT 'Raw taxi trips as received'
+        AS SELECT *, _metadata.file_path AS source_file, current_timestamp() AS ingested_at
+        FROM STREAM read_files('/Volumes/workspace/taxi_lab/raw/trips', format => 'json');
+        ~~~
+
+        A **streaming table** reads each new input once. «read_files» in a stream uses Auto Loader
+        underneath.
+
+        ## Step 3: clean rows with expectations
+
+        ~~~sql
+        CREATE OR REFRESH STREAMING TABLE trips_clean (
+          CONSTRAINT positive_fare EXPECT (fare_amount > 0) ON VIOLATION DROP ROW,
+          CONSTRAINT ends_after_start EXPECT (dropoff_ts > pickup_ts) ON VIOLATION DROP ROW,
+          CONSTRAINT has_zip EXPECT (pickup_zip IS NOT NULL)
+        )
+        AS SELECT
+          sha2(to_json(struct(tpep_pickup_datetime, tpep_dropoff_datetime,
+                              pickup_zip, dropoff_zip, trip_distance, fare_amount)), 256) AS trip_id,
+          to_timestamp(tpep_pickup_datetime) AS pickup_ts,
+          to_timestamp(tpep_dropoff_datetime) AS dropoff_ts,
+          CAST(pickup_zip AS INT) AS pickup_zip,
+          CAST(trip_distance AS DOUBLE) AS trip_distance,
+          CAST(fare_amount AS DOUBLE) AS fare_amount,
+          ingested_at
+        FROM STREAM(bronze_trips);
+        ~~~
+
+        | Expectation action | Effect |
+        |---|---|
+        | No action (warn) | Keep the row, count the violation |
+        | «ON VIOLATION DROP ROW» | Drop the row, count it |
+        | «ON VIOLATION FAIL UPDATE» | Stop the update; nothing bad is published |
+
+        ## Step 4: silver with AUTO CDC
+
+        Deduplicate by key with **AUTO CDC** (older documentation calls it «APPLY CHANGES»):
+
+        ~~~sql
+        CREATE OR REFRESH STREAMING TABLE silver_trips;
+
+        CREATE FLOW silver_trips_upsert AS AUTO CDC INTO silver_trips
+        FROM STREAM(trips_clean)
+        KEYS (trip_id)
+        SEQUENCE BY ingested_at
+        STORED AS SCD TYPE 1;
+        ~~~
+
+        «SCD TYPE 1» keeps the latest row per key. «SCD TYPE 2» would keep history with start and
+        end columns, which is a one-word change compared with a hand-written type 2 «MERGE».
+
+        ## Step 5: gold as a materialized view
+
+        ~~~sql
+        CREATE OR REFRESH MATERIALIZED VIEW gold_daily_zip AS
+        SELECT to_date(pickup_ts) AS trip_date, pickup_zip,
+               count(*) AS trips, round(sum(fare_amount), 2) AS revenue
+        FROM silver_trips
+        GROUP BY ALL;
+        ~~~
+
+        A **materialized view** is recomputed on each update, incrementally when the engine can.
+
+        ## Step 6: run, read and break
+
+        1. Click **Run pipeline**. The graph shows the four tables and the rows that flowed.
+        2. Select «trips_clean» and open its data quality metrics: how many rows did each
+           expectation drop?
+        3. Re-send the files as in the first lab and run again. **Predict**, then check: bronze grows,
+           silver does not.
+        4. Change «positive_fare» to «ON VIOLATION FAIL UPDATE», add a file with a negative fare,
+           and run. The update fails and gold keeps its last good state.
+
+        ## Hand-built or declarative?
+
+        | | Hand-built (lab 1) | Declarative (this lab) |
+        |---|---|---|
+        | Control | Full: any Spark code | Within the framework's model |
+        | Boilerplate | Checkpoints, MERGE, task order | Little |
+        | Data quality | Your own checks | Expectations with metrics built in |
+        | Portability | Plain Spark and Delta | Tied to the platform (with a growing open source core) |
+
+        ## Clean up
+
+        Delete the pipeline in Jobs & Pipelines, then run «DROP SCHEMA workspace.taxi_dlp CASCADE».
+
+        > [!senior] When to choose declarative
+        > "For standard ingest, clean, dedupe and aggregate flows, declarative pipelines remove most
+        > of the plumbing and give quality metrics for free. For unusual logic, cross-system
+        > coordination or engine portability, I keep hand-built jobs." Interviewers want the trade-off,
+        > not loyalty to a feature.
+      `,
+      checks: [
+        {
+          question: 'What does ON VIOLATION FAIL UPDATE do when a row breaks the expectation?',
+          options: [
+            'Drops the row and continues',
+            'Keeps the row and logs a warning',
+            'Stops the update, so the bad data is not published',
+            'Moves the row to gold',
+          ],
+          answer: 2,
+          why: 'FAIL UPDATE treats the violation as fatal for this update. Tables keep their last good state until the data is fixed.',
+        },
+        {
+          question: 'Which clause deduplicates silver_trips by trip_id in this pipeline?',
+          options: [
+            'CONSTRAINT ... EXPECT',
+            'AUTO CDC INTO ... KEYS (trip_id) SEQUENCE BY ingested_at',
+            'CREATE MATERIALIZED VIEW',
+            'read_files',
+          ],
+          answer: 1,
+          why: 'AUTO CDC applies changes by key, keeping the latest row by the sequence column (SCD type 1).',
+        },
+      ],
+    },
   ],
 };
 
@@ -1579,6 +1925,58 @@ export const problems: Problem[] = [
     ],
     followUps: [
       'Two years later the ML team wants Databricks while analysts stay on Snowflake. How do you avoid two copies of the data?',
+    ],
+  },
+  {
+    slug: 'databricks-resent-files-double-counts',
+    title: 'Gold revenue doubled after a partner re-sent files',
+    track: 'snowflake-databricks',
+    kind: 'design',
+    difficulty: 'medium',
+    companies: ['uber', 'google'],
+    prompt: `
+      A Databricks pipeline ingests partner order files with Auto Loader into bronze, appends
+      bronze to silver with a plain «INSERT INTO silver SELECT * FROM bronze_new», and rebuilds a
+      gold revenue table nightly. The partner re-sent last Tuesday's files under new names.
+      Tuesday's revenue in gold doubled and finance noticed. Fix today's data and redesign the
+      pipeline so this cannot happen again.
+    `,
+    hints: [
+      'What does Auto Loader deduplicate, and what does it not?',
+      'Where should the business key be enforced?',
+      'How do you repair silver safely?',
+    ],
+    answer: `
+      **Why it happened:** Auto Loader is exactly-once per **file path**. New names are new files,
+      so bronze holds the orders twice, which is correct for bronze. The bug is in silver: an
+      append has no business key, so the duplicates flowed into gold.
+
+      **Fix today's data:**
+
+      1. Pause the job. Note the current silver table version («DESCRIBE HISTORY»).
+      2. Rebuild silver for the affected dates from bronze, keeping one row per «order_id» (the
+         latest by «updated_at», then «_ingested_at»), and replace those dates with
+         «INSERT OVERWRITE ... REPLACE WHERE order_date BETWEEN ...» or a «MERGE».
+      3. Rebuild gold for those dates, compare totals with the partner's control file, and tell
+         finance which numbers changed.
+
+      **Redesign:**
+
+      - Silver becomes an **idempotent MERGE** (or AUTO CDC in a declarative pipeline) on
+        «order_id», sequenced by «updated_at». Replays and re-sends change nothing.
+      - Add a **uniqueness test** on silver's key and a **reconciliation** check of daily totals
+        against the partner's control totals, which blocks the gold publish on failure.
+      - Optionally detect re-sent files early by a content hash in bronze, to alert the partner.
+    `,
+    signals: [
+      'Explains that Auto Loader deduplicates files, not records',
+      'Moves deduplication to silver on the business key',
+      'Repairs only the affected dates with a recorded table version',
+      'Adds uniqueness and reconciliation checks that block publishing',
+      'Communicates the corrected numbers to finance',
+    ],
+    followUps: [
+      'The partner sometimes sends a corrected file for the same orders. How does your MERGE handle it?',
     ],
   },
 ];

@@ -11,6 +11,7 @@ import * as ai from '@/lib/course/tracks/ai';
 import * as architecture from '@/lib/course/tracks/architecture';
 import * as behavioral from '@/lib/course/tracks/behavioral';
 import * as cloud from '@/lib/course/tracks/cloud';
+import * as databases from '@/lib/course/tracks/databases';
 import * as dbt from '@/lib/course/tracks/dbt';
 import * as lakehouse from '@/lib/course/tracks/lakehouse';
 import * as modeling from '@/lib/course/tracks/modeling';
@@ -27,6 +28,7 @@ import type { Company, CompanyGuide, Difficulty, Lesson, Problem, Track } from '
 
 const MODULES = [
   playbook,
+  databases,
   sql,
   python,
   modeling,

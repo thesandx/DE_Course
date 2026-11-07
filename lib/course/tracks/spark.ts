@@ -259,6 +259,201 @@ export const track: Track = {
         },
       ],
     },
+    {
+      slug: 'catalyst-aqe-join-selection',
+      title: 'Catalyst, AQE and how Spark picks a join',
+      summary:
+        'Walk a query through Catalyst, explain how Spark chooses a join strategy, what AQE changes at runtime, and what blocks the optimiser.',
+      minutes: 16,
+      body: `
+        "How does Spark optimise this?" is a standard senior question. The answer has two halves:
+        **Catalyst** plans before the job runs, and **Adaptive Query Execution (AQE)** re-plans
+        while it runs.
+
+        ## Catalyst in four phases
+
+        ~~~text
+        DataFrame / SQL
+          → unresolved logical plan
+          → analysis            names and types resolved against the catalog
+          → logical optimisation rule-based rewrites
+          → physical planning   choose join strategies and operators (with statistics)
+          → code generation     whole-stage codegen into Java bytecode
+        ~~~
+
+        Logical rules you should be able to name:
+
+        - **Predicate pushdown:** filters move below joins and into the file scan.
+        - **Column pruning:** read only the columns used.
+        - **Constant folding** and **boolean simplification.**
+        - **Combining** adjacent filters and projections.
+
+        **Whole-stage code generation** fuses a chain of narrow operators into one function, which
+        works on Spark's compact binary row format (the Tungsten project) instead of Java objects.
+        In «explain» output, operators inside a codegen stage carry a «*(n)» prefix.
+
+        ## How Spark picks a join
+
+        For an equi-join, Spark checks, in order:
+
+        1. A **hint**: «BROADCAST», «MERGE», «SHUFFLE_HASH» or «SHUFFLE_REPLICATE_NL».
+        2. **Broadcast hash join** if one side's estimated size is under
+           «spark.sql.autoBroadcastJoinThreshold» (10 MB by default).
+        3. **Sort-merge join** otherwise («spark.sql.join.preferSortMergeJoin» is true by default).
+        4. Shuffle hash join when sort-merge is not preferred and one side's partitions fit in memory.
+
+        ~~~sql
+        SELECT /*+ BROADCAST(z) */ t.*, z.zone_name
+        FROM trips t JOIN zones z ON t.zone_id = z.zone_id;
+        ~~~
+
+        The size estimate comes from file sizes unless you collect statistics. The cost-based
+        optimiser («spark.sql.cbo.enabled») is **off by default**. With
+        «ANALYZE TABLE t COMPUTE STATISTICS FOR COLUMNS a, b» and CBO on, Spark can reorder joins
+        using row counts and distinct values.
+
+        ## What AQE changes at runtime
+
+        AQE is on by default since Spark 3.2. After each shuffle stage, Spark knows the real sizes and can:
+
+        | Feature | Effect |
+        |---|---|
+        | **Coalesce shuffle partitions** | Merges many tiny post-shuffle partitions, so 200 tasks of 1 MB become 4 tasks |
+        | **Switch join strategy** | Turns a planned sort-merge join into a broadcast join when a side is small after filtering |
+        | **Skew join** | Splits oversized partitions and replicates the matching side |
+
+        **Dynamic partition pruning** (Spark 3.0) is related: a filter on a small dimension prunes
+        the partitions of a large fact table at runtime.
+
+        ## What blocks the optimiser
+
+        - **Python UDFs** are opaque. Catalyst cannot push a filter through one or read its result
+          statistics, and every row crosses to a Python worker. Prefer built-in functions; if you
+          must, use a vectorised pandas UDF.
+        - **Casting or wrapping a filter column** («CAST(dt AS STRING) = '2026-11-01'») can stop
+          partition pruning and pushdown.
+        - **Dropping to RDDs** («df.rdd.map(...)») leaves Catalyst entirely.
+        - **Caching too early** freezes a plan and can hide pushdown from later filters.
+
+        > [!tip] Confirm in the plan
+        > Look for «PushedFilters» and «PartitionFilters» on the scan node, «BroadcastHashJoin»
+        > versus «SortMergeJoin», and «AdaptiveSparkPlan isFinalPlan=true» after the job ran.
+
+        > [!senior] Statistics drive everything
+        > "Spark chose sort-merge because it estimated the filtered dimension from its full file
+        > size. AQE switched it to broadcast at runtime. I would also add a broadcast hint, since the
+        > dimension is always small after this filter." That shows you know both planning halves.
+      `,
+      checks: [
+        {
+          question:
+            "Is Spark's cost-based optimiser (join reordering by statistics) on by default?",
+          options: [
+            'Yes, always',
+            'No; spark.sql.cbo.enabled is false by default and needs column statistics',
+            'Only in Structured Streaming',
+            'Only for Python',
+          ],
+          answer: 1,
+          why: 'Rule-based optimisation always runs. CBO join reordering must be enabled and needs ANALYZE TABLE statistics. AQE, which is on by default, covers many of the same cases at runtime.',
+        },
+        {
+          question: 'Why does a Python UDF in a filter often make a scan read more data?',
+          options: [
+            'Python is single-threaded',
+            'Catalyst cannot see inside the UDF, so it cannot push the filter into the scan',
+            'UDFs disable caching',
+            'UDFs force a broadcast join',
+          ],
+          answer: 1,
+          why: 'The UDF is a black box to the optimiser. Express the filter with built-in functions so it becomes a pushed or partition filter.',
+        },
+      ],
+    },
+    {
+      slug: 'duckdb-spark-trino',
+      title: 'DuckDB, Spark or Trino',
+      summary:
+        'Compare an in-process engine, a distributed batch engine and an MPP SQL engine, and choose one for a workload by data size, latency and failure tolerance.',
+      minutes: 14,
+      body: `
+        Three engines cover most analytical work on a lake. They make different trade-offs, so
+        "which one?" is a frequent design question.
+
+        ## Three architectures
+
+        | | **DuckDB** | **Spark** | **Trino** |
+        |---|---|---|---|
+        | Shape | A library inside your process | Driver plus executors on a cluster | Coordinator plus workers, always running |
+        | Execution | Vectorised, multi-core, one machine | Stages split at shuffles; tasks written to disk between stages | Pipelined stages that stream data in memory between workers |
+        | Scale | One machine: up to hundreds of GB with spilling | Petabytes | Petabytes of scans; joins limited by memory |
+        | Start-up | Milliseconds | Seconds to minutes for a cluster | Already running; sub-second queries |
+        | Failure | Process dies, query dies | Retries failed tasks and stages | A worker failure fails the query by default; fault-tolerant mode spools exchanges |
+        | Languages | SQL, Python and others | SQL, Python, Scala, Java | SQL |
+        | Best at | Local analysis, tests, small pipelines, notebooks | Long ETL, heavy joins, ML preprocessing, streaming | Interactive SQL across many sources (federation) |
+
+        ## Choosing
+
+        - **Data under about 100 GB, one job, one machine:** DuckDB (or Polars). No cluster, no
+          scheduler, and a laptop or one large VM often beats a small Spark cluster because there is
+          no shuffle over a network.
+        - **Hours-long transformations of terabytes, Python logic, retries needed:** Spark. A task
+          failure at hour three costs one task, not the whole job.
+        - **Analysts running ad hoc SQL over the lake and joining it with Postgres or Kafka:** Trino.
+          Low latency, many connectors, one SQL dialect.
+
+        ## They work together
+
+        A common lake stack: Spark writes Iceberg tables in nightly and streaming jobs; Trino serves
+        analysts on the same tables; DuckDB runs unit tests in CI and lets engineers explore a
+        sample on a laptop with «read_parquet('s3://...')».
+
+        ~~~python
+        import duckdb
+
+        con = duckdb.connect()
+        top = con.sql(
+            """
+            SELECT pickup_zone, count(*) AS trips
+            FROM read_parquet('trips/*.parquet')
+            GROUP BY pickup_zone
+            ORDER BY trips DESC
+            LIMIT 10
+            """
+        ).fetchall()
+        ~~~
+
+        > [!trap] Spark for a 2 GB file
+        > Starting a cluster, shuffling over the network and paying for idle executors to process
+        > 2 GB is slower and costlier than one process. Interviewers like to hear that you would not
+        > use Spark.
+
+        > [!senior] Decide on three axes
+        > Say the data size, the latency target and what happens on failure. "Interactive, under
+        > 10 seconds, read-only: Trino. Six-hour ETL that must survive a lost node: Spark. CI tests
+        > and 50 GB exploration: DuckDB."
+      `,
+      checks: [
+        {
+          question:
+            'A nightly job transforms 30 TB with heavy joins and must survive a lost node. Which engine fits best?',
+          options: ['DuckDB', 'Spark', 'Trino in default mode', 'A Python script with pandas'],
+          answer: 1,
+          why: 'Spark writes shuffle output between stages and retries failed tasks, so a lost node costs a few tasks, not the whole job.',
+        },
+        {
+          question: 'Why can DuckDB on one large VM beat a small Spark cluster on 50 GB?',
+          options: [
+            'DuckDB caches the internet',
+            'It runs vectorised in one process with no cluster start-up and no network shuffle',
+            'Spark cannot read Parquet',
+            'DuckDB uses GPUs',
+          ],
+          answer: 1,
+          why: 'At this size, cluster overhead and network shuffles cost more than they save.',
+        },
+      ],
+    },
   ],
 };
 
@@ -490,5 +685,103 @@ export const problems: Problem[] = [
       'Knows session_window',
     ],
     followUps: ['How do you sessionize incrementally each hour without reprocessing all history?'],
+  },
+  {
+    slug: 'spark-udf-blocks-pruning',
+    title: 'A filter reads every partition',
+    track: 'spark',
+    kind: 'coding',
+    difficulty: 'medium',
+    companies: ['uber', 'google'],
+    prompt: `
+      This job should read one day of a table partitioned by «event_date» (a string column), but
+      it reads all 900 days:
+
+      ~~~python
+      from pyspark.sql import functions as F
+      from pyspark.sql.types import BooleanType
+
+      @F.udf(returnType=BooleanType())
+      def is_target_day(d):
+          return d == "2026-11-01"
+
+      events = spark.table("lake.events")
+      daily = events.filter(is_target_day("event_date")).join(cities, "city_id")
+      ~~~
+
+      Explain why, show the fix, and say how you would confirm it.
+    `,
+    hints: [
+      'Can Catalyst see inside a Python UDF?',
+      'Where does a partition filter appear in the plan?',
+    ],
+    answer: `
+      A Python UDF is opaque to Catalyst. It cannot turn «is_target_day(event_date)» into a
+      partition filter, so the scan lists and reads every partition, ships each row to a Python
+      worker, and only then filters.
+
+      ~~~python
+      from pyspark.sql import functions as F
+
+      events = spark.table("lake.events")
+      daily = (
+          events.filter(F.col("event_date") == "2026-11-01")
+          .join(F.broadcast(cities), "city_id")
+      )
+      daily.explain("formatted")
+      ~~~
+
+      Confirm: the scan node now shows «PartitionFilters: [isnotnull(event_date),
+      (event_date = 2026-11-01)]», and the Spark UI shows the input size of one day. The broadcast
+      hint is a bonus: «cities» is small, so the join needs no shuffle of «events».
+
+      General rule: express filters with built-in column expressions; keep UDFs for logic that has
+      no built-in form, and apply them after the data is reduced.
+    `,
+    signals: [
+      'Explains that UDFs are opaque to the optimiser',
+      'Replaces the UDF with a column expression',
+      'Confirms with PartitionFilters in the plan',
+      'Notices the chance to broadcast the small side',
+    ],
+    followUps: ['The logic truly needs Python. How do you limit the cost?'],
+  },
+  {
+    slug: 'spark-choose-engine',
+    title: 'DuckDB, Spark or Trino for four workloads',
+    track: 'spark',
+    kind: 'concept',
+    difficulty: 'medium',
+    companies: ['google', 'uber'],
+    prompt: `
+      Choose an engine for each workload and justify it in one or two sentences:
+
+      1. Unit tests for 300 SQL transformations in CI.
+      2. Analysts exploring the Iceberg lake and joining it with a Postgres reference table, with
+         answers in seconds.
+      3. A nightly 40 TB sessionisation and join job that runs 4 hours.
+      4. A daily 3 GB partner file that needs cleaning and loading into one table.
+    `,
+    hints: ['Size, latency, failure handling.', 'Who runs it, and how often?'],
+    answer: `
+      1. **DuckDB.** In-process, starts in milliseconds, runs SQL on small fixture files, no
+         cluster to manage in CI.
+      2. **Trino.** Always-on MPP SQL with low latency and connectors to both Iceberg and Postgres,
+         so analysts join them in one query.
+      3. **Spark.** Long, heavy, shuffle-bound work that must survive a lost executor; Spark retries
+         tasks and stages instead of restarting four hours of work.
+      4. **DuckDB or Polars in a container** (or the warehouse's own loader). 3 GB fits on one
+         machine; a cluster adds start-up time and cost for no gain.
+
+      The engines share the same Iceberg tables and catalog, so this is a toolbox, not a migration.
+    `,
+    signals: [
+      'Matches engine to data size and latency',
+      'Mentions failure handling for long jobs',
+      'Uses Trino federation for cross-source SQL',
+      'Avoids a cluster for small data',
+      'Notes the engines share one catalog',
+    ],
+    followUps: ['The 40 TB job must now run hourly. Does the choice change?'],
   },
 ];

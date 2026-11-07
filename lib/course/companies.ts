@@ -66,7 +66,7 @@ export const COMPANIES: readonly CompanyGuide[] = [
         minutes: 60,
         focus:
           'Design a pipeline end to end, often real-time: surge signals, trip analytics or event ingestion. Scale numbers, failure modes and trade-offs.',
-        tracks: ['system-design', 'streaming', 'spark', 'quality', 'ai'],
+        tracks: ['system-design', 'databases', 'streaming', 'spark', 'quality', 'ai'],
       },
       {
         name: 'Onsite: coding',
@@ -85,6 +85,7 @@ export const COMPANIES: readonly CompanyGuide[] = [
     ],
     weights: {
       playbook: 0.5,
+      databases: 0.7,
       sql: 1,
       python: 1,
       modeling: 1,
@@ -171,7 +172,15 @@ export const COMPANIES: readonly CompanyGuide[] = [
         minutes: 45,
         focus:
           'An end-to-end pipeline with batch and streaming paths. Watermarks, exactly-once claims, backfills and cost.',
-        tracks: ['system-design', 'streaming', 'spark', 'orchestration', 'quality', 'ai'],
+        tracks: [
+          'system-design',
+          'databases',
+          'streaming',
+          'spark',
+          'orchestration',
+          'quality',
+          'ai',
+        ],
       },
       {
         name: 'Onsite: Googleyness and leadership',
@@ -183,6 +192,7 @@ export const COMPANIES: readonly CompanyGuide[] = [
     ],
     weights: {
       playbook: 0.5,
+      databases: 0.8,
       sql: 1,
       python: 1.3,
       modeling: 1,
