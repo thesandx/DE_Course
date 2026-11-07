@@ -291,6 +291,100 @@ export const track: Track = {
         },
       ],
     },
+    {
+      slug: 'build-your-story-bank',
+      title: 'Build and rehearse your own story bank',
+      summary:
+        'Mine your last three years for 8 to 10 true stories, map them to the themes loops ask, and rehearse them under follow-up questions.',
+      minutes: 15,
+      body: `
+        The example answers in this track show the shape. Your loop is scored on **your**
+        stories. Write them before the loop, not in it. The **Story bank** page, linked from
+        this track, stores them, shows which themes are still missing, and checks each story
+        as you write.
+
+        ## Step 1: mine your history
+
+        Go through the last three years, project by project. For each, note one line: what
+        changed, what you decided, and one number. Good sources are performance reviews,
+        launch notes, postmortems you wrote and design documents. Expect 15 to 25 candidates.
+
+        ## Step 2: pick 8 to 10 and map the themes
+
+        | Theme | The question behind it |
+        |---|---|
+        | **Conflict** | A disagreement with another team |
+        | **Failure** | Your biggest mistake |
+        | **Influence** | Changing minds without authority |
+        | **Ambiguity** | Delivering when the goal was unclear |
+        | **Trade-off** | Quality against a deadline |
+        | **Biggest project** | The project you are proudest of |
+        | **Multiplying others** | Making other engineers better |
+        | **Disagree and commit** | A decision you disagreed with |
+        | **Customer impact** | Putting users first |
+        | **Data-driven call** | Deciding with incomplete data |
+
+        One strong story often answers two to four themes. A migration you led can be the
+        biggest project, an influence story and a trade-off story, told with a different
+        emphasis each time. Aim to cover at least eight themes, with no story used for more
+        than four.
+
+        ## Step 3: write each story in STAR, at the right level
+
+        - **Situation:** two sentences and one number for the stakes.
+        - **Task:** what you owned, and why it was hard.
+        - **Action:** three to five steps with "I", including the option you rejected.
+        - **Result:** numbers, and what changed for other teams.
+        - **Learned:** one thing you would do differently.
+
+        About 300 words is two minutes out loud, which is the right length.
+
+        ## Step 4: rehearse against follow-ups
+
+        Interviewers dig. Practise each story against these questions:
+
+        1. "What exactly did you do, as opposed to the team?"
+        2. "What did the other side say? Were they right about anything?"
+        3. "What would you do differently?"
+        4. "What happened six months later?"
+        5. "How did you measure that result?"
+
+        Record yourself once per story. Then prepare a 30-second version of each for the
+        "tell me briefly" moments.
+
+        > [!trap] Do not borrow a story
+        > A story you did not live falls apart at the second follow-up. Interviewers are
+        > trained to dig until they reach your real role.
+
+        > [!senior] Keep the bank alive
+        > After each loop, note which questions came up and which story you used. Gaps show
+        > up fast, and the next loop goes better.
+      `,
+      checks: [
+        {
+          question: 'How many stories does a well-prepared candidate usually need?',
+          options: [
+            'Two, told very well',
+            'Eight to ten, covering most themes, with each used for at most four',
+            'One per possible question, about forty',
+            'None; answers should be improvised',
+          ],
+          answer: 1,
+          why: 'Eight to ten true stories cover almost every behavioral question when each is told with the right emphasis.',
+        },
+        {
+          question: 'Which follow-up question most often exposes a weak story?',
+          options: [
+            '"What database did you use?"',
+            '"What exactly did you do, as opposed to the team?"',
+            '"How long was the project?"',
+            '"Who was your manager?"',
+          ],
+          answer: 1,
+          why: 'Interviewers dig for your own role. A story told with "we" throughout cannot be scored.',
+        },
+      ],
+    },
   ],
 };
 

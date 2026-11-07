@@ -68,6 +68,11 @@
       "collectionGroup": "learners",
       "fieldPath": "courses",
       "indexes": []
+    },
+    {
+      "collectionGroup": "story-banks",
+      "fieldPath": "stories",
+      "indexes": []
     }
   ]
 }

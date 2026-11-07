@@ -12,20 +12,22 @@ A learner joins each course separately. Each course keeps its own tracker in `le
 
 ## Files
 
-| File               | What it holds                                                                   |
-| ------------------ | ------------------------------------------------------------------------------- |
-| `tracks/<slug>.ts` | One track. It exports `track` (the lessons) and `problems`.                     |
-| `catalog.ts`       | The study order, the lookups, XP per item, track progress and loop readiness.   |
-| `companies.ts`     | The Uber and Google loop guides: rounds and the weight of each track.           |
-| `markdown.ts`      | The parser for the prose dialect below.                                         |
-| `progress.ts`      | Item ids, XP values, levels, streaks, the activity grid and the learner record. |
-| `courses.ts`       | The course list: slugs, names, hues and links. Safe for client components.      |
-| `rules.ts`         | The item check and the XP table of each course.                                 |
-| `hub.ts`           | The numbers on each course card of the hub.                                     |
-| `shell-stats.ts`   | The streak and XP that the app shell shows for the current course.              |
-| `search-index.ts`  | The search index of each course: its entries, examples and browse list.         |
-| `search.ts`        | Search matching and ranking. Safe for client components.                        |
-| `gcp/`             | The GCP course. See [`gcp/README.md`](./gcp/README.md).                         |
+| File                   | What it holds                                                                   |
+| ---------------------- | ------------------------------------------------------------------------------- |
+| `tracks/<slug>.ts`     | One track. It exports `track` (the lessons) and `problems`.                     |
+| `catalog.ts`           | The study order, the lookups, XP per item, track progress and loop readiness.   |
+| `companies.ts`         | The Uber and Google loop guides: rounds and the weight of each track.           |
+| `markdown.ts`          | The parser for the prose dialect below.                                         |
+| `progress.ts`          | Item ids, XP values, levels, streaks, the activity grid and the learner record. |
+| `courses.ts`           | The course list: slugs, names, hues and links. Safe for client components.      |
+| `rules.ts`             | The item check and the XP table of each course.                                 |
+| `hub.ts`               | The numbers on each course card of the hub.                                     |
+| `shell-stats.ts`       | The streak and XP that the app shell shows for the current course.              |
+| `search-index.ts`      | The search index of each course: its entries, examples and browse list.         |
+| `search.ts`            | Search matching and ranking. Safe for client components.                        |
+| `gcp/`                 | The GCP course. See [`gcp/README.md`](./gcp/README.md).                         |
+| `story-bank.ts`        | The schema of a behavioral story, shared by the API route and the editor.       |
+| `story-bank-themes.ts` | The story themes, the STAR fields and the strength checks. No zod.              |
 
 The types are in [`types/course.ts`](../../types/course.ts).
 
@@ -76,6 +78,15 @@ All prose fields (`body`, `prompt`, `answer`, `overview`, `focus`) use this dial
 | `> [!senior] Title` then `> ` lines | A callout. The kinds are `senior`, `trap`, `tip` and `example`.        |
 
 Do not write backticks or `${` anywhere in content: they end or break the template literal.
+
+## The story bank
+
+The page `/de/stories` lets a learner write their own behavioral stories. The behavioral and staff track pages link to it.
+
+- A learner keeps at most 12 stories in one document, `story-banks/{uid}`. `services/story.service.ts` explains why it is one document.
+- Each story names one to four themes from `STORY_THEMES`. The page shows which themes are still missing. A ready bank covers eight.
+- `assessStory` checks a story against six habits: length, a number in the result, "I" in the action, a trade-off, scope beyond the team, and a lesson. The checks are heuristics. Each failed check shows a tip.
+- To add a theme, add its slug to `STORY_THEME_SLUGS` and an entry to `STORY_THEMES`. Do not remove or rename a slug: stored stories name it, and the schema refuses an unknown slug on read.
 
 ## Search
 

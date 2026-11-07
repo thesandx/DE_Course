@@ -368,6 +368,9 @@ export const track: Track = {
         > [!senior] Say what you would not build
         > "We don't need a feature store yet; two models share three features. Revisit at five
         > models." Scoping down with a trigger to revisit is a staff behaviour.
+
+        The **Staff-level judgement** track goes further: ambiguity, strategy, design reviews,
+        influence and the business case, with problems that practise each one.
       `,
       checks: [
         {
@@ -436,8 +439,35 @@ const coreProblems: Problem[] = [
 
       **Operate.** SLO on output age per city. Alert on Kafka lag and on cells with sudden
       zero supply (likely a pipeline bug, not reality). Replay from Kafka to rebuild state after a bad deploy.
+
+      **Capacity.**
+
+      | Item | Number | How |
+      |---|---|---|
+      | Pings into Kafka | 250 MB/s | 1.25M/s × 200 B |
+      | Kafka disk for 24 h | about 65 TB | 21.6 TB a day × 3 replicas |
+      | Partitions | 256 | about 1 MB/s each, room to add consumers |
+      | Driver state in Flink | about 0.5 GB | 5M drivers × about 100 B |
+      | KV writes per tick | about 17,000/s | 500,000 active cells every 30 s |
+
+      **Options I rejected.**
+
+      | Option | Why not |
+      |---|---|
+      | Count raw pings per cell | A driver pings 7 times in 30 s, so supply is over-counted 7x and moves with ping rate |
+      | Spark micro-batches every 30 s | It works, but "latest cell per driver" plus sliding windows is simpler in Flink keyed state |
+      | Serve from the warehouse | Pricing reads in milliseconds at thousands of requests a second |
+      | Geohash squares | Neighbours sit at uneven distances; H3 hexagons have six equal neighbours, which smoothing needs |
+
+      **Failure walkthrough: the Flink job dies at peak.** The job restarts from its last
+      checkpoint (every 10 s) and replays Kafka from the stored offsets. For about a minute no
+      new values arrive. Each value carries «computed_at», so pricing sees data older than 90 s
+      and switches those cities to a capped fallback multiplier. The job catches up at about 3x
+      real-time, and pricing returns to live values on its own. Nobody is paged unless output age
+      stays over the SLO for 5 minutes.
     `,
     signals: [
+      'Names the options rejected and why, then walks through one failure end to end',
       'Estimates the ping rate and bandwidth',
       'Counts a driver once using latest-position state, not raw pings',
       'Uses a geospatial index such as H3 and re-keys by cell',
@@ -498,8 +528,36 @@ const coreProblems: Problem[] = [
       **Operate.** Reconcile fast and validated counts per day; a large gap signals a filter or
       pipeline problem. Keep raw events long enough to re-run filtering when models improve, and
       version payout calculations for audits.
+
+      **Capacity.**
+
+      | Item | Number | How |
+      |---|---|---|
+      | Raw events | about 1.5 TB a day | 5B × 300 B |
+      | One year of raw events | about 550 TB | before columnar compression |
+      | Counter writes | about 300,000/s | 3M videos with a view in each 10 s window |
+      | Bigtable nodes for counters | about 30 | at roughly 10,000 writes a second per node |
+
+      **Options I rejected.**
+
+      | Option | Why not |
+      |---|---|
+      | Increment a database row per view | A viral video puts 50,000 writes a second on one row |
+      | Pay creators from the stream | Payout must use fraud signals that arrive days later, and be reproducible |
+      | One exact path for everything | Exact and filtered means hours of delay; the public counter needs a minute |
+      | Count unique viewers exactly | HyperLogLog gives about 1% error in 12 KB per video, which is enough for a dashboard |
+
+      I accept two code paths because they serve different correctness needs. The reconciliation
+      job is what keeps them honest.
+
+      **Failure walkthrough: a bot farm sends 10M views to one video in an hour.** Cheap filters
+      in the stream catch some, so the public counter rises too fast. The nightly batch flags the
+      farm with device and account signals and removes those views from validated counts.
+      Payouts never saw them. The counter does not drop; it grows slower until it meets the
+      validated number. The reconciliation gap for that video triggers a review.
     `,
     signals: [
+      'Names the options rejected and why, then walks through one failure end to end',
       'Separates public counter, analytics and payouts by correctness need',
       'Dedupes on a client-generated id',
       'Handles hot keys with sharded pre-aggregation',
@@ -557,8 +615,33 @@ const coreProblems: Problem[] = [
       **Operate.** Alert if pacing data is older than 2 minutes (the ad server then slows
       delivery for affected campaigns). Retain raw clicks for the dispute window. Credits for
       invalid clicks found later are applied as adjustments, never by editing past invoices.
+
+      **Capacity.**
+
+      | Item | Number | How |
+      |---|---|---|
+      | Raw clicks | about 500 GB a day | 1B × 500 B |
+      | Minute aggregates | about 30,000 rows/s | 2M ads with clicks in a minute |
+      | Pacing reads | high, but cached | the ad server caches spend for a few seconds |
+      | Dedupe state | about 50 GB | 24 h of click ids at about 50 B each |
+
+      **Options I rejected.**
+
+      | Option | Why not |
+      |---|---|
+      | Bill from the streaming totals | Not reproducible when fraud rules change, and hard to audit |
+      | One database transaction per click | Hot campaigns become hot rows, and the cost is high at 50,000/s |
+      | Hourly batch for pacing | A popular campaign can overspend its whole budget in an hour |
+      | Exactly-once end to end | Expensive; idempotent upserts by key give the same result |
+
+      **Failure walkthrough: the streaming job is down for 20 minutes.** Pacing data ages past
+      2 minutes. The ad server does not stop all ads: it throttles only campaigns already above
+      80% of their budget, which limits overspend without losing most revenue. Dashboards show
+      "data as of". Invoices are untouched, because they come from the batch path. After restart
+      the job replays Kafka; upserts by (campaign, window) make the replay safe.
     `,
     signals: [
+      'Names the options rejected and why, then walks through one failure end to end',
       'Separates pacing, dashboards and invoices by freshness and correctness',
       'Bills only from a reproducible batch path',
       'Dedupes on a click id and uses idempotent upserts',
@@ -612,8 +695,37 @@ const coreProblems: Problem[] = [
 
       **Result.** Freshness drops from about 24 hours to minutes, load on databases drops, and
       analysts get history the dumps never had.
+
+      **Capacity.**
+
+      | Item | Number | How |
+      |---|---|---|
+      | Change events | about 500,000/s at peak | 500 databases × about 1,000 changes/s |
+      | Bytes into Kafka | about 500 MB/s | before and after rows, about 1 KB per event |
+      | Tables | about 25,000 | 50 tables per database |
+      | Connect workers | 25 to 50 | 10 to 20 connectors per worker |
+
+      25,000 tables with 1 to 3 partitions each is too many for one Kafka cluster to manage
+      comfortably. I split by domain into a few clusters.
+
+      **Options I rejected.**
+
+      | Option | Why not |
+      |---|---|
+      | Query-based incremental extract («updated_at > x») | Misses hard deletes, needs a reliable «updated_at» on every table, and loads the source |
+      | Database triggers | Doubles writes on the source |
+      | Dual writes from the applications | The database and the event can disagree |
+      | Copy-on-write tables | Frequent small upserts rewrite whole files; merge-on-read with scheduled compaction is cheaper |
+
+      **Failure walkthrough: one connector is down for 3 days.** Binlog retention is 2 days,
+      so the connector's position no longer exists. It cannot resume, and the table set needs a
+      re-snapshot. The fix is to prevent it: keep binlogs for 7 days and alert when a connector's
+      lag passes 50% of retention. If it still happens, an incremental snapshot runs while
+      streaming continues. The changelog table has a gap for those days, which I record in the
+      catalog instead of hiding it.
     `,
     signals: [
+      'Names the options rejected and why, then walks through one failure end to end',
       'Uses log-based CDC instead of queries',
       'Plans the initial snapshot without downtime',
       'Lands both changelog and current state',
@@ -670,8 +782,33 @@ const coreProblems: Problem[] = [
 
       **Scale.** The per-user daily table is computed once and shared, so cost grows with users
       and metrics, not with experiments times metrics. Partition by date, cluster by user.
+
+      **Capacity.**
+
+      | Item | Number | How |
+      |---|---|---|
+      | Daily active users | 30M | assumed |
+      | Per-user daily table | 30M rows × 200 metric columns | one wide row per user per day |
+      | Exposure rows | about 600M | each user in about 20 experiments |
+      | Output | small | experiments × variants × metrics × days of sufficient statistics |
+
+      **Options I rejected.**
+
+      | Option | Why not |
+      |---|---|
+      | One query per experiment per metric | 300 experiments × 20 metrics scan the same facts 6,000 times a day |
+      | Real-time results | Teams would peek and stop early, which inflates false positives; daily is enough |
+      | Analyse everyone assigned | Users never exposed dilute the effect toward zero |
+      | Raw values per user in the result table | Sufficient statistics make every interval a cheap recomputation |
+
+      **Failure walkthrough: Android stops logging exposures for variant B.** Variant B now has
+      fewer users than planned. The sample ratio check sees a 53/47 split instead of 50/50 and marks the
+      experiment untrustworthy. The results page hides the numbers and says why, so nobody ships
+      a decision on bad data. After the fix, the platform recomputes from the first good day, and
+      the metric registry records the incident window.
     `,
     signals: [
+      'Names the options rejected and why, then walks through one failure end to end',
       'Uses exposure, not assignment, as the analysis population',
       'Defines metrics once in a shared layer',
       'Computes sufficient statistics instead of rescanning raw data',
@@ -726,8 +863,36 @@ const coreProblems: Problem[] = [
 
       **Risk and timeline.** Leave a 3-month buffer before end of support. Track jobs migrated,
       jobs turned off, and compute cost per job. Report weekly to leadership.
+
+      **Capacity and timeline.**
+
+      | Item | Number | How |
+      |---|---|---|
+      | Jobs after cleanup | about 1,400 | 2,000 minus 30% dead |
+      | Migration window | 12 months | 18 months minus 3 for setup and 3 for buffer |
+      | Rate needed | about 30 jobs a week | 1,400 over about 50 weeks |
+      | Extra compute while dual-running | about 15% | one week of overlap per job |
+
+      At 30 jobs a week the plan fails without automation. That is why translation and DAG
+      generation come first.
+
+      **Options I rejected.**
+
+      | Option | Why not |
+      |---|---|
+      | Lift and shift Hadoop onto cloud VMs | Keeps the debt and the operations cost, and only moves the end-of-support problem |
+      | Big-bang cut-over | One bad weekend breaks every report at once, with no rollback |
+      | Redesign each job while moving it | Doubles the risk per job and will not finish in 18 months |
+      | Each team migrates alone | No shared tooling, inconsistent quality, and the slowest team sets the date |
+
+      **Failure walkthrough: a finance job differs by 0.3% in dual-run.** The comparison blocks
+      cut-over. The usual causes are known Hive-to-Spark differences: time zone handling of
+      timestamps, implicit casts and null ordering. The team finds the cause, adds it to the
+      known-differences list and to the translation rules, and re-runs. If month-end is close,
+      the job stays on Hadoop for one more cycle. The tracker shows it as at risk, not as done.
     `,
     signals: [
+      'Names the options rejected and why, then walks through one failure end to end',
       'Starts by turning off unused jobs',
       'Migrates in dependency order',
       'Automates translation and validation instead of hand-porting',
