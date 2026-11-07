@@ -31,6 +31,7 @@ const prose = (lab: (typeof LABS)[number]): string[] =>
     step.body,
     step.console ?? '',
     step.check ?? '',
+    step.see ?? '',
   ]);
 
 describe('the GCP labs', () => {
@@ -65,6 +66,32 @@ describe('the GCP labs', () => {
           const doable = step.console ?? step.shell ?? step.sql;
           expect(doable !== undefined || step.check !== undefined).toBe(true);
         }
+      });
+
+      it('gives every step that uses Cloud Shell or SQL a console path too', () => {
+        const plan = labPlan(lab);
+        const missing = [...plan.steps, ...plan.cleanup]
+          .filter((step) => (step.shell ?? step.sql) !== undefined && step.console === undefined)
+          .map((step) => step.title);
+        expect(missing).toEqual([]);
+      });
+
+      it('says where in the console to see the result of every step', () => {
+        const plan = labPlan(lab);
+        const missing = [...plan.steps, ...plan.cleanup]
+          .filter((step) => step.console !== undefined && step.see === undefined)
+          .map((step) => step.title);
+        expect(missing).toEqual([]);
+      });
+
+      it('gives every cleanup step a console path', () => {
+        expect(lab.cleanup.filter((step) => step.console === undefined)).toEqual([]);
+      });
+
+      it('proves the cleanup in the console as well as in Cloud Shell', () => {
+        expect(lab.verifyConsole).toMatch(/^1\. /);
+        expect(() => parseMarkdown(lab.verifyConsole)).not.toThrow();
+        expect(lab.verifyConsole).not.toContain('`');
       });
 
       it('names every resource with its lab prefix', () => {

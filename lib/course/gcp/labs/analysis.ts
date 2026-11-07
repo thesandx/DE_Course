@@ -16,6 +16,9 @@ const FAQ = `id,question
 export const LABS: readonly GcpLab[] = [
   {
     station: 'visualization',
+    verifyConsole: `1. **BigQuery** > **BI Engine**: no reservation.
+2. **BigQuery** > **Studio**: the Explorer lists no «lab41».
+3. Looker Studio > **Reports** and **Data sources**: nothing from this lab.`,
     title: 'Build a fast, safe sales dashboard',
     scenario:
       'The sales dashboard takes 20 seconds to load and reads the whole fact table on every refresh. Store managers must see only totals, never customer rows. You pre-aggregate the data, find the slow query in the job history, connect Looker Studio, and give consumers a safe view.',
@@ -35,6 +38,9 @@ export const LABS: readonly GcpLab[] = [
     steps: [
       {
         title: 'Generate the sales fact table',
+        see: `«lab41.sales» > **Details** shows 1,000,000 rows, **Partitioned by: DAY** on «order_date» and **Clustered by: store_id**.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.`,
         body: 'One million order lines across 20 stores and 90 days, partitioned by day: the shape of a typical dashboard source.',
         concepts: [2],
         sql: `CREATE SCHEMA IF NOT EXISTS lab41 OPTIONS (location = 'us-central1');
@@ -53,6 +59,9 @@ FROM UNNEST(GENERATE_ARRAY(1, 1000)) AS a, UNNEST(GENERATE_ARRAY(1, 1000)) AS b;
       },
       {
         title: 'Pre-aggregate for the dashboard',
+        see: `The Explorer shows «daily_store_mv» with a materialized view icon. The second query’s **Job information** shows a few kilobytes processed.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.`,
         body: 'The dashboard shows revenue by store and day. A materialized view of that aggregate holds 1,800 rows instead of a million, refreshes itself, and reads in milliseconds.',
         concepts: [2],
         sql: `CREATE MATERIALIZED VIEW lab41.daily_store_mv
@@ -71,6 +80,7 @@ LIMIT 5;`,
       },
       {
         title: 'Find and fix a slow query',
+        see: `**Execution details** shows each stage with its input and output rows and its slot time. **Job history** > **Personal history** lists both queries with their duration and bytes.`,
         body: 'Run a deliberately bad query, then read its plan. The **Execution details** tab shows each stage, its rows and its slot time; the job history in «INFORMATION_SCHEMA.JOBS» shows bytes and slots for every query, so you can find the worst ones.',
         concepts: [3],
         sql: `-- Slow: a join that multiplies rows, then sorts everything.
@@ -102,6 +112,9 @@ LIMIT 5;`,
       },
       {
         title: 'Give consumers a safe view',
+        see: `«store_revenue» > **Schema** shows four columns and no «customer_id».`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.`,
         body: 'Store managers need totals, not customer rows. Publish a view with no customer column, and point the dashboard at it. In Looker Studio, **owner’s credentials** means everyone sees what the owner sees; **viewer’s credentials** means each viewer’s own BigQuery access applies.',
         concepts: [4],
         sql: `CREATE OR REPLACE VIEW lab41.store_revenue AS
@@ -111,6 +124,7 @@ FROM lab41.daily_store_mv;`,
       },
       {
         title: 'Connect Looker Studio',
+        see: `The report shows both charts. In BigQuery, **Job history** > **Project history** lists the queries Looker Studio sent to «store_revenue».`,
         body: 'A BI tool should read the small, safe view, not the fact table. Every chart refresh becomes a query, so the source decides the speed and the bill.',
         concepts: [1, 4],
         console: `1. Open lookerstudio.google.com > **Create** > **Report**. Add data > **BigQuery**.
@@ -123,6 +137,7 @@ FROM lab41.daily_store_mv;`,
       },
       {
         title: 'Optional: accelerate with BI Engine',
+        see: `**BigQuery** > **BI Engine** lists the 1 GB reservation in «us-central1». The job’s **Job information** shows **BI Engine mode**.`,
         body: 'BI Engine keeps hot data in memory for sub-second dashboards. A reservation bills by the hour while it exists, so create it, test, and delete it in the cleanup.',
         concepts: [2],
         console:
@@ -133,6 +148,7 @@ FROM lab41.daily_store_mv;`,
     cleanup: [
       {
         title: 'Delete the BI Engine reservation',
+        see: `**BigQuery** > **BI Engine** lists no reservation.`,
         body: 'Skip this if you did not create one. This is the only part of the lab that bills by the hour.',
         concepts: [],
         console:
@@ -140,6 +156,7 @@ FROM lab41.daily_store_mv;`,
       },
       {
         title: 'Delete the report and the data source',
+        see: `Looker Studio **Reports** and **Data sources** list neither the report nor «store_revenue».`,
         body: 'They cost nothing, but a forgotten data source with owner’s credentials is a way into your data.',
         concepts: [],
         console:
@@ -147,6 +164,7 @@ FROM lab41.daily_store_mv;`,
       },
       {
         title: 'Delete the dataset',
+        see: `The Explorer no longer lists «lab41».`,
         body: 'This deletes the table, the materialized view and the view.',
         concepts: [],
         console: '1. Delete the dataset «lab41» in BigQuery.',
@@ -158,6 +176,8 @@ echo "Also open BigQuery > BI Engine and check that no reservation is listed"`,
   },
   {
     station: 'ai-ml',
+    verifyConsole: `1. **BigQuery** > **Studio**: the Explorer lists no «lab42» and no «us.lab42_conn».
+2. **IAM & Admin** > **IAM**: no Vertex AI User row for the connection’s service account.`,
     title: 'Train, evaluate and serve models in BigQuery ML',
     scenario:
       'The research team has a table of penguin measurements and two asks: predict body mass, and classify the species. You train both models with SQL, read their metrics like an ML engineer, and, optionally, add semantic search over support questions with embeddings.',
@@ -186,6 +206,9 @@ echo "Also open BigQuery > BI Engine and check that no reservation is listed"`,
     steps: [
       {
         title: 'Look at the training data',
+        see: `The Explorer shows the dataset «lab42»; its **Details** tab shows **Data location: US**. The results panel shows three species.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.`,
         body: 'Before any model: how many rows, which columns are missing values, and is any class rare? These answers decide the model and the metrics.',
         concepts: [2],
         sql: `CREATE SCHEMA IF NOT EXISTS lab42 OPTIONS (location = 'US');
@@ -200,6 +223,10 @@ GROUP BY species;`,
       },
       {
         title: 'Train a regression model with a TRANSFORM',
+        see: `The Explorer shows «lab42» > **Models** > «mass_model». Open it: **Details** shows the model type and the TRANSFORM, **Training** shows the loss per iteration, and **Evaluation** shows the metrics.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.
+3. Training takes one to two minutes.`,
         body: 'The «TRANSFORM» clause stores feature preparation inside the model, so prediction applies exactly the same steps. That prevents training-serving skew, a classic exam topic.',
         concepts: [1, 2],
         sql: `CREATE OR REPLACE MODEL lab42.mass_model
@@ -223,6 +250,10 @@ WHERE body_mass_g IS NOT NULL;`,
       },
       {
         title: 'Evaluate and predict',
+        see: `The model’s **Evaluation** tab shows the same metrics as ML.EVALUATE, such as mean absolute error and R squared.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+**. Paste the SQL below.
+2. Select each query and click **Run**.
+3. Open «mass_model» > **Evaluation** and compare its numbers with the ML.EVALUATE result.`,
         body: 'Read the metrics on the held-out 20%, not on the training data. Then predict for rows the model has not seen.',
         concepts: [1, 2],
         sql: `SELECT * FROM ML.EVALUATE(MODEL lab42.mass_model);
@@ -238,6 +269,10 @@ FROM ML.PREDICT(MODEL lab42.mass_model, (
       },
       {
         title: 'Classify the species and read the confusion matrix',
+        see: `«species_model» > **Evaluation** shows precision, recall and accuracy, and draws the confusion matrix as a grid.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.
+3. Open «species_model» > **Evaluation**.`,
         body: 'For classes, accuracy alone hides mistakes on a small class. Read precision and recall per class, and the confusion matrix, which shows which species the model mixes up.',
         concepts: [1, 2],
         sql: `CREATE OR REPLACE MODEL lab42.species_model
@@ -253,6 +288,7 @@ SELECT * FROM ML.CONFUSION_MATRIX(MODEL lab42.species_model);`,
       },
       {
         title: 'Optional: semantic search with embeddings',
+        see: `**Models** lists «embedder» as a remote model. «faq_vectors» > **Preview** shows each question with a long array of numbers.`,
         body: 'An embedding turns text into a vector so similar meanings sit close together. That is the retrieval half of RAG. You embed six support questions, then find the nearest ones to a new question. If the model name below has been retired, pick the current text embedding model from the Vertex AI model list.',
         concepts: [3],
         console:
@@ -280,6 +316,7 @@ FROM VECTOR_SEARCH(
     cleanup: [
       {
         title: 'Delete the dataset',
+        see: `The Explorer no longer lists «lab42».`,
         body: 'This deletes both models, the remote model and the tables.',
         concepts: [],
         console: '1. Delete the dataset «lab42» in BigQuery.',
@@ -287,6 +324,7 @@ FROM VECTOR_SEARCH(
       },
       {
         title: 'Delete the connection and its role',
+        see: `The Explorer lists no «us.lab42_conn», and **IAM** shows no Vertex AI User row for its service account.`,
         body: 'Skip this if you did not do the optional step.',
         concepts: [],
         console:
@@ -302,6 +340,8 @@ bq ls --connection --location=US | grep lab42 || echo "No lab42 connection left"
   },
   {
     station: 'sharing-data',
+    verifyConsole: `1. **BigQuery** > **Sharing (Analytics Hub)**: no «lab43_exchange».
+2. **BigQuery** > **Studio**: the Explorer lists no «lab43_src» and no «lab43_linked».`,
     title: 'Publish a dataset with BigQuery sharing',
     scenario:
       'A partner wants your daily city metrics. You must not copy the data, must be able to revoke access at once, and must see who subscribed. You publish a listing on a private exchange and subscribe to it as the partner would.',
@@ -318,6 +358,9 @@ bq ls --connection --location=US | grep lab42 || echo "No lab42 connection left"
     steps: [
       {
         title: 'Prepare the dataset to share',
+        see: `«lab43_src» > **Details** shows the description. «daily_city» > **Details** shows 42 rows.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.`,
         body: 'Share a dataset made for consumers: aggregated, documented, and with no personal data. A listing shares a whole dataset, so keep internal tables elsewhere.',
         concepts: [1],
         sql: `CREATE SCHEMA IF NOT EXISTS lab43_src OPTIONS (
@@ -333,6 +376,7 @@ FROM UNNEST(GENERATE_ARRAY(0, 13)) AS d, UNNEST(['SF', 'NYC', 'LON']) AS city;`,
       },
       {
         title: 'Create a private exchange and a listing',
+        see: `**Sharing (Analytics Hub)** > «lab43_exchange» lists «lab43_daily». Open the listing to see its source dataset, description and state.`,
         body: 'An exchange is a catalogue of listings with its own access control. A listing points at one dataset. Subscribers get a read-only **linked dataset**: a pointer, not a copy, so they always see current data and you can revoke at once.',
         concepts: [1],
         console: `1. Open **BigQuery** > **Sharing (Analytics Hub)** > **Create exchange**. Location «us-central1», name «lab43_exchange», private. Create, and skip the permissions page.
@@ -341,6 +385,7 @@ FROM UNNEST(GENERATE_ARRAY(0, 13)) AS d, UNNEST(['SF', 'NYC', 'LON']) AS city;`,
       },
       {
         title: 'Subscribe as the partner',
+        see: `The Explorer shows «lab43_linked» with a linked dataset icon. Its **Details** tab names the listing it comes from.`,
         body: 'You subscribe to your own listing to see the partner’s view. In real use the partner does this in their project, after you grant them Subscriber on the listing or the exchange.',
         concepts: [1],
         console:
@@ -356,6 +401,9 @@ CREATE TABLE lab43_linked.my_copy AS SELECT 1 AS x;  -- fails`,
       },
       {
         title: 'See that the share is live, not a copy',
+        see: `The results panel shows 43. **Preview** «lab43_linked.daily_city» shows the BLR row.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.`,
         body: 'Add a row in the source and read it through the linked dataset. Then compare with the other ways to share.',
         concepts: [1],
         sql: `INSERT lab43_src.daily_city VALUES (DATE '2026-03-15', 'BLR', 500);
@@ -368,6 +416,7 @@ SELECT COUNT(*) AS rows_seen_by_partner FROM lab43_linked.daily_city;`,
     cleanup: [
       {
         title: 'Delete the linked dataset',
+        see: `The Explorer no longer lists «lab43_linked».`,
         body: 'Deleting the linked dataset ends the subscription. It never deletes the source data.',
         concepts: [],
         console: '1. Delete the dataset «lab43_linked» in BigQuery.',
@@ -375,6 +424,7 @@ SELECT COUNT(*) AS rows_seen_by_partner FROM lab43_linked.daily_city;`,
       },
       {
         title: 'Delete the listing and the exchange',
+        see: `**Sharing (Analytics Hub)** lists no «lab43_exchange».`,
         body: 'Delete the listing first, then the exchange.',
         concepts: [],
         console:
@@ -382,6 +432,7 @@ SELECT COUNT(*) AS rows_seen_by_partner FROM lab43_linked.daily_city;`,
       },
       {
         title: 'Delete the source dataset',
+        see: `The Explorer no longer lists «lab43_src».`,
         body: 'Last, delete the data you shared.',
         concepts: [],
         console: '1. Delete the dataset «lab43_src».',

@@ -1,4 +1,5 @@
 import { Prose } from '@/components/course/Prose';
+import { Icon } from '@/components/layout/Icon';
 import { Tabs } from '@/components/ui/Tabs';
 import { cn } from '@/lib/utils';
 import type { LabStep } from '@/types/gcp';
@@ -23,8 +24,9 @@ export interface LabStepCardProps {
 
 /**
  * One lab step: why it matters, how to do it in the console or in Cloud
- * Shell, the SQL to paste, and what the learner should see. The tick at the
- * foot is the only client part.
+ * Shell, the SQL to paste, what the learner should see, and where in the
+ * console to see it. The console tab comes first, because every step can be
+ * done there. The tick at the foot is the only client part.
  */
 export function LabStepCard({
   id,
@@ -37,7 +39,7 @@ export function LabStepCard({
 }: LabStepCardProps) {
   const ways = [
     ...(step.console !== undefined
-      ? [{ id: 'console', label: 'Console', content: <Prose source={step.console} /> }]
+      ? [{ id: 'console', label: 'Console (UI)', content: <Prose source={step.console} /> }]
       : []),
     ...(step.shell !== undefined
       ? [
@@ -106,6 +108,16 @@ export function LabStepCard({
         <div className="bg-easy-soft rounded-input flex flex-col gap-1 p-4">
           <p className="eyebrow text-easy">You should see</p>
           <Prose source={step.check} />
+        </div>
+      )}
+
+      {step.see !== undefined && (
+        <div className="bg-sunken border-line rounded-input flex flex-col gap-1 border p-4">
+          <p className="eyebrow text-ink-soft flex items-center gap-1.5">
+            <Icon name="monitor" className="size-4" />
+            See it in the console
+          </p>
+          <Prose source={step.see} />
         </div>
       )}
 

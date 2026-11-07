@@ -55,6 +55,7 @@ export function setupStep(lab: GcpLab): LabStep {
     shell,
     check:
       '«gcloud services enable» ends with «Operation … finished successfully» (or prints nothing, when the APIs were already on).',
+    see: 'The project picker at the top of the console shows your project. **APIs & Services** > **Enabled APIs & services** lists the APIs this lab needs. To turn one on without Cloud Shell, open **APIs & Services** > **Library**, search for it, and click **Enable**.',
   };
 }
 
@@ -65,8 +66,11 @@ export function dataStep(lab: GcpLab): LabStep | undefined {
     title: 'Create the sample data',
     body: 'Everything the lab needs is below. In Cloud Shell, paste the command for each file to write it in your home folder. To use the console instead, download each file and upload it when a step asks.',
     concepts: [],
+    console:
+      '1. Under **Sample files** in the briefing above, click each file to download it.\n2. Keep the files at hand: a step tells you when to upload one, in BigQuery with **Create table** > **Upload** or in Cloud Storage with **Upload files**.\n3. To write the files in Cloud Shell instead, paste the commands from the **Cloud Shell** tab.',
     shell: lab.files.map(fileCommand).join('\n\n'),
     check: `«ls» shows ${lab.files.map((file) => `«${file.name}»`).join(', ')}.`,
+    see: 'In Cloud Shell, click **Open Editor** to see the files in your home folder. If you downloaded them, your browser’s downloads list shows each one.',
   };
 }
 

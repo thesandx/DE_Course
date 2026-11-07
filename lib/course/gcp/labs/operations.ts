@@ -8,6 +8,8 @@ import type { GcpLab } from '@/types/gcp';
 export const LABS: readonly GcpLab[] = [
   {
     station: 'resource-optimization',
+    verifyConsole: `1. **BigQuery** > **Studio**: the Explorer lists no «lab51».
+2. **Billing** > **Budgets & alerts**: only the budgets you chose to keep.`,
     title: 'Put guardrails on BigQuery spend',
     scenario:
       'Last month an analyst ran «SELECT *» on a 30 TB table, twice. Finance wants it never to happen again, and an email before any surprise. You estimate costs for free, cap a query, set a budget alert, and pick the cheaper storage model.',
@@ -26,6 +28,7 @@ export const LABS: readonly GcpLab[] = [
     steps: [
       {
         title: 'Estimate a query for free',
+        see: `The grey text at the top right of the editor: «This query will process … when run». It turns red when the query is not valid.`,
         body: 'On-demand BigQuery bills the bytes a query reads, about $6.25 per TiB after the free 1 TiB each month. A dry run returns those bytes without running anything. Columns matter; a «LIMIT» does not reduce the bytes.',
         concepts: [1],
         shell: `bq query --use_legacy_sql=false --dry_run \\
@@ -41,6 +44,7 @@ bq query --use_legacy_sql=false --dry_run \\
       },
       {
         title: 'Cap a query before it bills',
+        see: `The results panel shows the red error. **Job history** > **Personal history** lists the failed job; its **Job information** shows **Bytes billed: 0 B**.`,
         body: '«maximum_bytes_billed» makes BigQuery refuse a query that would read more than the cap, before it starts. Set it in scripts, in the console query settings, or in your tools’ defaults.',
         concepts: [1],
         shell: `bq query --use_legacy_sql=false --maximum_bytes_billed=100000000 \\
@@ -52,6 +56,7 @@ bq query --use_legacy_sql=false --dry_run \\
       },
       {
         title: 'Set a quota and a budget alert',
+        see: `**Quotas & System Limits** shows your value for «Query usage per day». **Budgets & alerts** lists «lab51-guardrail» with its amount and thresholds.`,
         body: 'A custom quota is a hard daily cap per project or per user. A budget alert is the early warning. Use both: the quota stops the accident, the budget catches everything else.',
         concepts: [1, 3],
         console: `1. Open **IAM & Admin** > **Quotas & System Limits**. Filter for «Query usage per day». Select the row for your project, click **Edit**, and set it to 1 TiB (or less). Submit.
@@ -61,6 +66,11 @@ bq query --use_legacy_sql=false --dry_run \\
       },
       {
         title: 'Make tables expire and choose the storage model',
+        see: `«lab51» > **Details** shows the default table expiration of 1 day. «scratch» > **Details** shows its expiration time and its logical and physical bytes under **Storage info**.`,
+        console: `1. In the BigQuery Explorer, open your project’s menu > **Create dataset**. ID «lab51», region «us-central1». Tick **Enable table expiration** and set 1 day. Create.
+2. In a new editor tab, run the «CREATE TABLE lab51.scratch …» statement from the **Cloud Shell** tab.
+3. Run the SQL below. The storage view can take a few minutes to show a new table.
+4. The billing model is a dataset setting: open «lab51» > **Details** > **Edit details** to see it. Leave it unchanged for this lab.`,
         body: 'A default expiration on a scratch dataset deletes forgotten tables for you. The storage billing model is per dataset: **logical** bytes (uncompressed) or **physical** bytes (compressed, plus time travel). Compressible data is often far cheaper on physical; check before you switch.',
         concepts: [1, 2],
         shell: `bq mk --dataset --location=us-central1 --default_table_expiration=86400 lab51
@@ -86,6 +96,7 @@ WHERE table_schema = 'lab51';`,
     cleanup: [
       {
         title: 'Delete the dataset',
+        see: `The Explorer no longer lists «lab51».`,
         body: 'The expiration would delete the table tomorrow; delete the dataset now.',
         concepts: [],
         console: '1. Delete the dataset «lab51».',
@@ -93,6 +104,7 @@ WHERE table_schema = 'lab51';`,
       },
       {
         title: 'Decide on the budget and the quota',
+        see: `**Budgets & alerts** lists only the budgets you chose to keep.`,
         body: 'Both cost nothing. Keeping the budget is good practice. If you set the quota low and it gets in your way, reset it.',
         concepts: [],
         console:
@@ -103,6 +115,8 @@ WHERE table_schema = 'lab51';`,
   },
   {
     station: 'automation',
+    verifyConsole: `1. **BigQuery** > **Scheduled queries**: no «lab52-daily».
+2. **BigQuery** > **Studio**: the Explorer lists no «lab52».`,
     title: 'Schedule an idempotent daily job and backfill it',
     scenario:
       'A daily summary must run every morning for yesterday, and the business wants the last five days rebuilt after a logic fix. Each run must be safe to repeat. You build it with a BigQuery scheduled query, the lightest way to schedule SQL.',
@@ -115,6 +129,9 @@ WHERE table_schema = 'lab51';`,
     steps: [
       {
         title: 'Create a week of raw trips',
+        see: `«lab52.trips» > **Details** shows 2,100 rows. «daily_city» > **Details** shows 0 rows.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.`,
         body: 'The raw table has trips for 1 to 7 January. The summary table is empty.',
         concepts: [1],
         sql: `CREATE SCHEMA IF NOT EXISTS lab52 OPTIONS (location = 'us-central1');
@@ -132,6 +149,10 @@ PARTITION BY day;`,
       },
       {
         title: 'Write the job so a re-run is safe',
+        see: `After each run, the last result shows 3 rows for 3 January. **Personal history** lists both script jobs; open one to see each statement it ran.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.
+3. Click **Run** a second time.`,
         body: 'The script replaces one day: delete that day, then insert it. Run it twice for the same day and you get the same rows, never doubles. «@run_date» is the date the scheduler passes to each run.',
         concepts: [1],
         sql: `DECLARE d DATE DEFAULT DATE '2026-01-03';  -- the scheduled version uses @run_date
@@ -148,6 +169,7 @@ SELECT * FROM lab52.daily_city ORDER BY day, city;`,
       },
       {
         title: 'Schedule it',
+        see: `**Scheduled queries** lists «lab52-daily» as enabled, with its schedule and next run. Open it to see **Run history** and **Configuration**.`,
         body: 'A scheduled query is a BigQuery Data Transfer Service config: it runs your SQL on a schedule, with the run time as a parameter. The console may ask you to authorise the transfer service the first time.',
         concepts: [1],
         console: `1. Open a new editor tab and paste:
@@ -159,6 +181,7 @@ SELECT * FROM lab52.daily_city ORDER BY day, city;`,
       },
       {
         title: 'Backfill five days',
+        see: `«lab52-daily» > **Run history** lists one run per backfilled day, each with its run date and a green tick.`,
         body: 'A backfill starts one run per day in a past range, each with its own «@run_date». Because the job is idempotent, you can backfill a range twice and get the same table.',
         concepts: [1],
         console:
@@ -174,6 +197,7 @@ ORDER BY day;`,
     cleanup: [
       {
         title: 'Delete the scheduled query',
+        see: `**Scheduled queries** no longer lists «lab52-daily».`,
         body: 'An enabled schedule runs every day until you delete it.',
         concepts: [],
         console: '1. Open **Scheduled queries**, select «lab52-daily», and click **Delete**.',
@@ -183,6 +207,7 @@ ORDER BY day;`,
       },
       {
         title: 'Delete the dataset',
+        see: `The Explorer no longer lists «lab52».`,
         body: 'This deletes the raw and the summary tables.',
         concepts: [],
         console: '1. Delete the dataset «lab52».',
@@ -194,6 +219,8 @@ bq ls --transfer_config --transfer_location=us-central1 | grep lab52 || echo "No
   },
   {
     station: 'workload-organization',
+    verifyConsole: `1. **BigQuery** > **Capacity management**: no «lab53_res» and no assignment.
+2. **BigQuery** > **Studio**: the Explorer lists no «lab53».`,
     title: 'Prioritise, label and charge back BigQuery work',
     scenario:
       'Finance’s month-end report keeps waiting behind ad hoc queries, and no one knows which team spends what. You run work at interactive and batch priority, label every job by team, build a chargeback query, and optionally isolate a workload on its own slots.',
@@ -212,6 +239,9 @@ bq ls --transfer_config --transfer_location=us-central1 | grep lab52 || echo "No
     steps: [
       {
         title: 'Make a table to query',
+        see: `«lab53.events» > **Details** shows 500,000 rows.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.`,
         body: 'Half a million rows is enough to see the job statistics.',
         concepts: [1],
         sql: `CREATE SCHEMA IF NOT EXISTS lab53 OPTIONS (location = 'us-central1');
@@ -223,6 +253,7 @@ FROM UNNEST(GENERATE_ARRAY(1, 500000)) AS n;`,
       },
       {
         title: 'Run labelled jobs at two priorities',
+        see: `**Job history** > **Personal history**: open each job. **Job information** shows its **Priority** (Interactive or Batch) and its **Labels**.`,
         body: 'Interactive queries start at once. Batch queries queue until slots are free, and start within 24 hours at most; they suit work with no one waiting. Labels on each job name the team, so cost can be grouped.',
         concepts: [1],
         shell: `bq query --use_legacy_sql=false --label=team:finance \\
@@ -238,6 +269,9 @@ bq query --use_legacy_sql=false --label=team:growth \\
       },
       {
         title: 'Build a chargeback report',
+        see: `The results panel shows one row per team and priority. Labels also reach **Billing** > **Reports**, where you can filter cost by label, after a delay of up to a day.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.`,
         body: 'The jobs view records bytes and slot time for every job, with its labels. Group by the «team» label for a cost split per team.',
         concepts: [1],
         sql: `SELECT
@@ -256,6 +290,7 @@ ORDER BY team;`,
       },
       {
         title: 'Optional: give one project its own slots',
+        see: `**Capacity management** lists «lab53_res» with its baseline and maximum slots, and its **Assignments** lists your project. The new job’s **Job information** names the reservation.`,
         body: 'A reservation is a pool of slots; an assignment sends a project’s queries to it. With a baseline of 0 and autoscaling to 50, you pay only while queries run. Be quick: until you delete the assignment, every query in the project runs on this reservation.',
         concepts: [1],
         console:
@@ -278,6 +313,7 @@ LIMIT 3;`,
     cleanup: [
       {
         title: 'Delete the assignment, then the reservation',
+        see: `**Capacity management** lists no «lab53_res».`,
         body: 'Skip this if you did not do the optional step. An assignment must go before its reservation.',
         concepts: [],
         console:
@@ -289,6 +325,7 @@ bq rm --reservation --location=us-central1 lab53_res`,
       },
       {
         title: 'Delete the dataset',
+        see: `The Explorer no longer lists «lab53».`,
         body: 'This deletes the events table.',
         concepts: [],
         console: '1. Delete the dataset «lab53».',
@@ -300,6 +337,9 @@ bq ls --reservation --location=us-central1 | grep lab53 || echo "No lab53 reserv
   },
   {
     station: 'monitoring',
+    verifyConsole: `1. **Monitoring** > **Alerting**: no «lab54-failed-queries» policy.
+2. **Logging** > **Log-based metrics**: no «lab54-failed-queries».
+3. **BigQuery** > **Studio**: the Explorer lists no «lab54».`,
     title: 'Get paged when a pipeline query fails',
     scenario:
       'A nightly query failed for three days before anyone noticed. You find failed jobs in the audit logs, turn them into a metric, alert on it by email, and read the quota and billing pages that explain the most common failures.',
@@ -319,6 +359,10 @@ bq ls --reservation --location=us-central1 | grep lab53 || echo "No lab53 reserv
     steps: [
       {
         title: 'Make one job succeed and one fail',
+        see: `**Job history** > **Personal history** lists two jobs: one succeeded, one failed. Open the failed one to read its error.`,
+        console: `1. In the BigQuery Explorer, create the dataset «lab54» in «us-central1».
+2. In the editor, run «CREATE TABLE lab54.ok AS SELECT 1 AS x».
+3. In a new tab, run «SELECT * FROM lab54.does_not_exist». It fails. If the editor will not run it, run that line from the **Cloud Shell** tab: the next steps need a failed job.`,
         body: 'You need a failure to look for. The second query names a table that does not exist.',
         concepts: [2],
         shell: `bq mk --dataset --location=us-central1 lab54
@@ -328,6 +372,7 @@ bq query --use_legacy_sql=false 'SELECT * FROM lab54.does_not_exist'`,
       },
       {
         title: 'Find the failure in the jobs view and the logs',
+        see: `Logs Explorer shows the entry with an ERROR severity icon. Expand it to read «protoPayload.status.message».`,
         body: 'Two places hold job history. «INFORMATION_SCHEMA.JOBS» is easiest for SQL. Cloud Logging holds the audit entries that metrics and alerts are built from.',
         concepts: [1, 2],
         sql: `SELECT creation_time, job_id, error_result.reason, error_result.message
@@ -344,6 +389,7 @@ ORDER BY creation_time DESC;`,
       },
       {
         title: 'Turn failures into a metric',
+        see: `**Logging** > **Log-based metrics** lists «lab54-failed-queries» under **User-defined metrics**. Its menu has **View in Metrics Explorer**, which charts it.`,
         body: 'A log-based counter metric counts matching entries over time. A chart or an alert can then use it, like any Cloud Monitoring metric.',
         concepts: [1],
         console:
@@ -355,6 +401,7 @@ ORDER BY creation_time DESC;`,
       },
       {
         title: 'Alert on it by email',
+        see: `**Monitoring** > **Alerting** lists the policy, and **Incidents** shows an open incident. The email has a link to it.`,
         body: 'An alert needs a condition and a notification channel. Alert on symptoms the business cares about (a failed load, stale data), not on every CPU spike.',
         concepts: [1],
         console: `1. Open **Monitoring** > **Alerting** > **Edit notification channels**. Add an **Email** channel with your address.
@@ -366,6 +413,7 @@ ORDER BY creation_time DESC;`,
       },
       {
         title: 'Read the pages behind most failures',
+        see: `Each page shows live values: the quota usage, the cost by service, and the query count chart.`,
         body: 'Many pipeline failures are not bugs: a quota was reached, or a billing account stopped. Know where to look.',
         concepts: [2],
         console:
@@ -377,6 +425,7 @@ ORDER BY creation_time DESC;`,
     cleanup: [
       {
         title: 'Delete the alerting policy and the channel',
+        see: `**Monitoring** > **Alerting** lists no «lab54-failed-queries» policy, and the notification channels list no lab email.`,
         body: 'Delete the policy first; a channel used by a policy cannot be deleted.',
         concepts: [],
         console:
@@ -384,6 +433,7 @@ ORDER BY creation_time DESC;`,
       },
       {
         title: 'Delete the metric and the dataset',
+        see: `**Log-based metrics** lists no «lab54-failed-queries», and the Explorer no longer lists «lab54».`,
         body: 'The metric stops counting at once.',
         concepts: [],
         console:
@@ -398,6 +448,9 @@ echo "Also check Monitoring > Alerting: no lab54 policy listed"`,
   },
   {
     station: 'failure-mitigation',
+    verifyConsole: `1. **Pub/Sub** > **Topics**, **Subscriptions** and **Snapshots**: nothing named «lab55».
+2. **BigQuery** > **Studio**: the Explorer lists no «lab55».
+3. **Cloud Storage** > **Buckets**: no «PROJECT_ID-lab55».`,
     title: 'Survive poison messages, bad deploys and corrupted tables',
     scenario:
       'Three things go wrong in one week: a malformed message blocks a subscriber, a buggy consumer acknowledges a batch it never processed, and an UPDATE corrupts a production table. You set up the controls that make each one recoverable, then use them.',
@@ -418,6 +471,7 @@ echo "Also check Monitoring > Alerting: no lab54 policy listed"`,
     steps: [
       {
         title: 'Route poison messages to a dead-letter topic',
+        see: `**Pub/Sub** > **Subscriptions** > «lab55-work» > **Details** shows dead lettering to «lab55-dead» with 5 maximum delivery attempts.`,
         body: 'A message that always fails is redelivered forever and holds up its subscriber. A dead-letter topic takes it after a set number of attempts. The Pub/Sub service agent needs permission to publish to the dead-letter topic and to acknowledge on the source subscription.',
         concepts: [1],
         shell: `export PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format="value(projectNumber)")
@@ -437,6 +491,10 @@ gcloud pubsub subscriptions add-iam-policy-binding lab55-work \\
       },
       {
         title: 'Fail a message five times',
+        see: `The «lab55-dead-sub» pull shows the poison message. Its attributes, such as «CloudPubSubDeadLetterSourceSubscription», name the subscription it came from.`,
+        console: `1. Open **Pub/Sub** > **Topics** > «lab55-orders» > **Messages** > **Publish message**. Message body «{"order_id": "X-1", "amount": "oops"}». Publish.
+2. Open **Subscriptions** > «lab55-work» > **Messages**. Leave **Enable ack messages** off and click **Pull**. Wait 15 seconds and pull again. Do this six times.
+3. Open «lab55-dead-sub» > **Messages**, turn on **Enable ack messages**, and click **Pull**.`,
         body: 'Pull without acknowledging, as a crashing consumer would. Each pull is one delivery attempt; after the ack deadline the message comes back. After the fifth attempt it moves to the dead-letter topic.',
         concepts: [1],
         shell: `gcloud pubsub topics publish lab55-orders --message='{"order_id": "X-1", "amount": "oops"}'
@@ -450,6 +508,12 @@ gcloud pubsub subscriptions pull lab55-dead-sub --auto-ack --limit=1`,
       },
       {
         title: 'Replay messages a buggy consumer acknowledged',
+        see: `**Pub/Sub** > **Snapshots** lists «lab55-snap» with its expiry time. After the replay, the pull shows the three orders again.`,
+        console: `1. Open **Pub/Sub** > «lab55-orders» > **Create subscription**. ID «lab55-replay», delivery **Pull**. Create.
+2. On the topic, publish three messages: «order-1», «order-2» and «order-3».
+3. Open **Pub/Sub** > **Snapshots** > **Create snapshot**. ID «lab55-snap», subscription «lab55-replay». Create.
+4. Open «lab55-replay» > **Messages**, turn on **Enable ack messages**, and **Pull** until nothing comes back.
+5. On «lab55-replay», click **Replay messages**, choose **To a previous snapshot**, pick «lab55-snap», and confirm. Pull again.`,
         body: 'A snapshot keeps the unacknowledged backlog of a subscription. Seeking to it marks those messages unacknowledged again, so a fixed consumer can process them a second time. Your consumer must therefore be idempotent.',
         concepts: [1, 3],
         shell: `gcloud pubsub subscriptions create lab55-replay --topic=lab55-orders
@@ -464,6 +528,10 @@ gcloud pubsub subscriptions pull lab55-replay --auto-ack --limit=10`,
       },
       {
         title: 'Undo a corrupting UPDATE with a snapshot',
+        see: `The Explorer shows «orders_before_fix» with a snapshot icon; its **Details** tab names the base table and the snapshot time. **Preview** «orders» shows the original amounts.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.
+3. To restore in the console instead, open «orders_before_fix» and click **Restore**: it makes a new table from the snapshot.`,
         body: 'Before a risky change, take a table snapshot: it costs only the bytes that later change. If the change goes wrong, restore with a clone. Time travel would also work for 7 days; a snapshot lasts as long as you set.',
         concepts: [3],
         sql: `CREATE SCHEMA IF NOT EXISTS lab55 OPTIONS (location = 'us-central1');
@@ -483,6 +551,7 @@ SELECT COUNT(*) AS orders, SUM(amount) AS total FROM lab55.orders;`,
       },
       {
         title: 'Store data in two regions',
+        see: `The bucket’s **Configuration** tab shows location type **Dual-region**, the two regions, and the replication setting.`,
         body: 'A dual-region bucket keeps every object in two regions, so a regional outage does not stop reads or writes. For a zone outage, regional services such as Dataflow and Dataproc restart work in another zone; for a region outage, you need the data in a second region first.',
         concepts: [2],
         console:
@@ -499,6 +568,7 @@ gcloud storage buckets describe gs://$BUCKET --format="json(location, location_t
     cleanup: [
       {
         title: 'Delete the snapshot, subscriptions and topics',
+        see: `**Pub/Sub** > **Topics**, **Subscriptions** and **Snapshots** list nothing named «lab55».`,
         body: 'Delete the snapshot and subscriptions before their topics.',
         concepts: [],
         console:
@@ -509,6 +579,7 @@ gcloud pubsub topics delete lab55-orders lab55-dead --quiet`,
       },
       {
         title: 'Delete the dataset and the bucket',
+        see: `The Explorer no longer lists «lab55», and **Buckets** has no «PROJECT_ID-lab55».`,
         body: 'This deletes the table and its snapshot, and both regions’ copies of the file.',
         concepts: [],
         console: '1. Delete the dataset «lab55».\n2. Delete the bucket «PROJECT_ID-lab55».',
