@@ -22,6 +22,7 @@ import * as quality from '@/lib/course/tracks/quality';
 import * as snowflakeDatabricks from '@/lib/course/tracks/snowflake-databricks';
 import * as spark from '@/lib/course/tracks/spark';
 import * as sql from '@/lib/course/tracks/sql';
+import * as staff from '@/lib/course/tracks/staff';
 import * as streaming from '@/lib/course/tracks/streaming';
 import * as systemDesign from '@/lib/course/tracks/system-design';
 import type { Company, CompanyGuide, Difficulty, Lesson, Problem, Track } from '@/types/course';
@@ -44,6 +45,7 @@ const MODULES = [
   systemDesign,
   ai,
   behavioral,
+  staff,
 ] as const;
 
 export const TRACKS: readonly Track[] = MODULES.map((module) => module.track);

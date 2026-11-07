@@ -55,8 +55,34 @@ export const designQuestions: Problem[] = [
 
       **Cost levers.** Drop or sample debug logs at the agent, shorten hot retention for
       high-volume, low-value services, and move search to the archive past 14 days.
+
+      **Capacity.**
+
+      | Item | Number | How |
+      |---|---|---|
+      | Kafka disk for 3 days | about 75 TB | compress at the agent: about 25 TB × 3 replicas |
+      | Hot index | about 280 TB | 10 TB a day × 14 days × 2 replicas |
+      | Archive | about 3.5 PB | one year in Parquet |
+
+      Compressing at the agent matters: without it the Kafka tier needs about 8 times the disk.
+
+      **Options I rejected.**
+
+      | Option | Why not |
+      |---|---|
+      | Full-text index on every field | The index can be as large as the raw data; most searches filter by labels first |
+      | One store for 14 days and 1 year | A year in the hot tier costs many times more than object storage |
+      | Agents write straight to the index | No buffer, so any indexing slowdown drops logs |
+      | A cluster per service | Hundreds of clusters to operate and upgrade |
+
+      **Failure walkthrough: a service logs in a tight loop at 10x its quota.** The agent
+      enforces the quota first, so the extra lines never reach the network. Over-quota lines are
+      sampled: errors are kept and info is sampled at 1%. The service owner gets an alert with
+      the top log templates. Other services see no change. Without quotas, that one service would
+      fill Kafka partitions and delay search for everyone.
     `,
     signals: [
+      'Names the options rejected and why, then walks through one failure end to end',
       'Estimates throughput and storage per tier',
       'Separates hot search from cheap cold retention',
       'Indexes labels, not every token, to control index size',
@@ -112,8 +138,31 @@ export const designQuestions: Problem[] = [
       **Correctness.** Dedupe on a click id for retries from the shipper. Late events update the
       hourly rollups. A nightly batch recomputes daily totals from the lake with the latest bot
       rules and overwrites the dashboard's daily numbers.
+
+      **Capacity.**
+
+      | Item | Number | How |
+      |---|---|---|
+      | Raw events | about 600 GB a day | 2B × 300 B |
+      | Hourly rollups | far fewer rows | one row per link, hour, country, referrer and device |
+      | Spill buffer per server | about 270 MB per 30 min | 30 MB/s fleet-wide over 200 servers |
+
+      **Options I rejected.**
+
+      | Option | Why not |
+      |---|---|
+      | Write the click to a database during the redirect | Adds latency and couples redirects to analytics |
+      | Query the raw events for each dashboard | Seconds per query, and cost grows with the life of the link |
+      | Batch only | Owners expect live totals |
+      | Hourly rows forever | Roll hourly rows up to daily after 90 days; nobody reads year-old data by the hour |
+
+      **Failure walkthrough: Kafka is unavailable for 30 minutes.** Redirects keep working
+      because they never wait on Kafka. Each server spills events to local disk, about 270 MB in
+      30 minutes, well within a small disk. Live totals freeze and show "as of". When Kafka
+      returns, the shippers drain the spill. The click id makes any resent batch harmless.
     `,
     signals: [
+      'Names the options rejected and why, then walks through one failure end to end',
       'Keeps analytics fully off the redirect path',
       'Enriches and flags bots in the stream, re-scores in batch',
       'Uses a counter store for the live total and OLAP for slices',
@@ -168,8 +217,33 @@ export const designQuestions: Problem[] = [
       **Late and wrong data.** Events arriving minutes late update their original minute bucket
       in Pinot via upsert or are accepted into the next segment. Each panel shows "data as of"
       time; a stalled pipeline shows a banner instead of a flat line that looks like zero trips.
+
+      **Capacity.**
+
+      | Item | Number | How |
+      |---|---|---|
+      | Rows per minute | about 50,000 | active city × product × neighbourhood combinations |
+      | Rows for 30 days | about 2.2 billion | 50,000 × 1,440 × 30 |
+      | Distinct queries | a few hundred a second | after 5 to 10 s caching of 1,600 queries a second |
+      | Flink state | small | open trips only, with a 3-hour TTL |
+
+      **Options I rejected.**
+
+      | Option | Why not |
+      |---|---|
+      | The warehouse | Built for fewer, bigger queries, not 1,600 a second |
+      | Precompute each panel into Redis | Fast, but every new slice needs new code |
+      | Exact medians | Needs every value; a sketch merges with about 1% error |
+      | Join trip events in the OLAP store | Pinot and Druid are poor at joins; join once in the stream |
+
+      **Failure walkthrough: the Flink job falls 5 minutes behind.** Every panel shows its
+      "data as of" time, and a banner appears once lag passes 2 minutes. That stops an ops manager
+      from reading a flat line as zero trips and sending drivers away. When the job catches up,
+      late minutes fill in via upsert. Trips still open after 3 hours expire from state and are
+      counted as incomplete in the lake, not the dashboard.
     `,
     signals: [
+      'Names the options rejected and why, then walks through one failure end to end',
       'Computes the query rate and rules out a plain warehouse',
       'Chooses a real-time OLAP store with Kafka ingestion',
       'Uses sketches for medians and states the error',
@@ -228,8 +302,35 @@ export const designQuestions: Problem[] = [
       the future or before the device's last reading, and keep the server receive time too.
 
       **Cost.** Downsample old data: keep raw for 90 days, then 1-minute summaries per device.
+
+      **Capacity.**
+
+      | Item | Number | How |
+      |---|---|---|
+      | Readings | 1M/s | 10M devices / 10 s |
+      | Bigtable, one row per reading | about 70 to 100 nodes | at 10,000 to 14,000 writes a second per node |
+      | Bigtable, one row per device-minute | about 15 to 20 nodes | 6 readings per row, about 170,000 writes a second |
+      | Lake | about 2 PB over 2 years | 6 PB raw, about 3x columnar compression |
+
+      Grouping readings per device-minute cuts the online store cost by about 5x. The trade-off
+      is that the newest reading lands up to a minute later; the alert path does not use this store.
+
+      **Options I rejected.**
+
+      | Option | Why not |
+      |---|---|
+      | A time-series database for everything | 10M series is a cardinality problem for most of them |
+      | Partition history by arrival time | A backlog upload would land in the wrong day |
+      | One store for lookups and analytics | Point lookups and full scans need different layouts |
+
+      **Failure walkthrough: a regional outage, then 1M devices reconnect.** Each device uploads
+      6 hours of backlog, about 2 billion readings in total. Gateways rate-limit backlog
+      upload per device, and Kafka absorbs the rest. The alert path drops readings older than a
+      few minutes, so ops is not paged for old heat. The daily aggregate for that date is
+      recomputed once the late-arrival count for its partition passes the threshold.
     `,
     signals: [
+      'Names the options rejected and why, then walks through one failure end to end',
       'Estimates the event rate and multi-year storage',
       'Keys by device id to keep per-device order',
       'Separates alert freshness from event-time analytics',
@@ -288,8 +389,32 @@ export const designQuestions: Problem[] = [
 
       **Privacy.** Listening history is personal: apply retention limits and honour deletion in
       the lake and the summaries.
+
+      **Capacity.**
+
+      | Item | Number | How |
+      |---|---|---|
+      | Raw plays | about 600 GB a day | 3B × 200 B |
+      | Monthly summaries | about 7 billion rows a year | 600M users × 12 |
+      | Year-in-review output | 600M small documents | written to a KV store by user id |
+
+      **Options I rejected.**
+
+      | Option | Why not |
+      |---|---|
+      | Count royalties in real time | Offline plays and fraud signals arrive days later |
+      | Scan a year of raw plays in December | About 220 TB per run, at the worst time of year to debug |
+      | Close the month on day 1 | Offline plays that sync later would miss the statement |
+      | Rewrite paid statements | Breaks audits; late plays become adjustments |
+
+      **Failure walkthrough: one app version double-sends plays.** If retries reuse the play id,
+      dedupe removes them. If the bug creates a new id each time, the plays-per-user rate for that
+      app version jumps, and an anomaly monitor fires. Before the month closes, the team filters
+      the version's duplicates and recomputes. After close, the correction becomes an adjustment
+      in the next statement.
     `,
     signals: [
+      'Names the options rejected and why, then walks through one failure end to end',
       'Dedupes on a client play id and keeps event time for offline plays',
       'Applies the 30-second rule and fraud filtering before royalties',
       'Closes the royalty month and books late plays as adjustments',
@@ -348,8 +473,32 @@ export const designQuestions: Problem[] = [
 
       **Scale and privacy.** Partition everything by date, keep raw impressions for a set window,
       and apply deletion requests to logs and derived training sets.
+
+      **Capacity.**
+
+      | Item | Number | How |
+      |---|---|---|
+      | Impressions | about 50B a day | 250M members × 2 visits × 100 titles |
+      | Impression storage | about 5 TB a day | about 100 B each, compressed |
+      | Training rows | about 5B a day | all positives plus about 10% of negatives |
+      | Candidate store | about 1 TB | 250M members × 500 candidates × 8 B ids |
+
+      **Options I rejected.**
+
+      | Option | Why not |
+      |---|---|
+      | Build features from today's tables | Leaks the future into training; offline scores look better than reality |
+      | Generate every candidate online | Too slow and costly for 250M home pages |
+      | Train on every impression | Most are negatives that add cost, not signal |
+      | Choose models by offline metrics alone | Offline gains often do not survive an A/B test |
+
+      **Failure walkthrough: the TV app stops logging serve-time features for 2 days.** The
+      monitor on the share of requests with missing features fires. The training job's input
+      gate refuses those partitions, so tomorrow's model is not trained on broken rows. The team
+      backfills those days through the point-in-time join, or drops them and records the gap.
     `,
     signals: [
+      'Names the options rejected and why, then walks through one failure end to end',
       'Logs impressions and serve-time features, not only plays',
       'Builds labels with an attribution window',
       'Uses point-in-time correct features to avoid leakage',
@@ -405,8 +554,32 @@ export const designQuestions: Problem[] = [
 
       **Correctness.** Public counters are approximate and corrected by a daily batch from the
       lake. Author analytics use the batch numbers once a day closes.
+
+      **Capacity.**
+
+      | Item | Number | How |
+      |---|---|---|
+      | Impressions | about 600,000/s average, about 1.5M/s peak | 50B a day |
+      | Raw storage | about 5 TB a day | about 100 B per impression |
+      | Hot post | about 14,000/s | 50M impressions in an hour |
+      | Per shard with 64 salt shards | about 220/s | 14,000 / 64 |
+
+      **Options I rejected.**
+
+      | Option | Why not |
+      |---|---|
+      | Increment a counter per impression | One celebrity post overloads one key |
+      | Exact distinct viewers | HyperLogLog is enough for a public number, at a tiny fraction of the memory |
+      | Trending by raw volume | Always shows the same big topics; trending means unusual growth |
+      | One job for counters and trending | Different keys and windows; one failure would take down both |
+
+      **Failure walkthrough: a celebrity post goes viral and one shard falls behind.** Salting
+      spreads the load, so only one of 64 shards is slow, and the counter is a few seconds stale.
+      If a whole job falls behind, the post page shows the last value and keeps it monotonic. The
+      daily batch from the lake sets the true numbers for the analytics page.
     `,
     signals: [
+      'Names the options rejected and why, then walks through one failure end to end',
       'Estimates impressions as the dominant volume',
       'Dedupes impressions on viewer, post and session',
       'Shards hot posts before aggregating',
@@ -462,8 +635,32 @@ export const designQuestions: Problem[] = [
       **Guardrails.** Monitor feature freshness (an online feature older than its SLO falls back
       to a default), track the share of requests with missing features, and compare online and
       offline feature distributions daily to catch skew.
+
+      **Capacity.**
+
+      | Item | Number | How |
+      |---|---|---|
+      | Impressions | about 16,500/s average, about 50,000/s peak | 10B a week |
+      | Online feature reads | many per feed request | batch reads by entity keys, p99 under 10 ms |
+      | Offline feature history | grows with time | partition by date, keep a fixed window |
+
+      **Options I rejected.**
+
+      | Option | Why not |
+      |---|---|
+      | Hourly batch for velocity features | "200 comments in the last hour" is stale by the time it lands |
+      | Separate code for online and offline features | The main cause of train/serve skew |
+      | Creator reports from raw events | Slow, and risks exposing individual viewers |
+      | A loose impression definition | Changes the click-through rate denominator without anyone noticing |
+
+      **Failure walkthrough: the streaming feature job lags 30 minutes.** Online velocity
+      features pass their freshness SLO. The serving path uses defaults for them and logs that
+      it did. Ranking quality drops a little, but feeds still load. The freshness alert pages the
+      feature owner, and the training job excludes the window from training labels that depend
+      on those features.
     `,
     signals: [
+      'Names the options rejected and why, then walks through one failure end to end',
       'Defines an impression precisely and enforces it in tracking',
       'Splits features by freshness into stream and batch',
       'Uses an online and offline feature store with timestamps',
@@ -525,8 +722,32 @@ export const designQuestions: Problem[] = [
 
       **Lifecycle.** Onboarding creates the tenant's objects from a template. Offboarding deletes
       or exports the tenant's data within the contract window, with proof of deletion.
+
+      **Capacity.**
+
+      | Item | Number | How |
+      |---|---|---|
+      | Tenants | 5,000 | 20 large ones own 60% of the data |
+      | Dedicated datasets | about 20 | the top tenants |
+      | Shared tables | for about 4,980 tenants | clustered by «tenant_id» |
+
+      **Options I rejected.**
+
+      | Option | Why not |
+      |---|---|
+      | A database per tenant for all 5,000 | 5,000 schemas to migrate on every change |
+      | Shared everything, including the top 20 | One big export slows the long tail |
+      | Filter by «tenant_id» in each query | One missed filter is a data leak; enforce it in the platform |
+      | Cost split by row count | Large tenants cost more per row because their queries scan more |
+
+      **Failure walkthrough: a new dashboard query forgets the tenant filter.** Row-level
+      security still binds the session to one tenant, so no other tenant's row appears. The
+      cross-tenant test in CI also catches it before release, because it runs every query as
+      tenant A and checks for tenant B's rows. Two independent controls mean one mistake is not
+      an incident.
     `,
     signals: [
+      'Names the options rejected and why, then walks through one failure end to end',
       'Compares isolation models and chooses a hybrid by tenant size',
       'Enforces tenant scope from authentication, not the request',
       'Tests cross-tenant leakage automatically',
@@ -584,8 +805,35 @@ export const designQuestions: Problem[] = [
 
       **Measure the platform.** Time to create a product, products meeting their SLOs, consumers
       per product, incidents caused by breaking changes, and cost per domain. Report them each quarter.
+
+      **Capacity.**
+
+      | Item | Number | How |
+      |---|---|---|
+      | Domains | 30 | about 2 to 3 products each |
+      | Products | 60 to 100 | within a year |
+      | Platform engineers | 8 | about 1 for every 4 domains |
+
+      With 8 engineers for 30 domains, anything that needs a ticket fails. Self-service is not a
+      nice-to-have; it is the only design that fits the headcount.
+
+      **Options I rejected.**
+
+      | Option | Why not |
+      |---|---|
+      | A central team builds every product | Becomes the bottleneck that mesh exists to remove |
+      | No platform: each domain picks a stack | 30 stacks, 30 security models and no shared catalog |
+      | Governance reviewed by people | Does not scale; checks in CI do |
+      | Big-bang adoption | Start with 2 or 3 willing domains, then grow from their results |
+
+      **Failure walkthrough: a domain renames a column used by 12 consumers.** The contract
+      check in CI fails the merge, because the change is breaking. The domain publishes a new
+      major version beside the old one. The catalog notifies all 12 consumers with a deprecation
+      date. If a domain bypasses CI, the output check after publish fails, and the platform
+      holds the new version back.
     `,
     signals: [
+      'Names the options rejected and why, then walks through one failure end to end',
       'Makes a product a declarative spec with provisioning on merge',
       'Versions output ports and runs old and new side by side',
       'Enforces classification and contracts in CI',
@@ -645,8 +893,32 @@ export const designQuestions: Problem[] = [
 
       **Measure.** Incidents found by the platform versus by people, time to detect, and time to
       resolve, per tier.
+
+      **Capacity.**
+
+      | Item | Number | How |
+      |---|---|---|
+      | Automatic monitors | about 80,000 a day | 20,000 tables × 4 monitors, from metadata |
+      | Tier 1 rule checks | about 5,000 per load cycle | 500 tables × about 10 checks |
+      | Alert budget | under 2 a week per team | above that, people ignore alerts |
+
+      **Options I rejected.**
+
+      | Option | Why not |
+      |---|---|
+      | Owner-written rules on all 20,000 tables | Nobody writes them for low-value tables, so coverage stays low |
+      | Anomaly detection only | Cannot block a publish; tier 1 needs hard rules |
+      | Full-scan profiling of every table daily | The cost grows with the lake; use metadata and sampling |
+      | Alert each check failure separately | One bad source becomes 300 alerts |
+
+      **Failure walkthrough: a source sends a column full of nulls.** The tier 1 not-null check
+      fails after the write, so the partition stays unpublished. The orchestrator holds 40
+      downstream jobs. Lineage marks 300 tables as suspect, but the router groups them into one
+      incident for the source owner. Executive dashboards show yesterday's data with a warning,
+      not wrong data.
     `,
     signals: [
+      'Names the options rejected and why, then walks through one failure end to end',
       'Tiers tables using lineage and usage',
       'Combines owner rules with learned anomaly monitors',
       'Blocks publication with write-audit-publish',
@@ -709,8 +981,34 @@ export const designQuestions: Problem[] = [
       **Operate.** Monitor freshness per feature, the share of defaults served, and online versus
       offline distributions. Log served feature values with each prediction, so future training
       can use exactly what was served.
+
+      **Capacity.**
+
+      | Item | Number | How |
+      |---|---|---|
+      | Entities | about 105M | 5M drivers, 100M riders |
+      | Online store size | about 40 GB plus overhead | 105M × 50 features × 8 B |
+      | Online reads | about 300,000/s | 100,000 predictions/s × 3 entities |
+
+      40 GB fits in memory in a small Redis cluster, but at 300,000 reads a second the choice
+      is driven by p99 latency and operations, not size.
+
+      **Options I rejected.**
+
+      | Option | Why not |
+      |---|---|
+      | Keep features in team notebooks | The cause of the problem: duplicated work and skew |
+      | Compute every feature at request time | Aggregates over 30 days cannot be computed in 10 ms |
+      | Train from online store snapshots | The online store keeps only the latest value; no history |
+      | Buy a managed store without the as-of join | The point-in-time join is the main value; do not give it up |
+
+      **Failure walkthrough: the streaming feature job stalls.** Values in the online store age.
+      Each feature has a TTL equal to its freshness SLO, so stale values are treated as missing
+      and replaced by defaults. The served-defaults metric jumps and pages the feature owner.
+      Model quality drops a little, but no model sees wrong data presented as fresh.
     `,
     signals: [
+      'Names the options rejected and why, then walks through one failure end to end',
       'Names train/serve skew and leakage as the root causes',
       'Uses one definition for batch and streaming computation',
       'Separates the offline history store from the online latest-value store',

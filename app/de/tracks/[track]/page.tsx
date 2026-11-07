@@ -19,6 +19,9 @@ import { trackNumber, trackStyle } from '@/lib/course/track-style';
 import { cn } from '@/lib/utils';
 import { requireDeLearner } from '@/services/learner.service';
 
+/** Tracks whose page links to the learner's own story bank. */
+const STORY_BANK_TRACKS = new Set(['behavioral', 'staff']);
+
 interface Props {
   params: Promise<{ track: string }>;
 }
@@ -143,6 +146,21 @@ export default async function TrackPage({ params }: Props) {
             aria-labelledby="problems-heading"
             className="flex min-w-0 flex-col gap-3 lg:col-span-5"
           >
+            {STORY_BANK_TRACKS.has(slug) && (
+              <Link
+                href="/de/stories"
+                className="border-line bg-brand-soft shadow-card hover:shadow-raised rounded-card flex items-center gap-4 border p-4 transition-shadow"
+              >
+                <span className="flex min-w-0 grow flex-col gap-0.5">
+                  <span className="font-semibold">Build your story bank</span>
+                  <span className="text-small text-ink-soft">
+                    Write your own 8 to 10 stories, check each one as you write, and see which
+                    themes are still missing.
+                  </span>
+                </span>
+                <Icon name="arrow-right" className="size-5 shrink-0" />
+              </Link>
+            )}
             <h2 id="problems-heading" className="text-title">
               Interview problems
             </h2>

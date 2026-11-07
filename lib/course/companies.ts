@@ -101,6 +101,7 @@ export const COMPANIES: readonly CompanyGuide[] = [
       'system-design': 1.2,
       ai: 0.4,
       behavioral: 1,
+      staff: 0.8,
     },
   },
   {
@@ -208,6 +209,7 @@ export const COMPANIES: readonly CompanyGuide[] = [
       'system-design': 1.2,
       ai: 0.4,
       behavioral: 1,
+      staff: 0.8,
     },
   },
 ];

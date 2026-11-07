@@ -84,6 +84,7 @@
   --color-track-15: #6a8caf;
   --color-track-16: #5b7cd9;
   --color-track-17: #e0564f;
+  --color-track-18: #b7791f;
 
   /* Study calendar — four steps from empty to busy */
   --color-heat-0: #f1ebe3;
@@ -346,6 +347,7 @@
     --color-track-13: #7b85f0;
     --color-track-15: #8aa8c8;
     --color-track-16: #7c97ef;
+    --color-track-18: #d9a441;
 
     /* Study calendar: empty is a dim well, busy glows. */
     --color-heat-0: #26224a;
