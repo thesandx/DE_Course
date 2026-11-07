@@ -6,7 +6,16 @@
 
 /** What a result points to. Each course uses the kinds it has. */
 export type SearchKind =
-  'track' | 'lesson' | 'topic' | 'problem' | 'guide' | 'line' | 'station' | 'concept' | 'drill';
+  | 'track'
+  | 'lesson'
+  | 'topic'
+  | 'problem'
+  | 'guide'
+  | 'line'
+  | 'station'
+  | 'concept'
+  | 'lab'
+  | 'drill';
 
 export interface SearchEntry {
   /** Unique in the course. */

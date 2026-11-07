@@ -97,3 +97,62 @@ export interface SprintRound {
   answer: string;
   distractors: readonly string[];
 }
+
+/**
+ * A file the learner needs for a lab. The lab page offers it as a download
+ * and as a Cloud Shell command that writes it, so a lab needs nothing else.
+ */
+export interface LabFile {
+  /** The file name, such as "employees.csv". Letters, digits, dots, dashes and underscores. */
+  name: string;
+  /** One line on what the file holds. */
+  about: string;
+  content: string;
+}
+
+/** One step of a lab: what to do in the console, in SQL, or in Cloud Shell, and what to check. */
+export interface LabStep {
+  title: string;
+  /** Why the step matters and what to look for. Course Markdown dialect. */
+  body: string;
+  /** The 1-based numbers of the station's concepts that the step practises. */
+  concepts: readonly number[];
+  /** Clicks in the Google Cloud console, as a numbered list in the dialect. */
+  console?: string;
+  /** SQL to run in the BigQuery Studio editor. Plain text. */
+  sql?: string;
+  /** Commands to run in Cloud Shell. Plain text. */
+  shell?: string;
+  /** What the learner sees when the step worked. Course Markdown dialect. */
+  check?: string;
+}
+
+/**
+ * A hands-on lab for one station. The learner opens it after the station,
+ * does every step in their own Google Cloud project, then deletes everything
+ * the lab created. The lab counts only once every cleanup step is ticked.
+ */
+export interface GcpLab {
+  /** The station slug. A lab belongs to exactly one station. */
+  station: string;
+  title: string;
+  /** The situation the lab puts the learner in. */
+  scenario: string;
+  minutes: number;
+  /** The APIs the setup step enables, such as "bigquery.googleapis.com". */
+  apis: readonly string[];
+  /** Extra Cloud Shell variables the setup step exports, name to value. */
+  vars?: Readonly<Record<string, string>>;
+  /** Every resource the lab creates. The cleanup deletes each one. */
+  creates: readonly string[];
+  /** What the lab costs if the learner follows the cleanup. Course Markdown dialect. */
+  cost: string;
+  /** How to stay inside the free tier. Inline markers only. */
+  freeTier: readonly string[];
+  files: readonly LabFile[];
+  steps: readonly LabStep[];
+  /** The cleanup steps. Mandatory: the lab cannot be finished without them. */
+  cleanup: readonly LabStep[];
+  /** Cloud Shell commands that prove nothing the lab made is left. */
+  verify: string;
+}

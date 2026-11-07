@@ -12,7 +12,9 @@ import {
   examReadiness,
   gcpTotalXp,
   gcpXpForItem,
+  getLab,
   getLine,
+  labProgress,
   LINES,
   MOCK_PASS_ID,
   type Rank,
@@ -52,6 +54,8 @@ export interface GcpSummary {
   cardsKnown: number;
   cardsTotal: number;
   mockPassed: boolean;
+  labsDone: number;
+  labsTotal: number;
   /** 0 to 1, weighted by each domain's share of the exam. */
   readiness: number;
   activeDays: number;
@@ -68,6 +72,10 @@ function describe(id: string): { title: string; href: string } | undefined {
   if (kind === 'boss' && first !== undefined) {
     const line = getLine(first);
     return line && { title: `Boss beaten: ${line.boss.title}`, href: `/gcp/lines/${first}/boss` };
+  }
+  if (kind === 'lab' && first !== undefined) {
+    const lab = getLab(first);
+    return lab && { title: `Lab done: ${lab.title}`, href: `/gcp/labs/${first}` };
   }
   if (id === MOCK_PASS_ID) return { title: 'Mock exam passed', href: '/gcp/practice/mock' };
   return undefined;
@@ -105,6 +113,8 @@ export function summarizeGcp(record: ProgressRecord, today: string, recentCount 
     cardsKnown: ids.filter((id) => id.startsWith('card:') && gcpXpForItem(id) > 0).length,
     cardsTotal: CARDS.length,
     mockPassed: record.done[MOCK_PASS_ID] !== undefined,
+    labsDone: labProgress(record.done).done,
+    labsTotal: labProgress(record.done).total,
     readiness: examReadiness(record.done),
     activeDays: grid.filter((cell) => cell.count > 0).length,
     recent,

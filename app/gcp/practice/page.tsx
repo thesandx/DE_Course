@@ -7,6 +7,7 @@ import { PageHeading } from '@/components/layout/PageHeading';
 import {
   BOSS_XP,
   CARD_XP,
+  LAB_XP,
   lineProgress,
   LINES,
   MOCK_QUESTIONS,
@@ -59,6 +60,13 @@ export default async function GcpPracticePage() {
       ).join(' · '),
     },
     {
+      href: '/gcp/labs',
+      icon: 'spark',
+      title: 'Hands-on labs',
+      body: 'Each exam section done for real in your Google Cloud project, with sample data and a cleanup.',
+      meta: `${summary.labsDone} of ${summary.labsTotal} done · +${LAB_XP} XP each`,
+    },
+    {
       href: '/gcp/practice/mock',
       icon: 'trophy',
       title: 'Mock exam',
@@ -75,7 +83,7 @@ export default async function GcpPracticePage() {
           alive on days with no new station.
         </PageHeading>
 
-        <ul className="grid gap-4 md:grid-cols-3">
+        <ul className="grid gap-4 md:grid-cols-2">
           {drills.map((drill) => (
             <li key={drill.href}>
               <Link

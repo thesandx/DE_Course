@@ -7,6 +7,7 @@
  */
 
 import { CARDS } from '@/lib/course/gcp/cards';
+import { getLab, LAB_XP, labId, LABS } from '@/lib/course/gcp/labs';
 import { line as analysis } from '@/lib/course/gcp/lines/analysis';
 import { line as design } from '@/lib/course/gcp/lines/design';
 import { line as ingest } from '@/lib/course/gcp/lines/ingest';
@@ -19,7 +20,7 @@ import type { BankQuestion, Flashcard, GcpLine, GcpStation } from '@/types/gcp';
 
 export const LINES: readonly GcpLine[] = [design, ingest, storage, analysis, operations];
 
-export { CARDS, QUESTIONS, SPRINT };
+export { CARDS, getLab, LAB_XP, labId, LABS, QUESTIONS, SPRINT };
 
 // ── Item ids ────────────────────────────────────────────────────────────────
 // Progress records store these ids. Do not rename a slug after release, and
@@ -73,7 +74,8 @@ export interface Rank {
 }
 
 /**
- * The lab's ranks, scaled to this course's XP (about 2,100 in all), so the
+ * The lab's ranks, scaled to this course's XP (about 2,100 without the
+ * hands-on labs, which add 950 more as a bonus), so the
  * top rank needs nearly everything: every station, boss and the mock exam.
  */
 const RANKS: ReadonlyArray<{ title: string; from: number }> = [
@@ -163,6 +165,7 @@ export function gcpXpForItem(itemId: string): number {
     const ref = findStation(first);
     return ref === undefined || second !== undefined ? 0 : stationXp(ref.station);
   }
+  if (kind === 'lab') return getLab(first) === undefined || second !== undefined ? 0 : LAB_XP;
   if (kind === 'boss') return getLine(first) === undefined || second !== undefined ? 0 : BOSS_XP;
   if (kind === 'card' && second !== undefined) {
     const index = Number(second);
@@ -220,6 +223,21 @@ export function examReadiness(done: DoneMap): number {
     0,
   );
   return weights === 0 ? 0 : weighted / weights;
+}
+
+/** Labs done and in all, across the course or on one line. */
+export function labProgress(done: DoneMap, lineSlug?: string): { done: number; total: number } {
+  const line = lineSlug === undefined ? undefined : getLine(lineSlug);
+  const stations = new Set(
+    (line === undefined ? allStations().map((ref) => ref.station) : line.stations).map(
+      (station) => station.slug,
+    ),
+  );
+  const labs = LABS.filter((lab) => stations.has(lab.station));
+  return {
+    done: labs.filter((lab) => done[labId(lab.station)] !== undefined).length,
+    total: labs.length,
+  };
 }
 
 /** The first unfinished station in study order, or undefined when all are done. */

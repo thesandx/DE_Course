@@ -4,7 +4,7 @@ import type { SearchEntry } from '@/types/search';
 
 import { getLesson, getProblem, getTrack } from './catalog';
 import { COURSE_SLUGS } from './courses';
-import { getLine, getStation } from './gcp/catalog';
+import { getLab, getLine, getStation } from './gcp/catalog';
 import { createSearcher, normalize, queryWords, sectionAnchor } from './search';
 import { browseEntries, SEARCH_EXAMPLES, searchIndex } from './search-index';
 
@@ -29,6 +29,7 @@ function resolves(href: string): boolean {
   }
   if (course === 'gcp') {
     if (section === 'practice') return ['flashcards', 'sprint', 'mock'].includes(a);
+    if (section === 'labs' && parts.length === 3) return getLab(a) !== undefined;
     if (section === 'lines' && parts.length === 3) return getLine(a) !== undefined;
     if (section === 'lines' && b === 'boss') return getLine(a) !== undefined;
     if (section === 'lines' && parts.length === 4) {

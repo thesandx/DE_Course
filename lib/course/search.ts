@@ -19,6 +19,7 @@ export const SEARCH_KIND_LABELS: Readonly<Record<SearchKind, string>> = {
   line: 'Line',
   station: 'Station',
   concept: 'Concept',
+  lab: 'Lab',
   drill: 'Drill',
 };
 
@@ -29,6 +30,7 @@ export const SEARCH_KIND_ORDER: readonly SearchKind[] = [
   'problem',
   'station',
   'concept',
+  'lab',
   'track',
   'line',
   'guide',
@@ -90,6 +92,7 @@ const KIND_BONUS: Readonly<Record<SearchKind, number>> = {
   guide: 1,
   topic: 0,
   concept: 0,
+  lab: 1,
   drill: 0,
 };
 
