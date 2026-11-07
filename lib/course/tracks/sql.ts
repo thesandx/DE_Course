@@ -722,6 +722,122 @@ export const track: Track = {
         },
       ],
     },
+    {
+      slug: 'execution-plans-and-cbo',
+      title: 'Execution plans and cost-based optimisation',
+      summary:
+        'Read a plan in Postgres, Trino, BigQuery or Snowflake, explain how a cost-based optimiser chooses joins, and rewrite a query it got wrong.',
+      minutes: 16,
+      body: `
+        A senior candidate does not stop at a correct query. They can say how the engine will run
+        it and what it will cost. That starts with the plan.
+
+        ## How to get the plan
+
+        | Engine | Command or screen | Look for |
+        |---|---|---|
+        | Postgres | «EXPLAIN (ANALYZE, BUFFERS)» | Estimated versus actual rows, loops, buffers read |
+        | Trino | «EXPLAIN ANALYZE» | Rows and CPU per stage, join distribution, dynamic filters |
+        | Spark | «df.explain("formatted")» and the SQL tab | «Exchange» nodes, join type, pushed filters |
+        | BigQuery | Execution details of the job | Slot time, bytes shuffled and spilled per stage, the slowest stage |
+        | Snowflake | Query Profile | Partitions scanned of total, spilling, rows out of each join |
+        | DuckDB | «EXPLAIN ANALYZE» | Time and rows per operator |
+
+        ## What a cost-based optimiser decides
+
+        1. **Join order.** Ten tables have millions of possible orders. The optimiser searches a part
+           of that space and costs each candidate.
+        2. **Join algorithm and distribution.** Hash, merge or nested loop; broadcast the small side
+           or partition (shuffle) both sides.
+        3. **Access path.** Full scan, partition and file pruning, index use.
+        4. **Where filters go.** Push them below joins and into the scan.
+
+        Every decision depends on **cardinality estimates**: how many rows leave each step.
+        Estimates come from statistics: row counts, distinct counts (often from HyperLogLog
+        sketches), min and max, null counts and histograms.
+
+        ## Why estimates go wrong
+
+        - **Stale or missing statistics** after a large load.
+        - **Correlated predicates:** «country = 'IN' AND city = 'Mumbai'» is treated as two
+          independent filters, so the estimate is too low.
+        - **Functions on columns:** «WHERE DATE(created_at) = '2026-11-01'» can hide the column from
+          statistics and from pruning.
+        - **Skew:** an average says 100 rows per key, but one key has 40 million.
+        - **Errors multiply:** a 10 times error at each of three joins is a 1,000 times error at the top.
+
+        ## Runtime help
+
+        Modern engines do not trust the plan blindly:
+
+        - **Dynamic filtering / runtime filters:** after building the hash table of a small filtered
+          dimension, the engine pushes its keys into the scan of the large fact table (Trino dynamic
+          filters, Spark dynamic partition pruning, Snowflake and BigQuery runtime pruning).
+        - **Adaptive execution:** Spark AQE re-plans after each shuffle with real sizes.
+
+        ## Rewrites that help the optimiser
+
+        ~~~sql
+        -- Before: function on the partition column, join before aggregate
+        SELECT d.city, SUM(f.fare)
+        FROM trips f
+        JOIN drivers d ON d.driver_id = f.driver_id
+        WHERE DATE(f.requested_at) = DATE '2026-11-01'
+        GROUP BY d.city;
+
+        -- After: a range on the raw column, and aggregate the fact before the join
+        WITH day_trips AS (
+          SELECT driver_id, SUM(fare) AS fare
+          FROM trips
+          WHERE requested_at >= TIMESTAMP '2026-11-01'
+            AND requested_at <  TIMESTAMP '2026-11-02'
+          GROUP BY driver_id
+        )
+        SELECT d.city, SUM(t.fare)
+        FROM day_trips t
+        JOIN drivers d ON d.driver_id = t.driver_id
+        GROUP BY d.city;
+        ~~~
+
+        The second form prunes partitions and joins a few hundred thousand pre-aggregated rows
+        instead of tens of millions of trips.
+
+        > [!trap] The exploding join
+        > A join on a key that is not unique on either side multiplies rows. In a Snowflake profile
+        > it shows as a join with far more rows out than in. Check the grain of both sides before you
+        > tune anything else.
+
+        > [!senior] Talk in rows and bytes
+        > "This scans 2 TB because the filter wraps the partition column; with a range it reads one
+        > day, 6 GB" is the language of a senior candidate. Bring the plan, then the numbers, then
+        > the fix.
+      `,
+      checks: [
+        {
+          question:
+            "Why can WHERE DATE(created_at) = DATE '2026-11-01' read the whole table on some engines?",
+          options: [
+            'DATE() is not allowed in WHERE',
+            'Wrapping the column in a function can stop partition pruning and statistics use',
+            'It forces a cross join',
+            'It disables the cache',
+          ],
+          answer: 1,
+          why: 'Pruning matches filters against the raw column. A half-open range on created_at keeps pruning and stats working everywhere.',
+        },
+        {
+          question: 'What does dynamic filtering do in a star join?',
+          options: [
+            'It rewrites the SQL text',
+            'It pushes the keys that survive the dimension filter into the scan of the fact table',
+            'It caches the result',
+            'It switches to a nested loop join',
+          ],
+          answer: 1,
+          why: 'Once the small, filtered dimension is built, its key set prunes fact files and row groups before they are read.',
+        },
+      ],
+    },
   ],
 };
 
@@ -1429,5 +1545,55 @@ export const problems: Problem[] = [
     followUps: [
       'There are 400 million users. How do you compute this daily without recursion at all?',
     ],
+  },
+  {
+    slug: 'sql-read-snowflake-profile',
+    title: 'A revenue query runs 25 minutes: read the profile',
+    track: 'sql',
+    kind: 'concept',
+    difficulty: 'hard',
+    companies: ['google', 'uber'],
+    prompt: `
+      A finance query joins «orders» (8 billion rows), «order_items» and «promotions» and takes 25
+      minutes on a Large warehouse. The query profile shows:
+
+      - TableScan on «orders»: partitions scanned 41,000 of 42,000.
+      - Join of «order_items» and «promotions»: 900 million rows in, 6.2 billion rows out.
+      - Aggregate: 1.8 TB spilled to remote storage.
+
+      The filter is «WHERE TO_CHAR(order_ts, 'YYYY-MM') = '2026-10'». Explain each symptom and
+      fix the query.
+    `,
+    hints: [
+      'Why did pruning not work?',
+      'More rows out of a join than in means what?',
+      'Remote spill is a symptom, not the cause.',
+    ],
+    answer: `
+      Three problems, in the order they matter:
+
+      1. **No pruning.** The filter wraps «order_ts» in «TO_CHAR», so the engine cannot compare it
+         with partition min and max values. Rewrite as a half-open range:
+         «order_ts >= '2026-10-01' AND order_ts < '2026-11-01'». Expect a few percent of
+         partitions scanned.
+      2. **Exploding join.** 900 million rows in, 6.2 billion out: «promotions» is not unique on the
+         join key (one row per promotion per day, for example), so every item matches several rows.
+         Fix the grain: join on the full key including the date, or deduplicate promotions to one
+         row per key first. Then check that totals match a trusted number.
+      3. **Remote spill.** The aggregate spills because it receives 6.2 billion rows. Fixing the join
+         removes most of it. Only if spill remains, aggregate earlier or use a larger warehouse
+         for this one query.
+
+      Do not start by resizing the warehouse: it would hide a wrong result (the exploding join
+      also inflates revenue) at a higher price.
+    `,
+    signals: [
+      'Links the function on the column to lost pruning',
+      'Recognises an exploding join from rows in versus out',
+      'Notes that the exploding join also makes the numbers wrong',
+      'Treats spill as a symptom of upstream row counts',
+      'Rejects scaling up as the first fix',
+    ],
+    followUps: ['How would you add a test so an exploding join is caught before release?'],
   },
 ];

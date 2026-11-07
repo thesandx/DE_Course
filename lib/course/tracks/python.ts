@@ -657,6 +657,140 @@ export const track: Track = {
         },
       ],
     },
+    {
+      slug: 'api-ingestion',
+      title: 'API ingestion: pagination, rate limits and retries',
+      summary:
+        'Pull data from a REST API without gaps, duplicates or bans: pick the pagination style, respect rate limits, retry safely and checkpoint progress.',
+      minutes: 16,
+      body: `
+        Many sources are SaaS APIs: payments, CRM, ads, support tickets. An API extractor looks
+        simple and fails in four ways: it misses pages, duplicates pages, gets rate limited, or
+        restarts from zero after a crash.
+
+        ## Pagination styles
+
+        | Style | Request | Problem |
+        |---|---|---|
+        | **Offset / page number** | «?offset=1000&limit=100» | Inserts during the run shift pages, so rows are skipped or repeated; deep offsets get slow |
+        | **Cursor (token)** | «?cursor=abc123» from the last response | Stable and fast; the cursor may expire, so finish or checkpoint quickly |
+        | **Keyset** | «?created_after=2026-11-01T10:00:00Z&after_id=981» | Stable if the sort key is unique and immutable |
+        | **Link header** | Follow the «next» URL in the response headers | Same as cursor; do not build URLs yourself |
+
+        Prefer cursor or keyset pagination. If only offsets exist, page over a **fixed time window**
+        that has stopped changing (for example, records updated before the run started) and
+        deduplicate by id afterwards.
+
+        ## Incremental pulls
+
+        Ask only for what changed: «updated_since = last_watermark - overlap». The overlap (a few
+        minutes) covers clock skew and late commits on the provider's side. Duplicates from the
+        overlap are removed later by a «MERGE» on the record id and «updated_at».
+
+        ## Rate limits
+
+        - Read the limit from the docs and the headers, such as «X-RateLimit-Remaining» and
+          «Retry-After».
+        - On **429 Too Many Requests**, wait as long as «Retry-After» says.
+        - Throttle on the client side with a **token bucket**, so parallel workers share one budget
+          and never hit the limit in the first place.
+
+        ## Retries
+
+        - Retry **only** what can succeed later: timeouts, connection errors, 429 and 5xx. Never retry
+          a 400 or 401 in a loop; fail and alert.
+        - Use **exponential backoff with full jitter**, so 50 workers do not retry in the same second.
+        - Always set a **timeout** on every call. A request without one can hang a job for hours.
+
+        ~~~python
+        import random
+        import time
+        from collections.abc import Iterator
+
+        import requests
+
+        RETRYABLE = {429, 500, 502, 503, 504}
+
+
+        def get_json(session: requests.Session, url: str, params: dict, attempts: int = 6) -> dict:
+            for attempt in range(attempts):
+                try:
+                    response = session.get(url, params=params, timeout=(5, 30))
+                except (requests.ConnectionError, requests.Timeout):
+                    response = None
+                if response is not None and response.status_code not in RETRYABLE:
+                    response.raise_for_status()  # 4xx other than 429: do not retry
+                    return response.json()
+                retry_after = response.headers.get("Retry-After", "") if response is not None else ""
+                if retry_after.isdigit():
+                    delay = float(retry_after)
+                else:
+                    delay = random.uniform(0, min(60.0, 2.0**attempt))  # full jitter
+                time.sleep(delay)
+            raise RuntimeError(f"giving up on {url} after {attempts} attempts")
+
+
+        def pages(session: requests.Session, url: str, updated_since: str) -> Iterator[dict]:
+            params: dict = {"updated_since": updated_since, "limit": 500}
+            while True:
+                page = get_json(session, url, params)
+                yield page
+                cursor = page.get("next_cursor")
+                if not cursor:
+                    return
+                params = {"cursor": cursor, "limit": 500}
+        ~~~
+
+        ## Land raw, then checkpoint
+
+        1. Write each page **as received** (JSON lines) to the landing zone, named by run id and
+           page number, with request metadata: URL, parameters, time and status.
+        2. After a page is safely written, save the cursor in a small state store. A crash resumes
+           from the last saved cursor, not from zero.
+        3. Parse and type the data in a later step. A schema change then breaks parsing, not
+           extraction, and the raw pages can be re-parsed.
+
+        ## Scale out carefully
+
+        Split the work by a key the API filters on (date windows, accounts, regions) and run
+        workers in parallel, all drawing from one shared rate budget. Backfills use the same code
+        with an old start date and a lower priority budget.
+
+        > [!trap] Retrying a POST
+        > Some APIs need a POST to start an export or a search. Retrying it can create two exports
+        > or two charges. Send an **idempotency key** if the API supports one, or check for the
+        > existing job first.
+
+        > [!senior] Name the failure modes
+        > "Cursor pagination, an updated_since window with five minutes of overlap, MERGE by id, a
+        > token bucket at 80 percent of the limit, retries with jitter on 429 and 5xx only, raw pages
+        > landed before the cursor is saved." Each phrase answers a follow-up before it is asked.
+      `,
+      checks: [
+        {
+          question: 'Why is offset pagination risky on a table that changes during the pull?',
+          options: [
+            'Offsets are slower to type',
+            'Inserts or deletes shift rows between pages, so some rows are skipped or repeated',
+            'APIs never support offsets',
+            'Offsets need authentication',
+          ],
+          answer: 1,
+          why: 'Page boundaries are positions, not keys. Cursor or keyset pagination anchors each page on a stable key.',
+        },
+        {
+          question: 'Which response should NOT be retried automatically?',
+          options: [
+            '429 Too Many Requests',
+            '503 Service Unavailable',
+            '401 Unauthorized',
+            'A read timeout',
+          ],
+          answer: 2,
+          why: 'A 401 will not succeed on retry. Refresh the credentials or fail and alert. The others are often transient.',
+        },
+      ],
+    },
   ],
 };
 
@@ -1312,5 +1446,103 @@ export const problems: Problem[] = [
       'Keeps output atomic and failures visible',
     ],
     followUps: ['The free-threaded Python build is available. Would you switch this job to it?'],
+  },
+  {
+    slug: 'python-paginated-api-extractor',
+    title: 'Write a resumable extractor for a rate-limited API',
+    track: 'python',
+    kind: 'coding',
+    difficulty: 'hard',
+    companies: ['uber', 'google'],
+    prompt: `
+      A payments API returns «{"data": [...], "next_cursor": "..." | null}» for
+      «GET /v1/charges?updated_since=...&cursor=...». It allows 100 requests a minute and answers
+      429 with a «Retry-After» header when you go over. Write a function that pulls every charge
+      updated since the last run, survives a crash in the middle, and never loads a charge twice
+      into the final table. You may assume helpers «write_page(run_id, n, records)»,
+      «load_state()» and «save_state(dict)».
+    `,
+    hints: [
+      'What do you save, and when?',
+      'Where do duplicates get removed?',
+      'How do you stay under 100 a minute without waiting for 429s?',
+    ],
+    answer: `
+      ~~~python
+      import random
+      import time
+      from datetime import datetime, timedelta, timezone
+
+      import requests
+
+      URL = "https://api.example.com/v1/charges"
+      MIN_INTERVAL = 60 / 90  # stay at 90 requests a minute, under the limit of 100
+      OVERLAP = timedelta(minutes=5)
+
+
+      def fetch(session: requests.Session, params: dict) -> dict:
+          for attempt in range(8):
+              try:
+                  response = session.get(URL, params=params, timeout=(5, 30))
+              except (requests.ConnectionError, requests.Timeout):
+                  time.sleep(random.uniform(0, 2**attempt))
+                  continue
+              if response.status_code == 429:
+                  time.sleep(float(response.headers.get("Retry-After", "60")))
+                  continue
+              if response.status_code >= 500:
+                  time.sleep(random.uniform(0, 2**attempt))
+                  continue
+              response.raise_for_status()
+              return response.json()
+          raise RuntimeError("API still failing after 8 attempts")
+
+
+      def extract(session: requests.Session, run_id: str) -> None:
+          state = load_state()
+          if state.get("cursor"):  # resume an interrupted run
+              params = {"cursor": state["cursor"]}
+              page_no = state["page_no"]
+              started = state["started"]
+          else:
+              since = datetime.fromisoformat(state["watermark"]) - OVERLAP
+              started = datetime.now(timezone.utc).isoformat()
+              params = {"updated_since": since.isoformat()}
+              page_no = 0
+          while True:
+              began = time.monotonic()
+              body = fetch(session, params)
+              write_page(run_id, page_no, body["data"])  # land raw first
+              page_no += 1
+              cursor = body.get("next_cursor")
+              if not cursor:
+                  save_state({"watermark": started, "cursor": None, "page_no": 0, "started": None})
+                  return
+              save_state({"watermark": state.get("watermark"), "cursor": cursor,
+                          "page_no": page_no, "started": started})
+              params = {"cursor": cursor}
+              time.sleep(max(0.0, MIN_INTERVAL - (time.monotonic() - began)))
+      ~~~
+
+      How it meets each requirement:
+
+      - **Crash safety:** a page is written before its cursor is saved. A crash repeats at most one
+        page. The new watermark is the run's **start time**, saved only when the last page is done.
+      - **No double loads:** the overlap and any repeated page create duplicates in landing on
+        purpose. The load step runs «MERGE INTO charges USING staged ON id» and keeps the row with
+        the latest «updated_at», so duplicates never reach the final table.
+      - **Rate limit:** client-side pacing at 90 a minute, plus honouring «Retry-After» on 429.
+      - **Retries:** only on network errors, 429 and 5xx, with jittered backoff; a 4xx fails fast.
+    `,
+    signals: [
+      'Lands the page before saving the cursor',
+      'Sets the next watermark to the run start, with an overlap',
+      'Deduplicates with a MERGE by id and updated_at',
+      'Paces requests on the client and honours Retry-After',
+      'Retries only transient errors, with jitter and timeouts',
+    ],
+    followUps: [
+      'The cursor expires after 10 minutes and a crash lasted an hour. What happens, and how do you recover?',
+    ],
   },
 ];

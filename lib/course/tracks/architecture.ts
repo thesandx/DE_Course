@@ -530,6 +530,93 @@ export const track: Track = {
         },
       ],
     },
+    {
+      slug: 'batch-streaming-etl-elt',
+      title: 'Batch versus streaming, ETL versus ELT',
+      summary:
+        'Place a pipeline on the latency spectrum, choose where transformations run, and defend the choice with cost, complexity and correctness.',
+      minutes: 14,
+      body: `
+        Two early choices shape every pipeline: **how often** data moves, and **where** it is
+        transformed. Interviewers ask both to see if you choose by need or by fashion.
+
+        ## The latency spectrum
+
+        | Mode | Typical freshness | Tools | Cost and complexity |
+        |---|---|---|---|
+        | **Daily or hourly batch** | Hours | Airflow + Spark, dbt, warehouse SQL | Lowest. Easy to rerun and backfill |
+        | **Micro-batch** | 1 to 15 minutes | Spark Structured Streaming, Snowpipe, scheduled incremental models | Medium. Small files, more runs |
+        | **Streaming** | Seconds or less | Kafka + Flink, Kafka Streams, Dataflow | Highest. State, late data, 24/7 on-call |
+
+        Ask "**what decision is made with this data, and how fast?**" A fraud block needs seconds.
+        A finance close needs correctness by morning. A dashboard that a human checks twice a day
+        does not need streaming, even if it would look modern.
+
+        ## When streaming earns its cost
+
+        - The value of the data decays in seconds or minutes: fraud, surge pricing, ETAs, alerts.
+        - The result feeds a machine, not a person: a feature store, a pricing service.
+        - The source is already a stream and batching it adds delay without saving work.
+
+        Otherwise, start with batch or micro-batch, and design so the same logic could later run in
+        a stream (event-time logic, idempotent writes, keys on every record).
+
+        ## ETL, ELT and EtLT
+
+        | Pattern | Where the transform runs | Fits |
+        |---|---|---|
+        | **ETL** | In a separate engine before loading (Spark, a Python service) | Heavy parsing, privacy rules before data lands, cutting huge volumes first |
+        | **ELT** | Inside the warehouse or lakehouse after loading (SQL, dbt) | Most analytics today: cheap storage, elastic compute, SQL that analysts can read |
+        | **EtLT** | Light clean-up in flight (types, PII masking, dedup), business logic after load | The practical default for many teams |
+
+        ELT became the default because warehouse compute became elastic and cheap enough, and
+        because keeping raw data lets you re-run logic when it changes. dbt made the "T" testable
+        and versioned.
+
+        ## When ETL is still right
+
+        - **Personal data** must be masked or tokenised before it lands where many people can read it.
+        - **Volume reduction:** 1 million IoT readings a second aggregated to one row per device per
+          minute before loading.
+        - **Unstructured input** (PDFs, images, binary protocols) that SQL cannot parse.
+        - **Warehouse compute cost:** a transformation that is far cheaper on Spark over files.
+
+        > [!trap] Streaming everything "for the future"
+        > A streaming pipeline needs state management, replay plans and people on call at night.
+        > Building it for a daily report is cost without value. Say what latency the consumer needs.
+
+        > [!senior] Choose per data set
+        > "Payments events stream into a fraud feature pipeline. The same events land in the lake,
+        > and finance reporting is a daily dbt job over them. PII is tokenised in flight, so the
+        > analytics copy never holds raw card data." One source, two latencies, EtLT, said in one
+        > breath.
+      `,
+      checks: [
+        {
+          question:
+            'A dashboard is reviewed by managers each morning. What freshness should drive the design?',
+          options: [
+            'Sub-second streaming',
+            'Daily or hourly batch is enough, because the decision is made once a day',
+            'Micro-batch every 30 seconds',
+            'Real time, because it is cheaper',
+          ],
+          answer: 1,
+          why: 'Freshness should follow the decision it supports. Streaming here adds cost and on-call work without value.',
+        },
+        {
+          question: 'When is ETL (transform before load) still the better choice?',
+          options: [
+            'When analysts write SQL',
+            'When personal data must be masked before it lands in a widely readable store',
+            'When the warehouse is elastic',
+            'When you want to keep raw data',
+          ],
+          answer: 1,
+          why: 'If raw PII must never reach the analytics store, the transformation has to run before loading.',
+        },
+      ],
+    },
   ],
 };
 
@@ -813,6 +900,47 @@ export const problems: Problem[] = [
     followUps: [
       'Six months in, two domains publish products with no tests. What do you do?',
       'How do you fund the platform team when its value is spread across domains?',
+    ],
+  },
+  {
+    slug: 'architecture-batch-or-stream',
+    title: 'Batch or streaming for four requests',
+    track: 'architecture',
+    kind: 'concept',
+    difficulty: 'easy',
+    companies: ['uber', 'google'],
+    prompt: `
+      Product teams send four requests. For each, choose batch, micro-batch or streaming, and ETL,
+      ELT or EtLT, in one or two sentences:
+
+      1. Block a card within 2 seconds when spending looks like fraud.
+      2. A daily revenue report for finance, which must match the ledger to the cent.
+      3. A city operations dashboard that managers watch during peak hours.
+      4. Load support chat transcripts, which contain phone numbers, for topic analysis.
+    `,
+    hints: [
+      'Who or what acts on each result, and how fast?',
+      'Which data must be changed before it lands?',
+    ],
+    answer: `
+      1. **Streaming, ETL-style in flight.** A machine acts in seconds. Kafka plus Flink compute
+         features and score in the stream; the events also land in the lake for training.
+      2. **Daily batch, ELT.** Correctness beats speed. Load the ledger and payments raw, transform
+         in dbt with reconciliation tests, publish once the checks pass.
+      3. **Micro-batch (1 to 5 minutes), ELT.** Humans watch it, so minute-level freshness is
+         enough and far cheaper than per-event processing. Incremental models or a real-time OLAP
+         store fed from Kafka.
+      4. **Batch, EtLT.** Mask or tokenise phone numbers before the transcripts land in the
+         analytics store, then run topic analysis after load.
+    `,
+    signals: [
+      'Chooses latency by who acts on the data',
+      'Puts correctness first for financial reporting',
+      'Uses micro-batch where minutes are enough',
+      'Removes PII before load',
+    ],
+    followUps: [
+      'Finance now wants an intraday revenue estimate. What do you add without breaking the daily report?',
     ],
   },
 ];

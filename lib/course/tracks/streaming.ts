@@ -532,6 +532,91 @@ export const track: Track = {
         },
       ],
     },
+    {
+      slug: 'flink-vs-spark-streaming',
+      title: 'Flink versus Spark Structured Streaming',
+      summary:
+        'Compare the two main stream processors on execution model, latency, state, event time, delivery guarantees and operations, and choose one for a workload.',
+      minutes: 15,
+      body: `
+        "Why Flink and not Spark?" follows almost every streaming design. Both are good. They come
+        from different ideas, and that difference decides the fit.
+
+        ## Execution model
+
+        - **Flink** is a true stream processor. Operators run all the time and records flow through
+          them one by one. Batch is a special case of a bounded stream.
+        - **Spark Structured Streaming** treats a stream as a table that grows. By default it runs
+          **micro-batches**: every trigger it plans and runs a small batch job over the new data.
+
+        ## Side by side
+
+        | | **Flink** | **Spark Structured Streaming** |
+        |---|---|---|
+        | Latency | Milliseconds | Usually seconds (micro-batch); depends on the trigger |
+        | State | Keyed state in memory or RocksDB; very large state is normal; Flink 2.0 added disaggregated state storage | State store per micro-batch, RocksDB provider for large state |
+        | Event time | Watermarks plus **timers**: code can fire at any event or processing time | Watermarks for windows, aggregations and joins; arbitrary state with timers through «transformWithState» in Spark 4 |
+        | Exactly-once | Checkpoint barriers plus transactional or idempotent sinks | Checkpointed offsets plus idempotent or transactional sinks |
+        | Upgrades | **Savepoints**: stop, change the job, restore state | Restart from the checkpoint; some query changes are not allowed with existing state |
+        | APIs | Java, SQL, Python (PyFlink) | Python, SQL, Scala, Java with the same DataFrame API as batch |
+        | Runs on | Kubernetes, YARN, managed services (Amazon Managed Service for Apache Flink, Confluent) | Any Spark cluster, Databricks, EMR, Dataproc |
+
+        ## Choose Flink when
+
+        - Latency must be under a second: fraud scoring, alerting, real-time pricing.
+        - The logic is **event-driven and stateful**: per-key timers, complex event patterns,
+          session logic with custom rules.
+        - State is very large and long-lived, and you must upgrade jobs without losing it.
+
+        ## Choose Spark Structured Streaming when
+
+        - Seconds to minutes are fine, and the team already runs Spark and writes PySpark.
+        - The same code should run as batch and as a stream (backfill with the same DataFrame logic).
+        - The sink is a lakehouse table (Delta or Iceberg) and the platform is Databricks or similar.
+
+        ## Same concepts, different words
+
+        Both need: a **watermark** to bound lateness, **checkpoints** for recovery, **keys** to
+        partition state, and an **idempotent or transactional sink** for exactly-once results. Kafka
+        Streams is a third option when the job is a Kafka-to-Kafka service inside an application,
+        with no separate cluster.
+
+        > [!trap] "Spark streaming is not real streaming"
+        > This is an outdated jab. Micro-batch latency is fine for most analytics, and the shared
+        > batch and stream API is a real advantage. Choose by latency need and team skill, not by
+        > slogan.
+
+        > [!senior] Decide with three numbers and a team
+        > "We need p99 under 500 ms, 2 TB of keyed state and per-user timers: Flink. The hourly
+        > aggregates into the lakehouse can be Spark, which the team already runs." Mixing engines by
+        > need is a staff-level answer.
+      `,
+      checks: [
+        {
+          question:
+            'A rule must fire 10 minutes after a rider requests a trip if no driver accepted. Which engine feature fits this best?',
+          options: [
+            'Micro-batch triggers',
+            'Keyed state with event-time or processing-time timers, as in Flink',
+            'A tumbling window count',
+            'Broadcast joins',
+          ],
+          answer: 1,
+          why: 'A per-key timer fires exactly when the condition is due. Flink offers this directly; in Spark it needs transformWithState.',
+        },
+        {
+          question: 'What do Flink savepoints make easy?',
+          options: [
+            'Writing SQL',
+            'Stopping a job, changing its code and restoring its state',
+            'Reading from S3',
+            'Avoiding watermarks',
+          ],
+          answer: 1,
+          why: 'A savepoint is a consistent, portable snapshot of job state that a new job version can resume from.',
+        },
+      ],
+    },
   ],
 };
 
@@ -887,5 +972,55 @@ export const problems: Problem[] = [
       'Links duplicates to uncommitted offsets on revoke and fixes both sides',
     ],
     followUps: ['The group must scale from 40 to 120 pods for a peak. What limits you?'],
+  },
+  {
+    slug: 'streaming-flink-or-spark',
+    title: 'Flink or Spark for two streaming jobs',
+    track: 'streaming',
+    kind: 'design',
+    difficulty: 'medium',
+    companies: ['uber', 'google'],
+    prompt: `
+      A payments team needs two jobs on the same Kafka topic of card transactions (40,000 events a
+      second):
+
+      1. Per-card features (count and amount in the last 1, 10 and 60 minutes) served to a fraud
+         model with p99 under 300 ms.
+      2. Per-merchant hourly totals written to an Iceberg table for finance dashboards.
+
+      The data team knows PySpark well and has never run Flink. Which engine for each job, and how
+      do you handle the skill gap?
+    `,
+    hints: [
+      'Which job has a sub-second requirement?',
+      'Which job is really an incremental batch?',
+      'What can reduce the operations burden of a new engine?',
+    ],
+    answer: `
+      **Job 1: Flink.** Sub-second p99 with per-card sliding state is Flink's home ground: keyed
+      state in RocksDB, event-time windows (or incremental counters with timers that expire old
+      buckets), and low per-record latency. Micro-batches would add seconds.
+
+      **Job 2: Spark Structured Streaming** with a trigger every few minutes (or a scheduled
+      «availableNow» run) writing Iceberg. Finance needs minutes or hours, the team knows PySpark,
+      and the same code can backfill history.
+
+      Closing the skill gap:
+
+      - Use a **managed Flink** service, so the team does not run the cluster.
+      - Start with **Flink SQL** for the windowed features; move to the DataStream API only where
+        SQL cannot express the logic.
+      - Shared rules for both jobs: keys by card or merchant, watermarks of a few seconds,
+        checkpoints, idempotent sinks, and the same schema registry subject.
+      - Pair one engineer with Flink experience (hire or borrow) for the first on-call rotation.
+    `,
+    signals: [
+      'Matches Flink to the sub-second, stateful job',
+      'Keeps the lakehouse aggregate on Spark',
+      'Considers team skills and operations',
+      'Suggests managed Flink or Flink SQL to reduce risk',
+      'Keeps shared streaming rules across engines',
+    ],
+    followUps: ['How do you prove the features in the stream match the features used in training?'],
   },
 ];
