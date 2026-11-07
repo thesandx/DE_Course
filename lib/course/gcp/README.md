@@ -58,6 +58,8 @@ Each station has one lab at `/gcp/labs/<station>`. The learner does the station'
 
 The page builds two steps for every lab. The first step selects the project, exports the variables in `vars` and enables the APIs in `apis`. The second step writes the sample files with a quoted heredoc, so the learner needs no download. The page also offers each file at `/api/lab-files/<station>/<file>`.
 
+Every step can be done in the console (UI). A step card shows the **Console (UI)** tab first, the **Cloud Shell** tab second, and then the SQL. Under the check, a "See it in the console" box tells the learner which console page shows the result. The "Prove nothing is left" section has the same two tabs: `verifyConsole` and `verify`.
+
 The learner ticks each step. The ticks stay in the browser (`localStorage`) because they are a convenience. The lab is saved to the learner's tracker only when the learner finishes it, and the finish button stays locked until every cleanup step is ticked.
 
 ### Rules for a lab
@@ -69,4 +71,6 @@ The learner ticks each step. The ticks stay in the browser (`localStorage`) beca
 5. Use `us-central1` for every resource, unless a public dataset needs the `US` location.
 6. Give each step a `check`: what the learner sees when the step worked.
 7. Set every shell variable before a step reads it: in `vars`, or with `export` in an earlier step. The tests check this.
-8. Write `console` steps as a numbered list. Write `shell` and `sql` as plain text. In a template literal, write `\\` for a line continuation and `\${` for a literal `${`.
+8. Give every step that has `shell` or `sql` a `console` path too, and give every cleanup step a `console` path. Name the menu, the page, the button and the value for each field. When the console cannot do a step, such as a local emulator run, say so in `console` and say how to open Cloud Shell. The tests check this.
+9. Give every step that has `console` a `see`: the console page and tab that show the result. Give every lab a `verifyConsole`: the console pages that prove nothing is left.
+10. Write `console` steps as a numbered list. Write `shell` and `sql` as plain text. In a template literal, write `\\` for a line continuation and `\${` for a literal `${`.

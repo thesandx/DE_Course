@@ -100,6 +100,10 @@ const WORKFLOW = `main:
 export const LABS: readonly GcpLab[] = [
   {
     station: 'pipeline-planning',
+    verifyConsole: `1. **Compute Engine** > **VM instances**: no «lab21-vm».
+2. **VPC network** > **VPC networks**: no «lab21-vpc».
+3. **Cloud Storage** > **Buckets**: no «PROJECT_ID-lab21».
+4. **Security** > **Key Management** > «lab21-ring» > «lab21-key»: every version is **Scheduled for destruction** or **Destroyed**.`,
     title: 'Private networking and customer-managed keys',
     scenario:
       'Security wants pipeline workers with no public IP, still able to reach Google APIs, and data encrypted with a key the company controls and can switch off. You build the network, prove what a private VM can and cannot reach, and crypto-lock a bucket.',
@@ -134,6 +138,7 @@ export const LABS: readonly GcpLab[] = [
       },
       {
         title: 'Build a private network',
+        see: `**VPC network** > **VPC networks** > «lab21-vpc» > **Subnets** shows «lab21-subnet» with **Private Google Access: On**. The **Firewalls** tab of the network lists one rule, «lab21-allow-iap».`,
         body: 'A custom-mode VPC has no subnets until you create them. You turn on **Private Google Access** on the subnet, so VMs without a public IP can still call Google APIs. The firewall rule lets in only the IAP range, so SSH works without a public IP.',
         concepts: [2],
         console: `1. Open **VPC network** > **VPC networks** > **Create VPC network**. Name «lab21-vpc», subnet creation mode **Custom**.
@@ -149,6 +154,7 @@ gcloud compute firewall-rules create lab21-allow-iap --network=lab21-vpc \\
       },
       {
         title: 'Start a VM with no public IP',
+        see: `**Compute Engine** > **VM instances** lists «lab21-vm» with an internal IP in «10.21.0.0/24» and no value in the **External IP** column.`,
         body: 'This is how Dataflow and Dataproc workers should run in a locked-down project: internal IPs only.',
         concepts: [2],
         console:
@@ -162,6 +168,10 @@ gcloud compute firewall-rules create lab21-allow-iap --network=lab21-vpc \\
       },
       {
         title: 'Prove what a private VM can reach',
+        see: `The SSH window prints both results. Open «lab21-vm» > **Details** > **Network interfaces**: **External IP** is **None**, which is why the internet call has no route.`,
+        console: `1. Open **Compute Engine** > **VM instances** and click **SSH** on the «lab21-vm» row. The VM has no external IP, so the console connects through IAP, using the firewall rule you made.
+2. In the SSH window, paste the two «curl» lines from the **Cloud Shell** tab. Skip the «gcloud compute ssh» line and «exit».
+3. Close the SSH window when you are done.`,
         body: 'SSH in through IAP, then try two calls: one to a Google API, one to the public internet. Private Google Access opens the first. Nothing opens the second, because there is no public IP and no Cloud NAT.',
         concepts: [2],
         shell: `gcloud compute ssh lab21-vm --zone=$ZONE --tunnel-through-iap
@@ -174,6 +184,10 @@ exit`,
       },
       {
         title: 'Turn Private Google Access off and try again',
+        see: `The subnet details page shows **Private Google Access: Off**, then **On** again.`,
+        console: `1. Open **VPC network** > **VPC networks** > «lab21-vpc» > **Subnets** > «lab21-subnet» > **Edit**. Set **Private Google Access** to **Off**. Save.
+2. Click **SSH** on «lab21-vm» again and paste the first «curl» line: it fails.
+3. Edit the subnet again, set **Private Google Access** back to **On**, and save.`,
         body: 'Seeing the failure is how you learn to diagnose it. Dataflow jobs with internal IPs fail in the same way when the subnet lacks Private Google Access.',
         concepts: [2],
         shell: `gcloud compute networks subnets update lab21-subnet --region=us-central1 \\
@@ -187,6 +201,7 @@ gcloud compute networks subnets update lab21-subnet --region=us-central1 \\
       },
       {
         title: 'Create a customer-managed key and a CMEK bucket',
+        see: `**Key Management** > «lab21-ring» lists «lab21-key» with version 1 **Enabled**. The bucket’s **Configuration** tab shows **Encryption type: Customer-managed** and the key, and the object’s details page shows the same key.`,
         body: 'With CMEK, Cloud Storage encrypts each object with a key in Cloud KMS that you control. The Cloud Storage service agent needs permission to use the key, and the key must be in the same location as the bucket.',
         concepts: [3],
         console: `1. Open **Security** > **Key Management** > **Create key ring**. Name «lab21-ring», location «us-central1».
@@ -207,6 +222,10 @@ gcloud storage objects describe gs://$BUCKET/secret.txt --format="value(kms_key)
       },
       {
         title: 'Switch the key off and watch the data lock',
+        see: `The key page shows version 1 as **Disabled**, then **Enabled**. The failed download shows an error about the key.`,
+        console: `1. Open **Security** > **Key Management** > «lab21-ring» > «lab21-key». Tick version 1 and click **Disable**.
+2. Wait a minute. In **Cloud Storage**, open the bucket, tick «secret.txt» and click **Download**: the download fails.
+3. Back on the key, tick version 1 and click **Enable**. Download the file again: it works.`,
         body: 'Disabling the key version makes every object encrypted with it unreadable, at once and everywhere. That control is why regulated companies ask for CMEK. The change usually applies within a few minutes.',
         concepts: [3],
         shell: `gcloud kms keys versions disable 1 --key=lab21-key --keyring=lab21-ring --location=us-central1
@@ -220,6 +239,7 @@ gcloud kms keys versions enable 1 --key=lab21-key --keyring=lab21-ring --locatio
     cleanup: [
       {
         title: 'Delete the VM, the firewall rule and the network',
+        see: `**VM instances** has no «lab21-vm», **Firewall** has no «lab21-allow-iap», and **VPC networks** has no «lab21-vpc».`,
         body: 'Delete in this order: the VM, then the rule, then the subnet, then the network. The boot disk is deleted with the VM.',
         concepts: [],
         console:
@@ -231,6 +251,7 @@ gcloud compute networks delete lab21-vpc --quiet`,
       },
       {
         title: 'Delete the bucket, then destroy the key version',
+        see: `**Buckets** has no «PROJECT_ID-lab21». In «lab21-key», version 1 shows **Scheduled for destruction** with a date. The key ring and the key names stay: Cloud KMS never deletes them, and they cost nothing.`,
         body: 'Delete the data first: once the key version is destroyed, nobody can ever read objects encrypted with it. Destruction runs after a waiting period (30 days by default) and the version stops costing money.',
         concepts: [],
         console:
@@ -247,6 +268,10 @@ gcloud kms keys versions list --key=lab21-key --keyring=lab21-ring --location=us
   },
   {
     station: 'building-pipelines',
+    verifyConsole: `1. **Pub/Sub** > **Topics** and **Subscriptions**: nothing named «lab22».
+2. **Dataflow** > **Jobs** and **Dataproc** > **Batches**: nothing **Running**.
+3. **BigQuery** > **Studio**: the Explorer lists no «lab22».
+4. **Cloud Storage** > **Buckets**: no «PROJECT_ID-lab22».`,
     title: 'Stream, window, clean and enrich ride events',
     scenario:
       'Ride events arrive out of order and with duplicates. You publish them to Pub/Sub, stream them into BigQuery with no code, count them in event-time windows with Beam, run a managed Dataflow job, try serverless Spark, and score rider comments with an AI API.',
@@ -290,6 +315,7 @@ gcloud kms keys versions list --key=lab21-key --keyring=lab21-ring --location=us
     steps: [
       {
         title: 'Publish events and pull them back',
+        see: `The subscription’s **Messages** tab lists each pulled message with its ID, publish time and the attribute «source=lab». The **Metrics** tab charts the unacknowledged messages.`,
         body: 'Pub/Sub decouples producers from consumers. A pull subscriber asks for messages and acknowledges each one; an unacknowledged message comes back after the ack deadline. That is at-least-once delivery, and it is why the dedupe step later matters.',
         concepts: [1],
         console:
@@ -305,6 +331,12 @@ gcloud pubsub subscriptions pull lab22-pull --limit=5 --auto-ack`,
       },
       {
         title: 'Stream into BigQuery with a BigQuery subscription',
+        see: `«lab22.rides_raw» > **Preview** shows one row per message, with the JSON in «data». «lab22-to-bq» > **Details** shows delivery type **BigQuery** and the table.`,
+        console: `1. In BigQuery, create the dataset «lab22» in «us-central1». On «lab22», click **Create table**: source **Empty table**, name «rides_raw», one field «data» of type STRING. Create.
+2. Open «rides_raw» > **Share** > **Manage permissions** > **Add principal**. Principal «service-PROJECT_NUMBER@gcp-sa-pubsub.iam.gserviceaccount.com» (the project number is on the console **Welcome** page), role **BigQuery Data Editor**. Save.
+3. Open **Pub/Sub** > «lab22-rides» > **Create subscription**. ID «lab22-to-bq», delivery type **Write to BigQuery**, dataset «lab22», table «rides_raw». Create.
+4. Publish the 12 lines of «events.jsonl» again. By hand that is 12 messages in **Publish message**, so the last loop of the **Cloud Shell** tab is quicker.
+5. Run the SQL below in BigQuery Studio.`,
         body: 'For "land the stream as-is", you need no pipeline: a BigQuery subscription writes each message to a table. The Pub/Sub service agent needs BigQuery Data Editor on the table. A subscription only gets messages published after it exists, so you publish again.',
         concepts: [1, 6],
         shell: `export PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format="value(projectNumber)")
@@ -329,6 +361,7 @@ ORDER BY event_id;`,
       },
       {
         title: 'Load the same file as a batch',
+        see: `«lab22.rides_batch» > **Schema** shows the typed columns, and **Details** shows 12 rows.`,
         body: 'A load job is the cheapest way into BigQuery: load jobs are free, while streaming writes are billed per byte. Use streaming only when the business needs the data in seconds.',
         concepts: [6],
         console:
@@ -340,6 +373,9 @@ ORDER BY event_id;`,
       },
       {
         title: 'Clean and deduplicate in SQL',
+        see: `The Explorer shows «lab22.rides». Its **Preview** shows 9 rows, and the results panel of the second statement shows the count per city.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.`,
         body: 'Keep one row per «event_id», drop invalid fares, and keep the rejects visible. In a stream, the same rule runs in Dataflow with a state store or a «QUALIFY» over a short lookback window.',
         concepts: [8],
         sql: `CREATE OR REPLACE TABLE lab22.rides AS
@@ -357,6 +393,9 @@ SELECT city, COUNT(*) AS rides FROM lab22.rides GROUP BY city ORDER BY city;`,
       },
       {
         title: 'Window by event time with Apache Beam',
+        see: `The output prints in the Cloud Shell terminal. Nothing is created in your project, so nothing new shows in the console.`,
+        console: `1. This step runs Apache Beam on your Cloud Shell machine, which no console page can do. Click **Activate Cloud Shell** (the >_ icon at the top right of the console) and paste the commands from the **Cloud Shell** tab.
+2. The next step runs a Beam pipeline on Dataflow, where the console draws the job graph.`,
         body: 'Beam separates what you compute (count per city) from where in event time (one-minute fixed windows). Event «e09» arrives late in the file but happened at 08:00:30, so Beam puts it in the 08:00 window. In a stream, the **watermark** decides when a window is complete, and **allowed lateness** with **triggers** decides what happens to data that arrives after that.',
         concepts: [2, 3],
         shell: `python3 -m venv ~/lab22-venv
@@ -367,10 +406,11 @@ SELECT city, COUNT(*) AS rides FROM lab22.rides GROUP BY city ORDER BY city;`,
       },
       {
         title: 'Run a managed Dataflow job',
+        see: `**Dataflow** > **Jobs** > «lab22-wordcount» shows the job graph, **Job metrics** (workers and throughput) and **Logs**. When it is **Succeeded**, open the bucket > «wordcount/» and click an output file to read it.`,
         body: 'Dataflow runs Beam pipelines on managed workers: it scales them, rebalances work, and shows the job graph and logs. Google’s templates run with no code. Workers use the project’s default network and the Compute Engine default service account; if the job fails at start, the job log names the missing network or role.',
         concepts: [4],
         console:
-          '1. Open **Dataflow** > **Create job from template**. Name «lab22-wordcount», region «us-central1», template **Word Count**.\n2. Input file «gs://dataflow-samples/shakespeare/kinglear.txt». Output «gs://PROJECT_ID-lab22/wordcount/out». Temporary location «gs://PROJECT_ID-lab22/temp».\n3. Run the job. Open it and watch the job graph, the worker count and the logs.',
+          '1. Create the bucket «PROJECT_ID-lab22» in «us-central1» (**Cloud Storage** > **Buckets** > **Create**).\n2. Open **Dataflow** > **Create job from template**. Name «lab22-wordcount», region «us-central1», template **Word Count**.\n3. Input file «gs://dataflow-samples/shakespeare/kinglear.txt». Output «gs://PROJECT_ID-lab22/wordcount/out». Temporary location «gs://PROJECT_ID-lab22/temp».\n4. Run the job. Open it and watch the job graph, the worker count and the logs.',
         shell: `gcloud storage buckets create gs://$BUCKET --location=us-central1 --uniform-bucket-level-access
 gcloud dataflow jobs run lab22-wordcount --region=us-central1 \\
   --gcs-location=gs://dataflow-templates-us-central1/latest/Word_Count \\
@@ -384,6 +424,10 @@ gcloud storage cat "gs://$BUCKET/wordcount/out*" | sort -t: -k2 -nr | head -5`,
       },
       {
         title: 'Optional: run Spark without a cluster',
+        see: `**Dataproc** > **Batches** lists the batch. Open it: the **Output** ends with «Pi is roughly 3.14…», and **Details** shows the run time and the resources used.`,
+        console: `1. Open **VPC network** > **VPC networks** > «default» > **Subnets** > the «us-central1» subnet > **Edit**. Set **Private Google Access** to **On**. Save.
+2. Open **Dataproc** > **Batches** (under **Serverless**) > **Create**. Region «us-central1», batch type **Spark**.
+3. Main class «org.apache.spark.examples.SparkPi», jar files «file:///usr/lib/spark/examples/jars/spark-examples.jar», arguments «1000». Submit.`,
         body: 'Dataproc Serverless runs a Spark batch with no cluster to size or delete. It needs Private Google Access on the subnet it uses, so the first command turns it on for the default subnet; leaving it on is free. This step costs a few cents.',
         concepts: [5],
         shell: `gcloud compute networks subnets update default --region=us-central1 --enable-private-ip-google-access
@@ -402,6 +446,9 @@ gcloud dataproc batches submit spark --region=us-central1 \\
       },
       {
         title: 'Enrich comments with an AI API',
+        see: `**APIs & Services** > **Enabled APIs & services** > **Cloud Natural Language API** > **Metrics** shows the two requests with response code 200 after a few minutes.`,
+        console: `1. Open **APIs & Services** > **Library**, search for **Cloud Natural Language API**, and make sure it is enabled.
+2. The console has no box to send your own text to the API, so the call runs in Cloud Shell. Click **Activate Cloud Shell** (the >_ icon at the top right of the console) and paste the commands from the **Cloud Shell** tab.`,
         body: 'Enrichment adds a field the source did not have. Here the Natural Language API scores the sentiment of a rider comment; in a pipeline, a Dataflow step or a BigQuery remote function makes the same call per row, with batching and retries.',
         concepts: [9],
         shell: `for text in "Smooth ride, friendly driver" "Driver was late and rude"; do
@@ -417,6 +464,7 @@ done`,
     cleanup: [
       {
         title: 'Delete the subscriptions and the topic',
+        see: `**Pub/Sub** > **Topics** and **Subscriptions** list nothing named «lab22».`,
         body: 'Delete subscriptions before the topic. A subscription with no topic keeps its backlog until it expires.',
         concepts: [],
         console:
@@ -426,6 +474,7 @@ gcloud pubsub topics delete lab22-rides --quiet`,
       },
       {
         title: 'Confirm no job is still running',
+        see: `The **Status** column of both lists shows **Succeeded** or **Failed**, never **Running**.`,
         body: 'Both jobs are batches and end on their own. A streaming Dataflow job would run, and bill, until you drain or cancel it. Always check.',
         concepts: [],
         console:
@@ -435,6 +484,7 @@ gcloud dataproc batches list --region=us-central1 --filter="state=RUNNING"`,
       },
       {
         title: 'Delete the dataset, the bucket and the local files',
+        see: `The Explorer has no «lab22», and **Buckets** has no «PROJECT_ID-lab22». The Cloud Shell files go when you run the last line of the **Cloud Shell** tab.`,
         body: 'Dataflow staging and temporary files are in the bucket, so deleting it removes them too.',
         concepts: [],
         console: '1. Delete the dataset «lab22».\n2. Delete the bucket «PROJECT_ID-lab22».',
@@ -450,6 +500,10 @@ gcloud storage ls | grep lab22 || echo "No lab22 bucket left"`,
   },
   {
     station: 'operationalizing-pipelines',
+    verifyConsole: `1. **Cloud Scheduler**: no «lab23-hourly».
+2. **Workflows**: no «lab23-daily».
+3. **BigQuery** > **Studio**: the Explorer lists no «lab23».
+4. **IAM & Admin** > **Service accounts**: no «lab23-runner».`,
     title: 'Orchestrate a daily job with Workflows and Cloud Scheduler',
     scenario:
       'A daily summary table must rebuild every hour from raw trips, safely re-run after a failure, and change only through a reviewed, versioned deploy. Composer would cost hundreds of dollars a month for this one job, so you build it serverless.',
@@ -482,6 +536,9 @@ gcloud storage ls | grep lab22 || echo "No lab22 bucket left"`,
     steps: [
       {
         title: 'Create the source and the target tables',
+        see: `The Explorer shows «lab23» with «trips» and «daily_city». **Preview** «trips»: 5 rows. «daily_city» > **Details**: 0 rows.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.`,
         body: 'The raw table gets new trips; the summary table is rebuilt from it. A MERGE makes the rebuild **idempotent**: running it twice gives the same result as running it once, which is what makes retries safe.',
         concepts: [1],
         sql: `CREATE SCHEMA IF NOT EXISTS lab23 OPTIONS (location = 'us-central1');
@@ -502,6 +559,10 @@ CREATE OR REPLACE TABLE lab23.daily_city (
       },
       {
         title: 'Create a runner identity with only what it needs',
+        see: `**IAM** shows a row for «lab23-runner» with three roles. «lab23» > **Sharing** > **Permissions** lists it under **BigQuery Data Editor**.`,
+        console: `1. Open **IAM & Admin** > **Service accounts** > **Create service account**. Name «lab23-runner». Click **Create and continue**.
+2. Grant three roles: **BigQuery Job User**, **Logs Writer** and **Workflows Invoker**. Click **Done**.
+3. In BigQuery, open «lab23» > **Sharing** > **Permissions** > **Add principal**. Principal «lab23-runner@PROJECT_ID.iam.gserviceaccount.com», role **BigQuery Data Editor**. Save.`,
         body: 'The workflow runs as its own service account: it may run BigQuery jobs, edit one dataset, and write logs. The scheduler uses the same account to start the workflow.',
         concepts: [1, 2],
         shell: `gcloud iam service-accounts create lab23-runner --display-name="Lab 2.3 runner"
@@ -516,6 +577,7 @@ bq query --use_legacy_sql=false \\
       },
       {
         title: 'Deploy and run the workflow',
+        see: `**Workflows** > «lab23-daily» > **Executions** lists two runs with state **Succeeded**. Open one: the **Output** pane shows «"4"», and the **Logs** tab shows each step. **Preview** «lab23.daily_city»: 4 rows.`,
         body: 'Workflows calls the BigQuery API through a connector, which waits for the job to finish and retries on transient errors. Run it twice and compare: the row count must not change.',
         concepts: [1],
         console:
@@ -528,6 +590,7 @@ gcloud workflows run lab23-daily --location=us-central1 --format="value(result)"
       },
       {
         title: 'Schedule it with Cloud Scheduler',
+        see: `**Cloud Scheduler** lists «lab23-hourly» with its next run time and the result of the last run. The workflow’s **Executions** tab shows a third run.`,
         body: 'Cloud Scheduler is cron as a service. It calls the Workflows executions API with an OAuth token for the runner account. Use the scheduler for "run this at a time"; use Workflows for "run these steps in order, with retries".',
         concepts: [1],
         console:
@@ -543,6 +606,11 @@ gcloud workflows executions list lab23-daily --location=us-central1 --limit=3`,
       },
       {
         title: 'Change the pipeline the CI/CD way',
+        see: `The workflow’s **Revisions** tab lists the revisions with their deploy times. The new execution’s **Output** shows «"5"».`,
+        console: `1. In BigQuery Studio, paste the SELECT from the **Cloud Shell** tab. Do not run it: the estimate at the top right is the dry run.
+2. In a new tab, run the INSERT from the **Cloud Shell** tab.
+3. Open **Workflows** > «lab23-daily» > **Edit**. Click **Next**, then **Deploy**.
+4. Click **Execute** and open the new execution.`,
         body: 'Treat the workflow and its SQL as code. A CI job checks the SQL with a free dry run, then deploys; every deploy makes a new revision you can trace. Here you add a new trip, check the SQL, and redeploy.',
         concepts: [2],
         shell: `bq query --use_legacy_sql=false --dry_run \\
@@ -567,6 +635,7 @@ gcloud workflows run lab23-daily --location=us-central1 --format="value(result)"
     cleanup: [
       {
         title: 'Delete the scheduler job and the workflow',
+        see: `**Cloud Scheduler** has no «lab23-hourly», and **Workflows** has no «lab23-daily».`,
         body: 'Delete the scheduler job first, so it does not start a workflow that is being deleted.',
         concepts: [],
         console:
@@ -576,6 +645,7 @@ gcloud workflows delete lab23-daily --location=us-central1 --quiet`,
       },
       {
         title: 'Delete the dataset, the roles and the service account',
+        see: `The Explorer has no «lab23». **IAM** has no row for «lab23-runner», and **Service accounts** does not list it.`,
         body: 'Remove each project role before you delete the account.',
         concepts: [],
         console:

@@ -36,6 +36,8 @@ C-06,Mia Schmidt,mia.schmidt@example.com,consumer,DE`;
 export const LABS: readonly GcpLab[] = [
   {
     station: 'storage-selection',
+    verifyConsole: `1. **Cloud Storage** > **Buckets**: no «PROJECT_ID-lab31».
+2. The emulator was never in the console. Closing Cloud Shell stops it.`,
     title: 'Pick, protect and design storage',
     scenario:
       'Five teams ask you where their data should live. You answer each one, then build two of the answers for real: a bucket that ages data into cheaper classes and refuses early deletes, and a Bigtable row key design you test on the free emulator.',
@@ -68,6 +70,7 @@ export const LABS: readonly GcpLab[] = [
       },
       {
         title: 'Create a bucket and set object classes',
+        see: `The bucket’s **Objects** tab shows the **Storage class** column: Standard for «hot.txt», Nearline for «cold.txt».`,
         body: 'The storage class is set per object. Nearline, Coldline and Archive cost less to store but charge for reads and have a minimum storage time (30, 90 and 365 days). An early delete is billed as if the object stayed for the minimum.',
         concepts: [4],
         console:
@@ -82,6 +85,7 @@ gcloud storage ls -L gs://$BUCKET/** | grep -E "gs://|Storage class"`,
       },
       {
         title: 'Add a lifecycle that ages data',
+        see: `The bucket’s **Lifecycle** tab lists two rules, each with its action and its condition.`,
         body: 'Lifecycle rules move or delete objects by age, class, prefix or version count, with no job to run. They are the cheapest cost control you can set.',
         concepts: [4, 5],
         console:
@@ -93,6 +97,7 @@ gcloud storage buckets describe gs://$BUCKET --format="json(lifecycle_config)"`,
       },
       {
         title: 'Refuse early deletes with a retention policy',
+        see: `The **Protection** tab shows the 60-second retention policy while it is set, and the 7-day soft delete policy. The refused delete shows a red error message.`,
         body: 'A retention policy makes every object undeletable until it reaches an age. Regulators ask for it (write once, read many). You set a 60-second policy, try to delete, then remove the policy. Soft delete is the other guard: deleted objects stay restorable for 7 days by default.',
         concepts: [4],
         console:
@@ -108,6 +113,9 @@ gcloud storage buckets describe gs://$BUCKET --format="json(soft_delete_policy)"
       },
       {
         title: 'Start the Bigtable emulator',
+        see: `The output prints in Cloud Shell. Nothing new shows in the console, because the emulator is not a cloud resource.`,
+        console: `1. The Bigtable emulator runs in memory on your Cloud Shell machine. It has no console page and costs nothing. Click **Activate Cloud Shell** (the >_ icon at the top right of the console) and paste the commands from the **Cloud Shell** tab.
+2. To see what a real instance asks for, open **Bigtable** > **Create instance** and read the choices: storage type, clusters and nodes. Do not create one: the smallest instance bills by the hour.`,
         body: 'The emulator runs Bigtable in memory in Cloud Shell. It has the real API, so «cbt» and client libraries work against it, and it costs nothing.',
         concepts: [2],
         shell: `which cbt || echo "cbt is missing"
@@ -125,6 +133,9 @@ cbt ls`,
       },
       {
         title: 'Design a row key and read by prefix',
+        see: `The output prints in Cloud Shell: the prefix read shows one row and its cells.`,
+        console: `1. Run this step in the same Cloud Shell session as the emulator: paste the commands from the **Cloud Shell** tab.
+2. On a real instance, **Bigtable** > your instance > **Bigtable Studio** reads rows by key prefix in the console.`,
         body: 'Bigtable sorts rows by key and serves a key range fast. A key that starts with a timestamp sends every new write to the same node: a hotspot. Start the key with the entity, then a reversed timestamp, so writes spread across devices and the newest reading of each device sorts first.',
         concepts: [2],
         shell: `for t in 1772352000 1772352060 1772352120; do
@@ -148,6 +159,8 @@ cbt count trips`,
     cleanup: [
       {
         title: 'Stop the emulator',
+        see: `Nothing to see in the console: the emulator never was a cloud resource.`,
+        console: `1. Click into Cloud Shell and paste the commands from the **Cloud Shell** tab. Closing the Cloud Shell session also stops the emulator.`,
         body: 'The emulator holds data in memory only; stopping it deletes the table.',
         concepts: [],
         shell: `pkill -f cbtemulator || pkill -f "emulators bigtable"
@@ -156,6 +169,7 @@ rm -f ~/.cbtrc`,
       },
       {
         title: 'Delete the bucket',
+        see: `**Cloud Storage** > **Buckets** has no «PROJECT_ID-lab31».`,
         body: 'Make sure the retention policy is gone first, or the delete fails.',
         concepts: [],
         console:
@@ -170,6 +184,7 @@ pgrep -f cbtemulator || echo "Emulator stopped"`,
   },
   {
     station: 'data-warehouse',
+    verifyConsole: `1. **BigQuery** > **Studio**: the Explorer lists no «lab32».`,
     title: 'Partition, cluster and pre-aggregate two million trips',
     scenario:
       'The trips table is slow and the finance team’s dashboard reads the whole table on every refresh. You model it as a star, then partition, cluster and pre-aggregate it, and measure every change in bytes and seconds.',
@@ -185,6 +200,10 @@ pgrep -f cbtemulator || echo "Emulator stopped"`,
     steps: [
       {
         title: 'Generate a star schema',
+        see: `The Explorer shows «lab32» with «dim_city» and «trips_flat». «trips_flat» > **Details** shows 2,000,000 rows and the table size.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.
+3. Generating two million rows takes about a minute.`,
         body: 'A fact table of trips points at a small city dimension. In BigQuery the other common shape is one wide table with nested and repeated fields; you build both and compare them later.',
         concepts: [1],
         sql: `CREATE SCHEMA IF NOT EXISTS lab32 OPTIONS (location = 'us-central1');
@@ -209,6 +228,9 @@ SELECT COUNT(*) AS trips FROM lab32.trips_flat;`,
       },
       {
         title: 'Partition by day and cluster by city',
+        see: `«trips_part» > **Details** shows **Partitioned by: DAY** on «pickup_ts» and **Clustered by: city_id**.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.`,
         body: 'Partitioning splits the table by day, so a date filter reads only those days. Clustering sorts the data inside each partition by city, so a city filter reads fewer blocks. Partition on the column every query filters by; cluster on the next most selective ones.',
         concepts: [2],
         sql: `CREATE OR REPLACE TABLE lab32.trips_part
@@ -225,6 +247,7 @@ LIMIT 5;`,
       },
       {
         title: 'Measure the bytes with dry runs',
+        see: `The estimate at the top right of the editor before each run, and **Job information** > **Bytes billed** after the run.`,
         body: 'A dry run returns the bytes a query would bill, for free. Compare the same query on both tables. Clustering savings do not show in a dry run, only in the job details after a real run.',
         concepts: [2],
         shell: `for t in trips_flat trips_part; do
@@ -241,6 +264,10 @@ bq query --use_legacy_sql=false --format=prettyjson \\
       },
       {
         title: 'Force a partition filter',
+        see: `«trips_part» > **Details** shows that a partition filter is required while it is on. The count without a filter shows a red error in the results panel.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+**. Paste the SQL below.
+2. Run the statements one at a time: select a statement and click **Run**. The editor runs only the selected text.
+3. Console alternative to the first ALTER: open «trips_part» > **Details** > **Edit details** and tick **Require partition filter**. Untick it at the end.`,
         body: 'Require a partition filter on a big table, and a query without one fails before it reads a byte. It is the simplest guard against a $1,000 «SELECT *».',
         concepts: [2],
         sql: `ALTER TABLE lab32.trips_part SET OPTIONS (require_partition_filter = TRUE);
@@ -256,6 +283,9 @@ ALTER TABLE lab32.trips_part SET OPTIONS (require_partition_filter = FALSE);`,
       },
       {
         title: 'Pre-aggregate with a materialized view',
+        see: `The Explorer shows «daily_city_mv» with a materialized view icon. Its **Details** tab shows the last refresh time. The February query’s **Job information** shows how few bytes it read.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.`,
         body: 'A dashboard asks the same aggregate again and again. A materialized view keeps it up to date in the background, and BigQuery can answer a matching query on the base table from the view instead.',
         concepts: [3],
         sql: `CREATE MATERIALIZED VIEW lab32.daily_city_mv
@@ -276,6 +306,10 @@ ORDER BY revenue DESC;`,
       },
       {
         title: 'Change the schema without breaking readers',
+        see: `«trips_part» > **Schema** shows «tip» with its description. The Explorer shows the view «trips_v».`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.
+3. Console alternative to the ALTER: open «trips_part» > **Schema** > **Edit schema** > **Add field**. Name «tip», type NUMERIC, mode NULLABLE, description «Tip in USD». Save.`,
         body: 'Adding a nullable column, relaxing REQUIRED to NULLABLE and adding descriptions are safe changes. Renaming or retyping a column breaks readers, so put a logical view in front of tables you expect to change.',
         concepts: [3],
         sql: `ALTER TABLE lab32.trips_part ADD COLUMN tip NUMERIC OPTIONS (description = 'Tip in USD');
@@ -291,6 +325,9 @@ WHERE tip = 0 AND pickup_ts >= '2026-03-01';`,
       },
       {
         title: 'Compare a nested table with the join',
+        see: `«trips_nested» > **Schema** shows «city» as a RECORD with two fields. **Preview** shows them as nested columns.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.`,
         body: 'Denormalising with a STRUCT removes the join at read time. That is the BigQuery default for read-heavy analytics; keep a separate dimension when it changes often or is shared by many facts.',
         concepts: [1],
         sql: `CREATE OR REPLACE TABLE lab32.trips_nested
@@ -310,6 +347,7 @@ GROUP BY city.country;`,
     cleanup: [
       {
         title: 'Delete the dataset',
+        see: `The Explorer no longer lists «lab32».`,
         body: 'This deletes the tables, the view and the materialized view. The materialized view stops refreshing at once.',
         concepts: [],
         console: '1. Delete the dataset «lab32» in BigQuery.',
@@ -320,6 +358,8 @@ GROUP BY city.country;`,
   },
   {
     station: 'data-lake',
+    verifyConsole: `1. **BigQuery** > **Studio**: the Explorer lists no «lab33» and no «us-central1.lab33_conn».
+2. **Cloud Storage** > **Buckets**: no «PROJECT_ID-lab33».`,
     title: 'Build a raw and curated lake with BigLake',
     scenario:
       'Event files land daily as JSON. Analysts want SQL over them today, the platform team wants an open, columnar curated zone, and finance wants raw files gone after 30 days. You build all three on one bucket.',
@@ -355,6 +395,11 @@ GROUP BY city.country;`,
     steps: [
       {
         title: 'Lay out the zones and land the raw files',
+        see: `The bucket’s **Objects** tab shows «raw/events/» with two «dt=» folders, each with one file.`,
+        console: `1. Open **Cloud Storage** > **Buckets** > **Create**. Name «PROJECT_ID-lab33», location type **Region**, «us-central1», access control **Uniform**. Create.
+2. In the bucket, click **Create folder** «raw». Open it and create «events». Open that and create «dt=2026-04-01».
+3. Open «dt=2026-04-01», click **Upload files**, and upload «events-2026-04-01.jsonl».
+4. Repeat for the folder «dt=2026-04-02» and the second file.`,
         body: 'One bucket, one prefix per zone: «raw/» exactly as received, «curated/» cleaned and columnar. Raw is never edited, so you can always rebuild curated from it.',
         concepts: [1],
         shell: `gcloud storage buckets create gs://$BUCKET --location=us-central1 --uniform-bucket-level-access
@@ -366,6 +411,7 @@ gcloud storage ls -r gs://$BUCKET/raw/`,
       },
       {
         title: 'Create a connection for BigLake',
+        see: `The Explorer lists «us-central1.lab33_conn» under the project’s connections; open it to see its service account. The bucket’s **Permissions** tab lists that account with **Storage Object Viewer**.`,
         body: 'A BigLake table reads files through a connection’s service account, not the user’s own access. Users then need access to the table only, never to the bucket, and row and column security work on lake files too.',
         concepts: [1],
         console:
@@ -380,6 +426,9 @@ bq mk --dataset --location=us-central1 lab33`,
       },
       {
         title: 'Query the raw zone in place',
+        see: `«lab33.events_raw» > **Details** shows **Table type: External**, the connection ID and the source URIs.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+**.
+2. Paste the SQL below, replace «YOUR_BUCKET» twice, and click **Run**.`,
         body: 'The table reads both days and turns «dt=…» into a column. Replace «YOUR_BUCKET» twice. If the query says the connection has no access, wait a minute for the role to apply.',
         concepts: [1],
         sql: `CREATE OR REPLACE EXTERNAL TABLE lab33.events_raw (
@@ -402,6 +451,10 @@ ORDER BY dt, event_type;`,
       },
       {
         title: 'Write the curated zone as Parquet',
+        see: `Open the bucket > «curated/purchases/»: two «dt=» folders, each with a «.parquet» object.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+**.
+2. Paste this, with your bucket name, and click **Run**: «EXPORT DATA OPTIONS (uri = 'gs://YOUR_BUCKET/curated/purchases/dt=2026-04-01/part-*.parquet', format = 'PARQUET', overwrite = true) AS SELECT event_id, user_id, event_ts, amount FROM lab33.events_raw WHERE dt = '2026-04-01' AND event_type = 'purchase'».
+3. Change both dates to «2026-04-02» and run it again.`,
         body: 'Curated data is typed, filtered and columnar, partitioned the way readers filter. Here only purchases go to curated, one folder per day.',
         concepts: [1],
         shell: `for d in 2026-04-01 2026-04-02; do
@@ -415,6 +468,9 @@ gcloud storage ls -r gs://$BUCKET/curated/`,
       },
       {
         title: 'Expire the raw zone automatically',
+        see: `The **Lifecycle** tab lists one rule: Delete, age 30 days, prefix «raw/».`,
+        console: `1. Open the bucket > **Lifecycle** > **Add a rule**.
+2. Action **Delete object**. Conditions: **Age** 30 days, and **Object name matches prefix** «raw/». Create.`,
         body: 'A lifecycle rule with a prefix condition deletes raw files after 30 days and leaves curated data alone. Because raw is the source of truth, decide the period with the owners first; here it is a lab.',
         concepts: [1],
         shell: `cat > raw-lifecycle.json <<'EOF'
@@ -428,6 +484,7 @@ gcloud storage buckets describe gs://$BUCKET --format="json(lifecycle_config)"`,
     cleanup: [
       {
         title: 'Delete the dataset and the connection',
+        see: `The Explorer lists neither «lab33» nor «us-central1.lab33_conn».`,
         body: 'Delete the tables first, then the connection they use.',
         concepts: [],
         console:
@@ -437,6 +494,7 @@ bq rm --connection $PROJECT_ID.us-central1.lab33_conn`,
       },
       {
         title: 'Delete the bucket and the local files',
+        see: `**Cloud Storage** > **Buckets** has no «PROJECT_ID-lab33».`,
         body: 'This removes both zones.',
         concepts: [],
         console: '1. Delete the bucket «PROJECT_ID-lab33».',
@@ -450,6 +508,8 @@ gcloud storage ls | grep lab33 || echo "No lab33 bucket left"`,
   },
   {
     station: 'data-platform',
+    verifyConsole: `1. **BigQuery** > **Studio**: the Explorer lists no «lab34_…» dataset.
+2. **BigQuery** > **Policy tags**: no «lab34_pii».`,
     title: 'Run a small governed data platform',
     scenario:
       'Two domain teams publish data on a shared platform. Each team owns its datasets, the platform team owns the guardrails, and an email column must stay hidden from anyone without a reason to see it.',
@@ -471,6 +531,12 @@ gcloud storage ls | grep lab33 || echo "No lab33 bucket left"`,
     steps: [
       {
         title: 'Create one dataset per domain, with labels',
+        see: `Each dataset’s **Details** tab shows its description and labels. **Preview** «lab34_sales.customers» shows six customers.`,
+        console: `1. In the BigQuery Explorer, open your project’s menu > **Create dataset**. ID «lab34_sales», region «us-central1». Under **Labels**, add «domain: sales» and «tier: gold». Create.
+2. Open the dataset > **Details** > **Edit details** and set the description «Sales domain. Owner: sales-data team.». Save.
+3. Repeat for «lab34_marketing» with «domain: marketing», «tier: silver» and the description «Marketing domain. Owner: growth team.».
+4. On «lab34_sales», click **Create table**: source **Upload**, file «customers.csv», format CSV, table «customers», schema **Auto detect**. Under **Advanced options**, set header rows to skip to 1. Create.
+5. In a new editor tab, run the «CREATE TABLE lab34_marketing.campaigns …» statement from the **Cloud Shell** tab, then the SQL below.`,
         body: 'In a federated platform each domain owns its datasets, and labels make ownership machine-readable. The platform can then find every dataset by domain, owner or tier without a spreadsheet.',
         concepts: [1],
         shell: `bq mk --dataset --location=us-central1 --label=domain:sales --label=tier:gold \\
@@ -488,6 +554,7 @@ WHERE option_name = 'labels' AND schema_name LIKE 'lab34%';`,
       },
       {
         title: 'Create a policy tag for personal data',
+        see: `**Policy tags** lists «lab34_pii». Open it: the tag «email» is listed and **Enforce access control** is on.`,
         body: 'A policy tag is a central label for a kind of data, such as «email». You attach it to columns in any domain’s tables; the platform team controls who may read every column with that tag, in one place.',
         concepts: [1],
         console: `1. Open **BigQuery** > **Policy tags** (under **Governance**) > **Create taxonomy**.
@@ -506,6 +573,7 @@ echo $TAG`,
       },
       {
         title: 'Tag the email column',
+        see: `«customers» > **Schema** shows a policy tag next to «email» and no other column.`,
         body: 'Attach the tag in the table schema. From now on, reading «email» needs the Fine-Grained Reader role on the tag, and project Owner does not include it.',
         concepts: [1],
         console:
@@ -518,6 +586,9 @@ bq update lab34_sales.customers tagged.json`,
       },
       {
         title: 'Prove the column is protected',
+        see: `The results panel shows a red access denied error for the first query, and a table without «email» for the second.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+**. Paste the SQL below.
+2. Select the first query and click **Run**, then do the same for the second.`,
         body: 'Run both queries. BigQuery refuses the first without returning any row. The second leaves the column out, so it works.',
         concepts: [1],
         sql: `SELECT * FROM lab34_sales.customers;
@@ -528,6 +599,7 @@ SELECT * EXCEPT (email) FROM lab34_sales.customers;`,
       },
       {
         title: 'Grant yourself the reason to see it',
+        see: `The tag’s info panel lists your account under **Fine-Grained Reader**. «SELECT *» now returns the «email» column.`,
         body: 'Grant Fine-Grained Reader on the tag to the people who need the column, ideally a group. Here you grant it to yourself, wait a minute, and read the column.',
         concepts: [1],
         console:
@@ -543,6 +615,9 @@ bq query --use_legacy_sql=false 'SELECT full_name, email FROM lab34_sales.custom
       },
       {
         title: 'Join across domains through the platform',
+        see: `The results panel shows the two rows.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.`,
         body: 'Domains publish, the platform joins. Marketing reads the sales customers it needs, without a copy and without the email column.',
         concepts: [1],
         sql: `SELECT m.campaign, c.full_name, c.segment
@@ -554,6 +629,7 @@ JOIN lab34_sales.customers AS c USING (customer_id);`,
     cleanup: [
       {
         title: 'Delete the datasets',
+        see: `The Explorer lists no «lab34_…» dataset.`,
         body: 'This deletes both domains’ tables.',
         concepts: [],
         console: '1. Delete the datasets «lab34_sales» and «lab34_marketing».',
@@ -563,6 +639,7 @@ rm -f customers.csv schema.json tagged.json`,
       },
       {
         title: 'Delete the taxonomy',
+        see: `**Policy tags** no longer lists «lab34_pii».`,
         body: 'Deleting the taxonomy deletes its tags and their access grants.',
         concepts: [],
         console: '1. Open **Policy tags**, tick «lab34_pii» and click **Delete**.',

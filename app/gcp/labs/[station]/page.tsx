@@ -10,6 +10,7 @@ import { LabStepCard } from '@/components/gcp/LabStepCard';
 import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/layout/Icon';
 import { buttonStyles } from '@/components/ui/Button';
+import { Tabs } from '@/components/ui/Tabs';
 import { allStations, getLab, LAB_XP, labId, stationId } from '@/lib/course/gcp/catalog';
 import { labPlan, tickIds } from '@/lib/course/gcp/labs';
 import { hueStyle } from '@/lib/course/hue';
@@ -261,9 +262,24 @@ export default async function GcpLabPage({ params }: Props) {
                   Prove nothing is left
                 </h3>
                 <p className="text-small text-ink-soft">
-                  Run these in Cloud Shell. Each line should print a “No … left” message.
+                  Check each page in the console, or run the commands in Cloud Shell. Each command
+                  should print a “No … left” message.
                 </p>
-                <CodeBlock label="Cloud Shell" code={lab.verify} />
+                <Tabs
+                  label="Ways to prove nothing is left"
+                  items={[
+                    {
+                      id: 'console',
+                      label: 'Console (UI)',
+                      content: <Prose source={lab.verifyConsole} />,
+                    },
+                    {
+                      id: 'shell',
+                      label: 'Cloud Shell',
+                      content: <CodeBlock label="Cloud Shell" code={lab.verify} />,
+                    },
+                  ]}
+                />
               </section>
 
               <section className="bg-surface border-line rounded-card shadow-card flex flex-col gap-3 border p-5 sm:p-6">

@@ -125,6 +125,11 @@ export interface LabStep {
   shell?: string;
   /** What the learner sees when the step worked. Course Markdown dialect. */
   check?: string;
+  /**
+   * Where in the Google Cloud console the learner sees the result of the
+   * step: the page, the tab and what it shows. Course Markdown dialect.
+   */
+  see?: string;
 }
 
 /**
@@ -155,4 +160,6 @@ export interface GcpLab {
   cleanup: readonly LabStep[];
   /** Cloud Shell commands that prove nothing the lab made is left. */
   verify: string;
+  /** The console pages that prove nothing the lab made is left, as a numbered list. */
+  verifyConsole: string;
 }

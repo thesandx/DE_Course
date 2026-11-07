@@ -54,6 +54,9 @@ const TRIPS = `trip_id,city,pickup_date,distance_km,fare
 export const LABS: readonly GcpLab[] = [
   {
     station: 'security-compliance',
+    verifyConsole: `1. **BigQuery** > **Studio**: the Explorer lists no «lab11_…» dataset.
+2. **IAM & Admin** > **Service accounts**: no «lab11-analyst».
+3. **IAM & Admin** > **IAM**: no row for «lab11-analyst».`,
     title: 'Lock down a table of personal data',
     scenario:
       'HR has loaded a table of employees with emails, phone numbers and salaries. Analysts need a directory, the EU team may see only EU rows, and salaries must be unreadable for anyone who leaves. You build every control yourself and prove that each one works.',
@@ -80,6 +83,7 @@ export const LABS: readonly GcpLab[] = [
     steps: [
       {
         title: 'Load the raw table into its own dataset',
+        see: `In the BigQuery **Explorer**, expand your project: «lab11_raw» and «lab11_share» are listed. Open «lab11_raw.employees» > **Preview** to see the 12 rows, and the dataset’s **Details** tab to see its labels.`,
         body: 'Put raw personal data in a dataset of its own, and put what you share in another. Access in BigQuery is easiest to reason about at the dataset level, so the dataset is your first security boundary. Labels record the zone and the environment for later audits.',
         concepts: [6],
         console: `1. Open **BigQuery** > **Studio**. In the Explorer, open the menu of your project and click **Create dataset**.
@@ -97,6 +101,7 @@ bq head -n 3 lab11_raw.employees`,
       },
       {
         title: 'Give an analyst identity the least privilege',
+        see: `**IAM & Admin** > **IAM**: the row for «lab11-analyst» shows one role, BigQuery Job User. In BigQuery, open «lab11_share» > **Sharing** > **Permissions** and expand **BigQuery Data Viewer**: the service account is there. «lab11_raw» > **Sharing** > **Permissions** does not list it.`,
         body: 'An analyst needs two things: permission to run jobs in the project, and permission to read the shared dataset. Nothing else. You create a service account to play the analyst, and allow yourself to act as it, so you can test what it can and cannot read.',
         concepts: [1],
         console: `1. Open **IAM & Admin** > **Service accounts** > **Create service account**. Name it «lab11-analyst» and click **Done**. Grant no project roles on this page.
@@ -116,6 +121,10 @@ gcloud iam service-accounts add-iam-policy-binding $SA \\
       },
       {
         title: 'Prove the analyst cannot read the raw table',
+        see: `Logs Explorer shows a BigQuery entry for «lab11-analyst» with a permission denied status: the audit log records every refused read.`,
+        console: `1. The console cannot act as another identity, so this one test runs in Cloud Shell. Click **Activate Cloud Shell** (the >_ icon at the top right of the console).
+2. Paste the commands from the **Cloud Shell** tab.
+3. To see the attempt in the UI, open **Logging** > **Logs Explorer** and run the query «protoPayload.authenticationInfo.principalEmail:"lab11-analyst"».`,
         body: 'Now act as the analyst. The function below asks BigQuery a question with a short-lived token for the service account. No key file is made: you act as the account through your Token Creator role. IAM changes can take a minute or two to apply, so retry if the first call says the token is not allowed.',
         concepts: [1],
         shell: `asbq() {
@@ -132,6 +141,7 @@ asbq "SELECT COUNT(*) AS n FROM lab11_raw.employees"`,
       },
       {
         title: 'Share a directory through an authorized view',
+        see: `«lab11_raw» > **Sharing** > **Authorize views** lists «lab11_share.employee_directory». Open the view > **Preview** (or query it) to see masked emails such as «***@example.com».`,
         body: 'An authorized view lets readers of «lab11_share» see the result of a query over «lab11_raw», without any access to «lab11_raw» itself. The view leaves out phone and salary, and masks the local part of each email.',
         concepts: [2],
         sql: `CREATE OR REPLACE VIEW lab11_share.employee_directory AS
@@ -153,6 +163,10 @@ asbq "SELECT COUNT(*) AS n FROM lab11_raw.employees"`,
       },
       {
         title: 'Restrict rows with a row access policy',
+        see: `The table’s **Details** tab shows the policy and its filter. **Preview** ignores row policies only for owners in some views, so trust the query result: DE and FR only.`,
+        console: `1. Open **BigQuery** > **Studio**, paste the SQL below and click **Run**. Replace «you@example.com» with your account first.
+2. Open «lab11_raw.employees» > **Details**: a **Row access policies** section now lists «lab11_eu_only».
+3. Run «DROP ALL ROW ACCESS POLICIES ON lab11_raw.employees;» in the editor when you are done.`,
         body: 'A row access policy filters one table for each group, with no copies of the data. Once a table has any policy, a reader who matches no policy sees no rows at all, even through the authorized view. Replace the email below with the result of «SELECT SESSION_USER()».',
         concepts: [2],
         sql: `SELECT SESSION_USER() AS me;
@@ -171,6 +185,10 @@ GROUP BY country;`,
       },
       {
         title: 'Encrypt salaries and crypto-delete one person',
+        see: `**Preview** of «lab11_raw.salary_encrypted» shows ciphertext, not numbers. The last result panel shows NULL for employee 1001.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.
+3. Open «lab11_raw.salary_encrypted» > **Preview**: «salary_ct» shows unreadable bytes.`,
         body: 'AEAD functions encrypt a value with a keyset you store per person. Delete that person’s keyset and their salary can never be decrypted again, even where copies of the encrypted value remain. This is crypto-deletion, the usual answer to "erase one user from years of backups".',
         concepts: [3],
         sql: `CREATE OR REPLACE TABLE lab11_raw.keysets AS
@@ -195,6 +213,9 @@ ORDER BY s.employee_id;`,
       },
       {
         title: 'Find and mask personal data with Sensitive Data Protection',
+        see: `For the optional job: **Sensitive Data Protection** > **Inspection** > **Inspect jobs** lists it. Open it when it is **Done** to see counts of EMAIL_ADDRESS and PHONE_NUMBER findings.`,
+        console: `1. Open **Security** > **Sensitive Data Protection** > **Inspection** to see where scan jobs live. The console has no box for a one-off text test, so the test runs in Cloud Shell: click **Activate Cloud Shell** and paste the commands.
+2. Optional, in the console: open the table «lab11_raw.employees» in BigQuery, click **Export** > **Scan with Sensitive Data Protection**, choose the info types EMAIL_ADDRESS and PHONE_NUMBER, and create the job. It scans a few kilobytes.`,
         body: 'Sensitive Data Protection (Cloud DLP) finds info types such as emails and phone numbers in free text, and can mask them before the text lands anywhere. You call the API directly so you see the exact request a pipeline would send.',
         concepts: [4],
         shell: `TEXT="Call Asha on +44 20 7946 0101 or write to asha.rao@example.com"
@@ -216,6 +237,10 @@ curl -s -X POST \\
       },
       {
         title: 'See data location as a hard boundary',
+        see: `Each dataset’s **Details** tab shows its **Data location**: «us-central1» for «lab11_raw», «EU» for «lab11_eu». The join query shows a red error that the dataset was not found in location us-central1.`,
+        console: `1. In BigQuery, create a dataset «lab11_eu» with location type **Multi-region**, **EU**.
+2. Run «CREATE TABLE lab11_eu.countries AS SELECT 'DE' AS country, 'Germany' AS name» in a new query tab.
+3. In another tab run «SELECT e.full_name, c.name FROM lab11_raw.employees AS e JOIN lab11_eu.countries AS c USING (country)».`,
         body: 'A dataset’s location is fixed when you create it, and BigQuery will not join tables across locations. That is how a residency rule ("EU data stays in the EU") becomes a fact of the platform. In an organisation you would add the resource-location org policy and a VPC Service Controls perimeter; both need an organisation, so this lab stops at location.',
         concepts: [5, 6],
         shell: `bq mk --dataset --location=EU --label=env:lab lab11_eu
@@ -228,6 +253,7 @@ bq query --use_legacy_sql=false 'SELECT e.full_name, c.name FROM lab11_raw.emplo
     cleanup: [
       {
         title: 'Delete the three datasets',
+        see: `The Explorer no longer lists any «lab11_…» dataset. Refresh the page if it still does.`,
         body: 'Deleting a dataset with «-r» deletes every table, view and policy inside it.',
         concepts: [],
         console:
@@ -238,6 +264,7 @@ bq rm -r -f -d lab11_eu`,
       },
       {
         title: 'Delete the service account and its project role',
+        see: `**IAM & Admin** > **Service accounts** has no «lab11-analyst», and **IAM** has no row for it.`,
         body: 'Remove the project role first, so no binding points at a deleted account.',
         concepts: [],
         console:
@@ -253,6 +280,8 @@ gcloud iam service-accounts list --filter="email~lab11" --format="value(email)" 
   },
   {
     station: 'reliability-fidelity',
+    verifyConsole: `1. **BigQuery** > **Studio**: the Explorer lists no «lab12».
+2. **Cloud Storage** > **Buckets**: no «PROJECT_ID-lab12».`,
     title: 'Validate, clean and recover an order feed',
     scenario:
       'A partner drops a daily order file. Today it holds duplicates, a missing customer, a negative amount, a bad date and a text amount, and later someone deletes the clean table by mistake. You catch every bad row, keep the good ones, and bring the data back.',
@@ -278,6 +307,7 @@ gcloud iam service-accounts list --filter="email~lab11" --format="value(email)" 
     steps: [
       {
         title: 'Land the file in a versioned bucket',
+        see: `Open the bucket > «landing/» > «orders.csv» > **Version history**: two versions, each with a generation number and a **Restore** action. The bucket’s **Protection** tab shows **Object versioning: On**.`,
         body: 'Object versioning keeps the old copy when someone overwrites a file. That turns "the partner sent a broken file over the good one" into a restore, not an incident.',
         concepts: [2],
         console: `1. Open **Cloud Storage** > **Buckets** > **Create**. Name it «PROJECT_ID-lab12», location type **Region**, «us-central1», class **Standard**. Under data protection, turn on **Object versioning**. Create it.
@@ -294,6 +324,7 @@ gcloud storage ls -a gs://$BUCKET/landing/`,
       },
       {
         title: 'Load everything as text into a staging table',
+        see: `«lab12.orders_raw» > **Schema** shows five STRING columns; **Preview** shows all 12 rows, bad ones included.`,
         body: 'Load a feed you do not trust as strings. A typed load fails on the first bad value and tells you about one row; a string load keeps every row, so you can measure every defect.',
         concepts: [1],
         console:
@@ -306,6 +337,10 @@ bq load --source_format=CSV --skip_leading_rows=1 lab12.orders_raw \\
       },
       {
         title: 'Profile the feed and stop on bad data',
+        see: `The results panel lists two statements: the profile row, then the ASSERT with a red error «Every amount must be a number». **Personal history** at the bottom of BigQuery Studio lists the failed job.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.
+3. The editor runs the script statement by statement. Click **View results** on the first statement to see the profile.`,
         body: 'Validation is a query that counts what is wrong, plus a gate that stops the pipeline when the count is not zero. «ASSERT» is that gate in BigQuery: it fails the script with your message.',
         concepts: [4],
         sql: `SELECT
@@ -325,6 +360,9 @@ ASSERT (
       },
       {
         title: 'Clean, quarantine and deduplicate',
+        see: `In the Explorer, «lab12» now has «orders» and «orders_rejected». **Preview** «orders_rejected» to read the «reason» of each bad row.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+** (Compose a new query).
+2. Paste the SQL below and click **Run**.`,
         body: 'Good rows go to the clean table, bad rows go to a quarantine table with a reason, and nothing is silently dropped. «QUALIFY» keeps the latest version of each order. This is SQL in BigQuery; at a larger scale or in a stream the same rules move into Dataflow, or into Dataform or dbt models.',
         concepts: [1, 4],
         sql: `CREATE OR REPLACE TABLE lab12.orders_rejected AS
@@ -359,6 +397,10 @@ SELECT (SELECT COUNT(*) FROM lab12.orders) AS clean_rows,
       },
       {
         title: 'Change two tables atomically',
+        see: `**Preview** «lab12.orders»: A-1003 is «refunded» and A-1008 is still «paid». **Preview** «lab12.refunds»: one row.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+**.
+2. Paste the SQL up to the first «COMMIT TRANSACTION;» and click **Run**.
+3. Open a new tab, paste the second transaction, and click **Run**. It fails on purpose.`,
         body: 'A multi-statement transaction makes a refund all-or-nothing: the order status and the refund row change together, or not at all. The second script fails on purpose, and nothing it did survives.',
         concepts: [3],
         sql: `CREATE TABLE IF NOT EXISTS lab12.refunds (order_id STRING, amount NUMERIC, refunded_at TIMESTAMP);
@@ -379,6 +421,11 @@ COMMIT TRANSACTION;`,
       },
       {
         title: 'Recover from an accidental delete',
+        see: `The Explorer shows «orders_snap» with a snapshot icon; its **Details** tab shows the base table, the snapshot time and the expiration. **Preview** «orders_restored» shows 6 rows while «orders» shows none.`,
+        console: `1. Open **BigQuery** > **Studio**. Run the «CREATE SNAPSHOT» and «SELECT CURRENT_TIMESTAMP()» statements, and copy the timestamp.
+2. Run the «DELETE» statement on its own.
+3. Paste your timestamp into the restore statement and run the rest.
+4. Console alternative to step 3: open «lab12.orders_snap» and click **Restore** (or **Copy**) to make a new table from the snapshot.`,
         body: 'BigQuery keeps every table’s history for the time travel window (7 days by default), and a table snapshot keeps a point in time for as long as you choose. Take the snapshot, delete everything, then restore both ways. Run the script in three parts: up to the «before_delete» timestamp, then the «DELETE», then the restore with your timestamp pasted in.',
         concepts: [2],
         sql: `CREATE SNAPSHOT TABLE lab12.orders_snap
@@ -404,6 +451,7 @@ SELECT (SELECT COUNT(*) FROM lab12.orders) AS live,
     cleanup: [
       {
         title: 'Delete the dataset',
+        see: `The Explorer no longer lists «lab12».`,
         body: 'This deletes every table and the snapshot.',
         concepts: [],
         console: '1. In BigQuery, delete the dataset «lab12» (type «delete» to confirm).',
@@ -411,6 +459,7 @@ SELECT (SELECT COUNT(*) FROM lab12.orders) AS live,
       },
       {
         title: 'Delete the bucket and every object version',
+        see: `**Cloud Storage** > **Buckets** no longer lists «PROJECT_ID-lab12».`,
         body: 'A versioned bucket keeps old versions after you delete the live object, so delete all versions.',
         concepts: [],
         console:
@@ -424,6 +473,9 @@ gcloud storage ls | grep lab12 || echo "No lab12 bucket left"`,
   },
   {
     station: 'flexibility-portability',
+    verifyConsole: `1. **BigQuery** > **Studio**: the Explorer lists no «lab13».
+2. **Cloud Storage** > **Buckets**: no «PROJECT_ID-lab13».
+3. **Dataplex Universal Catalog** > **Profile**: no lab13 scan.`,
     title: 'Keep data portable and findable',
     scenario:
       'Your company may run a second engine next year. Leadership wants the trip data in an open format any engine can read, laid out so engines can skip what they do not need, and easy to find in the catalog.',
@@ -450,6 +502,7 @@ gcloud storage ls | grep lab12 || echo "No lab12 bucket left"`,
     steps: [
       {
         title: 'Load the trips',
+        see: `«lab13.trips» > **Preview** shows 16 rows, and the bucket «PROJECT_ID-lab13» is listed in **Cloud Storage** > **Buckets**.`,
         body: 'Start with a native BigQuery table. Every later step makes the same data open and portable.',
         concepts: [1],
         console:
@@ -461,6 +514,7 @@ bq load --source_format=CSV --skip_leading_rows=1 --autodetect lab13.trips trips
       },
       {
         title: 'Export to Parquet in a Hive-style layout',
+        see: `Open the bucket in **Cloud Storage** > **Buckets** > «lake/»: three folders «city=SF», «city=NYC» and «city=LON», each with a «.parquet» object and its size.`,
         body: 'Parquet is columnar, typed and open: Spark, Trino, DuckDB and BigQuery all read it. A Hive-style layout («city=SF/») lets every engine skip folders it does not need.',
         concepts: [1],
         console:
@@ -475,6 +529,9 @@ gcloud storage ls -r gs://$BUCKET/lake/`,
       },
       {
         title: 'Read the files with another engine',
+        see: `The object’s details page shows its size, type and creation time. The file has no «city» column: that value lives only in the folder name.`,
+        console: `1. In **Cloud Storage**, open «lake/city=SF/», tick the Parquet file and click **Download**. Any Parquet viewer, Spark or DuckDB on your laptop can open it.
+2. Or click **Activate Cloud Shell** and run the commands from the **Cloud Shell** tab, which read it with Python.`,
         body: 'Portability is real only if another engine reads the files. Cloud Shell has Python; «pyarrow» reads the Parquet file with no BigQuery involved.',
         concepts: [1],
         shell: `gcloud storage cp "gs://$BUCKET/lake/city=SF/*.parquet" ./sf/
@@ -485,6 +542,10 @@ python3 -m venv ~/lab13-venv && ~/lab13-venv/bin/pip install --quiet pyarrow
       },
       {
         title: 'Query the lake in place from BigQuery',
+        see: `«lab13.trips_lake» > **Details** shows **Table type: External**, the source URIs and the partition column «city». **Preview** is not available for external tables, so query it.`,
+        console: `1. Open **BigQuery** > **Studio** and click **+**.
+2. Paste the SQL below, replace «YOUR_BUCKET» twice, and click **Run**.
+3. Console alternative to the DDL: on «lab13», click **Create table**, source **Google Cloud Storage**, path «YOUR_BUCKET/lake/*», format **Parquet**, tick **Source data partitioning** with prefix «gs://YOUR_BUCKET/lake», table type **External table**, name «trips_lake».`,
         body: 'An external table reads the files where they are. BigQuery turns «city=…» into a column and prunes folders when you filter on it.',
         concepts: [1],
         sql: `-- Replace YOUR_BUCKET twice.
@@ -504,6 +565,7 @@ ORDER BY city;`,
       },
       {
         title: 'Describe and label the table, then find it',
+        see: `«lab13.trips» > **Details** shows the description and the label. The search result in **Dataplex Universal Catalog** shows the same, plus the schema with the column description of «fare».`,
         body: 'Data that no one can find is not reused. Descriptions and labels flow into Dataplex Universal Catalog, which indexes BigQuery and Cloud Storage assets for search.',
         concepts: [2],
         console: `1. Open «lab13.trips» > **Details** > **Edit details**. Add the description «Taxi trips, one row per trip. Owner: mobility team.» and the label «domain: mobility».
@@ -517,6 +579,7 @@ bq show --format=prettyjson lab13.trips | jq '{description, labels}'`,
       },
       {
         title: 'Optional: profile the table',
+        see: `«lab13.trips» > **Data profile** shows each column’s null ratio, distinct values, min, max and top values.`,
         body: 'A data profile scan computes null ratios, distinct counts, ranges and top values per column. It is the quick health check before anyone builds on a table. This step costs about one cent.',
         concepts: [2],
         console:
@@ -528,6 +591,7 @@ bq show --format=prettyjson lab13.trips | jq '{description, labels}'`,
     cleanup: [
       {
         title: 'Delete the profile scan',
+        see: `The table’s **Data profile** tab no longer shows results, and **Dataplex Universal Catalog** > **Profile** lists no lab13 scan.`,
         body: 'Skip this if you did not create one.',
         concepts: [],
         console:
@@ -538,6 +602,7 @@ bq show --format=prettyjson lab13.trips | jq '{description, labels}'`,
       },
       {
         title: 'Delete the dataset, the bucket and the local files',
+        see: `Neither «lab13» in BigQuery nor «PROJECT_ID-lab13» in Cloud Storage is listed.`,
         body: 'The external table is only metadata; the bucket holds the bytes, so delete both.',
         concepts: [],
         console:
@@ -552,6 +617,9 @@ gcloud storage ls | grep lab13 || echo "No lab13 bucket left"`,
   },
   {
     station: 'data-migrations',
+    verifyConsole: `1. **Storage Transfer Service** > **Transfer jobs**: no lab job.
+2. **Cloud Storage** > **Buckets**: no «PROJECT_ID-lab14-src» and no «PROJECT_ID-lab14-dst».
+3. **BigQuery** > **Studio**: the Explorer lists no «lab14».`,
     title: 'Move files and prove nothing was lost',
     scenario:
       'An on-premises export has landed in a source bucket. You must copy it to the new platform two ways, load it, and prove to an auditor that the target holds exactly the same rows. Then you plan the Hadoop part of the move.',
@@ -572,6 +640,10 @@ gcloud storage ls | grep lab13 || echo "No lab13 bucket left"`,
     steps: [
       {
         title: 'Make an "on-premises export" in the source bucket',
+        see: `Open «PROJECT_ID-lab14-src» > «export/»: 50 objects named «part-01.csv» to «part-50.csv».`,
+        console: `1. Open **Cloud Storage** > **Buckets** > **Create** twice: «PROJECT_ID-lab14-src» and «PROJECT_ID-lab14-dst», both **Region** «us-central1».
+2. Writing 50 files by hand is slow, so make them in Cloud Shell: click **Activate Cloud Shell** and run the commands from the **Cloud Shell** tab (the bucket lines are harmless if the buckets exist).
+3. Or upload any folder of small CSV files from your laptop with **Upload folder**, into «export/».`,
         body: 'Cloud Shell writes 50 CSV files of 1,000 rows each, then uploads them. This stands in for a nightly export from a legacy system.',
         concepts: [1],
         shell: `gcloud storage buckets create gs://$SRC --location=us-central1 --uniform-bucket-level-access
@@ -586,6 +658,9 @@ gcloud storage ls gs://$SRC/export/ | wc -l`,
       },
       {
         title: 'Copy small data with rsync',
+        see: `«PROJECT_ID-lab14-dst» > «rsync/» holds 50 objects with the same sizes as the source.`,
+        console: `1. The console copies objects one selection at a time: open «PROJECT_ID-lab14-src» > «export/», tick all objects, click the **More actions** menu > **Copy**, and choose «PROJECT_ID-lab14-dst/rsync/».
+2. That is fine for a few files. For a repeatable, incremental copy, use the **Cloud Shell** tab: rsync copies only what changed.`,
         body: 'For gigabytes from a machine you control, «gcloud storage rsync» is enough: it copies only what changed, so a second run is cheap and safe to repeat.',
         concepts: [1],
         shell: `gcloud storage rsync --recursive gs://$SRC/export gs://$DST/rsync
@@ -594,6 +669,7 @@ gcloud storage rsync --recursive gs://$SRC/export gs://$DST/rsync`,
       },
       {
         title: 'Copy with Storage Transfer Service',
+        see: `**Storage Transfer Service** > **Transfer jobs** > your job > **Run history**: one run, status **Succeeded**, 50 objects and the bytes copied. Open the run to see per-object logs.`,
         body: 'For terabytes, for a schedule, or from another cloud, use Storage Transfer Service. It runs in Google’s infrastructure, retries, checks integrity and logs every object. Over about 20 TB from a data centre with a slow link, the answer is Transfer Appliance.',
         concepts: [1],
         console: `1. Open **Storage Transfer Service** > **Create transfer job**.
@@ -610,6 +686,11 @@ gcloud transfer jobs list --format="table(name, status)"
       },
       {
         title: 'Load both copies and prove they match',
+        see: `Both tables’ **Details** tabs show 50,000 rows. The query result shows two rows with equal counts and equal fingerprints.`,
+        console: `1. In BigQuery, create the dataset «lab14» in «us-central1».
+2. On «lab14», click **Create table**: source **Google Cloud Storage**, URI «PROJECT_ID-lab14-src/export/*.csv», format **CSV**, table «from_src», schema as text «part:STRING,n:INT64,v:INT64». Create.
+3. Repeat with URI «PROJECT_ID-lab14-dst/sts/*.csv» and table «from_sts».
+4. Paste the SQL below in a new query tab and click **Run**.`,
         body: 'Matching row counts are not enough: a migration can keep the count and corrupt values. Compare a fingerprint of every row as well. This is what the Data Validation Tool automates at scale.',
         concepts: [2],
         shell: `bq mk --dataset --location=us-central1 lab14
@@ -626,6 +707,7 @@ FROM lab14.from_sts AS t;`,
       },
       {
         title: 'Translate a Hive query and plan the Hadoop move',
+        see: `The translated GoogleSQL appears in the pane next to your HiveQL. Click **Run** on it to prove it works on «lab14.from_src».`,
         body: 'Most Hadoop moves go in two stages: first lift the jobs to Dataproc with the data in Cloud Storage («gs://» instead of «hdfs://»), then modernise the SQL to BigQuery. The BigQuery translation service converts dialects such as HiveQL, and costs nothing to try.',
         concepts: [2],
         console: `1. In BigQuery Studio, open a new query tab. Click **More** > **Enable SQL translation**.
@@ -639,6 +721,7 @@ FROM lab14.from_sts AS t;`,
     cleanup: [
       {
         title: 'Delete the transfer job',
+        see: `**Storage Transfer Service** > **Transfer jobs** lists no lab job.`,
         body: 'A finished one-time job costs nothing, but a forgotten job can run again if someone edits its schedule.',
         concepts: [],
         console: '1. Open **Storage Transfer Service**, select the lab job and click **Delete**.',
@@ -648,6 +731,7 @@ FROM lab14.from_sts AS t;`,
       },
       {
         title: 'Delete the dataset, the buckets and the local files',
+        see: `No «lab14» dataset and no «lab14» bucket are listed.`,
         body: 'Delete both buckets and everything in them.',
         concepts: [],
         console:
