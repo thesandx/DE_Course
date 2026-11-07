@@ -13,7 +13,7 @@
 
 import { COMPANIES, DIFFICULTY_LABELS, KIND_LABELS, PROBLEMS, TRACKS } from '@/lib/course/catalog';
 import type { CourseSlug } from '@/lib/course/courses';
-import { LINES } from '@/lib/course/gcp/catalog';
+import { getLab, LINES } from '@/lib/course/gcp/catalog';
 import { hueStyle } from '@/lib/course/hue';
 import { type Block, parseMarkdown, stripInline } from '@/lib/course/markdown';
 import { sectionAnchor } from '@/lib/course/search';
@@ -193,6 +193,26 @@ function gcpIndex(): SearchEntry[] {
           detail: `Concept ${index + 1} of station ${station.code}`,
           keywords: termsOf(concept.body),
         });
+      });
+    }
+    for (const station of line.stations) {
+      const lab = getLab(station.slug);
+      if (lab === undefined) continue;
+      entries.push({
+        id: `lab:${station.slug}`,
+        kind: 'lab',
+        title: `Lab ${station.code}: ${lab.title}`,
+        context: `${station.code} ${station.title}`,
+        href: `/gcp/labs/${station.slug}`,
+        dot,
+        detail: `Hands-on lab · about ${lab.minutes} minutes`,
+        keywords: [
+          'lab',
+          'hands-on',
+          'console',
+          ...lab.steps.map((step) => step.title),
+          ...termsOf(...lab.steps.map((step) => step.body)),
+        ],
       });
     }
     entries.push({

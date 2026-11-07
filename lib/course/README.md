@@ -83,7 +83,7 @@ Each course has a search page at `/<slug>/search`. The top bar opens it: a searc
 
 The index is built on the server from the catalogue and sent to the page. The page filters it in the browser, so results change on each keystroke. An entry holds the title, where the item sits, and the terms inside it: headings, **bold** terms, «code» and table headers. The full text of a lesson does not ship. So a term that a learner will search for must be marked in the text, as a heading, bold or code.
 
-A `##` section of a DE lesson is a topic entry. It opens the lesson at `#section-<n>`, which `Prose sectioned` sets. A GCP concept opens its station at `#concept-<n>`.
+A `##` section of a DE lesson is a topic entry. It opens the lesson at `#section-<n>`, which `Prose sectioned` sets. A GCP concept opens its station at `#concept-<n>`, and a GCP lab opens at `/gcp/labs/<station>`.
 
 ## Progress and XP
 

@@ -8,7 +8,7 @@ import { StationChecks } from '@/components/gcp/StationChecks';
 import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/layout/Icon';
 import { buttonStyles } from '@/components/ui/Button';
-import { getStation, stationId, stationXp } from '@/lib/course/gcp/catalog';
+import { getLab, getStation, LAB_XP, labId, stationId, stationXp } from '@/lib/course/gcp/catalog';
 import { hueStyle } from '@/lib/course/hue';
 import { cn } from '@/lib/utils';
 import { requireGcpLearner } from '@/services/learner.service';
@@ -47,6 +47,8 @@ export default async function GcpStationPage({ params }: Props) {
   const previous = line.stations[index - 1];
   const next = line.stations[index + 1];
   const hue = hueStyle(line.hue);
+  const lab = getLab(station.slug);
+  const labDone = progress.done[labId(station.slug)] !== undefined;
   const stationHref = (slug: string): string => `/gcp/lines/${lineSlug}/${slug}`;
 
   return (
@@ -153,6 +155,42 @@ export default async function GcpStationPage({ params }: Props) {
                   }
                 : {})}
             />
+
+            {lab !== undefined && (
+              <section
+                aria-labelledby="lab-heading"
+                className={cn(
+                  'rounded-card flex flex-col gap-3 border p-5 sm:p-6',
+                  done
+                    ? 'bg-night-soft text-on-night border-night-line'
+                    : 'bg-sunken border-line border-dashed',
+                )}
+              >
+                <p className={cn('eyebrow', done ? 'text-gold' : 'text-ink-faint')}>
+                  Hands-on lab · {done ? (labDone ? 'Done' : 'Open') : 'Opens when you finish'}
+                </p>
+                <h2 id="lab-heading" className="text-title">
+                  {lab.title}
+                </h2>
+                <p className={cn('text-small', done ? 'text-on-night-soft' : 'text-ink-soft')}>
+                  {`Do this station for real in the Google Cloud console and Cloud Shell, with sample data and a cleanup at the end. About ${lab.minutes} minutes.`}
+                </p>
+                <Link
+                  href={`/gcp/labs/${station.slug}`}
+                  className={cn(
+                    buttonStyles({ variant: done ? 'primary' : 'secondary' }),
+                    'self-start',
+                  )}
+                >
+                  {done
+                    ? labDone
+                      ? 'Open the lab again'
+                      : `Start the lab · +${LAB_XP} XP`
+                    : 'Preview the lab'}
+                  <Icon name="arrow-right" className="size-4" />
+                </Link>
+              </section>
+            )}
 
             <nav aria-label="Next station">
               <Link

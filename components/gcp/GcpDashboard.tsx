@@ -292,7 +292,7 @@ export function GcpDashboard({ name, progress, summary, today }: GcpDashboardPro
             Drills
           </h2>
         </div>
-        <ul className="grid gap-4 md:grid-cols-3">
+        <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[
             {
               href: '/gcp/practice/flashcards',
@@ -303,6 +303,11 @@ export function GcpDashboard({ name, progress, summary, today }: GcpDashboardPro
               href: '/gcp/practice/sprint',
               title: 'Service Sprint',
               detail: '60 seconds: match each need to its service',
+            },
+            {
+              href: '/gcp/labs',
+              title: 'Hands-on labs',
+              detail: `${summary.labsDone} of ${summary.labsTotal} done · real GCP, with cleanup`,
             },
             {
               href: '/gcp/practice/mock',

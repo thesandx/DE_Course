@@ -1,7 +1,14 @@
 import Link from 'next/link';
 
 import { Icon } from '@/components/layout/Icon';
-import { BOSS_XP, bossId, lineProgress, stationId, stationXp } from '@/lib/course/gcp/catalog';
+import {
+  BOSS_XP,
+  bossId,
+  labId,
+  lineProgress,
+  stationId,
+  stationXp,
+} from '@/lib/course/gcp/catalog';
 import { hueStyle } from '@/lib/course/hue';
 import type { DoneMap } from '@/lib/course/progress';
 import { cn } from '@/lib/utils';
@@ -68,6 +75,7 @@ export function MetroLine({ line, done, nextSlug }: MetroLineProps) {
                 <span className="text-body font-semibold">{station.title}</span>
                 <span className="text-small text-ink-soft">
                   {station.concepts.length} concepts · {station.keyPoints.length} checkpoints
+                  {done[labId(station.slug)] !== undefined ? ' · lab done' : ''}
                 </span>
               </span>
               <span
