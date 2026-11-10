@@ -44,6 +44,7 @@ async function loadEnv(overrides: Record<string, string | undefined>): Promise<E
     'FIRESTORE_EMULATOR_HOST',
     'HEALTH_DEEP_CHECKS_ENABLED',
     'LOG_LEVEL',
+    'OPENROUTER_API_KEY',
   ]) {
     delete process.env[key];
   }
@@ -191,5 +192,27 @@ describe('value validation', () => {
     await expect(
       loadEnv({ NODE_ENV: 'development', HEALTH_DEEP_CHECKS_ENABLED: 'maybe' }),
     ).rejects.toThrow(/HEALTH_DEEP_CHECKS_ENABLED/);
+  });
+
+  it('turns the assistant off when no OpenRouter key is set', async () => {
+    const env = await loadEnv({ NODE_ENV: 'development' });
+    expect(env.openrouterApiKey).toBe('');
+    expect(env.assistantEnabled).toBe(false);
+  });
+
+  it('turns the assistant on with a valid OpenRouter key, trimming a pasted newline', async () => {
+    const key = `sk-or-v1-${'a1'.repeat(32)}`;
+    const env = await loadEnv({ NODE_ENV: 'development', OPENROUTER_API_KEY: `${key}\n` });
+    expect(env.openrouterApiKey).toBe(key);
+    expect(env.assistantEnabled).toBe(true);
+  });
+
+  it('rejects a value that is not an OpenRouter key', async () => {
+    await expect(
+      loadEnv({ NODE_ENV: 'development', OPENROUTER_API_KEY: 'AIzaNotAnOpenRouterKey' }),
+    ).rejects.toThrow(/OPENROUTER_API_KEY/);
+    await expect(
+      loadEnv({ NODE_ENV: 'development', OPENROUTER_API_KEY: 'sk-or-short' }),
+    ).rejects.not.toThrow(/sk-or-short/);
   });
 });

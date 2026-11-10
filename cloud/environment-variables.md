@@ -172,6 +172,33 @@ Disable before destroying — disabling is reversible, destroying is not.
 
 ---
 
+## AI doubt assistant (OpenRouter)
+
+The AI helper ("Pip") calls OpenRouter from the server. The key is a secret: it spends money. It reaches Cloud Run from Secret Manager as `OPENROUTER_API_KEY`. The browser never sees it. See [ADR-0009](../docs/adr/0009-answer-learner-doubts-through-openrouter.md).
+
+Do these steps one time. Use the runtime service account, not the deployer.
+
+```bash
+export PROJECT_ID=<your-gcp-project-id>
+export RUNTIME_SA=<slug>-runtime@$PROJECT_ID.iam.gserviceaccount.com
+
+# Pipe the key. Do not pass it as an argument, where it lands in shell history.
+printf '%s' 'sk-or-v1-...' \
+  | gcloud secrets create openrouter-api-key --data-file=- --project "$PROJECT_ID"
+
+gcloud secrets add-iam-policy-binding openrouter-api-key --project "$PROJECT_ID" \
+  --member="serviceAccount:$RUNTIME_SA" --role=roles/secretmanager.secretAccessor
+
+# Tells deploy.yml to mount the secret. The next deploy turns the helper on.
+gh variable set OPENROUTER_SECRET --body openrouter-api-key
+```
+
+To change the key, add a new version and deploy again (see "Rotating" above). Set a credit limit on the key in the OpenRouter dashboard. That limit is the hard cap on spend. The app also limits each learner to 30 questions in 10 minutes.
+
+Locally, put `OPENROUTER_API_KEY=sk-or-v1-...` in `.env.local`. Git ignores that file.
+
+---
+
 ## GitHub Actions configuration
 
 | Kind         | Use for                            | Visible in logs | Set with               |
@@ -198,6 +225,7 @@ Current inventory:
 | `RUNTIME_SERVICE_ACCOUNT`    | variable | no       | Identity the revision runs as (default `<slug>-runtime@<project>`)             |
 | `FIRESTORE_DATABASE_ID`      | variable | no       | Override only for an existing database (default `<slug>-db`)                   |
 | `GCS_BUCKET`                 | variable | no       | Override only for an existing bucket (default `<project>-<slug>-media`)        |
+| `OPENROUTER_SECRET`          | variable | no       | Secret Manager secret that holds the OpenRouter key. Unset: the helper is off  |
 | `HEALTH_DEEP_CHECKS_ENABLED` | variable | no       | Enables `/api/health?deep=1` (default `false`)                                 |
 | `DEPLOYED_AT`                | computed | no       | UTC deploy time the workflow injects; `/api/health` shows it in IST            |
 

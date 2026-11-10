@@ -65,6 +65,13 @@ const FIREBASE_AUTH_DOMAIN_PATTERN = /^[a-z0-9][a-z0-9.-]{1,251}[a-z0-9]$/;
 /** Firebase web app ids look like `1:1234567890:web:0a1b2c3d4e5f`. */
 const FIREBASE_APP_ID_PATTERN = /^\d+:\d+:web:[0-9a-z]+$/;
 
+/**
+ * OpenRouter API keys look like `sk-or-v1-<64 hex>`. The check is loose on the
+ * tail on purpose: it catches a pasted wrong value (a Firebase key, a quoted
+ * string, a newline) without breaking when OpenRouter lengthens the key.
+ */
+const OPENROUTER_KEY_PATTERN = /^sk-or-[A-Za-z0-9_-]{20,200}$/;
+
 class EnvValidationError extends Error {
   constructor(issues: readonly string[]) {
     super(
@@ -239,6 +246,29 @@ const firebaseAppId = pattern(
  * It is fixed at BUILD time, because these are NEXT_PUBLIC_ values. Adding
  * them to a running Cloud Run service enables nothing until you rebuild.
  */
+/**
+ * The OpenRouter key for the AI doubt assistant. A SECRET: it spends money.
+ * It comes from Secret Manager at runtime (`--set-secrets` in deploy.yml), or
+ * from `.env.local` on a laptop. Never `NEXT_PUBLIC_`, never a build arg.
+ * Empty means the assistant is off: the panel says so and the route answers 503.
+ */
+function secretKey(name: string, value: string | undefined, regex: RegExp): string {
+  const resolved = optional(value, '').trim();
+  if (resolved === '') return '';
+  if (!regex.test(resolved)) {
+    // Never echo the value: it is a secret, and this message reaches the logs.
+    issues.push(`${name} must be an OpenRouter API key (starts with "sk-or-")`);
+    return '';
+  }
+  return resolved;
+}
+
+const openrouterApiKey = secretKey(
+  'OPENROUTER_API_KEY',
+  process.env.OPENROUTER_API_KEY,
+  OPENROUTER_KEY_PATTERN,
+);
+
 const authEnabled =
   firebaseApiKey !== '' &&
   firebaseAuthDomain !== '' &&
@@ -362,6 +392,15 @@ export const env = {
    * health data; leave it off for most.
    */
   authCheckRevoked: boolean('AUTH_CHECK_REVOKED', process.env.AUTH_CHECK_REVOKED, false),
+
+  /**
+   * OpenRouter API key for the AI doubt assistant. Server-only and secret.
+   * Never pass it to a Client Component; pass `assistantEnabled` instead.
+   */
+  openrouterApiKey,
+
+  /** True when the AI doubt assistant can answer. Safe to pass to the client. */
+  assistantEnabled: openrouterApiKey !== '',
 
   /**
    * UTC time of the last deploy (ISO-8601), injected by the deploy workflow.

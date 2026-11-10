@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { DoubtAssistant } from '@/components/assistant/DoubtAssistant';
 import { copyrightLine } from '@/lib/contact';
 import { PROBLEMS, TRACKS } from '@/lib/course/catalog';
 import { type CourseSlug, getCourse } from '@/lib/course/courses';
@@ -336,6 +337,8 @@ export function AppShell({
           </div>
         </footer>
       </div>
+
+      <DoubtAssistant enabled={env.assistantEnabled} />
     </div>
   );
 }
