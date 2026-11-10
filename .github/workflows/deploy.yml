@@ -262,6 +262,11 @@ jobs:
           # runs as the default compute service account — Editor on the whole
           # project, the opposite of the least-privilege account bootstrap
           # created. Keep this in flags, where gcloud actually reads it.
+          #
+          # The last flag mounts the OpenRouter key for the AI doubt assistant
+          # from Secret Manager, and only when the OPENROUTER_SECRET variable
+          # names the secret. Unset, the flag is empty and the assistant stays
+          # off, so a project without the secret still deploys.
           flags: >-
             --service-account=${{ vars.RUNTIME_SERVICE_ACCOUNT || format('{0}-runtime@{1}.iam.gserviceaccount.com', env.APP_SLUG, env.GCP_PROJECT_ID) }}
             --allow-unauthenticated
@@ -275,6 +280,7 @@ jobs:
             --execution-environment=gen2
             --cpu-boost
             --revision-suffix=${{ steps.meta.outputs.revision_suffix }}
+            ${{ vars.OPENROUTER_SECRET != '' && format('--set-secrets=OPENROUTER_API_KEY={0}:latest', vars.OPENROUTER_SECRET) || '' }}
 
       - name: Verify the deployment serves traffic
         # The deploy step succeeding only means Cloud Run accepted the revision.
