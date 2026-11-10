@@ -1,3 +1,4 @@
+import { pandasLessons, pandasProblems } from '@/lib/course/tracks/python-pandas';
 import type { Problem, Track } from '@/types/course';
 
 export const track: Track = {
@@ -791,6 +792,7 @@ export const track: Track = {
         },
       ],
     },
+    ...pandasLessons,
   ],
 };
 
@@ -1545,4 +1547,5 @@ export const problems: Problem[] = [
       'The cursor expires after 10 minutes and a crash lasted an hour. What happens, and how do you recover?',
     ],
   },
+  ...pandasProblems,
 ];

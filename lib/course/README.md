@@ -12,26 +12,26 @@ A learner joins each course separately. Each course keeps its own tracker in `le
 
 ## Files
 
-| File                                                 | What it holds                                                                   |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `tracks/<slug>.ts`                                   | One track. It exports `track` (the lessons) and `problems`.                     |
-| `tracks/spark-pyspark.ts`, `tracks/company-loops.ts` | More lessons and problems that a track module spreads into its own lists.       |
-| `catalog.ts`                                         | The study order, the lookups, XP per item, track progress and loop readiness.   |
-| `companies.ts`                                       | Every loop guide, in page order, and the Uber and Google guides.                |
-| `companies-big-tech.ts`                              | The Amazon, Microsoft and Meta loop guides.                                     |
-| `companies-india.ts`                                 | The Flipkart, Walmart Global Tech, PhonePe and Swiggy loop guides.              |
-| `company-meta.ts`                                    | The name, card surface and dial colour of each company. No course content.      |
-| `markdown.ts`                                        | The parser for the prose dialect below.                                         |
-| `progress.ts`                                        | Item ids, XP values, levels, streaks, the activity grid and the learner record. |
-| `courses.ts`                                         | The course list: slugs, names, hues and links. Safe for client components.      |
-| `rules.ts`                                           | The item check and the XP table of each course.                                 |
-| `hub.ts`                                             | The numbers on each course card of the hub.                                     |
-| `shell-stats.ts`                                     | The streak and XP that the app shell shows for the current course.              |
-| `search-index.ts`                                    | The search index of each course: its entries, examples and browse list.         |
-| `search.ts`                                          | Search matching and ranking. Safe for client components.                        |
-| `gcp/`                                               | The GCP course. See [`gcp/README.md`](./gcp/README.md).                         |
-| `story-bank.ts`                                      | The schema of a behavioral story, shared by the API route and the editor.       |
-| `story-bank-themes.ts`                               | The story themes, the STAR fields and the strength checks. No zod.              |
+| File                                                                            | What it holds                                                                   |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `tracks/<slug>.ts`                                                              | One track. It exports `track` (the lessons) and `problems`.                     |
+| `tracks/spark-pyspark.ts`, `tracks/python-pandas.ts`, `tracks/company-loops.ts` | More lessons and problems that a track module spreads into its own lists.       |
+| `catalog.ts`                                                                    | The study order, the lookups, XP per item, track progress and loop readiness.   |
+| `companies.ts`                                                                  | Every loop guide, in page order, and the Uber and Google guides.                |
+| `companies-big-tech.ts`                                                         | The Amazon, Microsoft and Meta loop guides.                                     |
+| `companies-india.ts`                                                            | The Flipkart, Walmart Global Tech, PhonePe and Swiggy loop guides.              |
+| `company-meta.ts`                                                               | The name, card surface and dial colour of each company. No course content.      |
+| `markdown.ts`                                                                   | The parser for the prose dialect below.                                         |
+| `progress.ts`                                                                   | Item ids, XP values, levels, streaks, the activity grid and the learner record. |
+| `courses.ts`                                                                    | The course list: slugs, names, hues and links. Safe for client components.      |
+| `rules.ts`                                                                      | The item check and the XP table of each course.                                 |
+| `hub.ts`                                                                        | The numbers on each course card of the hub.                                     |
+| `shell-stats.ts`                                                                | The streak and XP that the app shell shows for the current course.              |
+| `search-index.ts`                                                               | The search index of each course: its entries, examples and browse list.         |
+| `search.ts`                                                                     | Search matching and ranking. Safe for client components.                        |
+| `gcp/`                                                                          | The GCP course. See [`gcp/README.md`](./gcp/README.md).                         |
+| `story-bank.ts`                                                                 | The schema of a behavioral story, shared by the API route and the editor.       |
+| `story-bank-themes.ts`                                                          | The story themes, the STAR fields and the strength checks. No zod.              |
 
 The types are in [`types/course.ts`](../../types/course.ts).
 
