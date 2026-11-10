@@ -16,6 +16,7 @@ import {
   trackProgress,
   TRACKS,
 } from '@/lib/course/catalog';
+import { COMPANY_META } from '@/lib/course/company-meta';
 import { problemId, type ProgressRecord } from '@/lib/course/progress';
 import { agoLabel, CALENDAR_WEEKS, type LearnerSummary, WEEKLY_GOAL } from '@/lib/course/summary';
 import { trackStyle } from '@/lib/course/track-style';
@@ -43,8 +44,6 @@ const DIFFICULTY_BAR: Record<Difficulty, string> = {
   medium: 'bg-medium-bar',
   hard: 'bg-hard-bar',
 };
-
-const COMPANY_TONE = { uber: 'easy', google: 'blue' } as const;
 
 function plural(count: number, one: string, many = `${one}s`): string {
   return `${count} ${count === 1 ? one : many}`;
@@ -363,7 +362,7 @@ export function Dashboard({ name, progress, summary, today }: DashboardProps) {
             </p>
           </div>
         </div>
-        <ul className="grid gap-4 md:grid-cols-2">
+        <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {COMPANIES.map((company) => {
             const ratio = readiness(company, progress.done);
             const asked = PROBLEMS.filter((problem) =>
@@ -379,7 +378,7 @@ export function Dashboard({ name, progress, summary, today }: DashboardProps) {
                   label={`${company.name} readiness`}
                   size={68}
                   thickness={7}
-                  tone={COMPANY_TONE[company.slug]}
+                  tone={COMPANY_META[company.slug].ring}
                   surface="night"
                   shape="wedge"
                 >

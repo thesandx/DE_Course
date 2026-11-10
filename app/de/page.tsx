@@ -17,7 +17,7 @@ import { requireDeLearner } from '@/services/learner.service';
 export const metadata: Metadata = {
   title: 'Senior Data Engineering',
   description:
-    'Lessons, interview problems and loop guides for senior data engineer interviews at Uber and Google.',
+    'Lessons, interview problems and loop guides for senior data engineer interviews at Uber, Google, Amazon, Microsoft and Indian product companies.',
 };
 
 export const dynamic = 'force-dynamic';

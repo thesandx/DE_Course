@@ -1358,7 +1358,7 @@ export const problems: Problem[] = [
     track: 'snowflake-databricks',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'microsoft'],
     prompt: `
       Trip files land in «s3://acme-raw/trips/» and a Snowpipe with auto-ingest loads them into
       «raw.trips». After an upstream team reran a failed export, the daily trip count doubled for
@@ -1418,7 +1418,7 @@ export const problems: Problem[] = [
     track: 'snowflake-databricks',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'microsoft'],
     prompt: `
       An operations dashboard filters a 60 TB «analytics.trips» table by «city_id» and the last 7
       days. It runs on a Medium warehouse and takes about 4 minutes. The team wants to move it to
@@ -1486,7 +1486,7 @@ export const problems: Problem[] = [
     track: 'snowflake-databricks',
     kind: 'sql',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'microsoft'],
     prompt: `
       «raw.orders» has one VARIANT column «payload» per Eats order:
 
@@ -1564,7 +1564,7 @@ export const problems: Problem[] = [
     track: 'snowflake-databricks',
     kind: 'concept',
     difficulty: 'easy',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'microsoft'],
     prompt: `
       At 09:12 an engineer ran «UPDATE analytics.drivers SET status = 'inactive';» in production.
       It was meant for one driver. Dashboards now show zero active drivers. The table is a
@@ -1621,7 +1621,7 @@ export const problems: Problem[] = [
     track: 'snowflake-databricks',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'microsoft'],
     prompt: `
       Finance reports that Snowflake credits went from about 40,000 to 80,000 a month. Nobody
       launched a big new project. You own the platform. How do you find the cause, fix it, and
@@ -1679,7 +1679,7 @@ export const problems: Problem[] = [
     track: 'snowflake-databricks',
     kind: 'design',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'microsoft'],
     prompt: `
       A CDC tool writes every change of the payments database into «raw.trips_cdc» (one row per
       change, with an «op» column of I, U or D and a «lsn» sequence). Analysts want
@@ -1753,7 +1753,7 @@ export const problems: Problem[] = [
     track: 'snowflake-databricks',
     kind: 'design',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'microsoft'],
     prompt: `
       Mobile app events land in S3 as small gzipped JSON files: about 2 million files and 1.5 TB
       a day. Producers add fields every few weeks. Design the ingestion into a bronze and a silver
@@ -1811,7 +1811,7 @@ export const problems: Problem[] = [
     track: 'snowflake-databricks',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'microsoft'],
     prompt: `
       A company runs 30 Databricks workspaces on the legacy Hive metastore. Rider emails and phone
       numbers sit in many tables. Analysts in each country may see only their country's riders,
@@ -1878,7 +1878,7 @@ export const problems: Problem[] = [
     track: 'snowflake-databricks',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'microsoft'],
     prompt: `
       A 300-person delivery start-up is moving off Postgres replicas. It has 15 analysts who
       write SQL, 4 data scientists building ETA models in Python, Kafka for app events, and
@@ -1933,7 +1933,7 @@ export const problems: Problem[] = [
     track: 'snowflake-databricks',
     kind: 'design',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'microsoft'],
     prompt: `
       A Databricks pipeline ingests partner order files with Auto Loader into bronze, appends
       bronze to silver with a plain «INSERT INTO silver SELECT * FROM bronze_new», and rebuilds a

@@ -627,7 +627,7 @@ export const problems: Problem[] = [
     track: 'architecture',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'flipkart', 'walmart'],
     prompt: `
       A payments team wants two things from the same events: a fraud operations dashboard that is
       fresh within 30 seconds, and daily settlement reports that must match the bank to the cent.
@@ -681,7 +681,7 @@ export const problems: Problem[] = [
     track: 'architecture',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'flipkart', 'walmart'],
     prompt: `
       A lakehouse has bronze, silver and gold folders. Bronze parses JSON with a strict schema and
       drops rows that fail. Silver is a copy of bronze with renamed columns. Gold tables join raw
@@ -735,7 +735,7 @@ export const problems: Problem[] = [
     track: 'architecture',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['uber'],
+    companies: ['uber', 'flipkart', 'walmart'],
     prompt: `
       Design the ledger for a rider and driver wallet. 50 million wallets, about 3,000 balance
       changes per second at peak. The app must show the current balance instantly. Finance needs
@@ -794,7 +794,7 @@ export const problems: Problem[] = [
     track: 'architecture',
     kind: 'design',
     difficulty: 'medium',
-    companies: ['google', 'uber'],
+    companies: ['google', 'uber', 'flipkart', 'walmart'],
     prompt: `
       A model in the warehouse scores 8 million business leads nightly. Sales wants the score and
       three usage fields on each lead in the CRM by 7 a.m. The CRM allows about 150,000 API calls
@@ -849,7 +849,7 @@ export const problems: Problem[] = [
     track: 'architecture',
     kind: 'concept',
     difficulty: 'hard',
-    companies: ['google', 'uber'],
+    companies: ['google', 'uber', 'flipkart', 'walmart'],
     prompt: `
       Your company has 600 engineers, 12 product domains and a central data team of 25. The
       backlog of data requests is four months long, and the central team is on call for
@@ -908,7 +908,7 @@ export const problems: Problem[] = [
     track: 'architecture',
     kind: 'concept',
     difficulty: 'easy',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'flipkart', 'walmart'],
     prompt: `
       Product teams send four requests. For each, choose batch, micro-batch or streaming, and ETL,
       ELT or EtLT, in one or two sentences:

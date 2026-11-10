@@ -52,13 +52,13 @@ export const COURSES: readonly CourseInfo[] = [
     short: 'DE',
     tagline: 'Senior and staff DE interview loops',
     summary:
-      'Databases, SQL, Spark, dbt, streaming, Snowflake, Databricks, cloud, AI, modeling and system design, taught for the interview. Lessons, 170 interview problems and loop guides for Uber and Google.',
+      'Databases, SQL, coding patterns, Spark, dbt, streaming, Snowflake, Databricks, cloud, AI, modeling and system design, taught for the interview. Lessons, 222 interview problems and loop guides for nine companies.',
     status: 'open',
     hue: 2,
     href: '/de',
     learn: { href: '/de/tracks', label: 'Tracks' },
     practice: { href: '/de/problems', label: 'Problems' },
-    facts: ['18 tracks', '133 lessons', '170 problems'],
+    facts: ['19 tracks', '150 lessons', '222 problems'],
   },
   {
     slug: 'gcp',

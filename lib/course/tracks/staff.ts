@@ -441,7 +441,7 @@ export const problems: Problem[] = [
     track: 'staff',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'microsoft'],
     prompt: `
       You join as the first staff engineer in a 60-person data org. Today: a nightly Hive and
       Airflow batch stack with 24-hour freshness, three product teams running their own Kafka
@@ -512,7 +512,7 @@ export const problems: Problem[] = [
     track: 'staff',
     kind: 'concept',
     difficulty: 'hard',
-    companies: ['google', 'uber'],
+    companies: ['google', 'uber', 'amazon', 'microsoft'],
     prompt: `
       A senior engineer asks you to review this design summary before it goes to the
       architecture review:
@@ -585,7 +585,7 @@ export const problems: Problem[] = [
     track: 'staff',
     kind: 'concept',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'microsoft'],
     prompt: `
       The VP of Data tells you: "Executives no longer trust our dashboards. Fix it." There is
       no more detail. You have one quarter and two engineers to start. Walk through how you
@@ -648,7 +648,7 @@ export const problems: Problem[] = [
     track: 'staff',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'microsoft'],
     prompt: `
       Your company built its own job scheduler eight years ago. It runs 6,000 jobs. Two of
       its original authors left, and a team of four maintains it. Leadership asks whether to
@@ -704,7 +704,7 @@ export const problems: Problem[] = [
     track: 'staff',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'microsoft'],
     prompt: `
       The old warehouse was meant to be turned off a year ago. The new lakehouse is live, but
       40 teams still read from the old warehouse, which costs $3M a year and is a security
@@ -764,7 +764,7 @@ export const problems: Problem[] = [
     track: 'staff',
     kind: 'behavioral',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'microsoft'],
     prompt: `
       "Tell me about a time two teams needed conflicting things from a system you owned."
       Example situation: the ML team wants raw, unfiltered events kept for a year; the
@@ -816,7 +816,7 @@ export const problems: Problem[] = [
     track: 'staff',
     kind: 'behavioral',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'microsoft'],
     prompt: `
       "Tell me about a time your technical proposal was rejected. What did you do next?"
       This tests disagreement, humility and follow-through. Outline your answer.
@@ -864,7 +864,7 @@ export const problems: Problem[] = [
     track: 'staff',
     kind: 'concept',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'microsoft'],
     prompt: `
       Your warehouse bill is $6M a year and grows 50% a year. You believe moving cold and
       heavy workloads to an Iceberg lakehouse with Spark and Trino could save money. The CFO
@@ -925,7 +925,7 @@ export const problems: Problem[] = [
     track: 'staff',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'microsoft'],
     prompt: `
       For the third time this year, an upstream team renamed a column and broke revenue
       reporting for a day. Each postmortem ended with "communicate schema changes better".
@@ -979,7 +979,7 @@ export const problems: Problem[] = [
     track: 'staff',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['google', 'uber'],
+    companies: ['google', 'uber', 'amazon', 'microsoft'],
     prompt: `
       You lead a data platform used by 30 teams. Your director asks you to define how the
       platform's success is measured for next year's goals. Uptime alone is not enough.
@@ -1028,7 +1028,7 @@ export const problems: Problem[] = [
     track: 'staff',
     kind: 'behavioral',
     difficulty: 'medium',
-    companies: ['google', 'uber'],
+    companies: ['google', 'uber', 'amazon', 'microsoft'],
     prompt: `
       "Tell me about a time you made other engineers more effective, beyond your own team."
       Staff loops call this multiplying. Outline your answer.
@@ -1074,7 +1074,7 @@ export const problems: Problem[] = [
     track: 'staff',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'microsoft'],
     prompt: `
       You have just designed a pipeline that lands trip events in an Iceberg lake every
       5 minutes and builds daily revenue tables. The interviewer now asks, one by one:

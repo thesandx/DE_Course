@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   COMPANIES,
+  COMPANY_NAMES,
   getCompany,
   getLesson,
   getProblem,
@@ -17,6 +18,7 @@ import {
   TRACKS,
   xpForItem,
 } from './catalog';
+import { COMPANY_META, COMPANY_SLUGS } from './company-meta';
 import { parseMarkdown } from './markdown';
 import { LESSON_XP, lessonId, PROBLEM_XP, problemId } from './progress';
 
@@ -42,9 +44,9 @@ function proseFields(): Array<[string, string]> {
 }
 
 describe('catalogue integrity', () => {
-  it('has seventeen tracks with unique, URL-safe slugs', () => {
+  it('has nineteen tracks with unique, URL-safe slugs', () => {
     const slugs = TRACKS.map((track) => track.slug);
-    expect(slugs).toHaveLength(18);
+    expect(slugs).toHaveLength(19);
     expect(new Set(slugs).size).toBe(slugs.length);
     for (const slug of slugs) expect(slug).toMatch(SLUG);
   });
@@ -90,6 +92,20 @@ describe('catalogue integrity', () => {
     }
   });
 
+  it('has a guide, a look and a weight for every track, for each company', () => {
+    expect(COMPANIES.map((company) => company.slug)).toEqual(COMPANY_SLUGS);
+    for (const company of COMPANIES) {
+      expect(COMPANY_META[company.slug].name.length).toBeGreaterThan(0);
+      expect(COMPANY_NAMES[company.slug]).toBe(COMPANY_META[company.slug].name);
+      expect(company.rounds.length, company.slug).toBeGreaterThanOrEqual(4);
+      for (const track of TRACKS) {
+        expect(company.weights[track.slug], `${company.slug} ${track.slug}`).toBeGreaterThan(0);
+      }
+      const asked = PROBLEMS.filter((problem) => problem.companies.includes(company.slug));
+      expect(asked.length, company.slug).toBeGreaterThanOrEqual(20);
+    }
+  });
+
   it('names only real tracks in company rounds and weights', () => {
     for (const company of COMPANIES) {
       for (const round of company.rounds) {
@@ -122,6 +138,8 @@ describe('lookups', () => {
     expect(getLesson('nope', 'window-functions')).toBeUndefined();
     expect(getProblem('not-in-null-trap')?.track).toBe('sql');
     expect(getCompany('uber')?.name).toBe('Uber');
+    expect(getCompany('amazon')?.name).toBe('Amazon');
+    expect(getCompany('netflix')).toBeUndefined();
   });
 });
 

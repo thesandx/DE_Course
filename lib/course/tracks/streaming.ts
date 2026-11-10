@@ -627,7 +627,7 @@ export const problems: Problem[] = [
     track: 'streaming',
     kind: 'concept',
     difficulty: 'easy',
-    companies: ['uber'],
+    companies: ['uber', 'flipkart', 'walmart', 'phonepe', 'swiggy'],
     prompt: `
       Trip events (requested, accepted, location updates, completed) go to one topic. Consumers
       compute per-trip state and per-city metrics. Which key do you use, and what goes wrong with
@@ -658,7 +658,7 @@ export const problems: Problem[] = [
     track: 'streaming',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['uber'],
+    companies: ['uber', 'flipkart', 'walmart', 'phonepe', 'swiggy'],
     prompt: `
       A streaming job reads payment events from Kafka, aggregates driver balances, and writes them
       to a database that the driver app reads. Finance says a balance must never double count a
@@ -700,7 +700,7 @@ export const problems: Problem[] = [
     track: 'streaming',
     kind: 'design',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'flipkart', 'walmart', 'phonepe', 'swiggy'],
     prompt: `
       A job counts ride requests per hexagon per minute to feed surge pricing. 3 percent of events
       arrive more than 30 seconds late, a few up to 10 minutes. How do you set windows, watermarks
@@ -738,7 +738,7 @@ export const problems: Problem[] = [
     track: 'streaming',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'flipkart', 'walmart', 'phonepe', 'swiggy'],
     prompt: `
       A consumer group's lag has grown from seconds to 40 minutes since this morning. Input rate is
       normal. What do you check and how do you recover?
@@ -776,7 +776,7 @@ export const problems: Problem[] = [
     track: 'streaming',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['google'],
+    companies: ['google', 'flipkart', 'walmart', 'phonepe', 'swiggy'],
     prompt: `
       Impressions and clicks arrive on two streams. A click is valid if it happens within 30
       minutes after its impression. Produce a real-time stream of attributed clicks for billing.
@@ -820,7 +820,7 @@ export const problems: Problem[] = [
     track: 'streaming',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'flipkart', 'walmart', 'phonepe', 'swiggy'],
     prompt: `
       The orders service runs on Postgres (2 TB, about 3,000 writes per second at peak). Analysts
       want an orders table in the lakehouse that is at most five minutes behind, includes
@@ -880,7 +880,7 @@ export const problems: Problem[] = [
     track: 'streaming',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'flipkart', 'walmart', 'phonepe', 'swiggy'],
     prompt: `
       A team wants to add each driver’s current vehicle type to every trip event in real time.
       Trips arrive on «trip-events» (96 partitions, key «trip_id»). Driver profiles are on a
@@ -933,7 +933,7 @@ export const problems: Problem[] = [
     track: 'streaming',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'flipkart', 'walmart', 'phonepe', 'swiggy'],
     prompt: `
       A consumer group of 40 pods reads a 240-partition topic. During every rolling deploy,
       lag jumps from seconds to 15 minutes, and some records are processed twice. Logs show many
@@ -979,7 +979,7 @@ export const problems: Problem[] = [
     track: 'streaming',
     kind: 'design',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'flipkart', 'walmart', 'phonepe', 'swiggy'],
     prompt: `
       A payments team needs two jobs on the same Kafka topic of card transactions (40,000 events a
       second):

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { SearchEntry } from '@/types/search';
 
-import { getLesson, getProblem, getTrack } from './catalog';
+import { getCompany, getLesson, getProblem, getTrack } from './catalog';
 import { COURSE_SLUGS } from './courses';
 import { getLab, getLine, getStation } from './gcp/catalog';
 import { createSearcher, normalize, queryWords, sectionAnchor } from './search';
@@ -25,7 +25,7 @@ function resolves(href: string): boolean {
       );
     }
     if (section === 'problems') return getProblem(a) !== undefined;
-    if (section === 'companies') return a === 'uber' || a === 'google';
+    if (section === 'companies') return getCompany(a) !== undefined;
   }
   if (course === 'gcp') {
     if (section === 'practice') return ['flashcards', 'sprint', 'mock'].includes(a);

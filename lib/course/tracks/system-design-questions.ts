@@ -13,7 +13,16 @@ export const designQuestions: Problem[] = [
     track: 'system-design',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['google', 'uber'],
+    companies: [
+      'google',
+      'uber',
+      'amazon',
+      'microsoft',
+      'flipkart',
+      'walmart',
+      'phonepe',
+      'swiggy',
+    ],
     prompt: `
       Design a platform that collects application logs from 200,000 hosts. Engineers search the
       last 14 days by service, level and free text within seconds, and security keeps one year
@@ -100,7 +109,7 @@ export const designQuestions: Problem[] = [
     track: 'system-design',
     kind: 'design',
     difficulty: 'medium',
-    companies: ['google'],
+    companies: ['google', 'amazon', 'microsoft', 'flipkart', 'walmart', 'phonepe', 'swiggy'],
     prompt: `
       A URL shortener serves 2 billion redirects a day. Link owners see total clicks in near
       real time and a dashboard of clicks by day, country, referrer and device for the life of
@@ -180,7 +189,7 @@ export const designQuestions: Problem[] = [
     track: 'system-design',
     kind: 'design',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'microsoft', 'flipkart', 'walmart', 'phonepe', 'swiggy'],
     prompt: `
       City operations teams need a dashboard of trips requested, completed and cancelled, and
       median pickup time, per city and per 1-minute bucket, with less than 1 minute of delay.
@@ -261,7 +270,16 @@ export const designQuestions: Problem[] = [
     track: 'system-design',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['google', 'uber'],
+    companies: [
+      'google',
+      'uber',
+      'amazon',
+      'microsoft',
+      'flipkart',
+      'walmart',
+      'phonepe',
+      'swiggy',
+    ],
     prompt: `
       10 million connected devices (scooters, meters, vehicles) each send a reading every 10
       seconds: location, battery, temperature and status. Devices go offline for hours and then
@@ -349,7 +367,7 @@ export const designQuestions: Problem[] = [
     track: 'system-design',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['google'],
+    companies: ['google', 'amazon', 'microsoft', 'flipkart', 'walmart', 'phonepe', 'swiggy'],
     prompt: `
       A music streaming app has 600 million users and records every play: track, user, start
       time, seconds played, device and whether it was offline. Artists see daily stream counts.
@@ -432,7 +450,7 @@ export const designQuestions: Problem[] = [
     track: 'system-design',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['google'],
+    companies: ['google', 'amazon', 'microsoft', 'flipkart', 'walmart', 'phonepe', 'swiggy'],
     prompt: `
       A video streaming service shows each of its 250 million members personalised rows on the
       home page. The ML team trains ranking models daily and wants to try new features each
@@ -516,7 +534,7 @@ export const designQuestions: Problem[] = [
     track: 'system-design',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['google'],
+    companies: ['google', 'amazon', 'microsoft', 'flipkart', 'walmart', 'phonepe', 'swiggy'],
     prompt: `
       A social network has 250 million daily users. Authors see impressions, likes, reposts and
       replies on each post in near real time, and an analytics page with 90 days of history. A
@@ -597,7 +615,7 @@ export const designQuestions: Problem[] = [
     track: 'system-design',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['google'],
+    companies: ['google', 'amazon', 'microsoft', 'flipkart', 'walmart', 'phonepe', 'swiggy'],
     prompt: `
       A professional network ranks each member's feed. Design the data platform behind it:
       tracking of feed views and actions, near-real-time features such as "this post got 200
@@ -679,7 +697,16 @@ export const designQuestions: Problem[] = [
     track: 'system-design',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['google', 'uber'],
+    companies: [
+      'google',
+      'uber',
+      'amazon',
+      'microsoft',
+      'flipkart',
+      'walmart',
+      'phonepe',
+      'swiggy',
+    ],
     prompt: `
       You run a SaaS product with 5,000 business customers. Each customer gets an analytics
       dashboard and an export of their own data. The largest 20 customers produce 60% of the
@@ -765,7 +792,16 @@ export const designQuestions: Problem[] = [
     track: 'system-design',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['google', 'uber'],
+    companies: [
+      'google',
+      'uber',
+      'amazon',
+      'microsoft',
+      'flipkart',
+      'walmart',
+      'phonepe',
+      'swiggy',
+    ],
     prompt: `
       Leadership has agreed to move to a data mesh. 30 domain teams will publish data products.
       You lead the platform team of 8 engineers. Design the platform: how a domain creates and
@@ -852,7 +888,16 @@ export const designQuestions: Problem[] = [
     track: 'system-design',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: [
+      'uber',
+      'google',
+      'amazon',
+      'microsoft',
+      'flipkart',
+      'walmart',
+      'phonepe',
+      'swiggy',
+    ],
     prompt: `
       The company has 20,000 tables in the lake and warehouse, built by 400 pipelines. Bad data
       reaches executives' dashboards about twice a month, usually found by a person. Design a
@@ -936,7 +981,16 @@ export const designQuestions: Problem[] = [
     track: 'system-design',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: [
+      'uber',
+      'google',
+      'amazon',
+      'microsoft',
+      'flipkart',
+      'walmart',
+      'phonepe',
+      'swiggy',
+    ],
     prompt: `
       Data scientists at a ride-hailing company build models for ETA, fraud and pricing. Each
       team recomputes the same features in its own notebooks, and models do worse in production

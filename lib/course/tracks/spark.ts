@@ -1,3 +1,4 @@
+import { pysparkLessons, pysparkProblems } from '@/lib/course/tracks/spark-pyspark';
 import type { Problem, Track } from '@/types/course';
 
 export const track: Track = {
@@ -454,6 +455,7 @@ export const track: Track = {
         },
       ],
     },
+    ...pysparkLessons,
   ],
 };
 
@@ -464,7 +466,7 @@ export const problems: Problem[] = [
     track: 'spark',
     kind: 'concept',
     difficulty: 'easy',
-    companies: ['uber'],
+    companies: ['uber', 'microsoft', 'flipkart', 'walmart'],
     prompt: `
       A job filters 2 TB of events down to 5 GB and writes it out. The output has 4,000 small
       files. A teammate proposes «coalesce(1)». What do you suggest and why?
@@ -493,7 +495,7 @@ export const problems: Problem[] = [
     track: 'spark',
     kind: 'concept',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'microsoft', 'flipkart', 'walmart'],
     prompt: `
       A daily job joins 3 billion trip events to a 40 GB driver table on «driver_id». It used to
       take 20 minutes and now takes 3 hours. The Spark UI shows one task reading 120 GB of shuffle
@@ -537,7 +539,7 @@ export const problems: Problem[] = [
     track: 'spark',
     kind: 'coding',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'microsoft', 'flipkart', 'walmart'],
     prompt: `
       A DataFrame «updates(order_id, status, updated_at, offset)» has many versions per order.
       Write PySpark that keeps the latest version per «order_id», deterministically. Then give a
@@ -586,7 +588,7 @@ export const problems: Problem[] = [
     track: 'spark',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['google', 'uber'],
+    companies: ['google', 'uber', 'microsoft', 'flipkart', 'walmart'],
     prompt: `
       An hourly Spark job's runtime grew from 15 to 50 minutes over a month. Nobody changed the
       code. What do you check, in order?
@@ -623,7 +625,7 @@ export const problems: Problem[] = [
     track: 'spark',
     kind: 'concept',
     difficulty: 'easy',
-    companies: ['uber'],
+    companies: ['uber', 'microsoft', 'flipkart', 'walmart'],
     prompt: `
       A notebook job fails with «java.lang.OutOfMemoryError» on the driver right after
       «df.toPandas()». The DataFrame has 300 million rows. What happened and what do you do?
@@ -650,7 +652,7 @@ export const problems: Problem[] = [
     track: 'spark',
     kind: 'coding',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'microsoft', 'flipkart', 'walmart'],
     prompt: `
       «events(user_id, ts)», with «ts» as a timestamp. A session ends after 30 minutes of
       inactivity. Add a «session_id» column that is unique across users.
@@ -692,7 +694,7 @@ export const problems: Problem[] = [
     track: 'spark',
     kind: 'coding',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'microsoft', 'flipkart', 'walmart'],
     prompt: `
       This job should read one day of a table partitioned by «event_date» (a string column), but
       it reads all 900 days:
@@ -752,7 +754,7 @@ export const problems: Problem[] = [
     track: 'spark',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['google', 'uber'],
+    companies: ['google', 'uber', 'microsoft', 'flipkart', 'walmart'],
     prompt: `
       Choose an engine for each workload and justify it in one or two sentences:
 
@@ -784,4 +786,5 @@ export const problems: Problem[] = [
     ],
     followUps: ['The 40 TB job must now run hourly. Does the choice change?'],
   },
+  ...pysparkProblems,
 ];

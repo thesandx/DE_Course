@@ -24,10 +24,15 @@ describe('Landing', () => {
     ).toBeInTheDocument();
   });
 
-  it('presents both company loops', () => {
+  it('presents every company loop', () => {
     render(<Landing signInHref="/sign-in" />);
-    expect(screen.getByRole('heading', { level: 3, name: 'Uber' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 3, name: 'Google' })).toBeInTheDocument();
+    for (const name of ['Uber', 'Google', 'Amazon', 'Microsoft', 'Flipkart', 'Swiggy']) {
+      expect(screen.getByRole('heading', { level: 3, name })).toBeInTheDocument();
+    }
+    expect(screen.getByRole('link', { name: /Read the Amazon loop guide/ })).toHaveAttribute(
+      'href',
+      expect.stringContaining('companies'),
+    );
   });
 
   it('walks the sample question step by step and reveals the model on demand', () => {

@@ -814,7 +814,7 @@ export const problems: Problem[] = [
     track: 'lakehouse',
     kind: 'concept',
     difficulty: 'easy',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'microsoft', 'flipkart', 'walmart'],
     prompt: `
       A clickstream table gets 5 billion events a day. Analysts usually query the last 1 to 30
       days, often for one app platform (iOS, Android, web), and sometimes look up one user.
@@ -855,7 +855,7 @@ export const problems: Problem[] = [
     track: 'lakehouse',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['google'],
+    companies: ['google', 'microsoft', 'flipkart', 'walmart'],
     prompt: `
       Your team's on-demand BigQuery bill tripled in a month. Most of the spend is one dashboard
       that refreshes every 15 minutes and queries a 400 TiB unpartitioned events table with
@@ -907,7 +907,7 @@ export const problems: Problem[] = [
     track: 'lakehouse',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'microsoft', 'flipkart', 'walmart'],
     prompt: `
       A Spark Structured Streaming job writes trip events to an Iceberg table every 30 seconds
       across 200 partitions of «city_id». After three months, queries that took 20 seconds take
@@ -957,7 +957,7 @@ export const problems: Problem[] = [
     track: 'lakehouse',
     kind: 'design',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'microsoft', 'flipkart', 'walmart'],
     prompt: `
       Your company is moving a Hive-style Parquet lake to a table format. Workloads: daily Spark
       batch jobs, a CDC feed from 300 MySQL tables that must land within 15 minutes, Trino for
@@ -1008,7 +1008,7 @@ export const problems: Problem[] = [
     track: 'lakehouse',
     kind: 'concept',
     difficulty: 'easy',
-    companies: ['uber'],
+    companies: ['uber', 'microsoft', 'flipkart', 'walmart'],
     prompt: `
       At 09:00 a buggy job overwrote yesterday's partition of a Delta table with an empty result.
       Three downstream jobs have already read it. It is now 10:30. What do you do?
@@ -1043,7 +1043,7 @@ export const problems: Problem[] = [
     track: 'lakehouse',
     kind: 'sql',
     difficulty: 'medium',
-    companies: ['google', 'uber'],
+    companies: ['google', 'uber', 'microsoft', 'flipkart', 'walmart'],
     prompt: `
       «staging.driver_changes(driver_id, name, city_id, op, changed_at)» holds a batch of CDC
       events where «op» is 'c', 'u' or 'd'. A driver can appear several times in one batch.
@@ -1099,7 +1099,7 @@ export const problems: Problem[] = [
     track: 'lakehouse',
     kind: 'concept',
     difficulty: 'easy',
-    companies: ['google', 'uber'],
+    companies: ['google', 'uber', 'microsoft', 'flipkart', 'walmart'],
     prompt: `
       For each need, choose block, file or object storage and give one reason:
 
@@ -1138,7 +1138,7 @@ export const problems: Problem[] = [
     track: 'lakehouse',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'microsoft', 'flipkart', 'walmart'],
     prompt: `
       A partner drops one «events.json.gz» file of 30 GB each night. The Spark job that parses it
       runs for 3 hours with one busy task while 199 cores sit idle. The bronze table it writes
@@ -1182,7 +1182,7 @@ export const problems: Problem[] = [
     track: 'lakehouse',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'microsoft', 'flipkart', 'walmart'],
     prompt: `
       A Delta table of trips holds 3 years, 20 TB, partitioned by «trip_date». Operations
       dashboards filter on the last 7 days and «pickup_zone». Support tools filter on one
@@ -1229,7 +1229,7 @@ export const problems: Problem[] = [
     track: 'lakehouse',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['google', 'uber'],
+    companies: ['google', 'uber', 'microsoft', 'flipkart', 'walmart'],
     prompt: `
       Today Spark writes Iceberg tables registered in a Hive Metastore. Trino reads them through
       the same metastore. The finance team now wants Snowflake to query the gold tables, and the
@@ -1277,7 +1277,7 @@ export const problems: Problem[] = [
     track: 'lakehouse',
     kind: 'concept',
     difficulty: 'easy',
-    companies: ['google'],
+    companies: ['google', 'microsoft', 'flipkart', 'walmart'],
     prompt: `
       A 60-person delivery startup has 2 TB of data, 5 analysts and 1 data engineer. They plan
       real-time ETAs and an ML team next year. The CTO asks: "Warehouse or lakehouse?"

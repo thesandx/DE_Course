@@ -12,22 +12,26 @@ A learner joins each course separately. Each course keeps its own tracker in `le
 
 ## Files
 
-| File                   | What it holds                                                                   |
-| ---------------------- | ------------------------------------------------------------------------------- |
-| `tracks/<slug>.ts`     | One track. It exports `track` (the lessons) and `problems`.                     |
-| `catalog.ts`           | The study order, the lookups, XP per item, track progress and loop readiness.   |
-| `companies.ts`         | The Uber and Google loop guides: rounds and the weight of each track.           |
-| `markdown.ts`          | The parser for the prose dialect below.                                         |
-| `progress.ts`          | Item ids, XP values, levels, streaks, the activity grid and the learner record. |
-| `courses.ts`           | The course list: slugs, names, hues and links. Safe for client components.      |
-| `rules.ts`             | The item check and the XP table of each course.                                 |
-| `hub.ts`               | The numbers on each course card of the hub.                                     |
-| `shell-stats.ts`       | The streak and XP that the app shell shows for the current course.              |
-| `search-index.ts`      | The search index of each course: its entries, examples and browse list.         |
-| `search.ts`            | Search matching and ranking. Safe for client components.                        |
-| `gcp/`                 | The GCP course. See [`gcp/README.md`](./gcp/README.md).                         |
-| `story-bank.ts`        | The schema of a behavioral story, shared by the API route and the editor.       |
-| `story-bank-themes.ts` | The story themes, the STAR fields and the strength checks. No zod.              |
+| File                                                                            | What it holds                                                                   |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `tracks/<slug>.ts`                                                              | One track. It exports `track` (the lessons) and `problems`.                     |
+| `tracks/spark-pyspark.ts`, `tracks/python-pandas.ts`, `tracks/company-loops.ts` | More lessons and problems that a track module spreads into its own lists.       |
+| `catalog.ts`                                                                    | The study order, the lookups, XP per item, track progress and loop readiness.   |
+| `companies.ts`                                                                  | Every loop guide, in page order, and the Uber and Google guides.                |
+| `companies-big-tech.ts`                                                         | The Amazon, Microsoft and Meta loop guides.                                     |
+| `companies-india.ts`                                                            | The Flipkart, Walmart Global Tech, PhonePe and Swiggy loop guides.              |
+| `company-meta.ts`                                                               | The name, card surface and dial colour of each company. No course content.      |
+| `markdown.ts`                                                                   | The parser for the prose dialect below.                                         |
+| `progress.ts`                                                                   | Item ids, XP values, levels, streaks, the activity grid and the learner record. |
+| `courses.ts`                                                                    | The course list: slugs, names, hues and links. Safe for client components.      |
+| `rules.ts`                                                                      | The item check and the XP table of each course.                                 |
+| `hub.ts`                                                                        | The numbers on each course card of the hub.                                     |
+| `shell-stats.ts`                                                                | The streak and XP that the app shell shows for the current course.              |
+| `search-index.ts`                                                               | The search index of each course: its entries, examples and browse list.         |
+| `search.ts`                                                                     | Search matching and ranking. Safe for client components.                        |
+| `gcp/`                                                                          | The GCP course. See [`gcp/README.md`](./gcp/README.md).                         |
+| `story-bank.ts`                                                                 | The schema of a behavioral story, shared by the API route and the editor.       |
+| `story-bank-themes.ts`                                                          | The story themes, the STAR fields and the strength checks. No zod.              |
 
 The types are in [`types/course.ts`](../../types/course.ts).
 
@@ -50,7 +54,7 @@ The types are in [`types/course.ts`](../../types/course.ts).
 ## Add a problem
 
 1. Add an object to `problems` in the track module. Set `track` to the module's track slug.
-2. Set `kind` (`sql`, `coding`, `design`, `modeling`, `concept` or `behavioral`), `difficulty` and the `companies` that ask it.
+2. Set `kind` (`sql`, `coding`, `design`, `modeling`, `concept` or `behavioral`), `difficulty` and `companies`. `companies` names the loops that ask this kind of question.
 3. Order `hints` from weakest to strongest.
 4. Write `answer` as a strong answer, not the only answer.
 5. Write three to six `signals` and one or two `followUps`.
@@ -59,8 +63,17 @@ The types are in [`types/course.ts`](../../types/course.ts).
 
 1. Create `tracks/<slug>.ts` that exports `track` and `problems`.
 2. Import it in `catalog.ts` and add it to `MODULES` in study order.
-3. Add a weight for it to each guide in `companies.ts`.
-4. Update the track count in `catalog.test.ts`.
+3. Add a weight for it to every guide in `companies.ts`, `companies-big-tech.ts` and `companies-india.ts`. A test fails if a guide has no weight for a track.
+4. Add a `--color-track-<n>` token to `styles/globals.css` and a row to `STYLES` in `track-style.ts`.
+5. Update the track count in `catalog.test.ts`.
+
+## Add a company guide
+
+1. Add the slug to `Company` in `types/course.ts`.
+2. Add its name, surface and dial colour to `COMPANY_META` in `company-meta.ts`. The order there is the page order.
+3. Add the guide to one of the company files, in the same order. Give it at least four rounds and a weight for every track.
+4. Add the slug to the `companies` of the problems its loop asks. A guide needs at least 20 problems.
+5. Write only what candidates commonly report, and tell the learner to confirm the rounds with the recruiter.
 
 ## The prose dialect
 

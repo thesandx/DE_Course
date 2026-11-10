@@ -12,7 +12,16 @@ export type TrackTone = 'butter' | 'soda' | 'grape' | 'peach';
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
 /** The companies with a loop guide. A problem names the ones that ask it. */
-export type Company = 'uber' | 'google';
+export type Company =
+  | 'uber'
+  | 'google'
+  | 'amazon'
+  | 'microsoft'
+  | 'meta'
+  | 'flipkart'
+  | 'walmart'
+  | 'phonepe'
+  | 'swiggy';
 
 /** What kind of answer a problem expects. It sets the label and the round it practises. */
 export type ProblemKind = 'sql' | 'coding' | 'design' | 'modeling' | 'concept' | 'behavioral';

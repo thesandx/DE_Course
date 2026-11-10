@@ -85,6 +85,7 @@
   --color-track-16: #5b7cd9;
   --color-track-17: #e0564f;
   --color-track-18: #b7791f;
+  --color-track-19: #4a7c8c;
 
   /* Study calendar — four steps from empty to busy */
   --color-heat-0: #f1ebe3;
@@ -343,11 +344,12 @@
     --color-hard: #ff8aa2;
     --color-hard-soft: #3a1424;
 
-    /* Track hues: the three darkest step up so a rail still shows on navy. */
+    /* Track hues: the darkest ones step up so a rail still shows on navy. */
     --color-track-13: #7b85f0;
     --color-track-15: #8aa8c8;
     --color-track-16: #7c97ef;
     --color-track-18: #d9a441;
+    --color-track-19: #6fa3b5;
 
     /* Study calendar: empty is a dim well, busy glows. */
     --color-heat-0: #26224a;

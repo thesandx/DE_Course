@@ -681,7 +681,7 @@ export const problems: Problem[] = [
     track: 'orchestration',
     kind: 'concept',
     difficulty: 'easy',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'walmart', 'swiggy'],
     prompt: `
       A daily DAG runs this SQL. After a two-day outage, the team cleared and reran the missed
       runs, and all of them loaded the same day's data. Why, and how do you fix it?
@@ -721,7 +721,7 @@ export const problems: Problem[] = [
     track: 'orchestration',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'walmart', 'swiggy'],
     prompt: `
       A task computes per-city daily revenue and appends it to a table. It also posts a Slack
       summary. Retries sometimes double revenue and send two messages. Redesign the task.
@@ -756,7 +756,7 @@ export const problems: Problem[] = [
     track: 'orchestration',
     kind: 'coding',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'walmart', 'swiggy'],
     prompt: `
       Each morning a pipeline must call a partner API once per active city (the list changes
       daily, about 600 cities), retry failures, run at most 20 calls at a time, and then load all
@@ -815,7 +815,7 @@ export const problems: Problem[] = [
     track: 'orchestration',
     kind: 'design',
     difficulty: 'medium',
-    companies: ['google', 'uber'],
+    companies: ['google', 'uber', 'amazon', 'walmart', 'swiggy'],
     prompt: `
       Your DAG must start only after another team's «payments_daily» pipeline has finished for the
       same day. They run on a different Airflow instance. What are your options and which do you
@@ -848,7 +848,7 @@ export const problems: Problem[] = [
     track: 'orchestration',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'walmart', 'swiggy'],
     prompt: `
       You are the first senior data engineer at a 200-person company. Pipelines run as cron jobs
       on one VM. Workloads: nightly warehouse loads, hourly API ingestions, and an ML team with
@@ -890,7 +890,7 @@ export const problems: Problem[] = [
     track: 'orchestration',
     kind: 'concept',
     difficulty: 'easy',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'walmart', 'swiggy'],
     prompt: `
       A DAG runs «check_volume», a branch task that returns «full_reload» on the first day of the
       month and «incremental_load» otherwise. Both lead to «send_report». Since the change,
@@ -925,7 +925,7 @@ export const problems: Problem[] = [
     track: 'orchestration',
     kind: 'coding',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'walmart', 'swiggy'],
     prompt: `
       Five teams each copied a 200-line Python task that pulls one day of data from a partner’s
       paginated REST API and writes JSON lines to object storage. Two copies have a bug that
@@ -1023,7 +1023,7 @@ export const problems: Problem[] = [
     track: 'orchestration',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'walmart', 'swiggy'],
     prompt: `
       You own the Airflow platform. Fifteen teams run about 600 DAGs and 40,000 task runs a
       day. Problems this quarter: one team’s DAG file made a database call at the top level and

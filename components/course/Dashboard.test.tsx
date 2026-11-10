@@ -47,7 +47,7 @@ describe('Dashboard', () => {
     expect(screen.getAllByText('Riders who never cancelled').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('link', { name: /Continue/ })[0]).toHaveAttribute(
       'href',
-      '/de/tracks/databases/database-families',
+      '/de/tracks/playbook/india-senior-loops',
     );
   });
 });
