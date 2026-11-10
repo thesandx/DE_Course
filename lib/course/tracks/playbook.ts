@@ -1,3 +1,4 @@
+import { playbookLoopLessons, playbookLoopProblems } from '@/lib/course/tracks/company-loops';
 import type { Problem, Track } from '@/types/course';
 
 export const track: Track = {
@@ -254,6 +255,7 @@ export const track: Track = {
         },
       ],
     },
+    ...playbookLoopLessons,
   ],
 };
 
@@ -418,4 +420,5 @@ export const problems: Problem[] = [
     ],
     followUps: ['Tell me about a decision that affected teams outside your own.'],
   },
+  ...playbookLoopProblems,
 ];

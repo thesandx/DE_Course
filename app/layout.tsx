@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     template: `%s | ${env.appName}`,
   },
   description:
-    'Senior data engineer interview prep: lessons, problems and loop guides for Uber and Google.',
+    'Senior data engineer interview prep: lessons, problems and loop guides for nine companies.',
   applicationName: env.appName,
   // iOS reads these, not the manifest, when the user adds the app to the home
   // screen. The manifest in app/manifest.ts serves every other browser.

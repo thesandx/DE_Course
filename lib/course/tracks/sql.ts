@@ -848,7 +848,7 @@ export const problems: Problem[] = [
     track: 'sql',
     kind: 'sql',
     difficulty: 'easy',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'meta', 'microsoft', 'walmart', 'swiggy'],
     prompt: `
       Table «payments(payment_id, city_id, amount_usd, paid_at TIMESTAMP)».
 
@@ -897,7 +897,7 @@ export const problems: Problem[] = [
     track: 'sql',
     kind: 'sql',
     difficulty: 'easy',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'meta', 'microsoft', 'walmart', 'swiggy'],
     prompt: `
       «trip_events(trip_id, status, event_ts, kafka_offset)» receives one row per status change,
       with duplicates from client retries. Return the current status of every trip.
@@ -935,7 +935,7 @@ export const problems: Problem[] = [
     track: 'sql',
     kind: 'sql',
     difficulty: 'easy',
-    companies: ['google'],
+    companies: ['google', 'amazon', 'meta', 'microsoft', 'walmart', 'swiggy'],
     prompt: `
       A teammate wrote this and it returns zero rows. Explain why and fix it.
 
@@ -978,7 +978,7 @@ export const problems: Problem[] = [
     track: 'sql',
     kind: 'sql',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'meta', 'microsoft', 'walmart', 'swiggy'],
     prompt: `
       «driver_sessions(driver_id, online_at TIMESTAMP, offline_at TIMESTAMP)». A driver can have
       several sessions per day. Return each driver's longest run of consecutive days with at least
@@ -1032,7 +1032,7 @@ export const problems: Problem[] = [
     track: 'sql',
     kind: 'sql',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'meta', 'microsoft', 'walmart', 'swiggy'],
     prompt: `
       «app_events(user_id, event_time, event_name)». A session ends after 30 minutes without an
       event. Return per user and session: start, end, number of events and duration in seconds.
@@ -1090,7 +1090,7 @@ export const problems: Problem[] = [
     track: 'sql',
     kind: 'sql',
     difficulty: 'medium',
-    companies: ['google'],
+    companies: ['google', 'amazon', 'meta', 'microsoft', 'walmart', 'swiggy'],
     prompt: `
       «video_views(view_id, video_id, category, viewed_at)» may contain duplicate «view_id» rows.
       For each day and category, return the top 3 videos by views. If videos tie at third place,
@@ -1140,7 +1140,7 @@ export const problems: Problem[] = [
     track: 'sql',
     kind: 'sql',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'meta', 'microsoft', 'walmart', 'swiggy'],
     prompt: `
       «trip_events(trip_id, city_id, status, event_ts)» with statuses «requested», «accepted»,
       «picked_up», «completed», «cancelled». For last week, return per city the share of requested
@@ -1195,7 +1195,7 @@ export const problems: Problem[] = [
     track: 'sql',
     kind: 'sql',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'meta', 'microsoft', 'walmart', 'swiggy'],
     prompt: `
       «trips(trip_id, city_id, duration_s)». Your engine has no «MEDIAN» or «PERCENTILE_CONT».
       Return the median trip duration per city, averaging the two middle values for an even count.
@@ -1237,7 +1237,7 @@ export const problems: Problem[] = [
     track: 'sql',
     kind: 'sql',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'meta', 'microsoft', 'walmart', 'swiggy'],
     prompt: `
       «users(user_id, signup_at)» and «sessions(user_id, started_at)». Return a retention table:
       cohort week, week number 0 to 8, active users, and retention as a share of the cohort size.
@@ -1304,7 +1304,7 @@ export const problems: Problem[] = [
     track: 'sql',
     kind: 'sql',
     difficulty: 'hard',
-    companies: ['google'],
+    companies: ['google', 'amazon', 'meta', 'microsoft', 'walmart', 'swiggy'],
     prompt: `
       «impressions(imp_id, ad_id, user_id, ts)» and «clicks(click_id, imp_id, ts)». Users double
       click: count at most one click per impression, and ignore clicks more than 30 minutes after
@@ -1355,7 +1355,7 @@ export const problems: Problem[] = [
     track: 'sql',
     kind: 'sql',
     difficulty: 'medium',
-    companies: ['google'],
+    companies: ['google', 'amazon', 'meta', 'microsoft', 'walmart', 'swiggy'],
     prompt: `
       «employees(employee_id, name, manager_id)» holds the org chart. «manager_id» is NULL for
       the CEO. For every employee, return the number of direct reports, the number of all reports
@@ -1417,7 +1417,7 @@ export const problems: Problem[] = [
     track: 'sql',
     kind: 'sql',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'meta', 'microsoft', 'walmart', 'swiggy'],
     prompt: `
       From «trips(region, city, fare)», produce one result with revenue per city, a subtotal per
       region and a grand total. Each row also shows its share of the grand total and its share of
@@ -1478,7 +1478,7 @@ export const problems: Problem[] = [
     track: 'sql',
     kind: 'sql',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'meta', 'microsoft', 'walmart', 'swiggy'],
     prompt: `
       «referrals(user_id, referred_by)» records who invited whom. «referred_by» is NULL for users
       who signed up on their own. Growth wants, for every user, the root of their referral chain
@@ -1552,7 +1552,7 @@ export const problems: Problem[] = [
     track: 'sql',
     kind: 'concept',
     difficulty: 'hard',
-    companies: ['google', 'uber'],
+    companies: ['google', 'uber', 'amazon', 'meta', 'microsoft', 'walmart', 'swiggy'],
     prompt: `
       A finance query joins «orders» (8 billion rows), «order_items» and «promotions» and takes 25
       minutes on a Large warehouse. The query profile shows:

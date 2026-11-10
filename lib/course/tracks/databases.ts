@@ -728,7 +728,7 @@ export const problems: Problem[] = [
     track: 'databases',
     kind: 'design',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'flipkart', 'phonepe'],
     prompt: `
       Five million drivers send a GPS point every 4 seconds. The dispatch service needs each
       driver's latest position and the drivers near a point within 100 ms. Analysts need 90 days
@@ -776,7 +776,7 @@ export const problems: Problem[] = [
     track: 'databases',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['google', 'uber'],
+    companies: ['google', 'uber', 'amazon', 'flipkart', 'phonepe'],
     prompt: `
       After a nightly bulk load of 40 million rows into «payments», a Postgres query that took
       200 ms now takes 6 minutes. Part of the plan:
@@ -832,7 +832,7 @@ export const problems: Problem[] = [
     track: 'databases',
     kind: 'sql',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'flipkart', 'phonepe'],
     prompt: `
       The wallet service runs this in Postgres at the default isolation level:
 
@@ -895,7 +895,7 @@ export const problems: Problem[] = [
     track: 'databases',
     kind: 'concept',
     difficulty: 'easy',
-    companies: ['google'],
+    companies: ['google', 'amazon', 'flipkart', 'phonepe'],
     prompt: `
       A team stores service metrics: 2 million points a second, each read mostly in the first
       hour, and deleted after 30 days. They want to put it in Postgres. Which storage engine
@@ -932,7 +932,7 @@ export const problems: Problem[] = [
     track: 'databases',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'flipkart', 'phonepe'],
     prompt: `
       Riders cancel a trip, then the app refreshes and shows it as still active for a few
       seconds. Writes go to a MySQL primary, reads to three async replicas behind a load
@@ -977,7 +977,7 @@ export const problems: Problem[] = [
     track: 'databases',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'flipkart', 'phonepe'],
     prompt: `
       The «trips» table is 40 TB on one MySQL primary and writes peak at 60,000 a second. The
       main queries are: get a trip by id; list a rider's last 50 trips; list a driver's trips
@@ -1027,7 +1027,7 @@ export const problems: Problem[] = [
     track: 'databases',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['google', 'uber'],
+    companies: ['google', 'uber', 'amazon', 'flipkart', 'phonepe'],
     prompt: `
       A super-app runs in three regions. It has a wallet (balances and payments) and a social
       feed (posts and likes). Using CAP and PACELC, say what each feature should choose during a
@@ -1065,7 +1065,7 @@ export const problems: Problem[] = [
     track: 'databases',
     kind: 'design',
     difficulty: 'medium',
-    companies: ['google', 'uber'],
+    companies: ['google', 'uber', 'amazon', 'flipkart', 'phonepe'],
     prompt: `
       A nightly job runs «SELECT * FROM orders» on the Postgres primary. The table is 2 TB, the
       job takes 7 hours, and checkout latency rises while it runs. Orders are updated for 30
@@ -1113,7 +1113,7 @@ export const problems: Problem[] = [
     track: 'databases',
     kind: 'concept',
     difficulty: 'hard',
-    companies: ['google'],
+    companies: ['google', 'amazon', 'flipkart', 'phonepe'],
     prompt: `
       An hourly job extracts «WHERE updated_at > :last_max_updated_at» from a MySQL replica and
       saves the largest «updated_at» it saw as the next watermark. A weekly reconciliation finds

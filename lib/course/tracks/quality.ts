@@ -480,7 +480,7 @@ export const problems: Problem[] = [
     track: 'quality',
     kind: 'sql',
     difficulty: 'easy',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'meta', 'phonepe'],
     prompt: `
       Before publishing «fct_trips(trip_id, driver_id, city_id, status, fare_usd, trip_date)» for
       a given «trip_date», write one query that returns a row for each failed check:
@@ -553,7 +553,7 @@ export const problems: Problem[] = [
     track: 'quality',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'meta', 'phonepe'],
     prompt: `
       The rider app team renamed «pickup_ts» to «pickup_time» in their trip events. Your Spark
       job did not fail: it wrote nulls for pickup time for 3 days, and the ETA accuracy dashboard
@@ -595,7 +595,7 @@ export const problems: Problem[] = [
     track: 'quality',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['google', 'uber'],
+    companies: ['google', 'uber', 'amazon', 'meta', 'phonepe'],
     prompt: `
       A VP messages you at 09:15: "Yesterday's revenue is down 30% on the exec dashboard. Is this
       real?" You own the pipeline behind it. Walk through what you do in the first hour.
@@ -641,7 +641,7 @@ export const problems: Problem[] = [
     track: 'quality',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'meta', 'phonepe'],
     prompt: `
       Your lake holds 4 PB across 3,000 tables, plus Kafka topics with 7-day retention and
       nightly backups. The company receives about 50,000 deletion requests a month and must
@@ -697,7 +697,7 @@ export const problems: Problem[] = [
     track: 'quality',
     kind: 'concept',
     difficulty: 'easy',
-    companies: ['google'],
+    companies: ['google', 'amazon', 'meta', 'phonepe'],
     prompt: `
       The daily «fct_ad_revenue» table feeds finance's revenue report (due at 08:00 UTC) and an
       hourly-refreshed advertiser dashboard. Propose SLIs and SLOs, and say what happens when
@@ -733,7 +733,7 @@ export const problems: Problem[] = [
     track: 'quality',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['google', 'uber'],
+    companies: ['google', 'uber', 'amazon', 'meta', 'phonepe'],
     prompt: `
       A team added a volume monitor on 400 tables: alert when today's row count differs from
       yesterday's by more than 20%. It now pages on-call about 30 times a week, nearly all false.

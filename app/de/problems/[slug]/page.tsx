@@ -9,6 +9,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { COMPANY_NAMES, getProblem, getTrack, KIND_LABELS } from '@/lib/course/catalog';
 import { PROBLEM_XP, problemId } from '@/lib/course/progress';
 import { requireDeLearner } from '@/services/learner.service';
+import type { Company } from '@/types/course';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -25,6 +26,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export const dynamic = 'force-dynamic';
+
+/** "Loops: Google, Amazon +4". Nine chips would fill a phone screen. */
+function loopsLabel(companies: readonly Company[]): string {
+  const names = companies.slice(0, 2).map((company) => COMPANY_NAMES[company]);
+  const more = companies.length - names.length;
+  return `Loops: ${names.join(', ')}${more > 0 ? ` +${more}` : ''}`;
+}
 
 export default async function ProblemPage({ params }: Props) {
   const { slug } = await params;
@@ -55,14 +63,9 @@ export default async function ProblemPage({ params }: Props) {
                 <span className="border-night-line rounded-pill text-micro text-on-night-soft border px-2.5 py-1 font-semibold">
                   {KIND_LABELS[problem.kind]}
                 </span>
-                {problem.companies.map((company) => (
-                  <span
-                    key={company}
-                    className="border-night-line rounded-pill text-micro text-on-night-soft border px-2.5 py-1 font-semibold"
-                  >
-                    Asked at {COMPANY_NAMES[company]}
-                  </span>
-                ))}
+                <span className="border-night-line rounded-pill text-micro text-on-night-soft border px-2.5 py-1 font-semibold">
+                  {loopsLabel(problem.companies)}
+                </span>
               </div>
               <h1 className="text-display">{problem.title}</h1>
               <dl className="border-night-line grid grid-cols-2 gap-4 border-t pt-4 sm:grid-cols-3">

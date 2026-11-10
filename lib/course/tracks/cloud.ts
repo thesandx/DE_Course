@@ -772,7 +772,7 @@ export const problems: Problem[] = [
     track: 'cloud',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'microsoft'],
     prompt: `
       A ride-hailing company runs on AWS. Phones and services send about 50,000 events per second
       at peak (trip state changes, driver locations, payments), about 1 KB each. Design the
@@ -837,7 +837,7 @@ export const problems: Problem[] = [
     track: 'cloud',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'microsoft'],
     prompt: `
       Your team is starting an AWS event pipeline: 20 MB/s today, maybe 200 MB/s in two years.
       Six teams want to consume it, one needs CDC from Postgres, and the platform team has two
@@ -882,7 +882,7 @@ export const problems: Problem[] = [
     track: 'cloud',
     kind: 'modeling',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'microsoft'],
     prompt: `
       A daily report joins two large Redshift tables and takes 40 minutes. Both were created with
       «DISTSTYLE EVEN». The plan shows «DS_DIST_BOTH» on the join. How do you fix it?
@@ -937,7 +937,7 @@ export const problems: Problem[] = [
     track: 'cloud',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'microsoft'],
     prompt: `
       An hourly Spark job writes about 2 million files of 20 KB each into
       «s3://lake/events/dt=2026-11-03/hr=09/». It fails with «503 SlowDown», and Athena queries on
@@ -984,7 +984,7 @@ export const problems: Problem[] = [
     track: 'cloud',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'microsoft'],
     prompt: `
       After moving EMR clusters into private subnets "for security", the monthly AWS bill for the
       data platform went from $60,000 to $80,000. Compute did not change. The cost explorer shows
@@ -1027,7 +1027,7 @@ export const problems: Problem[] = [
     track: 'cloud',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'microsoft'],
     prompt: `
       The lake bucket lives in the «data-prod» AWS account and is encrypted with a
       customer-managed KMS key. A Spark job in the «analytics» account must read only
@@ -1073,7 +1073,7 @@ export const problems: Problem[] = [
     track: 'cloud',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'microsoft'],
     prompt: `
       A pull request refactors the Terraform for the data platform into modules. CI posts a plan
       that says: «aws_s3_bucket.lake will be destroyed» and «module.storage.aws_s3_bucket.lake will
@@ -1129,7 +1129,7 @@ export const problems: Problem[] = [
     track: 'cloud',
     kind: 'design',
     difficulty: 'medium',
-    companies: ['google', 'uber'],
+    companies: ['google', 'uber', 'amazon', 'microsoft'],
     prompt: `
       A retailer runs a 30 TB SQL Server warehouse on premises, loaded nightly by SSIS. They are
       moving to Azure. Some source systems must stay on premises for two more years. Design the
@@ -1183,7 +1183,7 @@ export const problems: Problem[] = [
     track: 'cloud',
     kind: 'concept',
     difficulty: 'easy',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'microsoft'],
     prompt: `
       A team on AWS asks whether to orchestrate pipelines with Step Functions or with Airflow on
       MWAA. Give the deciding questions and an answer for each case.
@@ -1222,7 +1222,7 @@ export const problems: Problem[] = [
     track: 'cloud',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'microsoft'],
     prompt: `
       The data platform costs $400,000 a month on AWS: EMR, Redshift, S3, MSK and data transfer.
       Leadership wants 30% off in two quarters without missing any data SLA. How do you run this?

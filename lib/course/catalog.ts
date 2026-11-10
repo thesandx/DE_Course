@@ -6,6 +6,7 @@
  */
 
 import { COMPANIES } from '@/lib/course/companies';
+import { COMPANY_META, COMPANY_SLUGS } from '@/lib/course/company-meta';
 import { type DoneMap, LESSON_XP, lessonId, PROBLEM_XP, problemId } from '@/lib/course/progress';
 import * as ai from '@/lib/course/tracks/ai';
 import * as architecture from '@/lib/course/tracks/architecture';
@@ -13,6 +14,7 @@ import * as behavioral from '@/lib/course/tracks/behavioral';
 import * as cloud from '@/lib/course/tracks/cloud';
 import * as databases from '@/lib/course/tracks/databases';
 import * as dbt from '@/lib/course/tracks/dbt';
+import * as dsa from '@/lib/course/tracks/dsa';
 import * as lakehouse from '@/lib/course/tracks/lakehouse';
 import * as modeling from '@/lib/course/tracks/modeling';
 import * as orchestration from '@/lib/course/tracks/orchestration';
@@ -32,6 +34,7 @@ const MODULES = [
   databases,
   sql,
   python,
+  dsa,
   modeling,
   spark,
   orchestration,
@@ -172,10 +175,9 @@ export function nextLesson(done: DoneMap): NextStep | undefined {
   return undefined;
 }
 
-export const COMPANY_NAMES: Readonly<Record<Company, string>> = {
-  uber: 'Uber',
-  google: 'Google',
-};
+export const COMPANY_NAMES: Readonly<Record<Company, string>> = Object.fromEntries(
+  COMPANY_SLUGS.map((slug) => [slug, COMPANY_META[slug].name]),
+) as Record<Company, string>;
 
 export const KIND_LABELS: Readonly<Record<Problem['kind'], string>> = {
   sql: 'SQL',

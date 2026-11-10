@@ -506,7 +506,7 @@ export const problems: Problem[] = [
     track: 'dbt',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'swiggy'],
     prompt: `
       An hourly incremental dbt model loads trip events with this filter. Finance says completed
       trips from drivers with bad signal are missing from yesterday's revenue. Find the cause and
@@ -559,7 +559,7 @@ export const problems: Problem[] = [
     track: 'dbt',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['google', 'uber'],
+    companies: ['google', 'uber', 'swiggy'],
     prompt: `
       A 1,200-model dbt project on BigQuery runs one nightly «dbt build». It takes 4 hours, often
       misses the 07:00 dashboard deadline, and the warehouse bill doubled in a year. Pull requests
@@ -609,7 +609,7 @@ export const problems: Problem[] = [
     track: 'dbt',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'swiggy'],
     prompt: `
       A daily dbt snapshot builds a type 2 history of «drivers». An investigation needs every
       city a driver was assigned to, with exact times. The snapshot shows one city where the ops
@@ -651,7 +651,7 @@ export const problems: Problem[] = [
     track: 'dbt',
     kind: 'design',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'swiggy'],
     prompt: `
       You own «fct_revenue» in dbt. The CFO's dashboard and two other teams' models read it. Last
       quarter a join change doubled revenue for a day before anyone noticed. Design its tests and
@@ -698,7 +698,7 @@ export const problems: Problem[] = [
     track: 'dbt',
     kind: 'design',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'swiggy'],
     prompt: `
       Your Airflow deployment runs ingestion DAGs. A team wants its 400-model dbt project to run
       after ingestion lands, with retries, alerts and visibility per model. Compare the options and
@@ -739,7 +739,7 @@ export const problems: Problem[] = [
     track: 'dbt',
     kind: 'sql',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'swiggy'],
     prompt: `
       «stg_trips(trip_id, driver_id, completed_at TIMESTAMP, fare_usd, tip_usd, status,
       _loaded_at TIMESTAMP)» is a dbt staging model. Trips can be corrected (a tip added, a fare

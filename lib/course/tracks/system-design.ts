@@ -396,7 +396,7 @@ const coreProblems: Problem[] = [
     track: 'system-design',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'microsoft', 'flipkart', 'walmart', 'phonepe', 'swiggy'],
     prompt: `
       Design the data pipeline that feeds surge pricing. Every 30 seconds, the pricing service
       needs supply (available drivers) and demand (ride requests and app opens) for every
@@ -486,7 +486,7 @@ const coreProblems: Problem[] = [
     track: 'system-design',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['google'],
+    companies: ['google', 'amazon', 'microsoft', 'flipkart', 'walmart', 'phonepe', 'swiggy'],
     prompt: `
       Design the system that counts video views. Creators see a near-real-time count on each
       video and detailed analytics (views by country, device and traffic source) in a dashboard.
@@ -575,7 +575,7 @@ const coreProblems: Problem[] = [
     track: 'system-design',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['google'],
+    companies: ['google', 'amazon', 'microsoft', 'flipkart', 'walmart', 'phonepe', 'swiggy'],
     prompt: `
       Advertisers pay per click. Design the pipeline that aggregates clicks per ad per minute for
       advertiser dashboards and budget pacing, and produces the billable click counts used for
@@ -659,7 +659,7 @@ const coreProblems: Problem[] = [
     track: 'system-design',
     kind: 'design',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'microsoft', 'flipkart', 'walmart', 'phonepe', 'swiggy'],
     prompt: `
       Product teams run 500 MySQL databases. Analysts want every table available in the lake
       within 15 minutes of a change, with history of how rows changed. Today a nightly dump runs
@@ -743,7 +743,16 @@ const coreProblems: Problem[] = [
     track: 'system-design',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['google', 'uber'],
+    companies: [
+      'google',
+      'uber',
+      'amazon',
+      'microsoft',
+      'flipkart',
+      'walmart',
+      'phonepe',
+      'swiggy',
+    ],
     prompt: `
       Hundreds of A/B experiments run at once. Each experiment owner picks metrics (trips per
       user, revenue per user, cancellation rate) and wants daily results with confidence
@@ -826,7 +835,16 @@ const coreProblems: Problem[] = [
     track: 'system-design',
     kind: 'design',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: [
+      'uber',
+      'google',
+      'amazon',
+      'microsoft',
+      'flipkart',
+      'walmart',
+      'phonepe',
+      'swiggy',
+    ],
     prompt: `
       Your company runs 2,000 Hive SQL jobs on an on-premises Hadoop cluster that reaches end of
       support in 18 months. Leadership wants them on a cloud lakehouse with Spark and a modern

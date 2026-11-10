@@ -1,11 +1,13 @@
+import { BIG_TECH_COMPANIES } from '@/lib/course/companies-big-tech';
+import { INDIA_COMPANIES } from '@/lib/course/companies-india';
 import type { CompanyGuide } from '@/types/course';
 
 /**
- * Loop guides for the target companies. Loops change by team and by year, so
- * each guide says what is typical and tells the learner to confirm the exact
+ * The Uber and Google loop guides. Loops change by team and by year, so each
+ * guide says what is typical and tells the learner to confirm the exact
  * rounds with their recruiter.
  */
-export const COMPANIES: readonly CompanyGuide[] = [
+const FIRST_COMPANIES: readonly CompanyGuide[] = [
   {
     slug: 'uber',
     name: 'Uber',
@@ -73,7 +75,7 @@ export const COMPANIES: readonly CompanyGuide[] = [
         minutes: 60,
         focus:
           'A practical problem in Python or another language: parsing, aggregation, intervals or a small streaming algorithm. Clean code and tests matter.',
-        tracks: ['python'],
+        tracks: ['python', 'dsa'],
       },
       {
         name: 'Onsite: behavioral and leadership',
@@ -88,6 +90,7 @@ export const COMPANIES: readonly CompanyGuide[] = [
       databases: 0.7,
       sql: 1,
       python: 1,
+      dsa: 0.7,
       modeling: 1,
       spark: 0.8,
       orchestration: 0.5,
@@ -152,14 +155,14 @@ export const COMPANIES: readonly CompanyGuide[] = [
         minutes: 45,
         focus:
           'A coding problem in a shared doc with no autocomplete, sometimes plus SQL. Explain complexity and test with examples.',
-        tracks: ['python', 'sql'],
+        tracks: ['dsa', 'python', 'sql'],
       },
       {
         name: 'Onsite: coding',
         minutes: 45,
         focus:
           'Data structures and algorithms with a data flavour: hashing, heaps, intervals, streams. Usually two coding rounds.',
-        tracks: ['python'],
+        tracks: ['dsa', 'python'],
       },
       {
         name: 'Onsite: SQL and data modeling',
@@ -196,6 +199,7 @@ export const COMPANIES: readonly CompanyGuide[] = [
       databases: 0.8,
       sql: 1,
       python: 1.3,
+      dsa: 1.3,
       modeling: 1,
       spark: 0.6,
       orchestration: 0.5,
@@ -212,4 +216,11 @@ export const COMPANIES: readonly CompanyGuide[] = [
       staff: 0.8,
     },
   },
+];
+
+/** Every loop guide, in the order the pages show them. */
+export const COMPANIES: readonly CompanyGuide[] = [
+  ...FIRST_COMPANIES,
+  ...BIG_TECH_COMPANIES,
+  ...INDIA_COMPANIES,
 ];

@@ -1,3 +1,4 @@
+import { behavioralLoopLessons, behavioralLoopProblems } from '@/lib/course/tracks/company-loops';
 import type { Problem, Track } from '@/types/course';
 
 export const track: Track = {
@@ -385,6 +386,7 @@ export const track: Track = {
         },
       ],
     },
+    ...behavioralLoopLessons,
   ],
 };
 
@@ -395,7 +397,7 @@ export const problems: Problem[] = [
     track: 'behavioral',
     kind: 'behavioral',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'microsoft', 'meta', 'flipkart'],
     prompt: `
       "Tell me about a time you disagreed with another team about a technical decision. What
       happened?" Outline your answer using one of your own stories, then compare it with the
@@ -443,7 +445,7 @@ export const problems: Problem[] = [
     track: 'behavioral',
     kind: 'behavioral',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'microsoft', 'meta', 'flipkart'],
     prompt: `
       "Tell me about a time you made a mistake that affected others." Outline your answer, then
       compare it with the model answer.
@@ -483,7 +485,7 @@ export const problems: Problem[] = [
     track: 'behavioral',
     kind: 'behavioral',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'microsoft', 'meta', 'flipkart'],
     prompt: `
       "Tell me about a time you convinced people to change direction when you had no authority
       over them." This is a core staff-level question. Outline your answer, then compare.
@@ -530,7 +532,7 @@ export const problems: Problem[] = [
     track: 'behavioral',
     kind: 'behavioral',
     difficulty: 'medium',
-    companies: ['google'],
+    companies: ['google', 'amazon', 'microsoft', 'meta', 'flipkart'],
     prompt: `
       "Tell me about a project where the requirements were vague or kept changing. How did you
       make progress?" Outline your answer, then compare.
@@ -568,7 +570,7 @@ export const problems: Problem[] = [
     track: 'behavioral',
     kind: 'behavioral',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'microsoft', 'meta', 'flipkart'],
     prompt: `
       "Tell me about a time you had to cut scope or accept a risk to hit a deadline." Outline
       your answer, then compare.
@@ -606,7 +608,7 @@ export const problems: Problem[] = [
     track: 'behavioral',
     kind: 'behavioral',
     difficulty: 'easy',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'microsoft', 'meta', 'flipkart'],
     prompt: `
       "Why do you want to work here, and why this role?" Write a 60-second answer for the
       company you are targeting, then compare with the model answers.
@@ -640,4 +642,5 @@ export const problems: Problem[] = [
     ],
     followUps: ['What would you want to work on in your first six months?'],
   },
+  ...behavioralLoopProblems,
 ];

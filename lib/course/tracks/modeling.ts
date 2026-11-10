@@ -555,7 +555,7 @@ export const problems: Problem[] = [
     track: 'modeling',
     kind: 'modeling',
     difficulty: 'easy',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'meta', 'flipkart', 'swiggy'],
     prompt: `
       A food delivery team wants to analyse orders: revenue per restaurant, items sold, delivery
       time, and courier performance. An order has several items and one courier.
@@ -590,7 +590,7 @@ export const problems: Problem[] = [
     track: 'modeling',
     kind: 'sql',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'meta', 'flipkart', 'swiggy'],
     prompt: `
       «dim_driver(driver_sk, driver_id, city_id, valid_from, valid_to, is_current)» is type 2 on
       «city_id». Each day «stg_driver(driver_id, city_id, updated_at)» holds the latest snapshot of
@@ -638,7 +638,7 @@ export const problems: Problem[] = [
     track: 'modeling',
     kind: 'modeling',
     difficulty: 'medium',
-    companies: ['google'],
+    companies: ['google', 'amazon', 'meta', 'flipkart', 'swiggy'],
     prompt: `
       Design tables for video analytics: views, watch time, likes, and creator dashboards that show
       daily totals per video. There are billions of views a day.
@@ -675,7 +675,7 @@ export const problems: Problem[] = [
     track: 'modeling',
     kind: 'modeling',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'meta', 'flipkart', 'swiggy'],
     prompt: `
       Operations want the average time from order placed to restaurant accepted, accepted to
       picked up, and picked up to delivered, per city per day. Events arrive as a stream of status
@@ -714,7 +714,7 @@ export const problems: Problem[] = [
     track: 'modeling',
     kind: 'modeling',
     difficulty: 'hard',
-    companies: ['google'],
+    companies: ['google', 'amazon', 'meta', 'flipkart', 'swiggy'],
     prompt: `
       Advertisers want conversions attributed to the last ad click within 7 days, and later want
       to compare with first-click and linear attribution. Design the tables, and say how a new
@@ -754,7 +754,7 @@ export const problems: Problem[] = [
     track: 'modeling',
     kind: 'modeling',
     difficulty: 'easy',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'meta', 'flipkart', 'swiggy'],
     prompt: `
       Marketing runs promotions per city per day. They ask: "Which active promotions produced no
       trips?" The trip fact has a «promo_id» column. Why can't you answer from the trip fact alone,
@@ -790,7 +790,7 @@ export const problems: Problem[] = [
     track: 'modeling',
     kind: 'modeling',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'meta', 'flipkart', 'swiggy'],
     prompt: `
       Rider data comes from four systems: the app database (rider id), payments (card holder id),
       the support CRM (email-based contact id) and a recently acquired scooter company (its own
@@ -848,7 +848,7 @@ export const problems: Problem[] = [
     track: 'modeling',
     kind: 'modeling',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'meta', 'flipkart', 'swiggy'],
     prompt: `
       Risk wants a nightly list of accounts within two hops of any banned account, where a hop is
       a shared device, payment card or phone number. Design the tables in the warehouse and write
@@ -921,7 +921,7 @@ export const problems: Problem[] = [
     track: 'modeling',
     kind: 'modeling',
     difficulty: 'easy',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'meta', 'flipkart', 'swiggy'],
     prompt: `
       The trip fact has twelve boolean and small-enum columns (is_pool, is_scheduled,
       payment_type, surge_band and others). «dim_rider» is SCD type 2 and has a «rating_band»

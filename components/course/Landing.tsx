@@ -5,6 +5,7 @@ import { TryQuestion } from '@/components/course/TryQuestion';
 import { Icon } from '@/components/layout/Icon';
 import { buttonStyles } from '@/components/ui/Button';
 import { COMPANIES, getTrack, PROBLEMS, problemsForTrack, TRACKS } from '@/lib/course/catalog';
+import { COMPANY_META } from '@/lib/course/company-meta';
 import { trackNumber, trackStyle } from '@/lib/course/track-style';
 import { cn } from '@/lib/utils';
 import type { Problem } from '@/types/course';
@@ -13,12 +14,6 @@ export interface LandingProps {
   /** Where the sign-in buttons go. */
   signInHref: string;
 }
-
-/** The dark card for each loop guide. Uber is violet, Google is navy. */
-const LOOP_SURFACE: Record<string, string> = {
-  uber: 'bg-night-violet',
-  google: 'bg-night-glow',
-};
 
 /** One easy, a spread of medium and hard: the problem table's preview rows. */
 function previewProblems() {
@@ -42,7 +37,7 @@ function signInTo(path: string): string {
 
 /**
  * The signed-out home page. It shows the course itself: a sample design
- * question in the hero, the tracks, the two loops it prepares for and a slice
+ * question in the hero, the tracks, the company loops it prepares for and a slice
  * of the problem list. Every count comes from the catalogue.
  */
 export function Landing({ signInHref }: LandingProps) {
@@ -64,15 +59,15 @@ export function Landing({ signInHref }: LandingProps) {
               <span className="bg-brand-soft text-brand-deep rounded-pill text-micro px-2 py-0.5 font-semibold">
                 New
               </span>
-              {TRACKS.length} tracks · Uber and Google loops
+              {TRACKS.length} tracks · {COMPANIES.length} company loops
             </p>
             <h1 className="text-hero font-display leading-none font-semibold">
               Pass the <span className="text-gradient-brand">senior</span> data engineer loop
             </h1>
             <p className="text-lead text-ink-soft max-w-xl">
               Short lessons, real interview problems and round-by-round guides, built around how
-              Uber and Google interview senior data engineers. Your progress, streak and XP follow
-              you from your phone to your laptop.
+              Uber, Google, Amazon and Indian product companies interview senior data engineers.
+              Your progress, streak and XP follow you from your phone to your laptop.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link href={signInHref} className={buttonStyles({ size: 'lg' })}>
@@ -154,14 +149,14 @@ export function Landing({ signInHref }: LandingProps) {
         <div className="flex flex-col gap-2">
           <p className="eyebrow text-brand-deep">Company loops</p>
           <h2 id="loops-heading" className="text-display">
-            Built around two loops
+            Built around {COMPANIES.length} company loops
           </h2>
           <p className="text-ink-soft max-w-2xl">
             Each guide walks the rounds in order, says what each one tests, and links the tracks
             that prepare you. Your readiness for each company grows as you finish them.
           </p>
         </div>
-        <ul className="grid gap-4 md:grid-cols-2">
+        <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {COMPANIES.map((company) => {
             const minutes = company.rounds.reduce((sum, round) => sum + round.minutes, 0);
             return (
@@ -169,7 +164,7 @@ export function Landing({ signInHref }: LandingProps) {
                 key={company.slug}
                 className={cn(
                   'rounded-sheet text-on-night flex flex-col gap-4 p-6 sm:p-8',
-                  LOOP_SURFACE[company.slug] ?? 'bg-night',
+                  COMPANY_META[company.slug].surface,
                 )}
               >
                 <div className="flex items-center justify-between gap-3">

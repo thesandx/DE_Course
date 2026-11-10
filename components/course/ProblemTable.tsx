@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { COMPANY_META, COMPANY_SLUGS } from '@/lib/course/company-meta';
 import { cn } from '@/lib/utils';
 import type { Company, Difficulty } from '@/types/course';
 
@@ -34,8 +35,6 @@ export interface ProblemTableProps {
   className?: string;
 }
 
-const COMPANY_LABEL: Record<Company, string> = { uber: 'Uber', google: 'Google' };
-
 /**
  * The problem list, LeetCode style: a status tick, the title, the track and
  * the difficulty, with filters above. Filtering runs in the browser over the
@@ -44,6 +43,14 @@ const COMPANY_LABEL: Record<Company, string> = { uber: 'Uber', google: 'Google' 
  * One markup for both postures. On a phone each row is a stacked card; from
  * `md` the same rows line up as a table.
  */
+/** "Uber +3": the first company by name, then how many more. The column is narrow. */
+function companyLabel(companies: readonly Company[]): string {
+  const [first, ...rest] = companies;
+  if (first === undefined) return '';
+  const name = COMPANY_META[first].name;
+  return rest.length === 0 ? name : `${name} +${rest.length}`;
+}
+
 export function ProblemTable({
   rows,
   tracks,
@@ -118,10 +125,10 @@ export function ProblemTable({
             value={company}
             onChange={(event) => setCompany(event.target.value)}
             placeholder="Any company"
-            options={[
-              { value: 'uber', label: 'Asked at Uber' },
-              { value: 'google', label: 'Asked at Google' },
-            ]}
+            options={COMPANY_SLUGS.map((slug) => ({
+              value: slug,
+              label: `${COMPANY_META[slug].name} loop`,
+            }))}
           />
           <Select
             label="Status"
@@ -161,7 +168,7 @@ export function ProblemTable({
               <span className="col-span-1">Status</span>
               <span className="col-span-5">Problem</span>
               <span className="col-span-3">Track</span>
-              <span className="col-span-1">Asked at</span>
+              <span className="col-span-1">Loops</span>
               <span className="col-span-2">Level</span>
             </li>
           )}
@@ -202,7 +209,7 @@ export function ProblemTable({
                       {row.trackTitle}
                     </span>
                     <span className="text-small text-ink-soft hidden md:col-span-1 md:block">
-                      {row.companies.map((item) => COMPANY_LABEL[item]).join(', ')}
+                      {companyLabel(row.companies)}
                     </span>
                     <span className="hidden md:col-span-2 md:block">
                       <DifficultyTag difficulty={row.difficulty} />

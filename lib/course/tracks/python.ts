@@ -801,7 +801,7 @@ export const problems: Problem[] = [
     track: 'python',
     kind: 'coding',
     difficulty: 'easy',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'meta', 'microsoft'],
     prompt: `
       Each line of a large log file looks like:
 
@@ -858,7 +858,7 @@ export const problems: Problem[] = [
     track: 'python',
     kind: 'coding',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'meta', 'microsoft'],
     prompt: `
       Given a list of «(user_id, start_ts, end_ts)» tuples, unsorted, return per user the merged
       sessions: sessions that overlap or are less than 5 minutes (300 s) apart become one.
@@ -913,7 +913,7 @@ export const problems: Problem[] = [
     track: 'python',
     kind: 'coding',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'meta', 'microsoft'],
     prompt: `
       Implement «allow(user_id, ts) -> bool» that permits at most 100 requests per user in any
       rolling 60-second window. Timestamps arrive in non-decreasing order.
@@ -963,7 +963,7 @@ export const problems: Problem[] = [
     track: 'python',
     kind: 'coding',
     difficulty: 'medium',
-    companies: ['google'],
+    companies: ['google', 'amazon', 'meta', 'microsoft'],
     prompt: `
       You receive a stream of search terms. At any time, «top(k)» must return the k most frequent
       terms seen so far. Implement «add(term)» and «top(k)». Discuss complexity, and what you
@@ -1012,7 +1012,7 @@ export const problems: Problem[] = [
     track: 'python',
     kind: 'coding',
     difficulty: 'hard',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'meta', 'microsoft'],
     prompt: `
       Given trips «(city, start_ts, end_ts)», return for each city the maximum number of trips in
       progress at the same time and the earliest time that peak was reached. A trip ending at t
@@ -1066,7 +1066,7 @@ export const problems: Problem[] = [
     track: 'python',
     kind: 'coding',
     difficulty: 'hard',
-    companies: ['google'],
+    companies: ['google', 'amazon', 'meta', 'microsoft'],
     prompt: `
       You have k files, each sorted by timestamp, each too large for memory together. Produce one
       output stream sorted by timestamp. Each line starts with an ISO timestamp.
@@ -1118,7 +1118,7 @@ export const problems: Problem[] = [
     track: 'python',
     kind: 'coding',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'meta', 'microsoft'],
     prompt: `
       Write «flatten(event)» that turns nested dictionaries into a single level with dotted keys.
       Lists of scalars stay lists; lists of dictionaries become «key.0.field», «key.1.field».
@@ -1163,7 +1163,7 @@ export const problems: Problem[] = [
     track: 'python',
     kind: 'coding',
     difficulty: 'easy',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'meta', 'microsoft'],
     prompt: `
       A function «send(payment)» posts to a payments API and sometimes times out, even though the
       payment may have gone through. Write a wrapper that retries safely, and explain what the API
@@ -1209,7 +1209,7 @@ export const problems: Problem[] = [
     track: 'python',
     kind: 'coding',
     difficulty: 'medium',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'meta', 'microsoft'],
     prompt: `
       Write a decorator «retry» for calls to a flaky service. It retries only the exception types
       it is given, uses exponential backoff with jitter capped at a maximum delay, and never spends
@@ -1311,7 +1311,7 @@ export const problems: Problem[] = [
     track: 'python',
     kind: 'coding',
     difficulty: 'medium',
-    companies: ['google'],
+    companies: ['google', 'amazon', 'meta', 'microsoft'],
     prompt: `
       This function keeps the latest event per trip. Events can arrive out of order, can share a
       timestamp, and can be delivered twice. Write the pytest tests you would ship with it.
@@ -1403,7 +1403,7 @@ export const problems: Problem[] = [
     track: 'python',
     kind: 'concept',
     difficulty: 'medium',
-    companies: ['uber'],
+    companies: ['uber', 'amazon', 'meta', 'microsoft'],
     prompt: `
       A daily job downloads 50,000 gzipped JSON files (about 4 MB each) from object storage,
       parses and validates every record in pure Python, and writes Parquet. It runs in one
@@ -1453,7 +1453,7 @@ export const problems: Problem[] = [
     track: 'python',
     kind: 'coding',
     difficulty: 'hard',
-    companies: ['uber', 'google'],
+    companies: ['uber', 'google', 'amazon', 'meta', 'microsoft'],
     prompt: `
       A payments API returns «{"data": [...], "next_cursor": "..." | null}» for
       «GET /v1/charges?updated_since=...&cursor=...». It allows 100 requests a minute and answers

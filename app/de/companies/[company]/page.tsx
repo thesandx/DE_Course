@@ -6,6 +6,7 @@ import { ProgressRing } from '@/components/course/ProgressRing';
 import { Prose } from '@/components/course/Prose';
 import { AppShell } from '@/components/layout/AppShell';
 import { getCompany, getTrack, readiness } from '@/lib/course/catalog';
+import { COMPANY_META } from '@/lib/course/company-meta';
 import { trackStyle } from '@/lib/course/track-style';
 import { cn } from '@/lib/utils';
 import { requireDeLearner } from '@/services/learner.service';
@@ -42,7 +43,7 @@ export default async function CompanyPage({ params }: Props) {
         <header
           className={cn(
             'rounded-sheet text-on-night flex flex-col gap-5 p-6 sm:p-8 md:flex-row md:items-center md:justify-between',
-            slug === 'uber' ? 'bg-night-violet' : 'bg-night-glow',
+            COMPANY_META[company.slug].surface,
           )}
         >
           <div className="flex min-w-0 flex-col gap-3">
@@ -59,7 +60,7 @@ export default async function CompanyPage({ params }: Props) {
               label={`${company.name} readiness`}
               size={104}
               thickness={9}
-              tone={slug === 'uber' ? 'brand' : 'blue'}
+              tone={COMPANY_META[company.slug].ring}
               surface="night"
               shape="wedge"
             >

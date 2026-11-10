@@ -133,7 +133,7 @@ export function SignInPanel({ redirectTo = '/' }: SignInPanelProps): React.JSX.E
           </p>
           <ul className="text-body text-on-night-soft flex flex-col gap-3">
             <li>Your streak, XP and solved problems on every device.</li>
-            <li>Readiness for the Uber and Google loops, round by round.</li>
+            <li>Readiness for nine company loops, round by round.</li>
             <li>No password. Google or a code sent to your phone.</li>
           </ul>
         </aside>
