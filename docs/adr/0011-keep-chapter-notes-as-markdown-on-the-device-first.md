@@ -1,4 +1,4 @@
-# ADR-0010: Keep chapter notes as Markdown, saved on the device first
+# ADR-0011: Keep chapter notes as Markdown, saved on the device first
 
 - **Status:** Accepted
 - **Date:** 2026-11-11

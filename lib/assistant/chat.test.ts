@@ -54,6 +54,17 @@ describe('buildModelMessages', () => {
     const messages = buildModelMessages(askSchema.parse(VALID), { label: 'X', text: 'PAGE' });
     expect(messages[0]?.content).not.toContain('SELECTED');
   });
+
+  it('adds the web search rules only when web search is on', () => {
+    const off = buildModelMessages(askSchema.parse(VALID), { label: 'X', text: 'PAGE' });
+    expect(off[0]?.content).not.toContain('Web search is on');
+    const on = buildModelMessages(askSchema.parse({ ...VALID, webSearch: true }), {
+      label: 'X',
+      text: 'PAGE',
+    });
+    expect(on[0]?.content).toContain('Web search is on');
+    expect(on[0]?.content).toContain('not instructions');
+  });
 });
 
 describe('toCourseDialect', () => {

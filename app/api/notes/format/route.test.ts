@@ -62,9 +62,10 @@ describe('POST /api/notes/format', () => {
     const response = await POST(post(VALID));
     expect(response.status).toBe(200);
     expect(await response.text()).toBe('## Dedup\n\n- ==ROW_NUMBER==');
-    const [model, messages, , options] = streamAnswer.mock.calls[0] ?? [];
+    const [model, messages, , webSearch, options] = streamAnswer.mock.calls[0] ?? [];
     expect(model).toBe(DEFAULT_MODEL_ID);
     expect(JSON.stringify(messages)).toContain('row number dedup');
+    expect(webSearch).toBe(false);
     expect(options).toMatchObject({ maxTokens: expect.any(Number) });
   });
 

@@ -66,8 +66,14 @@ export async function POST(request: Request): Promise<Response> {
       input.model,
       buildModelMessages(input, context, notes),
       request.signal,
+      input.webSearch === true,
     );
-    logger.info('Assistant question', { uid: user.uid, model: input.model, page: context.label });
+    logger.info('Assistant question', {
+      uid: user.uid,
+      model: input.model,
+      page: context.label,
+      webSearch: input.webSearch === true,
+    });
 
     return new Response(stream, {
       headers: {

@@ -67,6 +67,7 @@ export async function POST(request: Request): Promise<Response> {
       input.model,
       buildFormatMessages(target, input.markdown, input.mode, input.instruction),
       request.signal,
+      false,
       { maxTokens: FORMAT_MAX_TOKENS, timeoutMs: FORMAT_TIMEOUT_MS },
     );
     logger.info('Note format', {
