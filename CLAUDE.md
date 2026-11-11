@@ -221,6 +221,7 @@ browser bundle.
 | `user.service.ts`          | `users/{uid}` profiles, keyed by the Firebase uid                           |
 | `firebase-admin.client.ts` | The lazy Admin app. **Auth only** — never Firestore or Storage              |
 | `openrouter.service.ts`    | The AI doubt helper's model calls. Holds the OpenRouter key; streams text   |
+| `notes.service.ts`         | Chapter notes at `notebooks/{uid}/notes/{key}`. The newer edit wins         |
 | `lib/storage-paths.ts`     | Path construction and upload rules — pure, so it is tested without a bucket |
 | `lib/document-ids.ts`      | Guards a caller-supplied document id against hotspot shapes — pure          |
 | `lib/session-cookie.ts`    | The cookie's name and attributes — pure                                     |
@@ -453,16 +454,17 @@ Full model in [`SECURITY.md`](./SECURITY.md).
 
 Recorded in [`docs/adr/`](./docs/adr/). Read before proposing a change to any of them.
 
-| ADR                                                                       | Decision                                                                                                 |
-| ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| [0001](./docs/adr/0001-use-cloud-run-for-hosting.md)                      | Cloud Run for hosting — over Vercel, GKE, App Engine, a VM                                               |
-| [0002](./docs/adr/0002-use-workload-identity-federation.md)               | Workload Identity Federation — no service account keys, ever                                             |
-| [0003](./docs/adr/0003-scope-workload-identity-to-the-github-owner.md)    | WIF provider scoped to the GitHub owner; the repository pin lives in the IAM binding                     |
-| [0004](./docs/adr/0004-use-firestore-and-cloud-storage.md)                | Firestore + Cloud Storage — over Cloud SQL, over a per-app project                                       |
-| [0005](./docs/adr/0005-use-firebase-auth-for-sign-in.md)                  | Firebase Auth with server-side session cookies — over Auth.js, over client-only auth                     |
-| [0007](./docs/adr/0007-adopt-the-loop-ready-visual-language.md)           | The Loop Ready visual language replaces Mochi — to match the owner's mockups                             |
-| [0008](./docs/adr/0008-host-several-courses-with-one-learner-document.md) | Several courses, one `learners/{uid}` document with a tracker per course — over a document per course    |
-| [0009](./docs/adr/0009-answer-learner-doubts-through-openrouter.md)       | An AI doubt helper through OpenRouter, called only from the server — over a browser call or a vendor SDK |
+| ADR                                                                           | Decision                                                                                                 |
+| ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| [0001](./docs/adr/0001-use-cloud-run-for-hosting.md)                          | Cloud Run for hosting — over Vercel, GKE, App Engine, a VM                                               |
+| [0002](./docs/adr/0002-use-workload-identity-federation.md)                   | Workload Identity Federation — no service account keys, ever                                             |
+| [0003](./docs/adr/0003-scope-workload-identity-to-the-github-owner.md)        | WIF provider scoped to the GitHub owner; the repository pin lives in the IAM binding                     |
+| [0004](./docs/adr/0004-use-firestore-and-cloud-storage.md)                    | Firestore + Cloud Storage — over Cloud SQL, over a per-app project                                       |
+| [0005](./docs/adr/0005-use-firebase-auth-for-sign-in.md)                      | Firebase Auth with server-side session cookies — over Auth.js, over client-only auth                     |
+| [0007](./docs/adr/0007-adopt-the-loop-ready-visual-language.md)               | The Loop Ready visual language replaces Mochi — to match the owner's mockups                             |
+| [0008](./docs/adr/0008-host-several-courses-with-one-learner-document.md)     | Several courses, one `learners/{uid}` document with a tracker per course — over a document per course    |
+| [0009](./docs/adr/0009-answer-learner-doubts-through-openrouter.md)           | An AI doubt helper through OpenRouter, called only from the server — over a browser call or a vendor SDK |
+| [0010](./docs/adr/0010-keep-chapter-notes-as-markdown-on-the-device-first.md) | Chapter notes as Markdown in a rich editor, saved on the device first — over a library, over stored HTML |
 
 Add an ADR when a decision is expensive to reverse, affects how everyone works, or rejects an obvious alternative. Never edit an accepted ADR to change its decision — write a new one that supersedes it, and link both ways.
 

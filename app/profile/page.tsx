@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { Suspense } from 'react';
 
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import { AppShell } from '@/components/layout/AppShell';
+import { Icon } from '@/components/layout/Icon';
 import { PageHeading } from '@/components/layout/PageHeading';
 import { ProfileForm } from '@/components/profile/ProfileForm';
 import { ThemePicker } from '@/components/profile/ThemePicker';
@@ -130,6 +132,21 @@ async function ProfileDetails({ user }: { user: SessionUser }): Promise<React.JS
         className="flex max-w-xl flex-col gap-4 lg:col-span-2"
         aria-labelledby="details-heading"
       >
+        <Link
+          href="/notes"
+          className="bg-surface border-line rounded-card shadow-card hover:border-line-strong flex items-center gap-3 border p-4"
+        >
+          <span className="bg-butter text-ink rounded-input inline-grid size-10 shrink-0 place-items-center">
+            <Icon name="note" className="size-5" />
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-heading">My notes</span>
+            <span className="text-small text-ink-soft">
+              Every note from every chapter, for revision.
+            </span>
+          </span>
+          <Icon name="arrow-right" className="text-ink-faint size-4" />
+        </Link>
         <h2 id="details-heading" className="text-title">
           Your details
         </h2>

@@ -3,11 +3,14 @@ import { z } from 'zod';
 
 import { askSchema, buildModelMessages } from '@/lib/assistant/chat';
 import { contextForPath } from '@/lib/assistant/context';
+import { MODEL_FAILURES } from '@/lib/assistant/failures';
 import { ASSISTANT_RATE_LIMIT, RateLimiter } from '@/lib/assistant/rate-limit';
 import { mapHttpError } from '@/lib/http-errors';
 import { logger } from '@/lib/logger';
+import { noteKeyForPath } from '@/lib/notes/targets';
 import { requireUser } from '@/services/auth.service';
-import { AssistantError, type AssistantFailure, streamAnswer } from '@/services/openrouter.service';
+import { getNoteOrNull } from '@/services/notes.service';
+import { AssistantError, streamAnswer } from '@/services/openrouter.service';
 
 /**
  * `POST /api/assistant` answers a learner's doubt about the page they are on.
@@ -21,22 +24,6 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const limiter = new RateLimiter(ASSISTANT_RATE_LIMIT);
-
-const FAILURES: Record<AssistantFailure, { status: number; message: string }> = {
-  not_configured: {
-    status: 503,
-    message: 'The assistant is not set up yet. The OpenRouter key is missing or was refused.',
-  },
-  out_of_credits: {
-    status: 402,
-    message: 'The OpenRouter account is out of credit. Add credit, then ask again.',
-  },
-  busy: { status: 429, message: 'That model is busy right now. Try again, or pick another model.' },
-  upstream: {
-    status: 502,
-    message: 'The model could not answer just now. Try again, or pick another model.',
-  },
-};
 
 function json(status: number, error: string, message: string, headers?: HeadersInit): NextResponse {
   return NextResponse.json({ error, message }, { status, ...(headers && { headers }) });
@@ -68,9 +55,16 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const context = contextForPath(input.path);
+    // Pip reads the learner's own notes for this chapter, so "check my notes"
+    // and "quiz me on my notes" work. A read failure only leaves them out.
+    const noteKey = noteKeyForPath(input.path);
+    const notes =
+      noteKey === undefined
+        ? undefined
+        : ((await getNoteOrNull(user.uid, noteKey))?.markdown ?? '');
     const stream = await streamAnswer(
       input.model,
-      buildModelMessages(input, context),
+      buildModelMessages(input, context, notes),
       request.signal,
     );
     logger.info('Assistant question', { uid: user.uid, model: input.model, page: context.label });
@@ -89,7 +83,7 @@ export async function POST(request: Request): Promise<Response> {
         reason: error.reason,
         detail: error.message,
       });
-      const failure = FAILURES[error.reason];
+      const failure = MODEL_FAILURES[error.reason];
       return json(failure.status, error.reason, failure.message);
     }
     const mapped = mapHttpError(error);

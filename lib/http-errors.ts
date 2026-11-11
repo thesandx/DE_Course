@@ -43,6 +43,7 @@ const BY_NAME: Record<string, { status: number; code: string; exposeDetail: bool
   UnknownCourseItemError: { status: 400, code: 'unknown_item', exposeDetail: true },
   StoryBankFullError: { status: 409, code: 'story_bank_full', exposeDetail: true },
   StoryNotFoundError: { status: 404, code: 'not_found', exposeDetail: true },
+  UnknownNoteTargetError: { status: 400, code: 'unknown_chapter', exposeDetail: true },
   // A missing environment variable is an operator error. Telling a caller which
   // one is missing describes the deployment to anyone who asks.
   ConfigurationError: { status: 500, code: 'server_misconfigured', exposeDetail: false },

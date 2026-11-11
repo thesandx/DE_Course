@@ -135,7 +135,10 @@ export function SidebarNav({ enrolled, counts = {} }: SidebarNavProps) {
         </ul>
       </div>
 
-      <NavRow href="/profile" label="Profile" icon="person" active={current === '/profile'} />
+      <div className="flex flex-col gap-1">
+        <NavRow href="/notes" label="My notes" icon="note" active={pathname === '/notes'} />
+        <NavRow href="/profile" label="Profile" icon="person" active={current === '/profile'} />
+      </div>
     </nav>
   );
 }

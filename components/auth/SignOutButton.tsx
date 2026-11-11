@@ -5,6 +5,7 @@ import { useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
 import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
+import { clearLocalNotes } from '@/hooks/useNoteSync';
 
 /**
  * Signs the user out of this browser and revokes their other sessions.
@@ -47,6 +48,8 @@ export function SignOutButton({
         void auth
           .signOut()
           .then(() => {
+            // Notes kept on this device belong to the person signing out.
+            clearLocalNotes();
             // The session cookie is gone, so every Server Component must be
             // re-rendered. Without the refresh the page keeps showing the
             // signed-in markup it was rendered with.

@@ -7,11 +7,15 @@ import { Prose } from '@/components/course/Prose';
 import { StationChecks } from '@/components/gcp/StationChecks';
 import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/layout/Icon';
+import { ChapterNotes } from '@/components/notes/ChapterNotes';
 import { buttonStyles } from '@/components/ui/Button';
 import { getLab, getStation, LAB_XP, labId, stationId, stationXp } from '@/lib/course/gcp/catalog';
 import { hueStyle } from '@/lib/course/hue';
+import { env } from '@/lib/env';
+import { noteKeys } from '@/lib/notes/targets';
 import { cn } from '@/lib/utils';
 import { requireGcpLearner } from '@/services/learner.service';
+import { getNoteOrNull } from '@/services/notes.service';
 
 interface Props {
   params: Promise<{ line: string; station: string }>;
@@ -41,7 +45,11 @@ export default async function GcpStationPage({ params }: Props) {
   if (found === undefined) notFound();
   const { line, station, index } = found;
 
-  const { progress, shell } = await requireGcpLearner(`/gcp/lines/${lineSlug}/${stationSlug}`);
+  const { user, progress, shell } = await requireGcpLearner(
+    `/gcp/lines/${lineSlug}/${stationSlug}`,
+  );
+  const noteKey = noteKeys.station(stationSlug);
+  const note = await getNoteOrNull(user.uid, noteKey);
   const itemId = stationId(station.slug);
   const done = progress.done[itemId] !== undefined;
   const previous = line.stations[index - 1];
@@ -135,6 +143,13 @@ export default async function GcpStationPage({ params }: Props) {
                 </ol>
               </section>
             )}
+
+            <ChapterNotes
+              noteKey={noteKey}
+              title={`${station.code} ${station.title}`}
+              initial={note}
+              pipEnabled={env.assistantEnabled}
+            />
 
             <StationChecks
               itemId={itemId}
