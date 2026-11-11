@@ -12,6 +12,11 @@ import {
   type ProgressRecord,
 } from '@/lib/course/progress';
 import { COURSE_RULES } from '@/lib/course/rules';
+import {
+  applyLearnerStudyTime,
+  MAX_SECONDS_PER_DAY,
+  MAX_SECONDS_PER_REPORT,
+} from '@/lib/course/study-time';
 import { logger } from '@/lib/logger';
 import type { SessionUser } from '@/services/auth.service';
 import { createRepository, DocumentAlreadyExistsError } from '@/services/repository';
@@ -30,6 +35,8 @@ import { createRepository, DocumentAlreadyExistsError } from '@/services/reposit
  *
  *   - `enrolled`: course → the day the learner joined it.
  *   - `courses`: course → that course's tracker, `{ done, days }`.
+ *   - `studyTime`: local day → seconds on a course page that day, across
+ *     every course. Optional; it feeds the study streak map on the home page.
  *
  * Each tracker is bounded the same way as before: `done` holds only ids that
  * exist in that course's catalogue (`COURSE_RULES`), and `days` keeps the
@@ -63,9 +70,16 @@ export const progressSchema = z.object({
     .refine((days) => Object.keys(days).length <= MAX_DAYS_KEPT, 'too many days'),
 });
 
+export const studyTimeSchema = z
+  .record(daySchema, z.number().int().min(0).max(MAX_SECONDS_PER_DAY))
+  .refine((days) => Object.keys(days).length <= MAX_DAYS_KEPT, 'too many days');
+
 export const learnerSchema = z.object({
   enrolled: z.partialRecord(courseSchema, daySchema),
   courses: z.partialRecord(courseSchema, progressSchema),
+  // Optional: documents written before time tracking have no field. Nothing
+  // needs a backfill, because an absent map reads as "no time yet".
+  studyTime: studyTimeSchema.optional(),
 });
 
 export type LearnerPayload = z.infer<typeof learnerSchema>;
@@ -89,7 +103,8 @@ export class UnknownCourseItemError extends Error {
 }
 
 function toRecord(document: LearnerPayload): LearnerRecord {
-  return { enrolled: document.enrolled, courses: document.courses };
+  const record: LearnerRecord = { enrolled: document.enrolled, courses: document.courses };
+  return document.studyTime === undefined ? record : { ...record, studyTime: document.studyTime };
 }
 
 function toPayload(record: LearnerRecord): LearnerPayload {
@@ -100,7 +115,9 @@ function toPayload(record: LearnerRecord): LearnerPayload {
     if (tracker !== undefined)
       courses[slug] = { done: { ...tracker.done }, days: { ...tracker.days } };
   }
-  return { enrolled: { ...record.enrolled }, courses };
+  const payload: LearnerPayload = { enrolled: { ...record.enrolled }, courses };
+  if (record.studyTime !== undefined) payload.studyTime = { ...record.studyTime };
+  return payload;
 }
 
 /** The DE record from the single-course document, as a learner record. */
@@ -178,4 +195,20 @@ export async function recordCompletion(
   );
   logger.info('Course progress recorded', { uid: user.uid, course, itemId, done });
   return result;
+}
+
+/**
+ * Adds seconds of study to the caller's local day. The browser reports about
+ * once a minute while a course page is open, visible and in use, so one
+ * learner makes about one write a minute, far below Firestore's limit of
+ * one write a second per document.
+ */
+export async function recordStudyTime(
+  user: SessionUser,
+  day: string,
+  seconds: number,
+): Promise<void> {
+  const added = Math.min(Math.round(seconds), MAX_SECONDS_PER_REPORT);
+  if (added <= 0) return;
+  await writeLearner(user, (before) => applyLearnerStudyTime(before, day, added));
 }

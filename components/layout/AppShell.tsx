@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { DoubtAssistant } from '@/components/assistant/DoubtAssistant';
+import { StudyTimer } from '@/components/course/StudyTimer';
 import { copyrightLine } from '@/lib/contact';
 import { PROBLEMS, TRACKS } from '@/lib/course/catalog';
 import { type CourseSlug, getCourse } from '@/lib/course/courses';
@@ -339,6 +340,8 @@ export function AppShell({
       </div>
 
       <DoubtAssistant enabled={env.assistantEnabled} />
+      {/* Time on a course page counts toward the study streak map on the home page. */}
+      {course !== undefined && <StudyTimer />}
     </div>
   );
 }

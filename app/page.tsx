@@ -4,13 +4,15 @@ import { CourseHub } from '@/components/course/CourseHub';
 import { Landing } from '@/components/course/Landing';
 import { AppShell } from '@/components/layout/AppShell';
 import { hubStats } from '@/lib/course/hub';
+import { studyActivity } from '@/lib/course/study-time';
 import { getCurrentUser } from '@/services/auth.service';
 import { loadLearner } from '@/services/learner.service';
 
 /**
  * Home. A signed-out visitor sees the platform: the courses, a live question
  * and a slice of each course. A signed-in learner sees the course hub: each
- * course they joined with its own tracker, and the courses they can join.
+ * course they joined with its own tracker, their own study streak map, and
+ * the courses they can join.
  *
  * It reads the session cookie, so it renders per request.
  */
@@ -29,7 +31,12 @@ export default async function HomePage() {
   const { name, record, enrolled, today, shell } = await loadLearner(user);
   return (
     <AppShell {...shell}>
-      <CourseHub name={name} joined={enrolled.map((course) => hubStats(record, course, today))} />
+      <CourseHub
+        name={name}
+        joined={enrolled.map((course) => hubStats(record, course, today))}
+        activity={studyActivity(record)}
+        today={today}
+      />
     </AppShell>
   );
 }

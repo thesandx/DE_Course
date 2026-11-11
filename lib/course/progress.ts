@@ -195,6 +195,12 @@ export function applyCompletion(
 export interface LearnerRecord {
   enrolled: Readonly<Partial<Record<CourseSlug, string>>>;
   courses: Readonly<Partial<Record<CourseSlug, ProgressRecord>>>;
+  /**
+   * Seconds on a course page per local day, across every course. Feeds the
+   * study streak map on the home page (`lib/course/study-time.ts`). Absent
+   * until the learner's first tracked minute.
+   */
+  studyTime?: Readonly<Record<string, number>>;
 }
 
 export const EMPTY_LEARNER: LearnerRecord = { enrolled: {}, courses: {} };

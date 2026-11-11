@@ -84,6 +84,11 @@
       "indexes": []
     },
     {
+      "collectionGroup": "learners",
+      "fieldPath": "studyTime",
+      "indexes": []
+    },
+    {
       "collectionGroup": "story-banks",
       "fieldPath": "stories",
       "indexes": []

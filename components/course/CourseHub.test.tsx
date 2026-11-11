@@ -4,9 +4,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getCourse } from '@/lib/course/courses';
 import { hubStats } from '@/lib/course/hub';
 import { EMPTY_LEARNER } from '@/lib/course/progress';
+import type { StudyActivity } from '@/lib/course/study-time';
 
 import { CourseHub } from './CourseHub';
 import { CourseJoin } from './CourseJoin';
+
+const NO_ACTIVITY: StudyActivity = { seconds: {}, items: {} };
 
 const push = vi.fn();
 const refresh = vi.fn();
@@ -19,26 +22,39 @@ afterEach(() => {
 
 describe('CourseHub', () => {
   it('offers every open course to a new learner, and the later one without a button', () => {
-    render(<CourseHub name="Sandeep" joined={[]} />);
+    render(<CourseHub name="Sandeep" joined={[]} activity={NO_ACTIVITY} today="2026-11-01" />);
     expect(screen.getByRole('heading', { name: 'Choose a course' })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Join course' })).toHaveLength(2);
     expect(screen.getByText('Opening later')).toBeInTheDocument();
   });
 
+  it('hides the study map until the learner joins a course', () => {
+    render(<CourseHub name="Sandeep" joined={[]} activity={NO_ACTIVITY} today="2026-11-01" />);
+    expect(screen.queryByText('Study streak')).not.toBeInTheDocument();
+  });
+
   it('shows a tracker card per joined course and offers the rest', () => {
-    render(<CourseHub name="Sandeep" joined={[hubStats(EMPTY_LEARNER, 'gcp', '2026-11-01')]} />);
+    render(
+      <CourseHub
+        name="Sandeep"
+        joined={[hubStats(EMPTY_LEARNER, 'gcp', '2026-11-01')]}
+        activity={NO_ACTIVITY}
+        today="2026-11-01"
+      />,
+    );
     expect(screen.getByRole('heading', { name: 'Your courses' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'GCP Professional Data Engineer' })).toHaveAttribute(
       'href',
       '/gcp',
     );
     expect(screen.getAllByRole('button', { name: 'Join course' })).toHaveLength(1);
+    expect(screen.getByText('Study streak')).toBeInTheDocument();
   });
 
   it('joins a course and opens it', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
-    render(<CourseHub name="Sandeep" joined={[]} />);
+    render(<CourseHub name="Sandeep" joined={[]} activity={NO_ACTIVITY} today="2026-11-01" />);
     fireEvent.click(screen.getAllByRole('button', { name: 'Join course' })[1] as HTMLElement);
     await waitFor(() => expect(push).toHaveBeenCalledWith('/gcp'));
     const body = JSON.parse(String((fetchMock.mock.calls[0]?.[1] as RequestInit).body)) as unknown;
@@ -47,7 +63,7 @@ describe('CourseHub', () => {
 
   it('says why a join failed', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 401 })));
-    render(<CourseHub name="Sandeep" joined={[]} />);
+    render(<CourseHub name="Sandeep" joined={[]} activity={NO_ACTIVITY} today="2026-11-01" />);
     fireEvent.click(screen.getAllByRole('button', { name: 'Join course' })[0] as HTMLElement);
     expect(await screen.findByText(/Sign in again to join/)).toBeInTheDocument();
     expect(push).not.toHaveBeenCalled();
