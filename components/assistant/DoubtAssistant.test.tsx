@@ -66,6 +66,35 @@ describe('DoubtAssistant', () => {
     );
   });
 
+  it('searches the web when the globe is on, and lists the sources under the answer', async () => {
+    const sources = [{ url: 'https://docs.getdbt.com/docs/build/snapshots', title: 'Snapshots' }];
+    fetchMock.mockResolvedValue(
+      streamed(`See [docs.getdbt.com](https://docs.getdbt.com/).\u001e${JSON.stringify(sources)}`),
+    );
+    render(<DoubtAssistant enabled />);
+    fireEvent.click(screen.getByRole('button', { name: /Ask Pip/ }));
+    const web = screen.getByRole('button', { name: /Web search/ });
+    expect(web).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(web);
+    expect(web).toHaveAttribute('aria-pressed', 'true');
+    expect(window.localStorage.getItem('loop-ready-assistant-web')).toBe('on');
+
+    fireEvent.change(screen.getByLabelText('Your doubt'), { target: { value: 'dbt 2 news?' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+    expect(await screen.findByRole('link', { name: /Snapshots/ })).toHaveAttribute(
+      'href',
+      sources[0]?.url,
+    );
+    expect(screen.getByRole('link', { name: 'docs.getdbt.com' })).toHaveAttribute(
+      'target',
+      '_blank',
+    );
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({
+      webSearch: true,
+    });
+  });
+
   it('shows the server message when the model cannot answer', async () => {
     fetchMock.mockResolvedValue(
       Response.json({ error: 'busy', message: 'That model is busy right now.' }, { status: 429 }),

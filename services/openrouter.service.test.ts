@@ -8,7 +8,9 @@ const envMock = vi.hoisted(() => ({
 vi.mock('@/lib/env', () => envMock);
 vi.mock('@/lib/logger', () => ({ logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() } }));
 
-const { AssistantError, deltaFromEvent, streamAnswer } = await import('./openrouter.service');
+const { AssistantError, deltaFromEvent, sourcesFromEvent, streamAnswer } =
+  await import('./openrouter.service');
+const { splitSources } = await import('@/lib/assistant/sources');
 
 function sse(lines: readonly string[]): Response {
   const encoder = new TextEncoder();
@@ -41,6 +43,25 @@ describe('deltaFromEvent', () => {
 
   it('throws on an error inside the stream', () => {
     expect(() => deltaFromEvent('{"error":{"message":"overloaded"}}')).toThrow(AssistantError);
+  });
+});
+
+describe('sourcesFromEvent', () => {
+  it('reads citations from a delta or a final message, and never throws', () => {
+    const citation = {
+      type: 'url_citation',
+      url_citation: { url: 'https://docs.getdbt.com/', title: 'dbt Docs' },
+    };
+    const sources = [{ url: 'https://docs.getdbt.com/', title: 'dbt Docs' }];
+    expect(
+      sourcesFromEvent(JSON.stringify({ choices: [{ delta: { annotations: [citation] } }] })),
+    ).toEqual(sources);
+    expect(
+      sourcesFromEvent(JSON.stringify({ choices: [{ message: { annotations: [citation] } }] })),
+    ).toEqual(sources);
+    expect(sourcesFromEvent('{"choices":[{"delta":{"content":"x"}}]}')).toEqual([]);
+    expect(sourcesFromEvent('[DONE]')).toEqual([]);
+    expect(sourcesFromEvent('not json')).toEqual([]);
   });
 });
 
@@ -91,6 +112,50 @@ describe('streamAnswer', () => {
       stream: true,
     });
     expect(init?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('asks for no web search unless the learner turned it on', async () => {
+    fetchMock.mockResolvedValue(sse(['data: {"choices":[{"delta":{"content":"Hi"}}]}', '']));
+    await streamAnswer('m', MESSAGES, new AbortController().signal);
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).not.toHaveProperty('plugins');
+  });
+
+  it('adds the web plugin and ends the stream with the cited sources', async () => {
+    const citation = (url: string, title: string) => ({
+      type: 'url_citation',
+      url_citation: { url, title, content: 'excerpt' },
+    });
+    fetchMock.mockResolvedValue(
+      sse([
+        'data: {"choices":[{"delta":{"content":"Use merge."}}]}',
+        `data: ${JSON.stringify({
+          choices: [
+            {
+              delta: {
+                annotations: [
+                  citation('https://docs.getdbt.com/a', 'Incremental models'),
+                  citation('https://docs.getdbt.com/a', 'Incremental models'),
+                  citation('https://www.getdbt.com/blog', 'dbt blog'),
+                ],
+              },
+            },
+          ],
+        })}`,
+        'data: [DONE]',
+        '',
+      ]),
+    );
+    const stream = await streamAnswer('m', MESSAGES, new AbortController().signal, true);
+    expect(splitSources(await readAll(stream))).toEqual({
+      text: 'Use merge.',
+      sources: [
+        { url: 'https://docs.getdbt.com/a', title: 'Incremental models' },
+        { url: 'https://www.getdbt.com/blog', title: 'dbt blog' },
+      ],
+    });
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toMatchObject({
+      plugins: [{ id: 'web', engine: 'exa', max_results: 5 }],
+    });
   });
 
   it.each([
