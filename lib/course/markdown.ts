@@ -28,7 +28,10 @@ export type Block =
   | { kind: 'callout'; tone: CalloutKind; title: string; body: string[] };
 
 export type Inline =
-  { kind: 'text'; text: string } | { kind: 'code'; text: string } | { kind: 'bold'; text: string };
+  | { kind: 'text'; text: string }
+  | { kind: 'code'; text: string }
+  | { kind: 'bold'; text: string }
+  | { kind: 'link'; text: string; href: string };
 
 const CALLOUT_KINDS: readonly CalloutKind[] = ['senior', 'trap', 'tip', 'example'];
 
@@ -175,15 +178,22 @@ export function parseMarkdown(source: string): Block[] {
   return blocks;
 }
 
-/** Splits a line into text, «code» and **bold** runs. Unclosed markers stay as text. */
+/**
+ * Splits a line into text, «code», **bold** and [link](https://…) runs.
+ * Unclosed markers stay as text. A link must be http or https, so a
+ * `javascript:` URL from an AI answer stays plain text.
+ */
 export function parseInline(text: string): Inline[] {
   const runs: Inline[] = [];
-  const pattern = /«([^»]+)»|\*\*([^*]+)\*\*/g;
+  const pattern = /«([^»]+)»|\*\*([^*]+)\*\*|\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g;
   let last = 0;
   for (let match = pattern.exec(text); match !== null; match = pattern.exec(text)) {
     if (match.index > last) runs.push({ kind: 'text', text: text.slice(last, match.index) });
     if (match[1] !== undefined) runs.push({ kind: 'code', text: match[1] });
     else if (match[2] !== undefined) runs.push({ kind: 'bold', text: match[2] });
+    else if (match[3] !== undefined && match[4] !== undefined) {
+      runs.push({ kind: 'link', text: match[3], href: match[4] });
+    }
     last = match.index + match[0].length;
   }
   if (last < text.length) runs.push({ kind: 'text', text: text.slice(last) });

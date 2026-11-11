@@ -195,6 +195,8 @@ gh variable set OPENROUTER_SECRET --body openrouter-api-key
 
 To change the key, add a new version and deploy again (see "Rotating" above). Set a credit limit on the key in the OpenRouter dashboard. That limit is the hard cap on spend. The app also limits each learner to 30 questions in 10 minutes.
 
+When a learner turns on web search in the panel, each answer also runs one Exa search through OpenRouter. It costs about $0.007, plus the prompt tokens of the results, and comes from the same OpenRouter credit. It needs no other key. See [ADR-0010](../docs/adr/0010-let-the-ai-helper-search-the-web.md).
+
 Locally, put `OPENROUTER_API_KEY=sk-or-v1-...` in `.env.local`. Git ignores that file.
 
 ---

@@ -15,6 +15,7 @@ import {
   toCourseDialect,
 } from '@/lib/assistant/chat';
 import { ASSISTANT_MODELS, DEFAULT_MODEL_ID, isAssistantModel } from '@/lib/assistant/models';
+import { hostOf, isWebUrl, splitSources, type WebSource } from '@/lib/assistant/sources';
 import { cn } from '@/lib/utils';
 
 import { PipMascot } from './PipMascot';
@@ -26,6 +27,7 @@ export interface DoubtAssistantProps {
 }
 
 const MODEL_KEY = 'loop-ready-assistant-model';
+const WEB_KEY = 'loop-ready-assistant-web';
 const CHAT_KEY_PREFIX = 'loop-ready-assistant-chat:';
 /** A selection made this recently counts as "the text I am asking about". */
 const SELECTION_FRESH_MS = 20_000;
@@ -54,6 +56,24 @@ function suggestionsFor(path: string): readonly string[] {
   ];
 }
 
+/** A chat turn in the panel. An answer can carry the web pages it used. */
+type PanelMessage = ChatMessage & { sources?: WebSource[] };
+
+function sourcesOf(value: unknown): WebSource[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const sources = value.filter(
+    (item): item is WebSource =>
+      typeof item === 'object' &&
+      item !== null &&
+      'url' in item &&
+      typeof item.url === 'string' &&
+      isWebUrl(item.url) &&
+      'title' in item &&
+      typeof item.title === 'string',
+  );
+  return sources.length === 0 ? undefined : sources;
+}
+
 function readStorage(storage: () => Storage, key: string): string | null {
   try {
     return storage().getItem(key);
@@ -72,21 +92,30 @@ function writeStorage(storage: () => Storage, key: string, value: string | null)
   }
 }
 
-function loadChat(path: string): ChatMessage[] {
+function loadChat(path: string): PanelMessage[] {
   const raw = readStorage(() => window.sessionStorage, CHAT_KEY_PREFIX + path);
   if (raw === null) return [];
   try {
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (item): item is ChatMessage =>
-        typeof item === 'object' &&
-        item !== null &&
-        'role' in item &&
-        (item.role === 'user' || item.role === 'assistant') &&
-        'content' in item &&
-        typeof item.content === 'string',
-    );
+    return parsed
+      .filter(
+        (item): item is ChatMessage =>
+          typeof item === 'object' &&
+          item !== null &&
+          'role' in item &&
+          (item.role === 'user' || item.role === 'assistant') &&
+          'content' in item &&
+          typeof item.content === 'string',
+      )
+      .map((item) => {
+        const sources = 'sources' in item ? sourcesOf(item.sources) : undefined;
+        return {
+          role: item.role,
+          content: item.content,
+          ...(sources !== undefined && { sources }),
+        };
+      });
   } catch {
     return [];
   }
@@ -104,12 +133,17 @@ function loadChat(path: string): ChatMessage[] {
  *
  * The model comes from the dropdown and is remembered in this browser. The
  * chat is remembered per page for the browser session.
+ *
+ * The globe button turns on web search. The model then also reads fresh web
+ * results, and the answer lists the pages it used. It is off by default,
+ * because each search adds a small charge; the choice is remembered too.
  */
 export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [model, setModel] = useState(DEFAULT_MODEL_ID);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [webSearch, setWebSearch] = useState(false);
+  const [messages, setMessages] = useState<PanelMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [quote, setQuote] = useState<string | null>(null);
   const [streaming, setStreaming] = useState(false);
@@ -130,6 +164,7 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
       // reads it is on screen until the panel opens, so hydration still matches.
       const saved = readStorage(() => window.localStorage, MODEL_KEY);
       if (saved !== null && isAssistantModel(saved)) setModel(saved);
+      if (readStorage(() => window.localStorage, WEB_KEY) === 'on') setWebSearch(true);
     }
     setLoadedPath(pathname);
     setMessages(loadChat(pathname));
@@ -194,12 +229,18 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
     writeStorage(() => window.localStorage, MODEL_KEY, id);
   }
 
+  function toggleWebSearch() {
+    const next = !webSearch;
+    setWebSearch(next);
+    writeStorage(() => window.localStorage, WEB_KEY, next ? 'on' : null);
+  }
+
   const ask = useCallback(
     async (question: string) => {
       const text = question.trim().slice(0, MAX_MESSAGE_CHARS);
       if (text === '' || streaming || !enabled) return;
 
-      const history: ChatMessage[] = [...messages, { role: 'user', content: text }];
+      const history: PanelMessage[] = [...messages, { role: 'user', content: text }];
       setMessages([...history, { role: 'assistant', content: '' }]);
       setDraft('');
       setError(null);
@@ -217,7 +258,11 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
             model,
             path: pathname,
             ...(quote !== null && { quote }),
-            messages: history.slice(-MAX_HISTORY),
+            ...(webSearch && { webSearch: true }),
+            // The server takes only the role and the text of each turn.
+            messages: history
+              .slice(-MAX_HISTORY)
+              .map((message) => ({ role: message.role, content: message.content })),
           }),
           signal: controller.signal,
         });
@@ -235,12 +280,17 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
+        let raw = '';
         for (;;) {
           const { done, value } = await reader.read();
           if (done) break;
-          answer += decoder.decode(value, { stream: true });
-          const partial = answer;
-          setMessages([...history, { role: 'assistant', content: partial }]);
+          raw += decoder.decode(value, { stream: true });
+          const { text: partial, sources } = splitSources(raw);
+          answer = partial;
+          setMessages([
+            ...history,
+            { role: 'assistant', content: partial, ...(sources.length > 0 && { sources }) },
+          ]);
         }
         if (answer.trim() === '') throw new Error('The model sent an empty answer. Try again.');
         setQuote(null);
@@ -255,7 +305,7 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
         setStreaming(false);
       }
     },
-    [enabled, messages, model, pathname, quote, streaming],
+    [enabled, messages, model, pathname, quote, streaming, webSearch],
   );
 
   function clearChat() {
@@ -299,7 +349,11 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
                 {ASSISTANT_NAME}
               </p>
               <p className="text-small text-on-night-soft truncate">
-                {streaming ? 'Thinking it through…' : 'Your friendly doubt helper'}
+                {streaming
+                  ? webSearch
+                    ? 'Searching the web…'
+                    : 'Thinking it through…'
+                  : 'Your friendly doubt helper'}
               </p>
             </div>
             {messages.length > 0 && (
@@ -359,6 +413,26 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
                 <path d="M6 9l6 6 6-6" />
               </svg>
             </div>
+            <button
+              type="button"
+              onClick={toggleWebSearch}
+              aria-pressed={webSearch}
+              aria-label="Web search"
+              title={
+                webSearch
+                  ? 'Web search is on. Each answer also reads fresh web results.'
+                  : 'Turn on web search for fresh facts, versions and docs.'
+              }
+              className={cn(
+                'rounded-pill text-small inline-flex min-h-11 shrink-0 items-center gap-1.5 border px-3 font-semibold',
+                webSearch
+                  ? 'bg-brand text-on-night border-brand'
+                  : 'bg-sunken border-line text-ink-soft hover:text-ink',
+              )}
+            >
+              <Icon name="globe" className="size-4" />
+              Web
+            </button>
           </div>
 
           <div
@@ -424,10 +498,44 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
                           <span className="animate-breathe bg-brand size-2 rounded-full" />
                           <span className="animate-breathe bg-iris size-2 rounded-full" />
                           <span className="animate-breathe bg-gold-deep size-2 rounded-full" />
-                          <span className="ml-1">Pip is thinking…</span>
+                          <span className="ml-1">
+                            {webSearch ? 'Pip is searching the web…' : 'Pip is thinking…'}
+                          </span>
                         </p>
                       ) : (
                         <Prose source={toCourseDialect(message.content)} className="text-small" />
+                      )}
+                      {message.sources !== undefined && message.sources.length > 0 && (
+                        <div className="border-line mt-3 border-t pt-2">
+                          <p className="text-small text-ink-soft flex items-center gap-1.5 font-semibold">
+                            <Icon name="globe" className="size-4" />
+                            Sources
+                          </p>
+                          <ol className="mt-1 flex flex-col">
+                            {message.sources.map((source, sourceIndex) => (
+                              <li key={source.url}>
+                                <a
+                                  href={source.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-small hover:bg-sunken rounded-input -mx-2 flex min-h-11 items-center gap-2 px-2"
+                                >
+                                  <span className="text-ink-faint font-mono">
+                                    {sourceIndex + 1}
+                                  </span>
+                                  <span className="min-w-0 flex-1">
+                                    <span className="text-ink line-clamp-1 font-semibold">
+                                      {source.title}
+                                    </span>
+                                    <span className="text-ink-faint block truncate">
+                                      {hostOf(source.url)}
+                                    </span>
+                                  </span>
+                                </a>
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
                       )}
                     </div>
                   </div>

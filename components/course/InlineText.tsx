@@ -1,7 +1,8 @@
 import { parseInline } from '@/lib/course/markdown';
 
 /**
- * One line of course text with «code» and **bold** runs. Safe in server and
+ * One line of course text with «code», **bold** and link runs. A link opens
+ * in a new tab, because it leaves the course. Safe in server and
  * client components: it is plain markup with no state.
  */
 export function InlineText({ text }: { text: string }) {
@@ -23,6 +24,19 @@ export function InlineText({ text }: { text: string }) {
             <strong key={index} className="font-bold">
               {run.text}
             </strong>
+          );
+        }
+        if (run.kind === 'link') {
+          return (
+            <a
+              key={index}
+              href={run.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-brand-deep font-semibold break-words underline underline-offset-2"
+            >
+              {run.text}
+            </a>
           );
         }
         return <span key={index}>{run.text}</span>;

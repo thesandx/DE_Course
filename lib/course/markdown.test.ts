@@ -101,6 +101,17 @@ describe('parseInline', () => {
     ]);
   });
 
+  it('reads web links, and leaves a non-web link as text', () => {
+    expect(parseInline('See [dbt docs](https://docs.getdbt.com/a_b).')).toEqual([
+      { kind: 'text', text: 'See ' },
+      { kind: 'link', text: 'dbt docs', href: 'https://docs.getdbt.com/a_b' },
+      { kind: 'text', text: '.' },
+    ]);
+    expect(parseInline('[x](javascript:alert(1))')).toEqual([
+      { kind: 'text', text: '[x](javascript:alert(1))' },
+    ]);
+  });
+
   it('leaves unclosed markers as text', () => {
     expect(parseInline('a «b')).toEqual([{ kind: 'text', text: 'a «b' }]);
   });

@@ -463,6 +463,7 @@ Recorded in [`docs/adr/`](./docs/adr/). Read before proposing a change to any of
 | [0007](./docs/adr/0007-adopt-the-loop-ready-visual-language.md)           | The Loop Ready visual language replaces Mochi — to match the owner's mockups                             |
 | [0008](./docs/adr/0008-host-several-courses-with-one-learner-document.md) | Several courses, one `learners/{uid}` document with a tracker per course — over a document per course    |
 | [0009](./docs/adr/0009-answer-learner-doubts-through-openrouter.md)       | An AI doubt helper through OpenRouter, called only from the server — over a browser call or a vendor SDK |
+| [0010](./docs/adr/0010-let-the-ai-helper-search-the-web.md)               | Web search for the AI helper through OpenRouter's Exa plugin, off by default — over native search        |
 
 Add an ADR when a decision is expensive to reverse, affects how everyone works, or rejects an obvious alternative. Never edit an accepted ADR to change its decision — write a new one that supersedes it, and link both ways.
 
