@@ -43,3 +43,4 @@ Do **not** write one for a routine choice with an obvious answer. An ADR per pul
 | [0008](./0008-host-several-courses-with-one-learner-document.md)            | Host several courses, with one learner document that holds a tracker per course | Accepted |
 | [0009](./0009-answer-learner-doubts-through-openrouter.md)                  | Answer learner doubts with an AI helper through OpenRouter, on the server       | Accepted |
 | [0010](./0010-let-the-ai-helper-search-the-web.md)                          | Let the AI helper search the web, with one Exa search per answer                | Accepted |
+| [0011](./0011-keep-chapter-notes-as-markdown-on-the-device-first.md)        | Keep chapter notes as Markdown, saved on the device first                       | Accepted |

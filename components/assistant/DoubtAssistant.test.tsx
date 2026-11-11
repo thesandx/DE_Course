@@ -101,7 +101,7 @@ describe('DoubtAssistant', () => {
     );
     render(<DoubtAssistant enabled />);
     fireEvent.click(screen.getByRole('button', { name: /Ask Pip/ }));
-    fireEvent.click(screen.getByRole('button', { name: /Quiz me with one question/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Quiz me on my notes/ }));
     expect(await screen.findByText('That model is busy right now.')).toBeInTheDocument();
   });
 

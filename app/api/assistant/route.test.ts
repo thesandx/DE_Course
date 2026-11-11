@@ -16,6 +16,7 @@ const USER: SessionUser = {
 
 const requireUser = vi.fn<() => Promise<SessionUser>>();
 const streamAnswer = vi.fn();
+const getNoteOrNull = vi.fn();
 
 class FakeAssistantError extends Error {
   constructor(
@@ -31,6 +32,9 @@ vi.mock('@/services/auth.service', () => ({ requireUser: () => requireUser() }))
 vi.mock('@/services/openrouter.service', () => ({
   AssistantError: FakeAssistantError,
   streamAnswer: (...args: unknown[]) => streamAnswer(...args),
+}));
+vi.mock('@/services/notes.service', () => ({
+  getNoteOrNull: (...args: unknown[]) => getNoteOrNull(...args),
 }));
 vi.mock('@/lib/logger', () => ({ logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() } }));
 
@@ -59,6 +63,26 @@ describe('POST /api/assistant', () => {
     vi.clearAllMocks();
     requireUser.mockResolvedValue(USER);
     streamAnswer.mockResolvedValue(textStream('A window function looks at nearby rows.'));
+    getNoteOrNull.mockResolvedValue(null);
+  });
+
+  it("reads the learner's own notes for the chapter", async () => {
+    getNoteOrNull.mockResolvedValue({
+      key: 'de:lesson:sql:window-functions',
+      markdown: 'ROW_NUMBER ==dedups==',
+      editedAt: '2026-11-11T10:00:00.000Z',
+    });
+    expect((await POST(post(VALID))).status).toBe(200);
+    expect(getNoteOrNull).toHaveBeenCalledWith(USER.uid, 'de:lesson:sql:window-functions');
+    const [, messages] = streamAnswer.mock.calls[0] ?? [];
+    expect(JSON.stringify(messages)).toContain('ROW_NUMBER ==dedups==');
+  });
+
+  it('reads no notes on a page that has none', async () => {
+    expect((await POST(post({ ...VALID, path: '/de' }))).status).toBe(200);
+    expect(getNoteOrNull).not.toHaveBeenCalled();
+    const [, messages] = streamAnswer.mock.calls[0] ?? [];
+    expect(JSON.stringify(messages)).not.toContain('NOTES ON THIS PAGE');
   });
 
   it('answers a signed-in learner with the page as context', async () => {

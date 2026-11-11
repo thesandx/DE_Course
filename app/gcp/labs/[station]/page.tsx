@@ -9,13 +9,17 @@ import { LabFinish, LabMeter, LabProgress } from '@/components/gcp/LabProgress';
 import { LabStepCard } from '@/components/gcp/LabStepCard';
 import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/layout/Icon';
+import { ChapterNotes } from '@/components/notes/ChapterNotes';
 import { buttonStyles } from '@/components/ui/Button';
 import { Tabs } from '@/components/ui/Tabs';
 import { allStations, getLab, LAB_XP, labId, stationId } from '@/lib/course/gcp/catalog';
 import { labPlan, tickIds } from '@/lib/course/gcp/labs';
 import { hueStyle } from '@/lib/course/hue';
+import { env } from '@/lib/env';
+import { noteKeys } from '@/lib/notes/targets';
 import { cn } from '@/lib/utils';
 import { requireGcpLearner } from '@/services/learner.service';
+import { getNoteOrNull } from '@/services/notes.service';
 import type { LabStep } from '@/types/gcp';
 
 interface Props {
@@ -48,7 +52,8 @@ export default async function GcpLabPage({ params }: Props) {
   if (found === undefined) notFound();
   const { line, station, lab } = found;
 
-  const { progress, shell } = await requireGcpLearner(`/gcp/labs/${stationSlug}`);
+  const { user, progress, shell } = await requireGcpLearner(`/gcp/labs/${stationSlug}`);
+  const noteKey = noteKeys.lab(stationSlug);
   const open = progress.done[stationId(station.slug)] !== undefined;
   const done = progress.done[labId(station.slug)] !== undefined;
   const hue = hueStyle(line.hue);
@@ -196,6 +201,8 @@ export default async function GcpLabPage({ params }: Props) {
     );
   }
 
+  const note = await getNoteOrNull(user.uid, noteKey);
+
   return (
     <AppShell
       {...shell}
@@ -281,6 +288,13 @@ export default async function GcpLabPage({ params }: Props) {
                   ]}
                 />
               </section>
+
+              <ChapterNotes
+                noteKey={noteKey}
+                title={`Lab ${station.code}: ${lab.title}`}
+                initial={note}
+                pipEnabled={env.assistantEnabled}
+              />
 
               <section className="bg-surface border-line rounded-card shadow-card flex flex-col gap-3 border p-5 sm:p-6">
                 <LabFinish

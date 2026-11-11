@@ -22,7 +22,8 @@ export type IconName =
   | 'sun'
   | 'moon'
   | 'monitor'
-  | 'globe';
+  | 'globe'
+  | 'note';
 
 const PATHS: Record<IconName, React.ReactNode> = {
   home: <path d="M4 11l8-7 8 7v8a1 1 0 01-1 1h-4v-6h-6v6H5a1 1 0 01-1-1z" />,
@@ -80,6 +81,12 @@ const PATHS: Record<IconName, React.ReactNode> = {
     <>
       <circle cx="12" cy="12" r="4" />
       <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4" />
+    </>
+  ),
+  note: (
+    <>
+      <path d="M6 3.5h9l4 4V19a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 015 19V5a1.5 1.5 0 011-1.5z" />
+      <path d="M9 10h6M9 14h6M9 18h3" />
     </>
   ),
   moon: <path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z" />,

@@ -36,3 +36,6 @@ export const DEFAULT_MODEL_ID = 'anthropic/claude-haiku-5.5';
 export function isAssistantModel(id: string): boolean {
   return ASSISTANT_MODELS.some((model) => model.id === id);
 }
+
+/** Where the browser remembers the learner's model. The doubt helper and the notes formatter share it. */
+export const MODEL_STORAGE_KEY = 'loop-ready-assistant-model';

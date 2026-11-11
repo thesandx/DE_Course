@@ -14,7 +14,12 @@ import {
   MAX_QUOTE_CHARS,
   toCourseDialect,
 } from '@/lib/assistant/chat';
-import { ASSISTANT_MODELS, DEFAULT_MODEL_ID, isAssistantModel } from '@/lib/assistant/models';
+import {
+  ASSISTANT_MODELS,
+  DEFAULT_MODEL_ID,
+  isAssistantModel,
+  MODEL_STORAGE_KEY,
+} from '@/lib/assistant/models';
 import { hostOf, isWebUrl, splitSources, type WebSource } from '@/lib/assistant/sources';
 import { cn } from '@/lib/utils';
 
@@ -26,7 +31,6 @@ export interface DoubtAssistantProps {
   className?: string;
 }
 
-const MODEL_KEY = 'loop-ready-assistant-model';
 const WEB_KEY = 'loop-ready-assistant-web';
 const CHAT_KEY_PREFIX = 'loop-ready-assistant-chat:';
 /** A selection made this recently counts as "the text I am asking about". */
@@ -39,6 +43,7 @@ function suggestionsFor(path: string): readonly string[] {
       'What is the interviewer testing here?',
       'Walk me through the approach',
       'What follow-up could they ask?',
+      'Check my notes for mistakes',
     ];
   }
   if (path.startsWith('/gcp/labs/')) {
@@ -46,13 +51,16 @@ function suggestionsFor(path: string): readonly string[] {
       'What does this lab teach me?',
       'A step failed. How do I debug it?',
       'How does this show up in the exam?',
+      'Check my notes for mistakes',
     ];
   }
+  const chapter =
+    /^\/(de\/tracks\/[^/]+\/[^/]+|gcp\/lines\/[^/]+\/[^/]+)$/.test(path) && !path.endsWith('/boss');
   return [
     'Explain this page in simple words',
     'Give me a real-world example',
     'How would an interviewer ask about this?',
-    'Quiz me with one question',
+    chapter ? 'Quiz me on my notes' : 'Quiz me with one question',
   ];
 }
 
@@ -162,7 +170,7 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
     if (loadedPath === null) {
       // The first client render: also read the remembered model. Nothing that
       // reads it is on screen until the panel opens, so hydration still matches.
-      const saved = readStorage(() => window.localStorage, MODEL_KEY);
+      const saved = readStorage(() => window.localStorage, MODEL_STORAGE_KEY);
       if (saved !== null && isAssistantModel(saved)) setModel(saved);
       if (readStorage(() => window.localStorage, WEB_KEY) === 'on') setWebSearch(true);
     }
@@ -226,7 +234,7 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
   function chooseModel(id: string) {
     if (!isAssistantModel(id)) return;
     setModel(id);
-    writeStorage(() => window.localStorage, MODEL_KEY, id);
+    writeStorage(() => window.localStorage, MODEL_STORAGE_KEY, id);
   }
 
   function toggleWebSearch() {

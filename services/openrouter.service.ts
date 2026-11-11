@@ -107,6 +107,13 @@ export function sourcesFromEvent(data: string): WebSource[] {
   return sources;
 }
 
+export interface StreamOptions {
+  /** Caps the answer. Default `MAX_ANSWER_TOKENS`. */
+  maxTokens?: number;
+  /** The whole answer must arrive within this. Default `ANSWER_TIMEOUT_MS`. */
+  timeoutMs?: number;
+}
+
 /**
  * Asks a model and returns a stream of the answer's text, as UTF-8 bytes.
  *
@@ -122,6 +129,7 @@ export async function streamAnswer(
   messages: readonly ModelMessage[],
   signal: AbortSignal,
   webSearch = false,
+  options: StreamOptions = {},
 ): Promise<ReadableStream<Uint8Array>> {
   if (env.openrouterApiKey === '') {
     throw new AssistantError('not_configured', 'OPENROUTER_API_KEY is not set');
@@ -140,10 +148,10 @@ export async function streamAnswer(
       model,
       messages,
       stream: true,
-      max_tokens: MAX_ANSWER_TOKENS,
+      max_tokens: options.maxTokens ?? MAX_ANSWER_TOKENS,
       ...(webSearch && { plugins: [WEB_SEARCH_PLUGIN] }),
     }),
-    signal: AbortSignal.any([signal, AbortSignal.timeout(ANSWER_TIMEOUT_MS)]),
+    signal: AbortSignal.any([signal, AbortSignal.timeout(options.timeoutMs ?? ANSWER_TIMEOUT_MS)]),
   });
 
   if (!response.ok || response.body === null) {

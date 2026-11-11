@@ -6,9 +6,13 @@ import { DifficultyTag } from '@/components/course/DifficultyTag';
 import { ProblemWorkspace } from '@/components/course/ProblemWorkspace';
 import { Prose } from '@/components/course/Prose';
 import { AppShell } from '@/components/layout/AppShell';
+import { ChapterNotes } from '@/components/notes/ChapterNotes';
 import { COMPANY_NAMES, getProblem, getTrack, KIND_LABELS } from '@/lib/course/catalog';
 import { PROBLEM_XP, problemId } from '@/lib/course/progress';
+import { env } from '@/lib/env';
+import { noteKeys } from '@/lib/notes/targets';
 import { requireDeLearner } from '@/services/learner.service';
+import { getNoteOrNull } from '@/services/notes.service';
 import type { Company } from '@/types/course';
 
 interface Props {
@@ -39,7 +43,9 @@ export default async function ProblemPage({ params }: Props) {
   const problem = getProblem(slug);
   if (problem === undefined) notFound();
 
-  const { progress, shell } = await requireDeLearner(`/de/problems/${slug}`);
+  const { user, progress, shell } = await requireDeLearner(`/de/problems/${slug}`);
+  const noteKey = noteKeys.problem(slug);
+  const note = await getNoteOrNull(user.uid, noteKey);
   const track = getTrack(problem.track);
   const itemId = problemId(slug);
 
@@ -103,16 +109,24 @@ export default async function ProblemPage({ params }: Props) {
               <Prose source={problem.prompt} />
             </section>
           </div>
-          <ProblemWorkspace
-            slug={slug}
-            itemId={itemId}
-            done={progress.done[itemId] !== undefined}
-            xp={PROBLEM_XP[problem.difficulty]}
-            hints={problem.hints}
-            signals={problem.signals}
-            followUps={problem.followUps}
-            answer={<Prose source={problem.answer} />}
-          />
+          <div className="flex min-w-0 flex-col gap-4">
+            <ProblemWorkspace
+              slug={slug}
+              itemId={itemId}
+              done={progress.done[itemId] !== undefined}
+              xp={PROBLEM_XP[problem.difficulty]}
+              hints={problem.hints}
+              signals={problem.signals}
+              followUps={problem.followUps}
+              answer={<Prose source={problem.answer} />}
+            />
+            <ChapterNotes
+              noteKey={noteKey}
+              title={problem.title}
+              initial={note}
+              pipEnabled={env.assistantEnabled}
+            />
+          </div>
         </div>
       </main>
     </AppShell>

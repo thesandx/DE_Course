@@ -6,12 +6,17 @@ import { LessonFinish } from '@/components/course/LessonFinish';
 import { Prose } from '@/components/course/Prose';
 import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/layout/Icon';
+import { ChapterNotes } from '@/components/notes/ChapterNotes';
+import { ToolIcon } from '@/components/notes/ToolIcon';
 import { buttonStyles } from '@/components/ui/Button';
 import { getLesson } from '@/lib/course/catalog';
 import { LESSON_XP, lessonId } from '@/lib/course/progress';
 import { trackNumber } from '@/lib/course/track-style';
+import { env } from '@/lib/env';
+import { noteKeys } from '@/lib/notes/targets';
 import { cn } from '@/lib/utils';
 import { requireDeLearner } from '@/services/learner.service';
+import { getNoteOrNull } from '@/services/notes.service';
 
 interface Props {
   params: Promise<{ track: string; lesson: string }>;
@@ -39,7 +44,9 @@ export default async function LessonPage({ params }: Props) {
   if (found === undefined) notFound();
   const { track, lesson, index } = found;
 
-  const { progress, shell } = await requireDeLearner(`/de/tracks/${trackSlug}/${lessonSlug}`);
+  const { user, progress, shell } = await requireDeLearner(`/de/tracks/${trackSlug}/${lessonSlug}`);
+  const noteKey = noteKeys.lesson(trackSlug, lessonSlug);
+  const note = await getNoteOrNull(user.uid, noteKey);
   const itemId = lessonId(trackSlug, lessonSlug);
   const done = progress.done[itemId] !== undefined;
   const previous = track.lessons[index - 1];
@@ -88,6 +95,13 @@ export default async function LessonPage({ params }: Props) {
             </header>
 
             <Prose source={lesson.body} sectioned />
+
+            <ChapterNotes
+              noteKey={noteKey}
+              title={lesson.title}
+              initial={note}
+              pipEnabled={env.assistantEnabled}
+            />
 
             <LessonFinish
               itemId={itemId}
@@ -193,6 +207,26 @@ export default async function LessonPage({ params }: Props) {
                 <Icon name="arrow-right" className="size-4" />
               </Link>
             </nav>
+
+            <a
+              href="#notes"
+              className="bg-surface border-line rounded-card shadow-card hover:border-line-strong hidden items-center gap-3 border p-4 lg:flex"
+            >
+              <span className="bg-butter text-ink rounded-input inline-grid size-9 shrink-0 place-items-center">
+                <ToolIcon name="highlight" className="size-4.5" />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-small font-semibold">
+                  {note !== null && note.markdown.trim() !== ''
+                    ? 'Your notes on this lesson'
+                    : 'Take notes on this lesson'}
+                </span>
+                <span className="text-small text-ink-soft">
+                  Highlight, code, checklists. Pip can tidy them.
+                </span>
+              </span>
+              <Icon name="arrow-right" className="text-ink-faint size-4" />
+            </a>
 
             <section className="bg-sun rounded-card text-gold-ink flex flex-col gap-1 p-5">
               <p className="eyebrow">
