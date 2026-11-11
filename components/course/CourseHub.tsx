@@ -2,18 +2,24 @@ import Link from 'next/link';
 
 import { EnrollButton } from '@/components/course/EnrollButton';
 import { ProgressRing } from '@/components/course/ProgressRing';
+import { StudyHeatmap } from '@/components/course/StudyHeatmap';
 import { CourseBadge } from '@/components/layout/CourseBadge';
 import { Icon } from '@/components/layout/Icon';
 import { buttonStyles } from '@/components/ui/Button';
 import { type CourseInfo, COURSES, isCourseSlug } from '@/lib/course/courses';
 import type { HubCourseStats } from '@/lib/course/hub';
 import { hueStyle } from '@/lib/course/hue';
+import type { StudyActivity } from '@/lib/course/study-time';
 import { cn } from '@/lib/utils';
 
 export interface CourseHubProps {
   name: string;
   /** Stats for each course the learner joined, in course order. */
   joined: readonly HubCourseStats[];
+  /** The learner's own study time and finished items per day, for the streak map. */
+  activity: StudyActivity;
+  /** `YYYY-MM-DD`. */
+  today: string;
 }
 
 /** A joined course: its own tracker in one card, with the next step one tap away. */
@@ -133,7 +139,7 @@ function OpenCard({ course, primary }: { course: CourseInfo; primary: boolean })
  * and the next step). Courses they have not joined follow, with a "Join"
  * button. Courses that are not open yet show as "Opening later".
  */
-export function CourseHub({ name, joined }: CourseHubProps) {
+export function CourseHub({ name, joined, activity, today }: CourseHubProps) {
   const firstName = name.split(' ')[0] ?? name;
   const joinedSlugs = new Set<string>(joined.map((stats) => stats.course));
   const others = COURSES.filter((course) => !joinedSlugs.has(course.slug));
@@ -169,6 +175,8 @@ export function CourseHub({ name, joined }: CourseHubProps) {
           </dl>
         )}
       </section>
+
+      {joined.length > 0 && <StudyHeatmap activity={activity} today={today} />}
 
       {joined.length > 0 && (
         <section aria-labelledby="joined-heading" className="flex flex-col gap-4">
