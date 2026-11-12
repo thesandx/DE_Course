@@ -4,12 +4,14 @@ import { notFound } from 'next/navigation';
 
 import { InlineText } from '@/components/course/InlineText';
 import { Prose } from '@/components/course/Prose';
+import { ConceptDiagram } from '@/components/gcp/ConceptDiagram';
 import { StationChecks } from '@/components/gcp/StationChecks';
 import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/layout/Icon';
 import { ChapterNotes } from '@/components/notes/ChapterNotes';
 import { buttonStyles } from '@/components/ui/Button';
 import { getLab, getStation, LAB_XP, labId, stationId, stationXp } from '@/lib/course/gcp/catalog';
+import { conceptDiagrams } from '@/lib/course/gcp/diagrams';
 import { hueStyle } from '@/lib/course/hue';
 import { env } from '@/lib/env';
 import { noteKeys } from '@/lib/notes/targets';
@@ -35,8 +37,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export const dynamic = 'force-dynamic';
 
 /**
- * A station: the mission that frames it, the concepts to read, the key points
- * to remember, then the checkpoint. The station counts once every checkpoint
+ * A station: the mission that frames it, the concepts to read (each opens
+ * with a diagram), the key points to remember, then the checkpoint. The station counts once every checkpoint
  * is right.
  */
 export default async function GcpStationPage({ params }: Props) {
@@ -114,6 +116,13 @@ export default async function GcpStationPage({ params }: Props) {
                 <h2 id={`concept-${conceptIndex + 1}-heading`} className="text-title">
                   {concept.title}
                 </h2>
+                {conceptDiagrams(station.slug, conceptIndex + 1).map((diagram, diagramIndex) => (
+                  <ConceptDiagram
+                    key={diagram.title}
+                    diagram={diagram}
+                    id={`concept-${conceptIndex + 1}-diagram-${diagramIndex + 1}`}
+                  />
+                ))}
                 <Prose source={concept.body} />
               </section>
             ))}

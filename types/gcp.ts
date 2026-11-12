@@ -163,3 +163,123 @@ export interface GcpLab {
   /** The console pages that prove nothing the lab made is left, as a numbered list. */
   verifyConsole: string;
 }
+
+/**
+ * The colour of a box, a span or a dot in a concept diagram. Each tone maps to
+ * a design token in `components/gcp/ConceptDiagram.tsx`, so a diagram follows
+ * light and dark mode with no extra work.
+ */
+export type DiagramTone =
+  'plain' | 'brand' | 'iris' | 'gold' | 'easy' | 'medium' | 'hard' | 'sky' | 'teal';
+
+/** One box in a diagram. Text fields use the inline markers only («code», **bold**). */
+export interface DiagramBox {
+  label: string;
+  /** One short line under the label. */
+  note?: string;
+  tone?: DiagramTone;
+  /** Short tags, such as service names or flags. */
+  chips?: readonly string[];
+}
+
+/** A box with a list of points, for a side-by-side comparison. */
+export interface DiagramColumn extends DiagramBox {
+  points: readonly string[];
+}
+
+/** A coloured stretch on a timeline lane. `start` and `end` are percent of the axis. */
+export interface DiagramSpan {
+  start: number;
+  end: number;
+  label?: string;
+  tone?: DiagramTone;
+  /** 0 for the top half of the lane, 1 for the bottom half. Use it for overlaps. */
+  row?: 0 | 1;
+}
+
+/** A point on a timeline lane, such as an event or a retry. `at` is percent of the axis. */
+export interface DiagramDot {
+  at: number;
+  tone?: DiagramTone;
+}
+
+export interface DiagramLane {
+  label: string;
+  spans?: readonly DiagramSpan[];
+  dots?: readonly DiagramDot[];
+}
+
+/** The shapes a concept diagram can take. Each one reads top to bottom on a phone. */
+export type DiagramShape =
+  | {
+      /** Steps from left to right; a phone shows them top to bottom. */
+      kind: 'flow';
+      steps: readonly DiagramBox[];
+      /** Optional labels on the arrows: `edges[i]` sits between step i and step i + 1. */
+      edges?: readonly string[];
+      /** Where the last step fans out to. */
+      fork?: { label: string; boxes: readonly DiagramBox[] };
+    }
+  | {
+      /** Questions in order. The first "yes" wins; the last box is the answer when all are "no". */
+      kind: 'decision';
+      questions: ReadonlyArray<{ ask: string; yes: DiagramBox }>;
+      otherwise: DiagramBox;
+    }
+  | {
+      /** Stacked bands, top to bottom. `nested` indents each band inside the one above. */
+      kind: 'layers';
+      layers: readonly DiagramBox[];
+      /** The label on the arrow beside the stack, such as "Grants inherit down". */
+      rail?: string;
+      nested?: boolean;
+    }
+  | {
+      /** Options placed along one axis, from `from` to `to`. */
+      kind: 'spectrum';
+      from: string;
+      to: string;
+      stops: readonly DiagramBox[];
+    }
+  | { kind: 'compare'; columns: readonly DiagramColumn[] }
+  | { kind: 'hub'; center: DiagramBox; spokes: readonly DiagramBox[] }
+  | {
+      /** Lanes on one shared axis. `marks` draw a line across every lane, such as a watermark. */
+      kind: 'timeline';
+      axis: { start: string; end: string };
+      lanes: readonly DiagramLane[];
+      marks?: ReadonlyArray<{ at: number; label: string }>;
+    }
+  | {
+      /** A table of storage blocks; the cells in `read` are the ones a query touches. */
+      kind: 'grid';
+      columns: readonly string[];
+      rows: readonly string[];
+      /** [row, column] indexes, from 0. */
+      read: ReadonlyArray<readonly [number, number]>;
+      legend: { read: string; skipped: string };
+    }
+  | {
+      /** A boundary around some boxes, and what happens to calls from outside it. */
+      kind: 'boundary';
+      inside: { label: string; boxes: readonly DiagramBox[] };
+      outside: ReadonlyArray<DiagramBox & { verdict: 'allowed' | 'blocked' }>;
+    }
+  | {
+      /** One thing on the left becomes one thing on the right, row by row. */
+      kind: 'pairs';
+      left: string;
+      right: string;
+      pairs: ReadonlyArray<readonly [string, string]>;
+    };
+
+/**
+ * A picture that explains one concept of a station. The station page shows it
+ * at the top of the concept, above the text. `concept` is 1-based.
+ */
+export type GcpDiagram = DiagramShape & {
+  concept: number;
+  title: string;
+  /** One or two sentences: what the picture shows and what to remember. */
+  caption: string;
+};
