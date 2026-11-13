@@ -1,0 +1,213 @@
+{
+  "station": "flexibility-portability",
+  "chapters": [
+    {
+      "title": "The mission",
+      "beats": [
+        {
+          "say": "Cymbal just bought a fashion brand. And it runs on AWS.",
+          "device": "big",
+          "text": "A new brand. On AWS."
+        },
+        {
+          "say": "Leadership wants one view of all the data.",
+          "device": "card",
+          "label": "The ask",
+          "head": "One view of all the data",
+          "headmark": "One view",
+          "headmark_at": "one"
+        },
+        {
+          "say": "But customer data from Europe has to stay in Europe.",
+          "device": "card",
+          "label": "The catch",
+          "head": "EU data stays in the EU",
+          "headmark": "stays in the EU",
+          "headmark_at": "stay"
+        },
+        {
+          "say": "Two ideas solve this. Keep things portable, and make data easy to find.",
+          "device": "card",
+          "label": "Station 1.3 · Flexibility and portability",
+          "head": "Portable, and easy to find",
+          "headmark": "Portable",
+          "headmark_at": "portable"
+        }
+      ]
+    },
+    {
+      "title": "Stay portable",
+      "beats": [
+        { "say": "Idea one: do not lock yourself in.", "device": "big", "text": "No lock-in" },
+        {
+          "say": "Think of a power plug adapter. The same device works in any country.",
+          "device": "card",
+          "label": "Think of an adapter",
+          "head": "One device, any socket",
+          "headmark": "any socket",
+          "headmark_at": "any"
+        },
+        {
+          "say": "Apache Beam is like that for pipelines. The same code runs on Dataflow, Flink or Spark.",
+          "device": "card",
+          "label": "Portable pipelines",
+          "head": "Apache Beam",
+          "text": "One pipeline, many runners",
+          "headmark": "Apache Beam",
+          "headmark_at": "Apache"
+        },
+        {
+          "say": "Dataproc runs your open source Spark and Hadoop jobs with no changes.",
+          "device": "card",
+          "label": "Portable jobs",
+          "head": "Dataproc",
+          "text": "Existing Spark and Hadoop, unchanged",
+          "mark": "unchanged",
+          "mark_at": "no"
+        },
+        {
+          "say": "And open formats, like Iceberg and Parquet, keep your data readable by any engine.",
+          "device": "card",
+          "label": "Portable data",
+          "head": "Open formats: Iceberg, Parquet",
+          "headmark": "Open formats",
+          "headmark_at": "open"
+        }
+      ]
+    },
+    {
+      "title": "Query data where it lives",
+      "check": {
+        "prompt": "Data in AWS must stay in AWS. Analysts want to query it from BigQuery. What do you use?",
+        "options": ["BigQuery Omni", "Storage Transfer Service", "A nightly CSV export"],
+        "answer": 0,
+        "why": "BigQuery Omni runs the query inside AWS. The other two copy the data out."
+      },
+      "beats": [
+        {
+          "say": "Now the hard part. The data in AWS must not move.",
+          "device": "big",
+          "text": "The data cannot move"
+        },
+        {
+          "say": "So do not move the data. Move the query.",
+          "device": "card",
+          "label": "The answer",
+          "head": "Move the query, not the data",
+          "headmark": "Move the query",
+          "headmark_at": "Move"
+        },
+        {
+          "say": "BigQuery Omni runs your query inside AWS or Azure. Only the results come back.",
+          "device": "card",
+          "label": "BigQuery Omni",
+          "head": "Runs the query inside AWS or Azure",
+          "headmark": "inside AWS or Azure",
+          "headmark_at": "inside"
+        },
+        {
+          "say": "BigLake adds table security on top of plain files: rows and columns, like a warehouse.",
+          "device": "card",
+          "label": "BigLake",
+          "head": "Warehouse security over plain files",
+          "headmark": "plain files",
+          "headmark_at": "plain"
+        },
+        {
+          "say": "The trap is copying S3 data into Google Cloud when it must stay in AWS.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "Copying S3 data out when it must stay in AWS",
+          "mark": "must stay in AWS",
+          "mark_at": "stay"
+        }
+      ]
+    },
+    {
+      "title": "Find and trust the data",
+      "check": {
+        "prompt": "Before you change a column, you want to see what is built from it. Which feature shows that?",
+        "options": ["Policy tags", "Time travel", "Data lineage"],
+        "answer": 2,
+        "why": "Lineage shows the tables and jobs downstream of a table."
+      },
+      "beats": [
+        {
+          "say": "Idea two: data nobody can find might as well not exist.",
+          "device": "big",
+          "text": "Can anyone find it?"
+        },
+        {
+          "say": "Dataplex organizes data without moving it. Think of it as a map of your data.",
+          "device": "card",
+          "label": "Dataplex",
+          "head": "Organizes data without moving it",
+          "headmark": "without moving it",
+          "headmark_at": "without"
+        },
+        {
+          "say": "A lake is a domain, like Sales. A zone is raw or curated. An asset is a bucket or a dataset.",
+          "device": "list",
+          "label": "The Dataplex words",
+          "items": ["Lake: a domain", "Zone: raw or curated", "Asset: bucket or dataset"],
+          "items_at": ["lake", "zone", "asset"]
+        },
+        {
+          "say": "The catalog is the search box. It collects metadata on its own, so people can search.",
+          "device": "card",
+          "label": "Knowledge Catalog",
+          "head": "A search box for all your data",
+          "headmark": "search box",
+          "headmark_at": "search"
+        },
+        {
+          "say": "And lineage shows what feeds what. Check it before you change a column.",
+          "device": "card",
+          "label": "Data lineage",
+          "head": "See what feeds what",
+          "headmark": "what feeds what",
+          "headmark_at": "what"
+        },
+        {
+          "say": "The trap: building your own metadata database. A managed catalog already exists.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "Building your own metadata database",
+          "mark": "your own",
+          "mark_at": "own"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Recap.", "device": "big", "text": "Quick recap" },
+        {
+          "say": "Keep compute portable with Beam and Spark. Keep data open. And when data cannot move, query it in place.",
+          "device": "list",
+          "label": "Station 1.3 · 1 of 2",
+          "items": [
+            "Portable compute: Beam, Spark",
+            "Open data formats",
+            "Cannot move? Query in place"
+          ],
+          "items_at": ["Keep", "open", "query"]
+        },
+        {
+          "say": "Then organize with Dataplex, search with the catalog, and track lineage.",
+          "device": "list",
+          "label": "Station 1.3 · 2 of 2",
+          "items": ["Organize: Dataplex", "Search: the catalog", "Track: lineage"],
+          "items_at": ["organize", "search", "track"]
+        },
+        {
+          "say": "Your turn. Try the checkpoint below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Pass the checkpoint below.",
+          "submark": "checkpoint"
+        }
+      ]
+    }
+  ]
+}

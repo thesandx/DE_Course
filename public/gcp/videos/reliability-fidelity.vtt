@@ -1,0 +1,213 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:03.005
+The festive sale is six weeks away.
+
+2
+00:00:03.025 --> 00:00:05.330
+The order pipeline must survive an outage,
+
+3
+00:00:05.350 --> 00:00:08.515
+keep payments correct, and stop bad files.
+
+4
+00:00:08.535 --> 00:00:09.940
+Four ideas get you there.
+
+5
+00:00:09.960 --> 00:00:11.715
+Let's go.
+
+6
+00:00:11.735 --> 00:00:14.200
+First: which tool cleans the data?
+
+7
+00:00:14.220 --> 00:00:15.300
+Here is the trick.
+
+8
+00:00:15.320 --> 00:00:17.985
+Pick the tool for the people who will run it.
+
+9
+00:00:18.005 --> 00:00:21.023
+A team that knows SQL, with data already in BigQuery?
+
+10
+00:00:21.043 --> 00:00:22.420
+Dataform.
+
+11
+00:00:22.440 --> 00:00:25.032
+A team that wants drag and drop, with no code?
+
+12
+00:00:25.052 --> 00:00:26.905
+Cloud Data Fusion.
+
+13
+00:00:26.925 --> 00:00:29.517
+Engineers with a fast stream and custom logic?
+
+14
+00:00:29.537 --> 00:00:30.915
+Dataflow.
+
+15
+00:00:30.935 --> 00:00:34.650
+And if you already have Spark jobs, keep them, on Dataproc.
+
+16
+00:00:34.670 --> 00:00:39.525
+The trap: a no-code tool for a high volume, low latency stream.
+
+17
+00:00:39.545 --> 00:00:42.185
+Second: what happens when something breaks?
+
+18
+00:00:42.205 --> 00:00:43.935
+Write down two numbers first.
+
+19
+00:00:43.955 --> 00:00:46.795
+RPO: how much data you can lose.
+
+20
+00:00:46.815 --> 00:00:49.505
+And RTO: how long you can be down.
+
+21
+00:00:49.525 --> 00:00:51.918
+Then buy the cheapest design that meets both.
+
+22
+00:00:51.938 --> 00:00:53.590
+Not the fanciest.
+
+23
+00:00:53.610 --> 00:00:54.840
+For Cloud Storage,
+
+24
+00:00:54.860 --> 00:00:59.975
+a dual-region bucket with turbo replication gives an RPO of 15 minutes.
+
+25
+00:00:59.995 --> 00:01:01.800
+BigQuery has time travel.
+
+26
+00:01:01.820 --> 00:01:05.360
+You can read a table as it was, up to 7 days ago.
+
+27
+00:01:05.380 --> 00:01:09.235
+Cloud SQL high availability keeps a standby in another zone.
+
+28
+00:01:09.255 --> 00:01:11.170
+It takes over on its own.
+
+29
+00:01:11.190 --> 00:01:12.945
+But a read replica does not.
+
+30
+00:01:12.965 --> 00:01:15.570
+You must promote it by hand.
+
+31
+00:01:15.590 --> 00:01:17.855
+Third: keeping payments correct.
+
+32
+00:01:17.875 --> 00:01:19.742
+Moving money touches two rows.
+
+33
+00:01:19.762 --> 00:01:21.505
+Both must change, or neither.
+
+34
+00:01:21.525 --> 00:01:23.340
+That is a transaction.
+
+35
+00:01:23.360 --> 00:01:27.250
+Spanner does this across rows, tables, and even regions.
+
+36
+00:01:27.270 --> 00:01:30.935
+Cloud SQL and AlloyDB do it inside one region.
+
+37
+00:01:30.955 --> 00:01:33.348
+Bigtable is atomic for one row only.
+
+38
+00:01:33.368 --> 00:01:35.545
+So never use it to move money.
+
+39
+00:01:35.565 --> 00:01:38.120
+Stronger and wider guarantees cost more.
+
+40
+00:01:38.140 --> 00:01:41.070
+Choose the weakest one that is enough.
+
+41
+00:01:41.090 --> 00:01:43.305
+Fourth: stopping bad data.
+
+42
+00:01:43.325 --> 00:01:45.990
+Check the data in the place where it changes.
+
+43
+00:01:46.010 --> 00:01:47.702
+Dataform has assertions.
+
+44
+00:01:47.722 --> 00:01:50.450
+Dataplex has data quality scans.
+
+45
+00:01:50.470 --> 00:01:55.560
+After a migration, the Data Validation Tool compares the source with the target.
+
+46
+00:01:55.580 --> 00:01:58.685
+In Dataflow, send bad rows to a dead-letter table.
+
+47
+00:01:58.705 --> 00:02:01.735
+Do not drop them, and do not crash.
+
+48
+00:02:01.755 --> 00:02:03.220
+Quick recap.
+
+49
+00:02:03.240 --> 00:02:04.707
+Pick the tool for the team.
+
+50
+00:02:04.727 --> 00:02:07.555
+Write down RPO and RTO first.
+
+51
+00:02:07.575 --> 00:02:09.880
+Choose the weakest guarantee that works.
+
+52
+00:02:09.900 --> 00:02:12.365
+And validate where the data changes.
+
+53
+00:02:12.385 --> 00:02:15.385
+Now try the checkpoint below.

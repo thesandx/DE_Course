@@ -1,0 +1,187 @@
+{
+  "station": "operationalizing-pipelines",
+  "chapters": [
+    {
+      "title": "The mission",
+      "beats": [
+        {
+          "say": "Your pipeline works on your laptop. Good start.",
+          "device": "big",
+          "text": "It works on my laptop"
+        },
+        {
+          "say": "Now it must run every night, retry on its own, and alert you when it is stuck.",
+          "device": "list",
+          "label": "Now it must",
+          "items": ["Run every night", "Retry on its own", "Alert when stuck"],
+          "items_at": ["run", "retry", "alert"]
+        },
+        {
+          "say": "Two ideas: who conducts the work, and how you ship changes safely.",
+          "device": "card",
+          "label": "Station 2.3 · Deploying the pipelines",
+          "head": "Orchestrate. Then ship safely.",
+          "headmark": "Orchestrate.",
+          "headmark_at": "conducts"
+        }
+      ]
+    },
+    {
+      "title": "Pick the orchestrator",
+      "check": {
+        "prompt": "One SQL query must run every night. What is enough?",
+        "options": ["Cloud Composer", "A scheduled query", "A Dataproc cluster"],
+        "answer": 1,
+        "why": "A scheduled query runs SQL on a schedule. Composer is too much for one query."
+      },
+      "beats": [
+        {
+          "say": "Think of an orchestra. Someone has to conduct.",
+          "device": "big",
+          "text": "Who conducts?"
+        },
+        {
+          "say": "Cloud Composer is managed Airflow. Pick it for big jobs with many steps, retries and backfills.",
+          "device": "card",
+          "label": "Big, many steps",
+          "head": "Cloud Composer",
+          "text": "Managed Airflow: DAGs, retries, backfills",
+          "headmark": "Cloud Composer",
+          "headmark_at": "Cloud"
+        },
+        {
+          "say": "Workflows is light and serverless. Pick it for a short chain of API calls.",
+          "device": "card",
+          "label": "A short chain of API calls",
+          "head": "Workflows",
+          "text": "Serverless, low cost, no Airflow",
+          "headmark": "Workflows"
+        },
+        {
+          "say": "Cloud Scheduler is just an alarm clock. It fires one thing, on a schedule.",
+          "device": "card",
+          "label": "One thing on a clock",
+          "head": "Cloud Scheduler",
+          "text": "Managed cron",
+          "headmark": "Cloud Scheduler",
+          "headmark_at": "Cloud"
+        },
+        {
+          "say": "And for a single SQL query each night, a scheduled query is enough.",
+          "device": "card",
+          "label": "Only SQL",
+          "head": "A scheduled query",
+          "headmark": "scheduled query",
+          "headmark_at": "scheduled"
+        },
+        {
+          "say": "The trap: Composer for one nightly query. That is far too much.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "Composer for one nightly query is overkill.",
+          "mark": "overkill",
+          "mark_at": "too"
+        },
+        {
+          "say": "One more. Airflow only conducts. The heavy work runs in BigQuery, Dataflow or Dataproc.",
+          "device": "card",
+          "label": "Remember",
+          "head": "Airflow conducts. It does not play.",
+          "headmark": "conducts"
+        }
+      ]
+    },
+    {
+      "title": "Tasks you can run twice",
+      "check": {
+        "prompt": "A retried task added the same rows a second time. What was missing?",
+        "options": ["Idempotency", "More workers", "A longer timeout"],
+        "answer": 0,
+        "why": "An idempotent task overwrites its partition, so a retry changes nothing."
+      },
+      "beats": [
+        {
+          "say": "A good task can run twice, and give the same result.",
+          "device": "big",
+          "text": "Run it twice. Same result."
+        },
+        {
+          "say": "The word for that is idempotent. Overwrite the day's partition. Do not append again.",
+          "device": "card",
+          "label": "Idempotent",
+          "head": "Overwrite the partition, do not append",
+          "headmark": "Overwrite",
+          "headmark_at": "Overwrite"
+        },
+        {
+          "say": "And use the run's date from Airflow, not the clock. Then backfills load the right day.",
+          "device": "card",
+          "label": "Dates",
+          "head": "Use the run date, not \"now\"",
+          "headmark": "run date",
+          "headmark_at": "date"
+        }
+      ]
+    },
+    {
+      "title": "Ship with CI/CD",
+      "beats": [
+        { "say": "Idea two: shipping changes safely.", "device": "big", "text": "Ship safely" },
+        {
+          "say": "The rule is simple. Everything lives in Git. Nobody edits production by hand.",
+          "device": "card",
+          "label": "The rule",
+          "head": "Everything in Git. No hand edits.",
+          "headmark": "No hand edits.",
+          "headmark_at": "Nobody"
+        },
+        {
+          "say": "Cloud Build tests and deploys. Artifact Registry stores the images. Terraform builds the infrastructure.",
+          "device": "list",
+          "label": "The toolbox",
+          "items": [
+            "Cloud Build: test and deploy",
+            "Artifact Registry: images",
+            "Terraform: infrastructure"
+          ],
+          "items_at": ["Build", "Registry", "Terraform"]
+        },
+        {
+          "say": "With Terraform, dev, test and prod are built the same way. So what works in test works in prod.",
+          "device": "card",
+          "label": "Why Terraform",
+          "head": "Dev, test and prod: identical",
+          "headmark": "identical",
+          "headmark_at": "same"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Recap.", "device": "big", "text": "Quick recap" },
+        {
+          "say": "Composer for big DAGs. Workflows for light chains. Scheduler for one thing on a clock.",
+          "device": "list",
+          "label": "Station 2.3 · 1 of 2",
+          "items": ["Composer: big DAGs", "Workflows: light chains", "Scheduler: one thing"],
+          "items_at": ["Composer", "Workflows", "Scheduler"]
+        },
+        {
+          "say": "Make tasks safe to run twice. And keep everything as code.",
+          "device": "list",
+          "label": "Station 2.3 · 2 of 2",
+          "items": ["Tasks safe to run twice", "Everything as code"],
+          "items_at": ["tasks", "everything"]
+        },
+        {
+          "say": "Line two, done. Try the checkpoint below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Pass the checkpoint below.",
+          "submark": "checkpoint"
+        }
+      ]
+    }
+  ]
+}

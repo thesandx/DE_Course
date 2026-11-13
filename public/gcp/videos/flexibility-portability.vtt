@@ -1,0 +1,165 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:02.270
+Cymbal just bought a fashion brand.
+
+2
+00:00:02.290 --> 00:00:04.155
+And it runs on AWS.
+
+3
+00:00:04.175 --> 00:00:06.890
+Leadership wants one view of all the data.
+
+4
+00:00:06.910 --> 00:00:10.325
+But customer data from Europe has to stay in Europe.
+
+5
+00:00:10.345 --> 00:00:11.900
+Two ideas solve this.
+
+6
+00:00:11.920 --> 00:00:15.675
+Keep things portable, and make data easy to find.
+
+7
+00:00:15.695 --> 00:00:18.435
+Idea one: do not lock yourself in.
+
+8
+00:00:18.455 --> 00:00:20.210
+Think of a power plug adapter.
+
+9
+00:00:20.230 --> 00:00:22.945
+The same device works in any country.
+
+10
+00:00:22.965 --> 00:00:25.370
+Apache Beam is like that for pipelines.
+
+11
+00:00:25.390 --> 00:00:29.105
+The same code runs on Dataflow, Flink or Spark.
+
+12
+00:00:29.125 --> 00:00:33.740
+Dataproc runs your open source Spark and Hadoop jobs with no changes.
+
+13
+00:00:33.760 --> 00:00:39.515
+And open formats, like Iceberg and Parquet, keep your data readable by any engine.
+
+14
+00:00:39.535 --> 00:00:40.615
+Now the hard part.
+
+15
+00:00:40.635 --> 00:00:43.050
+The data in AWS must not move.
+
+16
+00:00:43.070 --> 00:00:44.387
+So do not move the data.
+
+17
+00:00:44.407 --> 00:00:45.910
+Move the query.
+
+18
+00:00:45.930 --> 00:00:49.973
+BigQuery Omni runs your query inside AWS or Azure.
+
+19
+00:00:49.993 --> 00:00:52.070
+Only the results come back.
+
+20
+00:00:52.090 --> 00:00:55.195
+BigLake adds table security on top of plain files:
+
+21
+00:00:55.215 --> 00:00:58.030
+rows and columns, like a warehouse.
+
+22
+00:00:58.050 --> 00:01:04.180
+The trap is copying S3 data into Google Cloud when it must stay in AWS.
+
+23
+00:01:04.200 --> 00:01:08.265
+Idea two: data nobody can find might as well not exist.
+
+24
+00:01:08.285 --> 00:01:11.227
+Dataplex organizes data without moving it.
+
+25
+00:01:11.247 --> 00:01:13.600
+Think of it as a map of your data.
+
+26
+00:01:13.620 --> 00:01:15.838
+A lake is a domain, like Sales.
+
+27
+00:01:15.858 --> 00:01:17.875
+A zone is raw or curated.
+
+28
+00:01:17.895 --> 00:01:20.585
+An asset is a bucket or a dataset.
+
+29
+00:01:20.605 --> 00:01:22.635
+The catalog is the search box.
+
+30
+00:01:22.655 --> 00:01:26.320
+It collects metadata on its own, so people can search.
+
+31
+00:01:26.340 --> 00:01:28.483
+And lineage shows what feeds what.
+
+32
+00:01:28.503 --> 00:01:30.730
+Check it before you change a column.
+
+33
+00:01:30.750 --> 00:01:33.617
+The trap: building your own metadata database.
+
+34
+00:01:33.637 --> 00:01:36.880
+A managed catalog already exists.
+
+35
+00:01:36.900 --> 00:01:38.140
+Recap.
+
+36
+00:01:38.160 --> 00:01:40.502
+Keep compute portable with Beam and Spark.
+
+37
+00:01:40.522 --> 00:01:41.815
+Keep data open.
+
+38
+00:01:41.835 --> 00:01:44.850
+And when data cannot move, query it in place.
+
+39
+00:01:44.870 --> 00:01:49.460
+Then organize with Dataplex, search with the catalog, and track lineage.
+
+40
+00:01:49.480 --> 00:01:50.097
+Your turn.
+
+41
+00:01:50.117 --> 00:01:52.855
+Try the checkpoint below.

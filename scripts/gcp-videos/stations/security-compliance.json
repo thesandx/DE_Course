@@ -1,0 +1,368 @@
+{
+  "station": "security-compliance",
+  "chapters": [
+    {
+      "title": "The mission",
+      "beats": [
+        {
+          "say": "Day one at Cymbal Retail, and the security chief hands you a list.",
+          "device": "big",
+          "text": "Day one at Cymbal",
+          "sub": "The security chief hands you a list."
+        },
+        {
+          "say": "Analysts can see every table. Card numbers sit in plain columns. And nobody knows who could copy the data out.",
+          "device": "list",
+          "label": "The list",
+          "items": [
+            "Everyone sees every table",
+            "Card numbers in plain text",
+            "Anyone could copy data out"
+          ],
+          "items_at": ["Analysts", "Card", "nobody"]
+        },
+        {
+          "say": "Your job: lock it down, without slowing anyone down.",
+          "device": "big",
+          "text": "Lock it down.",
+          "sub": "Without slowing anyone down.",
+          "submark": "slowing anyone down",
+          "submark_at": "slowing"
+        },
+        {
+          "say": "Six ideas do it. Let's take them one at a time.",
+          "device": "card",
+          "label": "Station 1.1 · Security and compliance",
+          "head": "Six ideas, one at a time",
+          "headmark": "Six ideas"
+        }
+      ]
+    },
+    {
+      "title": "IAM: who can do what",
+      "check": {
+        "prompt": "An analyst must run queries, but read only one dataset. Which grant fits?",
+        "options": [
+          "Editor on the project",
+          "jobUser on the project + dataViewer on that dataset",
+          "dataOwner on every dataset"
+        ],
+        "answer": 1,
+        "why": "jobUser lets the analyst run queries. dataViewer on one dataset limits what the analyst can read."
+      },
+      "beats": [
+        {
+          "say": "First, IAM. It answers one question: who can do what, on which resource?",
+          "device": "big",
+          "text": "IAM: who can do what?",
+          "sub": "On which resource?",
+          "submark": "resource"
+        },
+        {
+          "say": "Think of an office building. A badge for every door is risky. A badge for one room is safe.",
+          "device": "card",
+          "label": "Think of a building",
+          "head": "A badge for one room, not every door",
+          "headmark": "one room",
+          "headmark_at": "one"
+        },
+        {
+          "say": "Access flows down: from the organization, to folders, to projects, to each resource.",
+          "device": "list",
+          "label": "Grants inherit downward",
+          "items": ["Organization", "Folder", "Project", "Resource"],
+          "items_at": ["organization", "folders", "projects", "resource"]
+        },
+        {
+          "say": "So a wide grant at the top cannot be undone lower down.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "A wide grant at the top cannot be undone lower down.",
+          "mark": "cannot be undone",
+          "mark_at": "cannot"
+        },
+        {
+          "say": "Basic roles, like Owner and Editor, are almost always the wrong answer.",
+          "device": "big",
+          "text": "Owner. Editor.",
+          "sub": "Almost always the wrong answer.",
+          "submark": "wrong answer",
+          "submark_at": "wrong"
+        },
+        {
+          "say": "The safe pattern: the narrowest predefined role, on the smallest resource, given to a group.",
+          "device": "card",
+          "label": "Least privilege",
+          "head": "Narrowest role. Smallest resource. A group.",
+          "headmark": "A group.",
+          "headmark_at": "group"
+        },
+        {
+          "say": "For an analyst, that is job user on the project, plus data viewer on one dataset.",
+          "device": "card",
+          "label": "The analyst pattern",
+          "text": "jobUser on the project + dataViewer on one dataset",
+          "mark": "dataViewer on one dataset",
+          "mark_at": "data"
+        }
+      ]
+    },
+    {
+      "title": "Views, rows and columns",
+      "beats": [
+        {
+          "say": "Next: what if people should see only part of a table?",
+          "device": "big",
+          "text": "Only part of a table?"
+        },
+        {
+          "say": "Use the coarsest control that works. Usually, that is a separate dataset.",
+          "device": "card",
+          "label": "The rule",
+          "head": "Use the coarsest control that works",
+          "headmark": "coarsest"
+        },
+        {
+          "say": "An authorized view shares the results, but hides the source tables.",
+          "device": "card",
+          "label": "Authorized view",
+          "head": "Shares results, hides the source",
+          "headmark": "hides the source",
+          "headmark_at": "hides"
+        },
+        {
+          "say": "A row access policy shows each team only its own rows.",
+          "device": "card",
+          "label": "Row access policy",
+          "head": "Each team sees only its own rows",
+          "headmark": "its own rows",
+          "headmark_at": "its"
+        },
+        {
+          "say": "A policy tag hides one column, or masks it, like a card number.",
+          "device": "card",
+          "label": "Policy tag + masking",
+          "head": "Hide or mask one column",
+          "headmark": "mask",
+          "headmark_at": "masks"
+        },
+        {
+          "say": "The trap is copying data into many filtered tables. Never do that.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "Copying data into many filtered tables",
+          "mark": "filtered tables",
+          "mark_at": "filtered"
+        }
+      ]
+    },
+    {
+      "title": "Encryption: who holds the key",
+      "beats": [
+        {
+          "say": "Third idea: encryption. Good news: it is always on.",
+          "device": "big",
+          "text": "Always encrypted",
+          "sub": "At rest and in transit. Nothing to set up."
+        },
+        {
+          "say": "So the exam never asks if data is encrypted. It asks who holds the key.",
+          "device": "card",
+          "label": "The real question",
+          "head": "Who holds the key?",
+          "headmark": "holds the key",
+          "headmark_at": "holds"
+        },
+        {
+          "say": "By default, Google holds it. With CMEK, you hold it, in Cloud KMS.",
+          "device": "list",
+          "label": "Who holds the key",
+          "items": ["Default: Google", "CMEK: you, in Cloud KMS"],
+          "items_at": ["default", "CMEK"]
+        },
+        {
+          "say": "Must the key stay outside Google? That is Cloud EKM.",
+          "device": "card",
+          "label": "Key outside Google",
+          "head": "Cloud EKM",
+          "headmark": "Cloud EKM",
+          "headmark_at": "EKM"
+        },
+        {
+          "say": "If a rule demands hardware keys, add Cloud HSM.",
+          "device": "card",
+          "label": "Regulation says hardware",
+          "head": "CMEK + Cloud HSM",
+          "headmark": "Cloud HSM",
+          "headmark_at": "HSM"
+        },
+        {
+          "say": "One more thing. Rotating a key does not re-encrypt old data.",
+          "device": "card",
+          "label": "Remember",
+          "text": "Rotating a key does not re-encrypt old data.",
+          "mark": "does not re-encrypt",
+          "mark_at": "does"
+        }
+      ]
+    },
+    {
+      "title": "Finding and hiding PII",
+      "beats": [
+        {
+          "say": "Fourth: personal data, like card numbers and emails.",
+          "device": "big",
+          "text": "Personal data",
+          "sub": "Card numbers. Emails. IDs."
+        },
+        {
+          "say": "Sensitive Data Protection, also called Cloud DLP, finds it for you, across thousands of tables.",
+          "device": "card",
+          "label": "Sensitive Data Protection · Cloud DLP",
+          "head": "Finds PII across thousands of tables",
+          "headmark": "Finds PII",
+          "headmark_at": "finds"
+        },
+        {
+          "say": "Then it hides it. And how you hide it is the exam question.",
+          "device": "big",
+          "text": "How do you hide it?"
+        },
+        {
+          "say": "Never need it back? Mask it. Need joins? Hash it. Need the original later? Use deterministic encryption.",
+          "device": "list",
+          "label": "Pick by what you need later",
+          "items": ["Never need it back: mask", "Need joins: hash", "Need the original: encrypt"],
+          "items_at": ["Never", "joins", "original"]
+        },
+        {
+          "say": "And to keep a sixteen digit card looking like a card, use format-preserving encryption.",
+          "device": "card",
+          "label": "Keep the shape",
+          "text": "16 digits in, 16 digits out: format-preserving encryption",
+          "mark": "format-preserving encryption",
+          "mark_at": "format-preserving"
+        }
+      ]
+    },
+    {
+      "title": "A wall around your data",
+      "check": {
+        "prompt": "A user with valid access copies a table to a personal project. What stops this?",
+        "options": ["VPC Service Controls", "A stronger IAM role", "Encryption with CMEK"],
+        "answer": 0,
+        "why": "IAM says who can act. Only a VPC Service Controls perimeter says where the data may go."
+      },
+      "beats": [
+        { "say": "Fifth: stopping data from leaving.", "device": "big", "text": "Stop the leak" },
+        {
+          "say": "IAM alone cannot do it. A valid user can still copy a table to a personal project.",
+          "device": "card",
+          "label": "The gap",
+          "text": "A valid user can still copy a table to a personal project.",
+          "mark": "personal project",
+          "mark_at": "personal"
+        },
+        {
+          "say": "VPC Service Controls draws a wall around your projects. Data cannot cross it, even with valid IAM.",
+          "device": "card",
+          "label": "VPC Service Controls",
+          "head": "A wall around your projects",
+          "headmark": "wall"
+        },
+        {
+          "say": "Must data stay in one country? Use regional resources, plus the resource locations org policy.",
+          "device": "card",
+          "label": "Data residency",
+          "head": "Regional resources + an org policy",
+          "headmark": "org policy",
+          "headmark_at": "org"
+        },
+        {
+          "say": "And remember: a BigQuery dataset's location can never change. You copy it instead.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "A dataset's location can never change.",
+          "mark": "never change",
+          "mark_at": "never"
+        }
+      ]
+    },
+    {
+      "title": "Projects and datasets",
+      "beats": [
+        {
+          "say": "Last idea: how you lay things out.",
+          "device": "big",
+          "text": "How you lay things out"
+        },
+        {
+          "say": "Give dev, test and prod their own projects. A mistake in dev then stays in dev.",
+          "device": "card",
+          "label": "Environments",
+          "head": "One project each: dev, test, prod",
+          "headmark": "One project each",
+          "headmark_at": "projects"
+        },
+        {
+          "say": "In BigQuery, the dataset is the security boundary. So: one client, one dataset.",
+          "device": "card",
+          "label": "Tenants",
+          "head": "One client, one dataset",
+          "headmark": "one dataset",
+          "headmark_at": "client"
+        },
+        {
+          "say": "And before you lock anything down, read the audit logs to see who uses what.",
+          "device": "card",
+          "label": "First step",
+          "head": "Read the audit logs first",
+          "headmark": "audit logs",
+          "headmark_at": "audit"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Let's recap, in twenty seconds.",
+          "device": "big",
+          "text": "Recap: what to remember",
+          "sub": "Station 1.1 in twenty seconds",
+          "submark": "twenty seconds",
+          "submark_at": "twenty"
+        },
+        {
+          "say": "Give the narrowest role, to a group. Use the coarsest control that works. And know who holds the key.",
+          "device": "list",
+          "label": "Recap · 1 of 2",
+          "items": [
+            "Narrowest role, to a group",
+            "Coarsest control that works",
+            "Know who holds the key"
+          ],
+          "items_at": ["narrowest", "coarsest", "know"]
+        },
+        {
+          "say": "Hide PII by what you need later. Block leaks with VPC Service Controls. And split projects by environment.",
+          "device": "list",
+          "label": "Recap · 2 of 2",
+          "items": [
+            "Hide PII by what you need later",
+            "VPC Service Controls blocks leaks",
+            "One project per environment"
+          ],
+          "items_at": ["Hide", "Block", "split"]
+        },
+        {
+          "say": "Now scroll down, and prove it at the checkpoint.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Scroll down and pass the checkpoint.",
+          "submark": "checkpoint"
+        }
+      ]
+    }
+  ]
+}

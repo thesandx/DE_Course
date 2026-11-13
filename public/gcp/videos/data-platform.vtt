@@ -1,0 +1,117 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:04.030
+Marketing, supply chain and finance each own their data.
+
+2
+00:00:04.050 --> 00:00:06.730
+One central team cannot keep up with all of them.
+
+3
+00:00:06.750 --> 00:00:08.590
+It becomes a bottleneck.
+
+4
+00:00:08.610 --> 00:00:12.350
+But if every team does its own thing, nothing fits together.
+
+5
+00:00:12.370 --> 00:00:13.750
+The answer is in the middle.
+
+6
+00:00:13.770 --> 00:00:16.300
+It is called a data mesh.
+
+7
+00:00:16.320 --> 00:00:18.085
+Think of a shopping mall.
+
+8
+00:00:18.105 --> 00:00:19.560
+Each shop runs itself.
+
+9
+00:00:19.580 --> 00:00:21.895
+It knows its own products best.
+
+10
+00:00:21.915 --> 00:00:26.355
+But the mall gives every shop the same building, power and safety rules.
+
+11
+00:00:26.375 --> 00:00:29.418
+In a mesh, each domain team owns its data products.
+
+12
+00:00:29.438 --> 00:00:30.965
+That is the shop.
+
+13
+00:00:30.985 --> 00:00:33.802
+A central team owns the standards and the platform.
+
+14
+00:00:33.822 --> 00:00:35.840
+That is the mall.
+
+15
+00:00:35.860 --> 00:00:38.625
+On Google Cloud, five blocks build it.
+
+16
+00:00:38.645 --> 00:00:40.262
+Cloud Storage is the lake.
+
+17
+00:00:40.282 --> 00:00:41.938
+BigQuery is the warehouse.
+
+18
+00:00:41.958 --> 00:00:44.585
+Dataplex organizes and governs.
+
+19
+00:00:44.605 --> 00:00:46.610
+The catalog makes data searchable.
+
+20
+00:00:46.630 --> 00:00:49.620
+And Analytics Hub shares it, without copies.
+
+21
+00:00:49.640 --> 00:00:51.107
+One mapping to remember.
+
+22
+00:00:51.127 --> 00:00:53.605
+A Dataplex lake is one domain.
+
+23
+00:00:53.625 --> 00:00:56.605
+The trap: one team that owns every dataset,
+
+24
+00:00:56.625 --> 00:01:00.230
+when the story describes independent domains.
+
+25
+00:01:00.250 --> 00:01:01.490
+Recap.
+
+26
+00:01:01.510 --> 00:01:03.403
+Domains own the data products.
+
+27
+00:01:03.423 --> 00:01:06.675
+A central team owns the rules and the platform.
+
+28
+00:01:06.695 --> 00:01:07.762
+Line three, done.
+
+29
+00:01:07.782 --> 00:01:10.520
+Try the checkpoint below.

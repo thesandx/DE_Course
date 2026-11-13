@@ -1,0 +1,175 @@
+{
+  "station": "monitoring",
+  "chapters": [
+    {
+      "title": "The mission",
+      "beats": [
+        {
+          "say": "Something broke at three in the morning.",
+          "device": "big",
+          "text": "It broke at 3 a.m."
+        },
+        {
+          "say": "Nobody noticed until nine. Six hours of bad data.",
+          "device": "card",
+          "label": "The cost",
+          "head": "Nobody noticed for six hours",
+          "headmark": "six hours",
+          "headmark_at": "Six"
+        },
+        {
+          "say": "Build it so the pipeline tells you first.",
+          "device": "card",
+          "label": "Station 5.4 · Monitoring",
+          "head": "The pipeline should tell you first",
+          "headmark": "tell you first",
+          "headmark_at": "tells"
+        }
+      ]
+    },
+    {
+      "title": "Metrics, logs and sinks",
+      "check": {
+        "prompt": "A log entry must trigger another system at once. Where does the sink send it?",
+        "options": ["Pub/Sub", "Cloud Storage", "BigQuery"],
+        "answer": 0,
+        "why": "Pub/Sub delivers the entry in real time. The other two are for an archive and for analysis."
+      },
+      "beats": [
+        { "say": "Think of a car dashboard.", "device": "big", "text": "Think of a car dashboard" },
+        {
+          "say": "Metrics are the gauges and warning lights. You set alerts on them.",
+          "device": "card",
+          "label": "Cloud Monitoring",
+          "head": "Metrics: alert on them",
+          "headmark": "alert on them",
+          "headmark_at": "alerts"
+        },
+        {
+          "say": "Logs are the mechanic's notes. They explain why it happened.",
+          "device": "card",
+          "label": "Cloud Logging",
+          "head": "Logs: they explain why",
+          "headmark": "explain why",
+          "headmark_at": "explain"
+        },
+        {
+          "say": "Watch the Pub/Sub backlog, the oldest unacked message, and Dataflow's system lag.",
+          "device": "list",
+          "label": "Gauges to watch",
+          "items": ["Pub/Sub backlog", "Oldest unacked message age", "Dataflow system lag"],
+          "items_at": ["backlog", "oldest", "lag"]
+        },
+        {
+          "say": "A log sink sends matching logs somewhere else.",
+          "device": "card",
+          "label": "Log sinks",
+          "head": "A sink routes logs",
+          "headmark": "routes logs",
+          "headmark_at": "sends"
+        },
+        {
+          "say": "To BigQuery for analysis. To Cloud Storage for the archive. To Pub/Sub for an instant reaction.",
+          "device": "list",
+          "label": "Sink to",
+          "items": ["BigQuery: analysis", "Cloud Storage: archive", "Pub/Sub: react at once"],
+          "items_at": ["BigQuery", "Storage", "Pub/Sub"]
+        },
+        {
+          "say": "And for BigQuery itself, INFORMATION SCHEMA shows who ran what, and what it cost.",
+          "device": "card",
+          "label": "Audit BigQuery",
+          "head": "INFORMATION_SCHEMA.JOBS",
+          "text": "Who ran what, and the cost",
+          "headmark": "INFORMATION_SCHEMA",
+          "headmark_at": "INFORMATION"
+        },
+        {
+          "say": "The trap: polling the logs on a timer, when you need an instant alert. Use a sink to Pub/Sub.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "Polling logs when you need an instant alert",
+          "mark": "Polling logs",
+          "mark_at": "polling"
+        }
+      ]
+    },
+    {
+      "title": "Read the error",
+      "check": {
+        "prompt": "The job shows \"rateLimitExceeded\". What is the right reaction?",
+        "options": [
+          "Retry at once, in a tight loop",
+          "Retry with exponential backoff",
+          "Grant the Owner role"
+        ],
+        "answer": 1,
+        "why": "Backoff gives the service time. A tight loop makes the limit worse."
+      },
+      "beats": [
+        {
+          "say": "Second idea: the error message tells you the fix.",
+          "device": "big",
+          "text": "Read the error message"
+        },
+        {
+          "say": "A quota error means too many small requests. Batch them, or spread them out.",
+          "device": "card",
+          "label": "quotaExceeded",
+          "head": "Quota: batch it, or spread it",
+          "headmark": "batch it",
+          "headmark_at": "Batch"
+        },
+        {
+          "say": "For rate limits, retry with exponential backoff.",
+          "device": "card",
+          "label": "rateLimitExceeded",
+          "head": "Retry with exponential backoff",
+          "headmark": "exponential backoff",
+          "headmark_at": "exponential"
+        },
+        {
+          "say": "Resources exceeded means one worker got too much. Rewrite the query.",
+          "device": "card",
+          "label": "resourcesExceeded",
+          "head": "Too much for one worker: rewrite",
+          "headmark": "rewrite"
+        },
+        {
+          "say": "Permission denied? Check the identity that runs the job. It needs the data role, and job user.",
+          "device": "card",
+          "label": "Permission denied",
+          "head": "Check the job's identity",
+          "headmark": "identity"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Recap.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "Metrics to alert. Logs to explain. Sinks to route.",
+          "device": "list",
+          "label": "Station 5.4 · 1 of 2",
+          "items": ["Metrics: alert", "Logs: explain", "Sinks: route"],
+          "items_at": ["Metrics", "Logs", "Sinks"]
+        },
+        {
+          "say": "Quota means batch. Resources exceeded means rewrite. Permission means check the identity.",
+          "device": "list",
+          "label": "Station 5.4 · 2 of 2",
+          "items": ["Quota: batch", "Resources exceeded: rewrite", "Permission: check identity"],
+          "items_at": ["Quota", "Resources", "Permission"]
+        },
+        {
+          "say": "Try the checkpoint below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Pass the checkpoint below.",
+          "submark": "checkpoint"
+        }
+      ]
+    }
+  ]
+}

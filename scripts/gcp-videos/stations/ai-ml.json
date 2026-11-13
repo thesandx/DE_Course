@@ -1,0 +1,217 @@
+{
+  "station": "ai-ml",
+  "chapters": [
+    {
+      "title": "The mission",
+      "beats": [
+        {
+          "say": "Two teams want AI. Both need you first.",
+          "device": "big",
+          "text": "Two teams want AI"
+        },
+        {
+          "say": "Merchandising wants a demand forecast.",
+          "device": "card",
+          "label": "Team one",
+          "head": "A demand forecast",
+          "headmark": "forecast"
+        },
+        {
+          "say": "And the product team wants a shopping assistant that answers from the catalog.",
+          "device": "card",
+          "label": "Team two",
+          "head": "An assistant that knows the catalog",
+          "headmark": "knows the catalog",
+          "headmark_at": "catalog"
+        },
+        {
+          "say": "Your job is to get the data ready. Three ideas.",
+          "device": "card",
+          "label": "Station 4.2 · Data for AI and ML",
+          "head": "Get the data ready",
+          "headmark": "ready"
+        }
+      ]
+    },
+    {
+      "title": "BigQuery ML",
+      "check": {
+        "prompt": "You must forecast next month's demand from past sales. Which model type?",
+        "options": ["KMEANS", "LOGISTIC_REG", "ARIMA_PLUS"],
+        "answer": 2,
+        "why": "ARIMA_PLUS is the time series model in BigQuery ML."
+      },
+      "beats": [
+        {
+          "say": "First: BigQuery ML. Machine learning, in SQL.",
+          "device": "big",
+          "text": "Machine learning, in SQL"
+        },
+        {
+          "say": "You write create model, and train it right where the data lives. No export.",
+          "device": "card",
+          "label": "How",
+          "text": "CREATE MODEL … AS SELECT …",
+          "mark": "CREATE MODEL",
+          "mark_at": "create"
+        },
+        {
+          "say": "To predict a number, use regression. For yes or no, classification. For groups with no labels, k-means.",
+          "device": "list",
+          "label": "Pick the model type",
+          "items": [
+            "A number: regression",
+            "Yes or no: classification",
+            "Groups, no labels: k-means"
+          ],
+          "items_at": ["number", "yes", "groups"]
+        },
+        {
+          "say": "And for a forecast over time, like demand, use ARIMA PLUS.",
+          "device": "card",
+          "label": "Time series",
+          "head": "Forecast: ARIMA_PLUS",
+          "headmark": "ARIMA_PLUS",
+          "headmark_at": "ARIMA"
+        },
+        {
+          "say": "Put your clean-up steps in the transform clause. Then they run in training, and again at prediction.",
+          "device": "card",
+          "label": "Feature engineering",
+          "head": "The TRANSFORM clause",
+          "text": "Same preprocessing at training and prediction",
+          "headmark": "TRANSFORM",
+          "headmark_at": "transform"
+        },
+        {
+          "say": "The trap: exporting data to train a simple model somewhere else.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "Exporting data to train a simple model elsewhere",
+          "mark": "Exporting data",
+          "mark_at": "exporting"
+        }
+      ]
+    },
+    {
+      "title": "ML basics",
+      "beats": [
+        {
+          "say": "Second: a few basics the exam still asks.",
+          "device": "big",
+          "text": "The basics they ask"
+        },
+        {
+          "say": "Overfitting is like a student who memorized last year's answers. Great in practice, lost in the real exam.",
+          "device": "card",
+          "label": "Overfitting",
+          "head": "Memorized, did not learn",
+          "headmark": "did not learn",
+          "headmark_at": "lost"
+        },
+        {
+          "say": "The fixes: regularization, dropout, a simpler model, or more data.",
+          "device": "list",
+          "label": "Fix overfitting",
+          "items": ["Regularization", "Dropout", "A simpler model", "More data"],
+          "items_at": ["regularization", "dropout", "simpler", "more"]
+        },
+        {
+          "say": "With rare cases, like fraud, accuracy lies. Use precision and recall.",
+          "device": "card",
+          "label": "Imbalanced data",
+          "head": "Accuracy lies. Use precision and recall.",
+          "headmark": "Accuracy lies.",
+          "headmark_at": "accuracy"
+        },
+        {
+          "say": "When behaviour changes over time, retrain on old and new data together. Not only the new.",
+          "device": "card",
+          "label": "Drift",
+          "head": "Retrain on old + new data",
+          "headmark": "old + new",
+          "headmark_at": "old"
+        }
+      ]
+    },
+    {
+      "title": "Documents, embeddings and RAG",
+      "check": {
+        "prompt": "How must you embed the questions and the documents?",
+        "options": [
+          "With the same embedding model",
+          "With two different models",
+          "Only the documents need a model"
+        ],
+        "answer": 0,
+        "why": "Vectors from different models cannot be compared."
+      },
+      "beats": [
+        {
+          "say": "Third: the shopping assistant. This is called RAG.",
+          "device": "big",
+          "text": "The assistant: RAG"
+        },
+        {
+          "say": "The model does not know your catalog. So you look things up first, then let it answer.",
+          "device": "card",
+          "label": "The idea",
+          "head": "Look it up, then answer",
+          "headmark": "Look it up",
+          "headmark_at": "look"
+        },
+        {
+          "say": "Five steps. Chunk the documents. Embed them. Index the vectors. Retrieve. Then generate.",
+          "device": "list",
+          "label": "The pipeline",
+          "items": ["Chunk", "Embed", "Index", "Retrieve", "Generate"],
+          "items_at": ["Chunk", "Embed", "Index", "Retrieve", "generate"]
+        },
+        {
+          "say": "An embedding turns text into numbers, so that similar meanings sit close together.",
+          "device": "card",
+          "label": "Embedding",
+          "head": "Similar meaning, close together",
+          "headmark": "close together",
+          "headmark_at": "close"
+        },
+        {
+          "say": "In BigQuery, you can embed, index, and run vector search, all in SQL.",
+          "device": "card",
+          "label": "Where",
+          "head": "Embed and search in BigQuery",
+          "headmark": "in BigQuery",
+          "headmark_at": "BigQuery"
+        },
+        {
+          "say": "The trap: embedding questions with a different model than the documents.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "Use the same embedding model for questions and documents.",
+          "mark": "same embedding model",
+          "mark_at": "different"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Recap.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "Train in SQL with create model. Fight overfitting. And for RAG, use one embedding model.",
+          "device": "list",
+          "label": "Station 4.2",
+          "items": ["Train in SQL: CREATE MODEL", "Fight overfitting", "RAG: one embedding model"],
+          "items_at": ["Train", "Fight", "RAG"]
+        },
+        {
+          "say": "Try the checkpoint below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Pass the checkpoint below.",
+          "submark": "checkpoint"
+        }
+      ]
+    }
+  ]
+}

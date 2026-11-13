@@ -331,6 +331,7 @@ Skip all of it and the app still deploys. Sign-in is unavailable, and every writ
 
 - If the app uploads files from the browser, add its origins to [`cloud/storage-cors.json`](./storage-cors.json) and re-run bootstrap.
 - Delete the `/example` route, `services/example.service.ts` and `components/example/`. A demo write path on a public URL is still a write path.
+- Upload the GCP station videos to the bucket: `gcloud storage cp <folder>/*.mp4 gs://<GCS_BUCKET>/course-videos/gcp/`. A station shows no player until its file is there. See [`scripts/gcp-videos/README.md`](../scripts/gcp-videos/README.md#put-the-videos-into-the-app).
 - Work through the [pre-production checklist](../SECURITY.md#hardening-checklist-for-a-real-deployment).
 
 ---

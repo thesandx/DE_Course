@@ -31,17 +31,18 @@ Do **not** write one for a routine choice with an obvious answer. An ADR per pul
 
 ## Index
 
-| ADR                                                                         | Title                                                                           | Status   |
-| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | -------- |
-| [0001](./0001-use-cloud-run-for-hosting.md)                                 | Use Cloud Run for hosting                                                       | Accepted |
-| [0002](./0002-use-workload-identity-federation.md)                          | Use Workload Identity Federation instead of service account keys                | Accepted |
-| [0003](./0003-scope-workload-identity-to-the-github-owner.md)               | Scope the WIF provider to the GitHub owner                                      | Accepted |
-| [0004](./0004-use-firestore-and-cloud-storage.md)                           | Use Firestore and Cloud Storage for data and files                              | Accepted |
-| [0005](./0005-use-firebase-auth-for-sign-in.md)                             | Use Firebase Auth for sign-in, with server-side session cookies                 | Accepted |
-| [0006](./0006-store-course-content-in-code-and-progress-in-one-document.md) | Store course content in code and progress in one document per learner           | Accepted |
-| [0007](./0007-adopt-the-loop-ready-visual-language.md)                      | Adopt the Loop Ready visual language in place of Mochi                          | Accepted |
-| [0008](./0008-host-several-courses-with-one-learner-document.md)            | Host several courses, with one learner document that holds a tracker per course | Accepted |
-| [0009](./0009-answer-learner-doubts-through-openrouter.md)                  | Answer learner doubts with an AI helper through OpenRouter, on the server       | Accepted |
-| [0010](./0010-let-the-ai-helper-search-the-web.md)                          | Let the AI helper search the web, with one Exa search per answer                | Accepted |
-| [0011](./0011-keep-chapter-notes-as-markdown-on-the-device-first.md)        | Keep chapter notes as Markdown, saved on the device first                       | Accepted |
-| [0012](./0012-track-study-time-with-a-browser-heartbeat.md)                 | Track study time with a browser heartbeat, in the learner document              | Accepted |
+| ADR                                                                             | Title                                                                           | Status   |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | -------- |
+| [0001](./0001-use-cloud-run-for-hosting.md)                                     | Use Cloud Run for hosting                                                       | Accepted |
+| [0002](./0002-use-workload-identity-federation.md)                              | Use Workload Identity Federation instead of service account keys                | Accepted |
+| [0003](./0003-scope-workload-identity-to-the-github-owner.md)                   | Scope the WIF provider to the GitHub owner                                      | Accepted |
+| [0004](./0004-use-firestore-and-cloud-storage.md)                               | Use Firestore and Cloud Storage for data and files                              | Accepted |
+| [0005](./0005-use-firebase-auth-for-sign-in.md)                                 | Use Firebase Auth for sign-in, with server-side session cookies                 | Accepted |
+| [0006](./0006-store-course-content-in-code-and-progress-in-one-document.md)     | Store course content in code and progress in one document per learner           | Accepted |
+| [0007](./0007-adopt-the-loop-ready-visual-language.md)                          | Adopt the Loop Ready visual language in place of Mochi                          | Accepted |
+| [0008](./0008-host-several-courses-with-one-learner-document.md)                | Host several courses, with one learner document that holds a tracker per course | Accepted |
+| [0009](./0009-answer-learner-doubts-through-openrouter.md)                      | Answer learner doubts with an AI helper through OpenRouter, on the server       | Accepted |
+| [0010](./0010-let-the-ai-helper-search-the-web.md)                              | Let the AI helper search the web, with one Exa search per answer                | Accepted |
+| [0011](./0011-keep-chapter-notes-as-markdown-on-the-device-first.md)            | Keep chapter notes as Markdown, saved on the device first                       | Accepted |
+| [0012](./0012-track-study-time-with-a-browser-heartbeat.md)                     | Track study time with a browser heartbeat, in the learner document              | Accepted |
+| [0013](./0013-make-station-videos-with-simcraft-and-keep-them-in-the-bucket.md) | Make station videos with simcraft, and keep the files in the bucket             | Accepted |

@@ -1,0 +1,177 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:03.030
+Before you write any code, draw the map.
+
+2
+00:00:03.050 --> 00:00:05.617
+Supplier files arrive by SFTP.
+
+3
+00:00:05.637 --> 00:00:07.030
+Clicks pour out of the app.
+
+4
+00:00:07.050 --> 00:00:09.240
+And orders live in MySQL.
+
+5
+00:00:09.260 --> 00:00:13.790
+Three ideas: the shape of the pipeline, the network, and the keys.
+
+6
+00:00:13.810 --> 00:00:16.475
+First, two words: batch and streaming.
+
+7
+00:00:16.495 --> 00:00:18.100
+Batch is like the post.
+
+8
+00:00:18.120 --> 00:00:21.910
+Letters are collected, then delivered together, on a schedule.
+
+9
+00:00:21.930 --> 00:00:23.760
+Streaming is like a phone call.
+
+10
+00:00:23.780 --> 00:00:26.295
+Each event is handled as it happens.
+
+11
+00:00:26.315 --> 00:00:28.470
+Next: ETL or ELT?
+
+12
+00:00:28.490 --> 00:00:31.180
+It is only a question of when you transform.
+
+13
+00:00:31.200 --> 00:00:35.955
+ELT loads the raw data into BigQuery first, then transforms it with SQL.
+
+14
+00:00:35.975 --> 00:00:37.640
+It is the default.
+
+15
+00:00:37.660 --> 00:00:37.990
+Why?
+
+16
+00:00:38.010 --> 00:00:39.427
+The raw copy stays.
+
+17
+00:00:39.447 --> 00:00:42.075
+So you can fix a bug, and run it all again.
+
+18
+00:00:42.095 --> 00:00:46.560
+The classic streaming path: Pub/Sub, then Dataflow, then BigQuery.
+
+19
+00:00:46.580 --> 00:00:50.795
+And for database changes: Datastream, straight into BigQuery.
+
+20
+00:00:50.815 --> 00:00:53.858
+The trap: devices writing straight into the database.
+
+21
+00:00:53.878 --> 00:00:56.595
+Always buffer with Pub/Sub.
+
+22
+00:00:56.615 --> 00:00:57.882
+Second: the network.
+
+23
+00:00:57.902 --> 00:00:59.880
+Workers need a way to talk.
+
+24
+00:00:59.900 --> 00:01:02.643
+Secure workers have no public IP address.
+
+25
+00:01:02.663 --> 00:01:05.315
+So how do they reach Google's services?
+
+26
+00:01:05.335 --> 00:01:08.152
+Turn on Private Google Access on the subnet.
+
+27
+00:01:08.172 --> 00:01:11.200
+That is the private door to Google APIs.
+
+28
+00:01:11.220 --> 00:01:14.710
+And if they need the wider internet, add Cloud NAT.
+
+29
+00:01:14.730 --> 00:01:18.735
+To reach Cloud SQL, use its private IP, or the Auth Proxy.
+
+30
+00:01:18.755 --> 00:01:21.145
+Never open it to the whole internet.
+
+31
+00:01:21.165 --> 00:01:22.033
+One trap.
+
+32
+00:01:22.053 --> 00:01:25.655
+Dataflow workers are stuck, and cannot talk to each other.
+
+33
+00:01:25.675 --> 00:01:32.005
+A firewall rule is missing, for ports 12345 and 12346.
+
+34
+00:01:32.025 --> 00:01:33.815
+Third: the keys.
+
+35
+00:01:33.835 --> 00:01:36.652
+Data moving between services is encrypted for you.
+
+36
+00:01:36.672 --> 00:01:38.200
+Nothing to do.
+
+37
+00:01:38.220 --> 00:01:42.510
+For data at rest, put your own key, your CMEK, on every hop.
+
+38
+00:01:42.530 --> 00:01:47.835
+That means the Pub/Sub topic, the Dataflow job, the bucket, and the table.
+
+39
+00:01:47.855 --> 00:01:49.095
+Recap.
+
+40
+00:01:49.115 --> 00:01:51.757
+Land raw data first, and transform later.
+
+41
+00:01:51.777 --> 00:01:53.955
+Buffer streams with Pub/Sub.
+
+42
+00:01:53.975 --> 00:01:56.605
+Private workers need Private Google Access.
+
+43
+00:01:56.625 --> 00:01:58.915
+And your key goes on every hop.
+
+44
+00:01:58.935 --> 00:02:01.935
+Now try the checkpoint below.

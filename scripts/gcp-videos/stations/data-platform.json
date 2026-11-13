@@ -1,0 +1,142 @@
+{
+  "station": "data-platform",
+  "chapters": [
+    {
+      "title": "The mission",
+      "beats": [
+        {
+          "say": "Marketing, supply chain and finance each own their data.",
+          "device": "big",
+          "text": "Three teams, three owners"
+        },
+        {
+          "say": "One central team cannot keep up with all of them. It becomes a bottleneck.",
+          "device": "card",
+          "label": "The problem",
+          "head": "The central team is a bottleneck",
+          "headmark": "bottleneck"
+        },
+        {
+          "say": "But if every team does its own thing, nothing fits together.",
+          "device": "card",
+          "label": "The other problem",
+          "head": "No rules = nothing fits",
+          "headmark": "nothing fits",
+          "headmark_at": "nothing"
+        },
+        {
+          "say": "The answer is in the middle. It is called a data mesh.",
+          "device": "card",
+          "label": "Station 3.4 · Designing a data platform",
+          "head": "The data mesh",
+          "headmark": "data mesh",
+          "headmark_at": "mesh"
+        }
+      ]
+    },
+    {
+      "title": "Who owns what",
+      "check": {
+        "prompt": "In a data mesh, who owns the data products of a domain?",
+        "options": ["The domain team", "One central data team", "The platform vendor"],
+        "answer": 0,
+        "why": "Each domain owns its products. The central team owns the rules and the platform."
+      },
+      "beats": [
+        { "say": "Think of a shopping mall.", "device": "big", "text": "Think of a mall" },
+        {
+          "say": "Each shop runs itself. It knows its own products best.",
+          "device": "card",
+          "label": "The shops",
+          "head": "Each shop runs itself",
+          "headmark": "runs itself",
+          "headmark_at": "runs"
+        },
+        {
+          "say": "But the mall gives every shop the same building, power and safety rules.",
+          "device": "card",
+          "label": "The mall",
+          "head": "Same building, same rules",
+          "headmark": "same rules",
+          "headmark_at": "rules"
+        },
+        {
+          "say": "In a mesh, each domain team owns its data products. That is the shop.",
+          "device": "card",
+          "label": "Domains",
+          "head": "Domains own their data products",
+          "headmark": "own their data products",
+          "headmark_at": "owns"
+        },
+        {
+          "say": "A central team owns the standards and the platform. That is the mall.",
+          "device": "card",
+          "label": "Central team",
+          "head": "Central team: rules and platform",
+          "headmark": "rules and platform",
+          "headmark_at": "standards"
+        }
+      ]
+    },
+    {
+      "title": "The building blocks",
+      "beats": [
+        { "say": "On Google Cloud, five blocks build it.", "device": "big", "text": "Five blocks" },
+        {
+          "say": "Cloud Storage is the lake. BigQuery is the warehouse. Dataplex organizes and governs.",
+          "device": "list",
+          "label": "The platform · 1 of 2",
+          "items": [
+            "Cloud Storage: the lake",
+            "BigQuery: the warehouse",
+            "Dataplex: organize and govern"
+          ],
+          "items_at": ["Storage", "BigQuery", "Dataplex"]
+        },
+        {
+          "say": "The catalog makes data searchable. And Analytics Hub shares it, without copies.",
+          "device": "list",
+          "label": "The platform · 2 of 2",
+          "items": ["Knowledge Catalog: search, lineage", "Analytics Hub: share, no copies"],
+          "items_at": ["catalog", "Analytics"]
+        },
+        {
+          "say": "One mapping to remember. A Dataplex lake is one domain.",
+          "device": "card",
+          "label": "Remember",
+          "head": "One Dataplex lake = one domain",
+          "headmark": "one domain",
+          "headmark_at": "one"
+        },
+        {
+          "say": "The trap: one team that owns every dataset, when the story describes independent domains.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "One central team owning every dataset",
+          "mark": "every dataset",
+          "mark_at": "every"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Recap.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "Domains own the data products. A central team owns the rules and the platform.",
+          "device": "list",
+          "label": "Station 3.4",
+          "items": ["Domains own data products", "Central team owns rules and platform"],
+          "items_at": ["Domains", "central"]
+        },
+        {
+          "say": "Line three, done. Try the checkpoint below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Pass the checkpoint below.",
+          "submark": "checkpoint"
+        }
+      ]
+    }
+  ]
+}

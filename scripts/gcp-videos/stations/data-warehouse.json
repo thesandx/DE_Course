@@ -1,0 +1,213 @@
+{
+  "station": "data-warehouse",
+  "chapters": [
+    {
+      "title": "The mission",
+      "beats": [
+        {
+          "say": "Finance has a sales table of 40 terabytes.",
+          "device": "stat",
+          "value": 40,
+          "sub": "in one sales table",
+          "suffix": " TB"
+        },
+        {
+          "say": "Every monthly report scans all of it. And costs a fortune.",
+          "device": "card",
+          "label": "The pain",
+          "head": "Every report scans everything",
+          "headmark": "scans everything",
+          "headmark_at": "scans"
+        },
+        {
+          "say": "The goal: scan gigabytes, not terabytes. Three ideas do it.",
+          "device": "card",
+          "label": "Station 3.2 · The data warehouse",
+          "head": "Scan gigabytes, not terabytes",
+          "headmark": "gigabytes",
+          "headmark_at": "gigabytes"
+        }
+      ]
+    },
+    {
+      "title": "Model for BigQuery",
+      "check": {
+        "prompt": "In BigQuery, where do the order lines best live?",
+        "options": [
+          "In a separate table, joined each time",
+          "Inside the order row, as a repeated field",
+          "In a CSV file in a bucket"
+        ],
+        "answer": 1,
+        "why": "Nested and repeated fields keep data that is read together in one row. No join is needed."
+      },
+      "beats": [
+        { "say": "First: how you shape the tables.", "device": "big", "text": "Shape the tables" },
+        {
+          "say": "App databases normalize. Every fact is stored once, in many small tables.",
+          "device": "card",
+          "label": "App databases",
+          "head": "Normalize: many small tables",
+          "headmark": "Normalize",
+          "headmark_at": "normalize"
+        },
+        {
+          "say": "BigQuery likes the opposite. Storage is cheap. Joining huge tables is not.",
+          "device": "card",
+          "label": "BigQuery",
+          "head": "Denormalize: joins are the cost",
+          "headmark": "Denormalize",
+          "headmark_at": "opposite"
+        },
+        {
+          "say": "So keep the order lines inside the order row, with nested and repeated fields.",
+          "device": "card",
+          "label": "The BigQuery way",
+          "head": "Nested and repeated fields",
+          "text": "STRUCT and ARRAY: no join needed",
+          "headmark": "Nested and repeated",
+          "headmark_at": "nested"
+        },
+        {
+          "say": "Data that is read together is stored together.",
+          "device": "card",
+          "label": "In one line",
+          "head": "Read together, stored together",
+          "headmark": "stored together",
+          "headmark_at": "stored"
+        }
+      ]
+    },
+    {
+      "title": "Partition and cluster",
+      "check": {
+        "prompt": "Reports always filter by date, and often by customer ID. Which design is best?",
+        "options": [
+          "Partition by customer ID",
+          "Cluster by date only",
+          "Partition by date, cluster by customer ID"
+        ],
+        "answer": 2,
+        "why": "Partition on the date filter. Cluster on the column with many values."
+      },
+      "beats": [
+        {
+          "say": "Second, and the big one: partitioning.",
+          "device": "big",
+          "text": "Partitioning"
+        },
+        {
+          "say": "Think of a filing cabinet with one drawer per day.",
+          "device": "card",
+          "label": "Think of a cabinet",
+          "head": "One drawer per day",
+          "headmark": "One drawer",
+          "headmark_at": "one"
+        },
+        {
+          "say": "Ask for last week, and BigQuery opens seven drawers. It never touches the rest.",
+          "device": "card",
+          "label": "Pruning",
+          "head": "Open 7 drawers, skip the rest",
+          "headmark": "skip the rest",
+          "headmark_at": "never"
+        },
+        {
+          "say": "So partition on the date you filter by.",
+          "device": "card",
+          "label": "The rule",
+          "head": "Partition on the date you filter by",
+          "headmark": "you filter by",
+          "headmark_at": "filter"
+        },
+        {
+          "say": "Clustering sorts the data inside each drawer, by up to four columns.",
+          "device": "card",
+          "label": "Clustering",
+          "head": "Sorted inside each drawer",
+          "text": "Up to 4 columns",
+          "headmark": "Sorted",
+          "headmark_at": "sorts"
+        },
+        {
+          "say": "Use it for columns with many values, like customer ID.",
+          "device": "card",
+          "label": "When to cluster",
+          "head": "Cluster on high-cardinality columns",
+          "headmark": "high-cardinality",
+          "headmark_at": "many"
+        },
+        {
+          "say": "The best setup uses both. Partition by date, then cluster by your common filters.",
+          "device": "card",
+          "label": "Combine them",
+          "head": "Partition by date + cluster by filter",
+          "headmark": "Partition by date",
+          "headmark_at": "Partition"
+        },
+        {
+          "say": "The trap: partitioning on an ID column. Cluster on it instead.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "Partitioning on an ID column",
+          "mark": "ID column",
+          "mark_at": "ID"
+        }
+      ]
+    },
+    {
+      "title": "Views and schema changes",
+      "beats": [
+        { "say": "Third: views.", "device": "big", "text": "Third: views" },
+        {
+          "say": "A normal view is a saved query. It runs again every time.",
+          "device": "card",
+          "label": "Logical view",
+          "head": "A saved query. Runs every time.",
+          "headmark": "Runs every time.",
+          "headmark_at": "runs"
+        },
+        {
+          "say": "A materialized view stores the answer, and keeps it fresh. Great for repeated totals.",
+          "device": "card",
+          "label": "Materialized view",
+          "head": "Stores the answer, keeps it fresh",
+          "headmark": "Stores the answer",
+          "headmark_at": "stores"
+        },
+        {
+          "say": "To change a column's type, rebuild the table with create or replace table, as select.",
+          "device": "card",
+          "label": "Change a type",
+          "text": "CREATE OR REPLACE TABLE … AS SELECT CAST(…)",
+          "mark": "CREATE OR REPLACE TABLE",
+          "mark_at": "create"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Recap.", "device": "big", "text": "Quick recap" },
+        {
+          "say": "Denormalize with nested fields. Partition on your date filter. Cluster on busy columns.",
+          "device": "list",
+          "label": "Station 3.2",
+          "items": [
+            "Denormalize with nested fields",
+            "Partition on your date filter",
+            "Cluster on busy columns"
+          ],
+          "items_at": ["Denormalize", "Partition", "Cluster"]
+        },
+        {
+          "say": "Now make that report cheap. Checkpoint below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Pass the checkpoint below.",
+          "submark": "checkpoint"
+        }
+      ]
+    }
+  ]
+}

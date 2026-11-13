@@ -1,0 +1,173 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:01.807
+Two teams want AI.
+
+2
+00:00:01.827 --> 00:00:03.580
+Both need you first.
+
+3
+00:00:03.600 --> 00:00:06.465
+Merchandising wants a demand forecast.
+
+4
+00:00:06.485 --> 00:00:11.025
+And the product team wants a shopping assistant that answers from the catalog.
+
+5
+00:00:11.045 --> 00:00:13.000
+Your job is to get the data ready.
+
+6
+00:00:13.020 --> 00:00:15.075
+Three ideas.
+
+7
+00:00:15.095 --> 00:00:16.625
+First: BigQuery ML.
+
+8
+00:00:16.645 --> 00:00:18.685
+Machine learning, in SQL.
+
+9
+00:00:18.705 --> 00:00:21.760
+You write create model, and train it right where the data lives.
+
+10
+00:00:21.780 --> 00:00:23.270
+No export.
+
+11
+00:00:23.290 --> 00:00:25.495
+To predict a number, use regression.
+
+12
+00:00:25.515 --> 00:00:27.795
+For yes or no, classification.
+
+13
+00:00:27.815 --> 00:00:30.480
+For groups with no labels, k-means.
+
+14
+00:00:30.500 --> 00:00:34.965
+And for a forecast over time, like demand, use ARIMA PLUS.
+
+15
+00:00:34.985 --> 00:00:37.628
+Put your clean-up steps in the transform clause.
+
+16
+00:00:37.648 --> 00:00:40.850
+Then they run in training, and again at prediction.
+
+17
+00:00:40.870 --> 00:00:45.600
+The trap: exporting data to train a simple model somewhere else.
+
+18
+00:00:45.620 --> 00:00:48.835
+Second: a few basics the exam still asks.
+
+19
+00:00:48.855 --> 00:00:52.435
+Overfitting is like a student who memorized last year's answers.
+
+20
+00:00:52.455 --> 00:00:55.820
+Great in practice, lost in the real exam.
+
+21
+00:00:55.840 --> 00:01:00.655
+The fixes: regularization, dropout, a simpler model, or more data.
+
+22
+00:01:00.675 --> 00:01:03.417
+With rare cases, like fraud, accuracy lies.
+
+23
+00:01:03.437 --> 00:01:05.540
+Use precision and recall.
+
+24
+00:01:05.560 --> 00:01:09.890
+When behaviour changes over time, retrain on old and new data together.
+
+25
+00:01:09.910 --> 00:01:11.990
+Not only the new.
+
+26
+00:01:12.010 --> 00:01:13.665
+Third: the shopping assistant.
+
+27
+00:01:13.685 --> 00:01:15.425
+This is called RAG.
+
+28
+00:01:15.445 --> 00:01:17.588
+The model does not know your catalog.
+
+29
+00:01:17.608 --> 00:01:20.685
+So you look things up first, then let it answer.
+
+30
+00:01:20.705 --> 00:01:21.510
+Five steps.
+
+31
+00:01:21.530 --> 00:01:22.335
+Chunk the documents.
+
+32
+00:01:22.355 --> 00:01:23.285
+Embed them.
+
+33
+00:01:23.305 --> 00:01:24.385
+Index the vectors.
+
+34
+00:01:24.405 --> 00:01:25.222
+Retrieve.
+
+35
+00:01:25.242 --> 00:01:26.670
+Then generate.
+
+36
+00:01:26.690 --> 00:01:31.805
+An embedding turns text into numbers, so that similar meanings sit close together.
+
+37
+00:01:31.825 --> 00:01:36.665
+In BigQuery, you can embed, index, and run vector search, all in SQL.
+
+38
+00:01:36.685 --> 00:01:41.390
+The trap: embedding questions with a different model than the documents.
+
+39
+00:01:41.410 --> 00:01:42.650
+Recap.
+
+40
+00:01:42.670 --> 00:01:44.575
+Train in SQL with create model.
+
+41
+00:01:44.595 --> 00:01:45.800
+Fight overfitting.
+
+42
+00:01:45.820 --> 00:01:48.535
+And for RAG, use one embedding model.
+
+43
+00:01:48.555 --> 00:01:51.330
+Try the checkpoint below.

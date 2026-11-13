@@ -6,16 +6,19 @@ import { InlineText } from '@/components/course/InlineText';
 import { Prose } from '@/components/course/Prose';
 import { ConceptDiagram } from '@/components/gcp/ConceptDiagram';
 import { StationChecks } from '@/components/gcp/StationChecks';
+import { StationVideo } from '@/components/gcp/StationVideo';
 import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/layout/Icon';
 import { ChapterNotes } from '@/components/notes/ChapterNotes';
 import { buttonStyles } from '@/components/ui/Button';
 import { getLab, getStation, LAB_XP, labId, stationId, stationXp } from '@/lib/course/gcp/catalog';
 import { conceptDiagrams } from '@/lib/course/gcp/diagrams';
+import { stationVideo, videoCaptionsHref, videoPosterHref } from '@/lib/course/gcp/videos';
 import { hueStyle } from '@/lib/course/hue';
 import { env } from '@/lib/env';
 import { noteKeys } from '@/lib/notes/targets';
 import { cn } from '@/lib/utils';
+import { getStationVideoUrl } from '@/services/course-video.service';
 import { requireGcpLearner } from '@/services/learner.service';
 import { getNoteOrNull } from '@/services/notes.service';
 
@@ -37,7 +40,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export const dynamic = 'force-dynamic';
 
 /**
- * A station: the mission that frames it, the concepts to read (each opens
+ * A station: the mission that frames it, the explainer video, the concepts to read (each opens
  * with a diagram), the key points to remember, then the checkpoint. The station counts once every checkpoint
  * is right.
  */
@@ -51,7 +54,13 @@ export default async function GcpStationPage({ params }: Props) {
     `/gcp/lines/${lineSlug}/${stationSlug}`,
   );
   const noteKey = noteKeys.station(stationSlug);
-  const note = await getNoteOrNull(user.uid, noteKey);
+  const video = stationVideo(station.slug);
+  // The film is optional: with no file in the bucket the URL is null, and the
+  // page shows the station without a player.
+  const [note, videoUrl] = await Promise.all([
+    getNoteOrNull(user.uid, noteKey),
+    video === undefined ? null : getStationVideoUrl(station.slug),
+  ]);
   const itemId = stationId(station.slug);
   const done = progress.done[itemId] !== undefined;
   const previous = line.stations[index - 1];
@@ -104,6 +113,15 @@ export default async function GcpStationPage({ params }: Props) {
                 ))}
               </dl>
             </header>
+
+            {video !== undefined && videoUrl !== null && (
+              <StationVideo
+                video={video}
+                src={videoUrl}
+                poster={videoPosterHref(station.slug)}
+                captionsSrc={videoCaptionsHref(station.slug)}
+              />
+            )}
 
             {station.concepts.map((concept, conceptIndex) => (
               <section

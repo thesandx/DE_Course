@@ -1,0 +1,43 @@
+{
+  "name": "Loop Ready",
+  "colors": { "muted": "#625f78" },
+  "shape": { "card_radius": "28px" },
+  "fonts": {
+    "display": {
+      "family": "Space Grotesk",
+      "fallback": "system-ui, sans-serif",
+      "weight": 700,
+      "transform": "none",
+      "letter_spacing_em": -0.025,
+      "files": [
+        { "family": "Space Grotesk", "file": "fonts/space-grotesk-700.woff2", "weight": 700 }
+      ]
+    },
+    "body": {
+      "family": "Inter",
+      "fallback": "system-ui, sans-serif",
+      "files": [
+        { "family": "Inter", "file": "fonts/inter-500.woff2", "weight": 400 },
+        { "family": "Inter", "file": "fonts/inter-600.woff2", "weight": 600 }
+      ]
+    },
+    "mono": {
+      "family": "JetBrains Mono",
+      "fallback": "ui-monospace, monospace",
+      "files": [
+        { "family": "JetBrains Mono", "file": "fonts/jetbrains-mono-500.woff2", "weight": 500 }
+      ]
+    }
+  },
+  "vox": {
+    "field_a": "#1d1838",
+    "field_b": "#5b4cf0",
+    "paper": "#f8f5f0",
+    "ink": "#17142e",
+    "accent": "#ffc53d",
+    "on_accent": "#17142e",
+    "edges": "clean",
+    "grain": 0,
+    "quote_font": "body"
+  }
+}

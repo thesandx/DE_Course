@@ -19,6 +19,9 @@ The content comes from the owner's PDE Exam Lab module. A one-time script conver
 | `labs/index.ts`      | All labs in study order, the lab id and XP, and the setup and data steps.           |
 | `diagrams/<line>.ts` | The concept diagrams of one line, keyed by station slug.                            |
 | `diagrams/index.ts`  | All diagrams, and the lookup for one concept.                                       |
+| `videos/timings.ts`  | The length, chapters, captions and quick checks of each video. A script writes it.  |
+| `videos/timeline.ts` | The player maths: the caption, the chapter and the quick check at a time.           |
+| `videos/index.ts`    | The lookup for one station, and the paths of the MP4 file, poster and captions.     |
 
 The types are in [`types/gcp.ts`](../../../types/gcp.ts).
 
@@ -104,3 +107,27 @@ A diagram has a `kind`. Each kind reads top to bottom on a phone and spreads out
 4. Use a `tone` for meaning: `hard` for wrong or costly, `easy` for right or safe, `brand` for the answer to remember. Use the other tones to tell boxes apart.
 5. Text fields use the inline markers only («code», **bold**). Do not write backticks or `${`.
 6. Run `pnpm test lib/course/gcp components/gcp`. The tests check concepts, positions, grid cells and unique labels, and render every diagram.
+
+## Explainer videos
+
+Every station has one explainer video of two to three minutes. The station page shows it under the header, before the concepts. The component [`components/gcp/StationVideo.tsx`](../../../components/gcp/StationVideo.tsx) is the player. It has captions, chapters, a speed button, full screen and quick checks.
+
+A video has three parts, and each part lives in a different place.
+
+| Part                             | Where                                             |
+| -------------------------------- | ------------------------------------------------- |
+| The picture and the voice (MP4)  | The app bucket, at `course-videos/gcp/<slug>.mp4` |
+| The poster and the captions file | `public/gcp/videos/<slug>.jpg` and `<slug>.vtt`   |
+| The timings and the quick checks | `videos/timings.ts`                               |
+
+[`services/course-video.service.ts`](../../../services/course-video.service.ts) signs a read URL for the MP4 file. When the file is not in the bucket, the page shows no player. The reasons are in [ADR-0013](../../../docs/adr/0013-make-station-videos-with-simcraft-and-keep-them-in-the-bucket.md).
+
+Do not edit `videos/timings.ts`. To change a video, change its script and build it again. The steps are in [`scripts/gcp-videos/README.md`](../../../scripts/gcp-videos/README.md).
+
+### Rules for a video
+
+- A video explains. It does not replace the concepts, and it does not give XP.
+- Use short sentences and plain words. Write one idea in one beat.
+- Start with the mission of the station. End with a recap and a pointer to the checkpoint.
+- A quick check asks about the chapter that just ended. It has one correct option.
+- Say nothing in the video that the station text does not support.

@@ -1,0 +1,132 @@
+{
+  "station": "workload-organization",
+  "chapters": [
+    {
+      "title": "The mission",
+      "beats": [
+        {
+          "say": "Nine in the morning. Everyone opens a dashboard.",
+          "device": "big",
+          "text": "9 a.m. dashboard rush"
+        },
+        {
+          "say": "At the same time, analysts run heavy ad-hoc queries. They collide.",
+          "device": "card",
+          "label": "The collision",
+          "head": "Dashboards and ad-hoc queries collide",
+          "headmark": "collide"
+        },
+        {
+          "say": "Organize capacity by what the business needs first.",
+          "device": "card",
+          "label": "Station 5.3 · Organizing workloads",
+          "head": "What does the business need first?",
+          "headmark": "need first",
+          "headmark_at": "first"
+        }
+      ]
+    },
+    {
+      "title": "Now, or when free",
+      "check": {
+        "prompt": "A weekly report is not urgent. How should its query run?",
+        "options": ["With interactive priority", "With batch priority"],
+        "answer": 1,
+        "why": "A batch query waits for free resources, so it does not fight the dashboards."
+      },
+      "beats": [
+        {
+          "say": "Think of a hospital. Emergencies go first.",
+          "device": "big",
+          "text": "Think of a hospital"
+        },
+        {
+          "say": "An interactive query is the emergency. It runs as soon as possible.",
+          "device": "card",
+          "label": "Interactive (the default)",
+          "head": "Interactive: runs now",
+          "headmark": "runs now",
+          "headmark_at": "soon"
+        },
+        {
+          "say": "A batch query can wait. It starts when resources are free.",
+          "device": "card",
+          "label": "Batch priority",
+          "head": "Batch: waits its turn",
+          "headmark": "waits its turn",
+          "headmark_at": "wait"
+        },
+        {
+          "say": "So send non-urgent reports as batch. They stop fighting the dashboards.",
+          "device": "card",
+          "label": "Use it",
+          "head": "Non-urgent report? Make it batch.",
+          "headmark": "Make it batch.",
+          "headmark_at": "batch"
+        }
+      ]
+    },
+    {
+      "title": "Who gets slots first",
+      "beats": [
+        {
+          "say": "Next: who gets compute first?",
+          "device": "big",
+          "text": "Who gets slots first?"
+        },
+        {
+          "say": "Give each kind of work its own reservation: dashboards, pipelines, ad-hoc.",
+          "device": "card",
+          "label": "Reservations",
+          "head": "One reservation per kind of work",
+          "headmark": "One reservation",
+          "headmark_at": "own"
+        },
+        {
+          "say": "Set a baseline on the important ones. Autoscaling covers the bursts.",
+          "device": "card",
+          "label": "Baseline and autoscale",
+          "head": "Baseline for sure. Autoscale for bursts.",
+          "headmark": "Baseline for sure.",
+          "headmark_at": "baseline"
+        },
+        {
+          "say": "And keep dev and test away from prod. An experiment must not starve production.",
+          "device": "card",
+          "label": "Separate",
+          "head": "Dev must not starve prod",
+          "headmark": "starve prod",
+          "headmark_at": "starve"
+        },
+        {
+          "say": "To size it, watch slot use in the admin charts.",
+          "device": "card",
+          "label": "How big?",
+          "head": "Watch slot use, then size",
+          "headmark": "Watch slot use",
+          "headmark_at": "watch"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Recap.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "Interactive runs now. Batch waits. Reservations and baselines decide who goes first.",
+          "device": "list",
+          "label": "Station 5.3",
+          "items": ["Interactive runs now", "Batch waits", "Reservations decide who is first"],
+          "items_at": ["Interactive", "Batch", "Reservations"]
+        },
+        {
+          "say": "Try the checkpoint below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Pass the checkpoint below.",
+          "submark": "checkpoint"
+        }
+      ]
+    }
+  ]
+}

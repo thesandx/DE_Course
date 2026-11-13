@@ -1,0 +1,137 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:02.730
+Something broke at three in the morning.
+
+2
+00:00:02.750 --> 00:00:04.380
+Nobody noticed until nine.
+
+3
+00:00:04.400 --> 00:00:06.565
+Six hours of bad data.
+
+4
+00:00:06.585 --> 00:00:09.590
+Build it so the pipeline tells you first.
+
+5
+00:00:09.610 --> 00:00:11.525
+Think of a car dashboard.
+
+6
+00:00:11.545 --> 00:00:13.775
+Metrics are the gauges and warning lights.
+
+7
+00:00:13.795 --> 00:00:15.535
+You set alerts on them.
+
+8
+00:00:15.555 --> 00:00:17.185
+Logs are the mechanic's notes.
+
+9
+00:00:17.205 --> 00:00:19.270
+They explain why it happened.
+
+10
+00:00:19.290 --> 00:00:24.680
+Watch the Pub/Sub backlog, the oldest unacked message, and Dataflow's system lag.
+
+11
+00:00:24.700 --> 00:00:27.615
+A log sink sends matching logs somewhere else.
+
+12
+00:00:27.635 --> 00:00:29.490
+To BigQuery for analysis.
+
+13
+00:00:29.510 --> 00:00:31.465
+To Cloud Storage for the archive.
+
+14
+00:00:31.485 --> 00:00:34.050
+To Pub/Sub for an instant reaction.
+
+15
+00:00:34.070 --> 00:00:39.335
+And for BigQuery itself, INFORMATION SCHEMA shows who ran what, and what it cost.
+
+16
+00:00:39.355 --> 00:00:43.410
+The trap: polling the logs on a timer, when you need an instant alert.
+
+17
+00:00:43.430 --> 00:00:46.010
+Use a sink to Pub/Sub.
+
+18
+00:00:46.030 --> 00:00:49.395
+Second idea: the error message tells you the fix.
+
+19
+00:00:49.415 --> 00:00:51.933
+A quota error means too many small requests.
+
+20
+00:00:51.953 --> 00:00:54.205
+Batch them, or spread them out.
+
+21
+00:00:54.225 --> 00:00:57.565
+For rate limits, retry with exponential backoff.
+
+22
+00:00:57.585 --> 00:01:00.503
+Resources exceeded means one worker got too much.
+
+23
+00:01:00.523 --> 00:01:02.100
+Rewrite the query.
+
+24
+00:01:02.120 --> 00:01:03.312
+Permission denied?
+
+25
+00:01:03.332 --> 00:01:05.450
+Check the identity that runs the job.
+
+26
+00:01:05.470 --> 00:01:08.775
+It needs the data role, and job user.
+
+27
+00:01:08.795 --> 00:01:10.035
+Recap.
+
+28
+00:01:10.055 --> 00:01:11.197
+Metrics to alert.
+
+29
+00:01:11.217 --> 00:01:12.398
+Logs to explain.
+
+30
+00:01:12.418 --> 00:01:13.895
+Sinks to route.
+
+31
+00:01:13.915 --> 00:01:15.133
+Quota means batch.
+
+32
+00:01:15.153 --> 00:01:17.220
+Resources exceeded means rewrite.
+
+33
+00:01:17.240 --> 00:01:19.705
+Permission means check the identity.
+
+34
+00:01:19.725 --> 00:01:22.500
+Try the checkpoint below.

@@ -1,0 +1,134 @@
+{
+  "station": "data-lake",
+  "chapters": [
+    {
+      "title": "The mission",
+      "beats": [
+        {
+          "say": "Cymbal's buckets are filling up.",
+          "device": "big",
+          "text": "The buckets are filling up"
+        },
+        {
+          "say": "Raw supplier files, product images, and logs. All piled together.",
+          "device": "list",
+          "label": "In the pile",
+          "items": ["Supplier files", "Product images", "Logs"],
+          "items_at": ["supplier", "images", "logs"]
+        },
+        {
+          "say": "Nobody can find anything. That is not a data lake. That is a data swamp.",
+          "device": "card",
+          "label": "The problem",
+          "head": "A data swamp",
+          "headmark": "swamp"
+        },
+        {
+          "say": "One idea turns it around: a lake is Cloud Storage, plus discipline.",
+          "device": "card",
+          "label": "Station 3.3 · Using a data lake",
+          "head": "A lake = Cloud Storage + discipline",
+          "headmark": "discipline"
+        }
+      ]
+    },
+    {
+      "title": "Zones and formats",
+      "beats": [
+        {
+          "say": "Discipline has five parts. One: zones.",
+          "device": "big",
+          "text": "First part: zones"
+        },
+        {
+          "say": "Data moves from raw, to staged, to curated. Each zone is cleaner than the last.",
+          "device": "list",
+          "label": "Three zones",
+          "items": ["Raw", "Staged", "Curated"],
+          "items_at": ["raw", "staged", "curated"]
+        },
+        {
+          "say": "Two: open formats, like Parquet, Avro and Iceberg. Any engine can read them.",
+          "device": "card",
+          "label": "2 · Open formats",
+          "head": "Parquet, Avro, Iceberg",
+          "headmark": "Parquet"
+        }
+      ]
+    },
+    {
+      "title": "Find, secure, afford",
+      "check": {
+        "prompt": "Analysts may see only some columns of the files in a bucket. What do you give them?",
+        "options": [
+          "Read access to the bucket",
+          "A BigLake table with column security",
+          "A copy of the files"
+        ],
+        "answer": 1,
+        "why": "A BigLake table gives row and column security. The analysts never get the bucket."
+      },
+      "beats": [
+        {
+          "say": "Three: discovery. Dataplex finds the files, and registers them as tables.",
+          "device": "card",
+          "label": "3 · Discovery",
+          "head": "Dataplex turns files into tables",
+          "headmark": "files into tables",
+          "headmark_at": "files"
+        },
+        {
+          "say": "Four: security. BigLake tables give row and column security over files.",
+          "device": "card",
+          "label": "4 · Security",
+          "head": "BigLake: row and column security on files",
+          "headmark": "BigLake"
+        },
+        {
+          "say": "So analysts query the table. They never get the whole bucket.",
+          "device": "card",
+          "label": "Why it matters",
+          "head": "Query the table, not the bucket",
+          "headmark": "not the bucket",
+          "headmark_at": "never"
+        },
+        {
+          "say": "Five: cost. Lifecycle rules move old files to colder, cheaper classes.",
+          "device": "card",
+          "label": "5 · Cost",
+          "head": "Lifecycle rules keep it cheap",
+          "headmark": "Lifecycle rules",
+          "headmark_at": "Lifecycle"
+        },
+        {
+          "say": "The trap: giving analysts read access to the whole bucket, to hide a few columns.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "Bucket-wide access when only some columns are allowed",
+          "mark": "Bucket-wide access",
+          "mark_at": "whole"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Recap. Five parts.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "Zones. Open formats. Discovery. BigLake security. And lifecycle rules.",
+          "device": "list",
+          "label": "Station 3.3",
+          "items": ["Zones", "Open formats", "Discovery", "BigLake security", "Lifecycle rules"],
+          "items_at": ["Zones", "Open", "Discovery", "BigLake", "lifecycle"]
+        },
+        {
+          "say": "Try the checkpoint below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Pass the checkpoint below.",
+          "submark": "checkpoint"
+        }
+      ]
+    }
+  ]
+}

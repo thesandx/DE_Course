@@ -1,0 +1,281 @@
+{
+  "station": "reliability-fidelity",
+  "chapters": [
+    {
+      "title": "The mission",
+      "beats": [
+        {
+          "say": "The festive sale is six weeks away.",
+          "device": "big",
+          "text": "Six weeks to the sale"
+        },
+        {
+          "say": "The order pipeline must survive an outage, keep payments correct, and stop bad files.",
+          "device": "list",
+          "label": "The pipeline must",
+          "items": ["Survive an outage", "Keep payments correct", "Stop bad supplier files"],
+          "items_at": ["survive", "payments", "stop"]
+        },
+        {
+          "say": "Four ideas get you there. Let's go.",
+          "device": "card",
+          "label": "Station 1.2 · Reliability and fidelity",
+          "head": "Four ideas for a pipeline you can trust",
+          "headmark": "Four ideas"
+        }
+      ]
+    },
+    {
+      "title": "Pick the cleaning tool",
+      "beats": [
+        { "say": "First: which tool cleans the data?", "device": "big", "text": "Which tool?" },
+        {
+          "say": "Here is the trick. Pick the tool for the people who will run it.",
+          "device": "card",
+          "label": "The trick",
+          "head": "Pick the tool for the people who run it",
+          "headmark": "the people",
+          "headmark_at": "people"
+        },
+        {
+          "say": "A team that knows SQL, with data already in BigQuery? Dataform.",
+          "device": "card",
+          "label": "SQL team",
+          "head": "Dataform",
+          "text": "SQL in BigQuery, with tests and Git",
+          "headmark": "Dataform"
+        },
+        {
+          "say": "A team that wants drag and drop, with no code? Cloud Data Fusion.",
+          "device": "card",
+          "label": "No-code team",
+          "head": "Cloud Data Fusion",
+          "text": "Drag and drop, 150+ connectors",
+          "headmark": "Cloud Data Fusion",
+          "headmark_at": "Cloud"
+        },
+        {
+          "say": "Engineers with a fast stream and custom logic? Dataflow.",
+          "device": "card",
+          "label": "Engineers with streams",
+          "head": "Dataflow",
+          "text": "Code, batch and streaming, exactly-once",
+          "headmark": "Dataflow"
+        },
+        {
+          "say": "And if you already have Spark jobs, keep them, on Dataproc.",
+          "device": "card",
+          "label": "Existing Spark jobs",
+          "head": "Dataproc",
+          "headmark": "Dataproc"
+        },
+        {
+          "say": "The trap: a no-code tool for a high volume, low latency stream.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "A no-code tool for a fast, high-volume stream",
+          "mark": "no-code tool",
+          "mark_at": "no-code"
+        }
+      ]
+    },
+    {
+      "title": "Disaster recovery: RPO and RTO",
+      "check": {
+        "prompt": "Which question does RPO answer?",
+        "options": [
+          "How long can we be down?",
+          "How much does the design cost?",
+          "How much data can we lose?"
+        ],
+        "answer": 2,
+        "why": "RPO is the data you can lose. RTO is the time you can be down."
+      },
+      "beats": [
+        {
+          "say": "Second: what happens when something breaks?",
+          "device": "big",
+          "text": "When it breaks"
+        },
+        {
+          "say": "Write down two numbers first. RPO: how much data you can lose.",
+          "device": "card",
+          "label": "Number one",
+          "head": "RPO",
+          "text": "How much data can you lose?",
+          "headmark": "RPO"
+        },
+        {
+          "say": "And RTO: how long you can be down.",
+          "device": "card",
+          "label": "Number two",
+          "head": "RTO",
+          "text": "How long can you be down?",
+          "headmark": "RTO"
+        },
+        {
+          "say": "Then buy the cheapest design that meets both. Not the fanciest.",
+          "device": "card",
+          "label": "The rule",
+          "head": "Cheapest design that meets both",
+          "headmark": "Cheapest",
+          "headmark_at": "cheapest"
+        },
+        {
+          "say": "For Cloud Storage, a dual-region bucket with turbo replication gives an RPO of 15 minutes.",
+          "device": "stat",
+          "value": 15,
+          "sub": "minutes RPO: dual-region + turbo replication",
+          "suffix": " min",
+          "submark": "turbo replication",
+          "submark_at": "turbo"
+        },
+        {
+          "say": "BigQuery has time travel. You can read a table as it was, up to 7 days ago.",
+          "device": "stat",
+          "value": 7,
+          "sub": "days of BigQuery time travel",
+          "suffix": " days",
+          "submark": "time travel",
+          "submark_at": "time"
+        },
+        {
+          "say": "Cloud SQL high availability keeps a standby in another zone. It takes over on its own.",
+          "device": "card",
+          "label": "Cloud SQL HA",
+          "head": "A standby that takes over on its own",
+          "headmark": "on its own",
+          "headmark_at": "own"
+        },
+        {
+          "say": "But a read replica does not. You must promote it by hand.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "A read replica does not fail over by itself.",
+          "mark": "does not fail over",
+          "mark_at": "does"
+        }
+      ]
+    },
+    {
+      "title": "ACID and consistency",
+      "check": {
+        "prompt": "You must move money between two accounts. Which store is the wrong choice?",
+        "options": ["Spanner", "Bigtable", "Cloud SQL"],
+        "answer": 1,
+        "why": "Bigtable is atomic for one row only. A transfer changes two rows."
+      },
+      "beats": [
+        {
+          "say": "Third: keeping payments correct.",
+          "device": "big",
+          "text": "Payments must be right"
+        },
+        {
+          "say": "Moving money touches two rows. Both must change, or neither. That is a transaction.",
+          "device": "card",
+          "label": "A transaction",
+          "head": "Both rows change, or neither",
+          "headmark": "or neither",
+          "headmark_at": "neither"
+        },
+        {
+          "say": "Spanner does this across rows, tables, and even regions.",
+          "device": "card",
+          "label": "Spanner",
+          "head": "Transactions across the globe",
+          "headmark": "across the globe",
+          "headmark_at": "across"
+        },
+        {
+          "say": "Cloud SQL and AlloyDB do it inside one region.",
+          "device": "card",
+          "label": "Cloud SQL · AlloyDB",
+          "head": "Transactions in one region",
+          "headmark": "one region",
+          "headmark_at": "one"
+        },
+        {
+          "say": "Bigtable is atomic for one row only. So never use it to move money.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "Bigtable is atomic for one row only.",
+          "mark": "one row only",
+          "mark_at": "one"
+        },
+        {
+          "say": "Stronger and wider guarantees cost more. Choose the weakest one that is enough.",
+          "device": "card",
+          "label": "Rule of thumb",
+          "head": "Choose the weakest guarantee that is enough",
+          "headmark": "weakest"
+        }
+      ]
+    },
+    {
+      "title": "Validate the data",
+      "beats": [
+        { "say": "Fourth: stopping bad data.", "device": "big", "text": "Stop bad data" },
+        {
+          "say": "Check the data in the place where it changes.",
+          "device": "card",
+          "label": "The rule",
+          "head": "Validate where the data changes",
+          "headmark": "where the data changes",
+          "headmark_at": "where"
+        },
+        {
+          "say": "Dataform has assertions. Dataplex has data quality scans.",
+          "device": "list",
+          "label": "Where to check",
+          "items": ["Dataform: assertions", "Dataplex: data quality scans"],
+          "items_at": ["assertions", "scans"]
+        },
+        {
+          "say": "After a migration, the Data Validation Tool compares the source with the target.",
+          "device": "card",
+          "label": "After a migration",
+          "head": "Data Validation Tool",
+          "text": "Compares source and target",
+          "headmark": "Data Validation Tool",
+          "headmark_at": "Data"
+        },
+        {
+          "say": "In Dataflow, send bad rows to a dead-letter table. Do not drop them, and do not crash.",
+          "device": "card",
+          "label": "In a pipeline",
+          "head": "Bad rows go to a dead letter",
+          "headmark": "dead letter",
+          "headmark_at": "dead-letter"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Quick recap.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "Pick the tool for the team. Write down RPO and RTO first.",
+          "device": "list",
+          "label": "Station 1.2 · 1 of 2",
+          "items": ["Tool for the team", "RPO and RTO first"],
+          "items_at": ["Pick", "Write"]
+        },
+        {
+          "say": "Choose the weakest guarantee that works. And validate where the data changes.",
+          "device": "list",
+          "label": "Station 1.2 · 2 of 2",
+          "items": ["Weakest guarantee that works", "Validate where data changes"],
+          "items_at": ["Choose", "validate"]
+        },
+        {
+          "say": "Now try the checkpoint below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Pass the checkpoint below.",
+          "submark": "checkpoint"
+        }
+      ]
+    }
+  ]
+}

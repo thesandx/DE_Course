@@ -1,0 +1,370 @@
+{
+  "station": "building-pipelines",
+  "chapters": [
+    {
+      "title": "The mission",
+      "beats": [
+        { "say": "Time to build.", "device": "big", "text": "Time to build" },
+        {
+          "say": "This is the biggest station on the exam. Nine tools and ideas. We go fast, one picture each.",
+          "device": "card",
+          "label": "Station 2.2 · Building the pipelines",
+          "head": "Nine ideas, one picture each",
+          "headmark": "Nine ideas",
+          "headmark_at": "Nine"
+        }
+      ]
+    },
+    {
+      "title": "Pub/Sub",
+      "check": {
+        "prompt": "A subscriber gets the same message twice. What is the usual cause?",
+        "options": [
+          "The message was too large",
+          "The ack came after the deadline",
+          "The topic was full"
+        ],
+        "answer": 1,
+        "why": "A message that is not acked in time is delivered again."
+      },
+      "beats": [
+        {
+          "say": "One: Pub/Sub. Think of a post office for events.",
+          "device": "big",
+          "text": "Pub/Sub: a post office",
+          "sub": "For events, not letters."
+        },
+        {
+          "say": "Publishers drop messages on a topic. Every subscription gets its own copy.",
+          "device": "card",
+          "label": "Topic and subscription",
+          "head": "Every subscription gets its own copy",
+          "headmark": "its own copy",
+          "headmark_at": "own"
+        },
+        {
+          "say": "Delivery is at least once. So duplicates will happen. Plan for them.",
+          "device": "card",
+          "label": "The guarantee",
+          "head": "At least once = expect duplicates",
+          "headmark": "expect duplicates",
+          "headmark_at": "duplicates"
+        },
+        {
+          "say": "A subscriber must say thanks, or ack, within the deadline. The default is 10 seconds.",
+          "device": "stat",
+          "value": 10,
+          "sub": "to ack, by default. Too slow? It comes again.",
+          "suffix": " s",
+          "submark": "It comes again.",
+          "submark_at": "deadline"
+        },
+        {
+          "say": "Need order? Use ordering keys. Made a mistake? Seek back in time, and replay.",
+          "device": "card",
+          "label": "Two handy tools",
+          "head": "Ordering keys. Seek to replay.",
+          "headmark": "Seek to replay.",
+          "headmark_at": "Seek"
+        },
+        {
+          "say": "And to copy messages into BigQuery unchanged, use a BigQuery subscription. No Dataflow needed.",
+          "device": "card",
+          "label": "No code needed",
+          "head": "BigQuery subscription",
+          "headmark": "BigQuery subscription",
+          "headmark_at": "BigQuery"
+        }
+      ]
+    },
+    {
+      "title": "Apache Beam",
+      "beats": [
+        {
+          "say": "Two: Apache Beam, the language of Dataflow.",
+          "device": "big",
+          "text": "Apache Beam"
+        },
+        {
+          "say": "A PCollection is the data. A PTransform is a step. And the pipeline is the whole graph.",
+          "device": "list",
+          "label": "Three words",
+          "items": ["PCollection: the data", "PTransform: a step", "Pipeline: the whole graph"],
+          "items_at": ["PCollection", "PTransform", "pipeline"]
+        },
+        {
+          "say": "ParDo works on one element at a time, like a worker on an assembly line.",
+          "device": "card",
+          "label": "ParDo",
+          "head": "One element at a time",
+          "headmark": "One element",
+          "headmark_at": "one"
+        },
+        {
+          "say": "To add things up, use Combine. It pre-adds on each worker, so it scales better than GroupByKey.",
+          "device": "card",
+          "label": "Combine",
+          "head": "Combine beats GroupByKey + sum",
+          "headmark": "Combine"
+        },
+        {
+          "say": "A side input is a small lookup table that every worker can read.",
+          "device": "card",
+          "label": "Side input",
+          "head": "A small lookup for every worker",
+          "headmark": "small lookup",
+          "headmark_at": "small"
+        }
+      ]
+    },
+    {
+      "title": "Windows and watermarks",
+      "check": {
+        "prompt": "\"Close the basket after 60 minutes with no activity.\" Which window is that?",
+        "options": ["Fixed", "Sliding", "Session"],
+        "answer": 2,
+        "why": "A session window closes after a gap with no activity."
+      },
+      "beats": [
+        {
+          "say": "Three: windows. A stream never ends, so you cut it into pieces.",
+          "device": "big",
+          "text": "Cut the stream into windows"
+        },
+        {
+          "say": "Always cut by event time: when it happened. Not when it arrived.",
+          "device": "card",
+          "label": "The rule",
+          "head": "Event time, not arrival time",
+          "headmark": "Event time",
+          "headmark_at": "event"
+        },
+        {
+          "say": "Fixed windows are like tiles. Every five minutes, a new one. No overlap.",
+          "device": "card",
+          "label": "Fixed",
+          "head": "Tiles: no overlap",
+          "headmark": "no overlap",
+          "headmark_at": "No"
+        },
+        {
+          "say": "Sliding windows overlap. The last hour, updated every five minutes.",
+          "device": "card",
+          "label": "Sliding",
+          "head": "Overlapping: last hour, every 5 minutes",
+          "headmark": "Overlapping",
+          "headmark_at": "overlap"
+        },
+        {
+          "say": "Session windows follow the user. They close after a gap with no activity.",
+          "device": "card",
+          "label": "Session",
+          "head": "Closes after a gap of silence",
+          "headmark": "a gap",
+          "headmark_at": "gap"
+        },
+        {
+          "say": "The watermark is Dataflow's guess that all data up to a time has arrived. After that, data is late.",
+          "device": "card",
+          "label": "Watermark",
+          "head": "\"I think everything up to here has arrived\"",
+          "headmark": "has arrived",
+          "headmark_at": "arrived"
+        },
+        {
+          "say": "The trap: a fixed window for no activity for an hour. That is a session window.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "\"No activity for 60 minutes\" means a session window.",
+          "mark": "session window",
+          "mark_at": "session"
+        }
+      ]
+    },
+    {
+      "title": "Running Dataflow",
+      "check": {
+        "prompt": "You must stop a streaming job for maintenance, and lose no data. What do you do?",
+        "options": ["Drain the job", "Cancel the job", "Delete the subscription"],
+        "answer": 0,
+        "why": "Drain stops reading new input and finishes the data in flight."
+      },
+      "beats": [
+        {
+          "say": "Four: running Dataflow jobs safely.",
+          "device": "big",
+          "text": "Running Dataflow"
+        },
+        {
+          "say": "To stop a streaming job without losing data, drain it. It finishes what is in flight.",
+          "device": "card",
+          "label": "Stop safely",
+          "head": "Drain: finish what is in flight",
+          "headmark": "Drain",
+          "headmark_at": "drain"
+        },
+        {
+          "say": "Cancel stops at once, and in-flight data is lost.",
+          "device": "card",
+          "label": "Stop now",
+          "head": "Cancel: in-flight data is lost",
+          "headmark": "is lost",
+          "headmark_at": "lost"
+        },
+        {
+          "say": "To ship a new version and keep the state, use update.",
+          "device": "card",
+          "label": "Change in place",
+          "head": "Update: new code, same state",
+          "headmark": "Update",
+          "headmark_at": "update"
+        },
+        {
+          "say": "For batch jobs that can wait, FlexRS is cheaper. And flex templates let others launch your job.",
+          "device": "card",
+          "label": "Also know",
+          "head": "FlexRS saves money. Flex templates share jobs.",
+          "headmark": "FlexRS"
+        }
+      ]
+    },
+    {
+      "title": "Dataproc",
+      "beats": [
+        {
+          "say": "Five: Dataproc, for teams that already have Spark.",
+          "device": "big",
+          "text": "Dataproc, for Spark teams"
+        },
+        {
+          "say": "Best practice: one cluster per job. Create it, run the job, delete it.",
+          "device": "card",
+          "label": "Ephemeral clusters",
+          "head": "Create. Run. Delete.",
+          "headmark": "Delete.",
+          "headmark_at": "delete"
+        },
+        {
+          "say": "That works because the data lives in Cloud Storage, not on the cluster.",
+          "device": "card",
+          "label": "Why it works",
+          "head": "Data in Cloud Storage, not on the cluster",
+          "headmark": "Cloud Storage",
+          "headmark_at": "Cloud"
+        },
+        {
+          "say": "Add cheap Spot workers for extra compute. But never keep data on them.",
+          "device": "card",
+          "label": "Save money",
+          "head": "Spot workers: compute only",
+          "headmark": "compute only",
+          "headmark_at": "never"
+        },
+        {
+          "say": "Or skip the cluster completely, with Dataproc Serverless.",
+          "device": "card",
+          "label": "No cluster at all",
+          "head": "Dataproc Serverless",
+          "headmark": "Serverless"
+        }
+      ]
+    },
+    {
+      "title": "Loading BigQuery",
+      "beats": [
+        { "say": "Six: getting data into BigQuery.", "device": "big", "text": "Into BigQuery" },
+        {
+          "say": "Batch load jobs are free. Use them when minutes of delay are fine.",
+          "device": "card",
+          "label": "Batch load",
+          "head": "Batch loads are free",
+          "headmark": "free"
+        },
+        {
+          "say": "For streaming, use the Storage Write API. It gives exactly-once delivery.",
+          "device": "card",
+          "label": "Streaming",
+          "head": "Storage Write API: exactly-once",
+          "headmark": "exactly-once"
+        },
+        {
+          "say": "For files, Avro and Parquet load fastest. They carry their own schema.",
+          "device": "card",
+          "label": "Best formats",
+          "head": "Avro and Parquet load fastest",
+          "headmark": "Avro and Parquet",
+          "headmark_at": "Avro"
+        },
+        {
+          "say": "The trap: zipping CSV files to speed things up. A gzip file cannot be read in parallel.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "Gzipped CSV loads slower, not faster.",
+          "mark": "slower, not faster",
+          "mark_at": "cannot"
+        }
+      ]
+    },
+    {
+      "title": "Kafka, duplicates and AI",
+      "beats": [
+        { "say": "Seven, eight and nine, quickly.", "device": "big", "text": "Three quick ones" },
+        {
+          "say": "Kafka: keep it if your apps already speak Kafka, on the managed service. Otherwise, Pub/Sub.",
+          "device": "card",
+          "label": "7 · Kafka",
+          "head": "Already on Kafka? Keep it, managed.",
+          "headmark": "managed"
+        },
+        {
+          "say": "Duplicates: remove them by key, with ROW_NUMBER or MERGE. And never drop bad rows silently.",
+          "device": "card",
+          "label": "8 · Cleaning",
+          "head": "Dedupe by key. Dead-letter bad rows.",
+          "headmark": "Dedupe by key.",
+          "headmark_at": "key"
+        },
+        {
+          "say": "And AI: bring the model to the data. Call Gemini from SQL in BigQuery, or use RunInference in Dataflow.",
+          "device": "card",
+          "label": "9 · AI enrichment",
+          "head": "Bring the model to the data",
+          "headmark": "model to the data",
+          "headmark_at": "model"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Recap. The four you must not forget.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "Pub/Sub means at least once. Windows use event time.",
+          "device": "list",
+          "label": "Station 2.2 · 1 of 2",
+          "items": ["Pub/Sub: at least once", "Windows: event time"],
+          "items_at": ["Pub/Sub", "Windows"]
+        },
+        {
+          "say": "Drain to stop safely. And batch loads into BigQuery are free.",
+          "device": "list",
+          "label": "Station 2.2 · 2 of 2",
+          "items": ["Drain to stop safely", "Batch loads are free"],
+          "items_at": ["Drain", "batch"]
+        },
+        {
+          "say": "Nine checkpoints wait below. Take your time.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Nine checkpoints wait below.",
+          "submark": "Nine checkpoints",
+          "submark_at": "Nine"
+        }
+      ]
+    }
+  ]
+}

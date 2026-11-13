@@ -1,0 +1,226 @@
+{
+  "station": "visualization",
+  "chapters": [
+    {
+      "title": "The mission",
+      "beats": [
+        {
+          "say": "The CEO's sales dashboard takes 40 seconds to load.",
+          "device": "stat",
+          "value": 40,
+          "sub": "to load one dashboard",
+          "suffix": " s"
+        },
+        {
+          "say": "And it shows yesterday's numbers.",
+          "device": "card",
+          "label": "It gets worse",
+          "head": "And the numbers are a day old",
+          "headmark": "a day old",
+          "headmark_at": "yesterday's"
+        },
+        {
+          "say": "Fix three things: the speed, the freshness, and who can see what.",
+          "device": "list",
+          "label": "Station 4.1 · Data for visualization",
+          "items": ["Speed", "Freshness", "Who sees what"],
+          "items_at": ["speed", "freshness", "who"]
+        }
+      ]
+    },
+    {
+      "title": "Pick the BI tool",
+      "beats": [
+        {
+          "say": "First: which tool shows the data?",
+          "device": "big",
+          "text": "Which tool shows it?"
+        },
+        {
+          "say": "Looker Studio is free and quick. Great for simple dashboards.",
+          "device": "card",
+          "label": "Quick dashboards",
+          "head": "Looker Studio",
+          "text": "Free. Connects straight to BigQuery.",
+          "headmark": "Looker Studio",
+          "headmark_at": "Looker"
+        },
+        {
+          "say": "Looker adds a shared dictionary of metrics, so revenue means one thing for everyone.",
+          "device": "card",
+          "label": "Governed metrics",
+          "head": "Looker",
+          "text": "One definition of every metric (LookML)",
+          "headmark": "Looker"
+        },
+        {
+          "say": "Connected Sheets lets spreadsheet people work on billions of rows, without an export.",
+          "device": "card",
+          "label": "Spreadsheet people",
+          "head": "Connected Sheets",
+          "headmark": "Connected Sheets",
+          "headmark_at": "Connected"
+        },
+        {
+          "say": "And BI Engine keeps data in memory, so dashboards answer in under a second.",
+          "device": "card",
+          "label": "Speed",
+          "head": "BI Engine: in-memory, sub-second",
+          "headmark": "BI Engine",
+          "headmark_at": "BI"
+        },
+        {
+          "say": "One classic trap. Looker Studio shows old data? It is the cache. Change the data freshness setting.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "Old data in Looker Studio: change data freshness.",
+          "mark": "data freshness",
+          "mark_at": "freshness"
+        }
+      ]
+    },
+    {
+      "title": "Compute once, read many",
+      "check": {
+        "prompt": "A dashboard runs the same heavy total all day. What helps most?",
+        "options": ["Adding LIMIT 10", "A materialized view", "Running the query more often"],
+        "answer": 1,
+        "why": "A materialized view stores the answer and keeps it fresh."
+      },
+      "beats": [
+        {
+          "say": "Second: stop doing the same work again and again.",
+          "device": "big",
+          "text": "Compute once, read many"
+        },
+        {
+          "say": "A dashboard asks the same question all day. So work out the answer once.",
+          "device": "card",
+          "label": "The idea",
+          "head": "Answer once, serve many times",
+          "headmark": "Answer once",
+          "headmark_at": "once"
+        },
+        {
+          "say": "Use a materialized view, a scheduled summary table, or BI Engine.",
+          "device": "list",
+          "label": "Three ways",
+          "items": ["Materialized view", "Scheduled summary table", "BI Engine"],
+          "items_at": ["materialized", "summary", "BI"]
+        },
+        {
+          "say": "And the same query, asked twice, is served from the cache, free, for about 24 hours.",
+          "device": "stat",
+          "value": 24,
+          "sub": "of free query cache",
+          "suffix": " h",
+          "submark": "free"
+        }
+      ]
+    },
+    {
+      "title": "Fix a slow query",
+      "check": {
+        "prompt": "Does LIMIT 10 reduce the bytes that an on-demand query scans?",
+        "options": ["Yes", "No"],
+        "answer": 1,
+        "why": "BigQuery still scans every byte of the columns. LIMIT only cuts the rows it returns."
+      },
+      "beats": [
+        {
+          "say": "Third: one query is still slow. Now what?",
+          "device": "big",
+          "text": "A slow query"
+        },
+        {
+          "say": "Do not guess. Open the query plan. It shows bytes, slot time, and skew.",
+          "device": "card",
+          "label": "Step one",
+          "head": "Read the query plan",
+          "headmark": "query plan",
+          "headmark_at": "plan"
+        },
+        {
+          "say": "Almost every fix is one of two things. Scan less, or shuffle less.",
+          "device": "card",
+          "label": "The two fixes",
+          "head": "Scan less. Shuffle less.",
+          "headmark": "Scan less.",
+          "headmark_at": "Scan"
+        },
+        {
+          "say": "Select only the columns you need. Filter on the partition early. And cut data down before a join.",
+          "device": "list",
+          "label": "In practice",
+          "items": [
+            "Only the columns you need",
+            "Filter on the partition early",
+            "Reduce before you join"
+          ],
+          "items_at": ["Select", "Filter", "cut"]
+        },
+        {
+          "say": "The trap: adding LIMIT to save money. BigQuery still scans every byte.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "LIMIT does not reduce the bytes scanned.",
+          "mark": "does not reduce",
+          "mark_at": "still"
+        }
+      ]
+    },
+    {
+      "title": "Safe for viewers",
+      "beats": [
+        {
+          "say": "Last: who can see what on the dashboard?",
+          "device": "big",
+          "text": "Who can see what?"
+        },
+        {
+          "say": "Give viewers a view, or a curated dataset. Never the raw tables.",
+          "device": "card",
+          "label": "The rule",
+          "head": "Views, not raw tables",
+          "headmark": "not raw tables",
+          "headmark_at": "Never"
+        },
+        {
+          "say": "And mask sensitive columns with policy tags. Share with groups, not people.",
+          "device": "card",
+          "label": "Inside a table",
+          "head": "Mask columns. Share with groups.",
+          "headmark": "Mask columns.",
+          "headmark_at": "mask"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Recap.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "Pick the BI tool for the audience. Compute once, and read many times.",
+          "device": "list",
+          "label": "Station 4.1 · 1 of 2",
+          "items": ["BI tool for the audience", "Compute once, read many"],
+          "items_at": ["Pick", "Compute"]
+        },
+        {
+          "say": "Read the plan, then scan less. And give viewers views, not raw tables.",
+          "device": "list",
+          "label": "Station 4.1 · 2 of 2",
+          "items": ["Read the plan, scan less", "Views, not raw tables"],
+          "items_at": ["Read", "give"]
+        },
+        {
+          "say": "Try the checkpoint below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Pass the checkpoint below.",
+          "submark": "checkpoint"
+        }
+      ]
+    }
+  ]
+}

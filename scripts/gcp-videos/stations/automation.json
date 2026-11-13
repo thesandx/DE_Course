@@ -1,0 +1,151 @@
+{
+  "station": "automation",
+  "chapters": [
+    {
+      "title": "The mission",
+      "beats": [
+        {
+          "say": "Cymbal runs 40 pipelines from cron, on one small machine.",
+          "device": "stat",
+          "value": 40,
+          "sub": "pipelines on cron, on one VM"
+        },
+        {
+          "say": "When one fails, nobody knows.",
+          "device": "card",
+          "label": "The problem",
+          "head": "One fails. Nobody knows.",
+          "headmark": "Nobody knows.",
+          "headmark_at": "nobody"
+        },
+        {
+          "say": "Turn them into DAGs that repeat, backfill, and shout when they break.",
+          "device": "card",
+          "label": "Station 5.2 · Automation",
+          "head": "Repeat. Backfill. Shout when broken.",
+          "headmark": "Shout when broken.",
+          "headmark_at": "shout"
+        }
+      ]
+    },
+    {
+      "title": "What a DAG is",
+      "beats": [
+        {
+          "say": "A DAG is a recipe with steps in order.",
+          "device": "big",
+          "text": "A DAG is a recipe"
+        },
+        {
+          "say": "In Cloud Composer, you write it in Python. Tasks, and arrows between them.",
+          "device": "card",
+          "label": "In Composer",
+          "head": "Tasks, and arrows between them",
+          "headmark": "arrows",
+          "headmark_at": "arrows"
+        },
+        {
+          "say": "Composer only gives the orders. BigQuery and Dataflow do the cooking.",
+          "device": "card",
+          "label": "Remember",
+          "head": "Composer orders. Others cook.",
+          "headmark": "Others cook.",
+          "headmark_at": "cooking"
+        }
+      ]
+    },
+    {
+      "title": "Safe to run twice",
+      "check": {
+        "prompt": "Which write is safe to retry?",
+        "options": [
+          "Append the rows again",
+          "Overwrite the partition of that day",
+          "Insert with a new random ID"
+        ],
+        "answer": 1,
+        "why": "An overwrite gives the same table after one run or after ten."
+      },
+      "beats": [
+        {
+          "say": "The golden rule: a task must be safe to run twice.",
+          "device": "big",
+          "text": "Safe to run twice"
+        },
+        {
+          "say": "Tasks get retried. If each retry appends rows, you get duplicates.",
+          "device": "card",
+          "label": "Why",
+          "head": "Retry + append = duplicates",
+          "headmark": "duplicates"
+        },
+        {
+          "say": "So overwrite the partition for that day, or use MERGE. Run it ten times: same result.",
+          "device": "card",
+          "label": "The fix",
+          "head": "Overwrite the day, or MERGE",
+          "headmark": "Overwrite the day",
+          "headmark_at": "overwrite"
+        },
+        {
+          "say": "The word for this is idempotent.",
+          "device": "card",
+          "label": "The word",
+          "head": "Idempotent",
+          "text": "Run it again, get the same answer",
+          "headmark": "Idempotent",
+          "headmark_at": "idempotent"
+        }
+      ]
+    },
+    {
+      "title": "Dates and backfills",
+      "beats": [
+        { "say": "Rule two: never ask the clock.", "device": "big", "text": "Never ask the clock" },
+        {
+          "say": "Use the run date that Airflow gives you, not now.",
+          "device": "card",
+          "label": "Dates",
+          "head": "Use the run date, not \"now\"",
+          "headmark": "run date",
+          "headmark_at": "run"
+        },
+        {
+          "say": "Then a backfill for last March really loads last March.",
+          "device": "card",
+          "label": "Backfills",
+          "head": "A backfill loads the right day",
+          "headmark": "the right day",
+          "headmark_at": "really"
+        },
+        {
+          "say": "Finally, add retries with a delay, a timeout, and an alert on failure.",
+          "device": "list",
+          "label": "Make it loud",
+          "items": ["Retries with a delay", "A timeout", "An alert on failure"],
+          "items_at": ["retries", "timeout", "alert"]
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Recap.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "A good task is idempotent, uses the run date, retries, and is loud when it fails.",
+          "device": "list",
+          "label": "Station 5.2",
+          "items": ["Idempotent", "Uses the run date", "Retries", "Loud when it fails"],
+          "items_at": ["idempotent", "date", "retries", "loud"]
+        },
+        {
+          "say": "Try the checkpoint below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Pass the checkpoint below.",
+          "submark": "checkpoint"
+        }
+      ]
+    }
+  ]
+}

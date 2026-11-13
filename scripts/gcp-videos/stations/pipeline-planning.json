@@ -1,0 +1,231 @@
+{
+  "station": "pipeline-planning",
+  "chapters": [
+    {
+      "title": "The mission",
+      "beats": [
+        {
+          "say": "Before you write any code, draw the map.",
+          "device": "big",
+          "text": "Draw the map first"
+        },
+        {
+          "say": "Supplier files arrive by SFTP. Clicks pour out of the app. And orders live in MySQL.",
+          "device": "list",
+          "label": "Cymbal's sources",
+          "items": ["Supplier files, by SFTP", "Clicks from the app", "Orders in MySQL"],
+          "items_at": ["Supplier", "Clicks", "orders"]
+        },
+        {
+          "say": "Three ideas: the shape of the pipeline, the network, and the keys.",
+          "device": "card",
+          "label": "Station 2.1 · Planning the pipelines",
+          "head": "Shape. Network. Keys.",
+          "headmark": "Shape.",
+          "headmark_at": "shape"
+        }
+      ]
+    },
+    {
+      "title": "Batch, streaming, ETL, ELT",
+      "check": {
+        "prompt": "Why does ELT load the raw data first?",
+        "options": [
+          "It makes every query faster",
+          "It needs no storage",
+          "You can fix a bug and process the data again"
+        ],
+        "answer": 2,
+        "why": "The raw copy stays. So a fix or a backfill can start from it again."
+      },
+      "beats": [
+        {
+          "say": "First, two words: batch and streaming.",
+          "device": "big",
+          "text": "Batch or streaming?"
+        },
+        {
+          "say": "Batch is like the post. Letters are collected, then delivered together, on a schedule.",
+          "device": "card",
+          "label": "Batch",
+          "head": "Like the post: collected, then delivered",
+          "headmark": "Like the post",
+          "headmark_at": "post"
+        },
+        {
+          "say": "Streaming is like a phone call. Each event is handled as it happens.",
+          "device": "card",
+          "label": "Streaming",
+          "head": "Like a phone call: as it happens",
+          "headmark": "as it happens",
+          "headmark_at": "happens"
+        },
+        {
+          "say": "Next: ETL or ELT? It is only a question of when you transform.",
+          "device": "card",
+          "label": "ETL or ELT",
+          "head": "When do you transform?",
+          "headmark": "When"
+        },
+        {
+          "say": "ELT loads the raw data into BigQuery first, then transforms it with SQL. It is the default.",
+          "device": "card",
+          "label": "The default",
+          "head": "ELT: load raw, then transform in SQL",
+          "headmark": "load raw",
+          "headmark_at": "loads"
+        },
+        {
+          "say": "Why? The raw copy stays. So you can fix a bug, and run it all again.",
+          "device": "card",
+          "label": "Why raw first",
+          "head": "Keep the raw copy. Replay any time.",
+          "headmark": "Keep the raw copy.",
+          "headmark_at": "raw"
+        },
+        {
+          "say": "The classic streaming path: Pub/Sub, then Dataflow, then BigQuery.",
+          "device": "list",
+          "label": "The streaming path to remember",
+          "items": ["Pub/Sub", "Dataflow", "BigQuery"],
+          "items_at": ["Pub/Sub", "Dataflow", "BigQuery"]
+        },
+        {
+          "say": "And for database changes: Datastream, straight into BigQuery.",
+          "device": "card",
+          "label": "The change-capture path",
+          "head": "Database → Datastream → BigQuery",
+          "headmark": "Datastream"
+        },
+        {
+          "say": "The trap: devices writing straight into the database. Always buffer with Pub/Sub.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "Devices writing straight to the database. Buffer with Pub/Sub.",
+          "mark": "Buffer with Pub/Sub.",
+          "mark_at": "buffer"
+        }
+      ]
+    },
+    {
+      "title": "Networking for pipelines",
+      "check": {
+        "prompt": "Workers have no public IP and must call BigQuery. What do you turn on?",
+        "options": ["Private Google Access", "A public IP on one worker", "Cloud CDN"],
+        "answer": 0,
+        "why": "Private Google Access lets private workers reach Google APIs."
+      },
+      "beats": [
+        {
+          "say": "Second: the network. Workers need a way to talk.",
+          "device": "big",
+          "text": "The network"
+        },
+        {
+          "say": "Secure workers have no public IP address. So how do they reach Google's services?",
+          "device": "card",
+          "label": "The puzzle",
+          "head": "No public IP. Now what?",
+          "headmark": "No public IP.",
+          "headmark_at": "no"
+        },
+        {
+          "say": "Turn on Private Google Access on the subnet. That is the private door to Google APIs.",
+          "device": "card",
+          "label": "To reach Google APIs",
+          "head": "Private Google Access",
+          "headmark": "Private Google Access",
+          "headmark_at": "Private"
+        },
+        {
+          "say": "And if they need the wider internet, add Cloud NAT.",
+          "device": "card",
+          "label": "To reach the internet",
+          "head": "Cloud NAT",
+          "headmark": "Cloud NAT",
+          "headmark_at": "Cloud"
+        },
+        {
+          "say": "To reach Cloud SQL, use its private IP, or the Auth Proxy. Never open it to the whole internet.",
+          "device": "card",
+          "label": "To reach Cloud SQL",
+          "head": "Private IP or the Auth Proxy",
+          "headmark": "Auth Proxy",
+          "headmark_at": "Auth"
+        },
+        {
+          "say": "One trap. Dataflow workers are stuck, and cannot talk to each other.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "Dataflow workers cannot talk to each other.",
+          "mark": "cannot talk",
+          "mark_at": "cannot"
+        },
+        {
+          "say": "A firewall rule is missing, for ports 12345 and 12346.",
+          "device": "card",
+          "label": "The fix",
+          "text": "Open TCP ports 12345 and 12346 between workers.",
+          "mark": "12345 and 12346",
+          "mark_at": "one"
+        }
+      ]
+    },
+    {
+      "title": "Encryption on every hop",
+      "beats": [
+        { "say": "Third: the keys.", "device": "big", "text": "Third: the keys" },
+        {
+          "say": "Data moving between services is encrypted for you. Nothing to do.",
+          "device": "card",
+          "label": "In transit",
+          "head": "Encrypted in transit, automatically",
+          "headmark": "automatically",
+          "headmark_at": "for"
+        },
+        {
+          "say": "For data at rest, put your own key, your CMEK, on every hop.",
+          "device": "card",
+          "label": "At rest",
+          "head": "Your CMEK on every hop",
+          "headmark": "every hop",
+          "headmark_at": "every"
+        },
+        {
+          "say": "That means the Pub/Sub topic, the Dataflow job, the bucket, and the table.",
+          "device": "list",
+          "label": "Every hop",
+          "items": ["Pub/Sub topic", "Dataflow job", "Bucket", "Table"],
+          "items_at": ["topic", "job", "bucket", "table"]
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Recap.", "device": "big", "text": "Quick recap" },
+        {
+          "say": "Land raw data first, and transform later. Buffer streams with Pub/Sub.",
+          "device": "list",
+          "label": "Station 2.1 · 1 of 2",
+          "items": ["Raw first, transform later", "Buffer streams with Pub/Sub"],
+          "items_at": ["Land", "Buffer"]
+        },
+        {
+          "say": "Private workers need Private Google Access. And your key goes on every hop.",
+          "device": "list",
+          "label": "Station 2.1 · 2 of 2",
+          "items": ["Private Google Access for workers", "CMEK on every hop"],
+          "items_at": ["Private", "key"]
+        },
+        {
+          "say": "Now try the checkpoint below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Pass the checkpoint below.",
+          "submark": "checkpoint"
+        }
+      ]
+    }
+  ]
+}

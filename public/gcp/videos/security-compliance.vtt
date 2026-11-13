@@ -1,0 +1,293 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:04.605
+Day one at Cymbal Retail, and the security chief hands you a list.
+
+2
+00:00:04.625 --> 00:00:06.717
+Analysts can see every table.
+
+3
+00:00:06.737 --> 00:00:09.055
+Card numbers sit in plain columns.
+
+4
+00:00:09.075 --> 00:00:11.990
+And nobody knows who could copy the data out.
+
+5
+00:00:12.010 --> 00:00:15.400
+Your job: lock it down, without slowing anyone down.
+
+6
+00:00:15.420 --> 00:00:16.700
+Six ideas do it.
+
+7
+00:00:16.720 --> 00:00:19.150
+Let's take them one at a time.
+
+8
+00:00:19.170 --> 00:00:20.475
+First, IAM.
+
+9
+00:00:20.495 --> 00:00:24.260
+It answers one question: who can do what, on which resource?
+
+10
+00:00:24.280 --> 00:00:25.722
+Think of an office building.
+
+11
+00:00:25.742 --> 00:00:27.798
+A badge for every door is risky.
+
+12
+00:00:27.818 --> 00:00:30.045
+A badge for one room is safe.
+
+13
+00:00:30.065 --> 00:00:35.680
+Access flows down: from the organization, to folders, to projects, to each resource.
+
+14
+00:00:35.700 --> 00:00:39.340
+So a wide grant at the top cannot be undone lower down.
+
+15
+00:00:39.360 --> 00:00:44.075
+Basic roles, like Owner and Editor, are almost always the wrong answer.
+
+16
+00:00:44.095 --> 00:00:47.050
+The safe pattern: the narrowest predefined role,
+
+17
+00:00:47.070 --> 00:00:49.885
+on the smallest resource, given to a group.
+
+18
+00:00:49.905 --> 00:00:55.785
+For an analyst, that is job user on the project, plus data viewer on one dataset.
+
+19
+00:00:55.805 --> 00:00:59.195
+Next: what if people should see only part of a table?
+
+20
+00:00:59.215 --> 00:01:01.445
+Use the coarsest control that works.
+
+21
+00:01:01.465 --> 00:01:04.130
+Usually, that is a separate dataset.
+
+22
+00:01:04.150 --> 00:01:08.415
+An authorized view shares the results, but hides the source tables.
+
+23
+00:01:08.435 --> 00:01:12.475
+A row access policy shows each team only its own rows.
+
+24
+00:01:12.495 --> 00:01:16.810
+A policy tag hides one column, or masks it, like a card number.
+
+25
+00:01:16.830 --> 00:01:19.985
+The trap is copying data into many filtered tables.
+
+26
+00:01:20.005 --> 00:01:21.935
+Never do that.
+
+27
+00:01:21.955 --> 00:01:23.647
+Third idea: encryption.
+
+28
+00:01:23.667 --> 00:01:25.920
+Good news: it is always on.
+
+29
+00:01:25.940 --> 00:01:28.820
+So the exam never asks if data is encrypted.
+
+30
+00:01:28.840 --> 00:01:30.930
+It asks who holds the key.
+
+31
+00:01:30.950 --> 00:01:32.730
+By default, Google holds it.
+
+32
+00:01:32.750 --> 00:01:36.190
+With CMEK, you hold it, in Cloud KMS.
+
+33
+00:01:36.210 --> 00:01:37.965
+Must the key stay outside Google?
+
+34
+00:01:37.985 --> 00:01:40.025
+That is Cloud EKM.
+
+35
+00:01:40.045 --> 00:01:43.860
+If a rule demands hardware keys, add Cloud HSM.
+
+36
+00:01:43.880 --> 00:01:44.897
+One more thing.
+
+37
+00:01:44.917 --> 00:01:48.560
+Rotating a key does not re-encrypt old data.
+
+38
+00:01:48.580 --> 00:01:52.320
+Fourth: personal data, like card numbers and emails.
+
+39
+00:01:52.340 --> 00:01:55.657
+Sensitive Data Protection, also called Cloud DLP,
+
+40
+00:01:55.677 --> 00:01:58.830
+finds it for you, across thousands of tables.
+
+41
+00:01:58.850 --> 00:01:59.755
+Then it hides it.
+
+42
+00:01:59.775 --> 00:02:02.565
+And how you hide it is the exam question.
+
+43
+00:02:02.585 --> 00:02:03.390
+Never need it back?
+
+44
+00:02:03.410 --> 00:02:04.278
+Mask it.
+
+45
+00:02:04.298 --> 00:02:05.128
+Need joins?
+
+46
+00:02:05.148 --> 00:02:05.740
+Hash it.
+
+47
+00:02:05.760 --> 00:02:07.078
+Need the original later?
+
+48
+00:02:07.098 --> 00:02:09.500
+Use deterministic encryption.
+
+49
+00:02:09.520 --> 00:02:12.375
+And to keep a sixteen digit card looking like a card,
+
+50
+00:02:12.395 --> 00:02:15.350
+use format-preserving encryption.
+
+51
+00:02:15.370 --> 00:02:17.860
+Fifth: stopping data from leaving.
+
+52
+00:02:17.880 --> 00:02:20.148
+IAM alone cannot do it.
+
+53
+00:02:20.168 --> 00:02:24.045
+A valid user can still copy a table to a personal project.
+
+54
+00:02:24.065 --> 00:02:27.683
+VPC Service Controls draws a wall around your projects.
+
+55
+00:02:27.703 --> 00:02:31.405
+Data cannot cross it, even with valid IAM.
+
+56
+00:02:31.425 --> 00:02:33.418
+Must data stay in one country?
+
+57
+00:02:33.438 --> 00:02:37.965
+Use regional resources, plus the resource locations org policy.
+
+58
+00:02:37.985 --> 00:02:41.965
+And remember: a BigQuery dataset's location can never change.
+
+59
+00:02:41.985 --> 00:02:44.315
+You copy it instead.
+
+60
+00:02:44.335 --> 00:02:46.975
+Last idea: how you lay things out.
+
+61
+00:02:46.995 --> 00:02:49.650
+Give dev, test and prod their own projects.
+
+62
+00:02:49.670 --> 00:02:52.385
+A mistake in dev then stays in dev.
+
+63
+00:02:52.405 --> 00:02:55.160
+In BigQuery, the dataset is the security boundary.
+
+64
+00:02:55.180 --> 00:02:58.020
+So: one client, one dataset.
+
+65
+00:02:58.040 --> 00:03:03.270
+And before you lock anything down, read the audit logs to see who uses what.
+
+66
+00:03:03.290 --> 00:03:05.730
+Let's recap, in twenty seconds.
+
+67
+00:03:05.750 --> 00:03:07.793
+Give the narrowest role, to a group.
+
+68
+00:03:07.813 --> 00:03:10.030
+Use the coarsest control that works.
+
+69
+00:03:10.050 --> 00:03:12.064
+And know who holds the key.
+
+70
+00:03:12.084 --> 00:03:14.301
+Hide PII by what you need later.
+
+71
+00:03:14.321 --> 00:03:17.039
+Block leaks with VPC Service Controls.
+
+72
+00:03:17.059 --> 00:03:19.599
+And split projects by environment.
+
+73
+00:03:19.619 --> 00:03:23.394
+Now scroll down, and prove it at the checkpoint.

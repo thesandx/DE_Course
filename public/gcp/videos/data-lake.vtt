@@ -1,0 +1,121 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:02.605
+Cymbal's buckets are filling up.
+
+2
+00:00:02.625 --> 00:00:05.393
+Raw supplier files, product images, and logs.
+
+3
+00:00:05.413 --> 00:00:07.165
+All piled together.
+
+4
+00:00:07.185 --> 00:00:08.778
+Nobody can find anything.
+
+5
+00:00:08.798 --> 00:00:10.178
+That is not a data lake.
+
+6
+00:00:10.198 --> 00:00:12.050
+That is a data swamp.
+
+7
+00:00:12.070 --> 00:00:17.125
+One idea turns it around: a lake is Cloud Storage, plus discipline.
+
+8
+00:00:17.145 --> 00:00:18.737
+Discipline has five parts.
+
+9
+00:00:18.757 --> 00:00:20.285
+One: zones.
+
+10
+00:00:20.305 --> 00:00:23.223
+Data moves from raw, to staged, to curated.
+
+11
+00:00:23.243 --> 00:00:25.670
+Each zone is cleaner than the last.
+
+12
+00:00:25.690 --> 00:00:29.045
+Two: open formats, like Parquet, Avro and Iceberg.
+
+13
+00:00:29.065 --> 00:00:31.470
+Any engine can read them.
+
+14
+00:00:31.490 --> 00:00:32.832
+Three: discovery.
+
+15
+00:00:32.852 --> 00:00:36.580
+Dataplex finds the files, and registers them as tables.
+
+16
+00:00:36.600 --> 00:00:37.992
+Four: security.
+
+17
+00:00:38.012 --> 00:00:41.865
+BigLake tables give row and column security over files.
+
+18
+00:00:41.885 --> 00:00:43.690
+So analysts query the table.
+
+19
+00:00:43.710 --> 00:00:45.725
+They never get the whole bucket.
+
+20
+00:00:45.745 --> 00:00:46.937
+Five: cost.
+
+21
+00:00:46.957 --> 00:00:50.910
+Lifecycle rules move old files to colder, cheaper classes.
+
+22
+00:00:50.930 --> 00:00:56.610
+The trap: giving analysts read access to the whole bucket, to hide a few columns.
+
+23
+00:00:56.630 --> 00:00:57.110
+Recap.
+
+24
+00:00:57.130 --> 00:00:58.545
+Five parts.
+
+25
+00:00:58.565 --> 00:00:59.095
+Zones.
+
+26
+00:00:59.115 --> 00:00:59.945
+Open formats.
+
+27
+00:00:59.965 --> 00:01:00.657
+Discovery.
+
+28
+00:01:00.677 --> 00:01:01.820
+BigLake security.
+
+29
+00:01:01.840 --> 00:01:03.780
+And lifecycle rules.
+
+30
+00:01:03.800 --> 00:01:06.575
+Try the checkpoint below.

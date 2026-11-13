@@ -1,0 +1,144 @@
+{
+  "station": "sharing-data",
+  "chapters": [
+    {
+      "title": "The mission",
+      "beats": [
+        {
+          "say": "Other companies want Cymbal's data.",
+          "device": "big",
+          "text": "Partners want data"
+        },
+        {
+          "say": "Suppliers want to see how their products sell.",
+          "device": "card",
+          "label": "Suppliers",
+          "head": "How are my products selling?",
+          "headmark": "selling",
+          "headmark_at": "sell"
+        },
+        {
+          "say": "And a partner wants joint insights, but must never see customer rows.",
+          "device": "card",
+          "label": "A partner",
+          "head": "Joint insights, no customer rows",
+          "headmark": "no customer rows",
+          "headmark_at": "never"
+        },
+        {
+          "say": "The old way is to export files, and send copies. Copies go stale, and they leak.",
+          "device": "card",
+          "label": "The old way",
+          "head": "Copies go stale, and leak",
+          "headmark": "go stale",
+          "headmark_at": "stale"
+        }
+      ]
+    },
+    {
+      "title": "Share live, with no copies",
+      "check": {
+        "prompt": "What does a subscriber to your listing get?",
+        "options": [
+          "A copy of your tables",
+          "A read-only linked dataset",
+          "A CSV export every night"
+        ],
+        "answer": 1,
+        "why": "A linked dataset reads your live data. Nothing is copied."
+      },
+      "beats": [
+        {
+          "say": "The new way: share live. Do not copy.",
+          "device": "big",
+          "text": "Share live. Do not copy."
+        },
+        {
+          "say": "Think of a library. You lend the book. You do not print a new one for every reader.",
+          "device": "card",
+          "label": "Think of a library",
+          "head": "Lend the book, do not reprint it",
+          "headmark": "Lend the book",
+          "headmark_at": "lend"
+        },
+        {
+          "say": "Analytics Hub works like that. It is now called BigQuery sharing.",
+          "device": "card",
+          "label": "The tool",
+          "head": "Analytics Hub (BigQuery sharing)",
+          "headmark": "Analytics Hub",
+          "headmark_at": "Analytics"
+        },
+        {
+          "say": "You publish a listing in an exchange. The subscriber gets a linked dataset, read only.",
+          "device": "list",
+          "label": "How it works",
+          "items": ["You: a listing in an exchange", "They: a linked dataset, read-only"],
+          "items_at": ["listing", "linked"]
+        },
+        {
+          "say": "No data is copied. It is always current. And the subscriber pays for their own queries.",
+          "device": "card",
+          "label": "Why it is good",
+          "head": "No copies. Always current.",
+          "headmark": "No copies.",
+          "headmark_at": "No"
+        }
+      ]
+    },
+    {
+      "title": "Clean rooms",
+      "beats": [
+        {
+          "say": "And the partner who must not see rows?",
+          "device": "big",
+          "text": "No rows for the partner"
+        },
+        {
+          "say": "Use a data clean room. Both sides bring data. Only combined, aggregated answers come out.",
+          "device": "card",
+          "label": "Data clean room",
+          "head": "Only aggregated answers come out",
+          "headmark": "aggregated answers",
+          "headmark_at": "aggregated"
+        },
+        {
+          "say": "And egress controls on a listing can block copying and exporting.",
+          "device": "card",
+          "label": "Extra lock",
+          "head": "Egress controls block exports",
+          "headmark": "Egress controls",
+          "headmark_at": "egress"
+        },
+        {
+          "say": "The trap: scheduled exports to partners, when a live listing avoids copies.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "Scheduled exports to partners",
+          "mark": "Scheduled exports",
+          "mark_at": "scheduled"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Recap.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "Share live with Analytics Hub. And use a clean room when rows must stay hidden.",
+          "device": "list",
+          "label": "Station 4.3",
+          "items": ["Share live: Analytics Hub", "Hidden rows: a clean room"],
+          "items_at": ["Share", "clean"]
+        },
+        {
+          "say": "Line four, done. Try the checkpoint below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Pass the checkpoint below.",
+          "submark": "checkpoint"
+        }
+      ]
+    }
+  ]
+}

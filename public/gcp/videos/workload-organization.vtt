@@ -1,0 +1,101 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:01.557
+Nine in the morning.
+
+2
+00:00:01.577 --> 00:00:03.780
+Everyone opens a dashboard.
+
+3
+00:00:03.800 --> 00:00:07.005
+At the same time, analysts run heavy ad-hoc queries.
+
+4
+00:00:07.025 --> 00:00:08.415
+They collide.
+
+5
+00:00:08.435 --> 00:00:12.465
+Organize capacity by what the business needs first.
+
+6
+00:00:12.485 --> 00:00:13.590
+Think of a hospital.
+
+7
+00:00:13.610 --> 00:00:15.575
+Emergencies go first.
+
+8
+00:00:15.595 --> 00:00:18.075
+An interactive query is the emergency.
+
+9
+00:00:18.095 --> 00:00:20.385
+It runs as soon as possible.
+
+10
+00:00:20.405 --> 00:00:21.860
+A batch query can wait.
+
+11
+00:00:21.880 --> 00:00:24.295
+It starts when resources are free.
+
+12
+00:00:24.315 --> 00:00:26.645
+So send non-urgent reports as batch.
+
+13
+00:00:26.665 --> 00:00:29.420
+They stop fighting the dashboards.
+
+14
+00:00:29.440 --> 00:00:31.705
+Next: who gets compute first?
+
+15
+00:00:31.725 --> 00:00:36.815
+Give each kind of work its own reservation: dashboards, pipelines, ad-hoc.
+
+16
+00:00:36.835 --> 00:00:38.777
+Set a baseline on the important ones.
+
+17
+00:00:38.797 --> 00:00:41.125
+Autoscaling covers the bursts.
+
+18
+00:00:41.145 --> 00:00:43.650
+And keep dev and test away from prod.
+
+19
+00:00:43.670 --> 00:00:46.435
+An experiment must not starve production.
+
+20
+00:00:46.455 --> 00:00:50.085
+To size it, watch slot use in the admin charts.
+
+21
+00:00:50.105 --> 00:00:51.345
+Recap.
+
+22
+00:00:51.365 --> 00:00:52.720
+Interactive runs now.
+
+23
+00:00:52.740 --> 00:00:53.733
+Batch waits.
+
+24
+00:00:53.753 --> 00:00:57.180
+Reservations and baselines decide who goes first.
+
+25
+00:00:57.200 --> 00:00:59.975
+Try the checkpoint below.
