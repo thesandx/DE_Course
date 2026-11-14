@@ -8,13 +8,21 @@
  * that teaches it, and a `##` section of a lesson is an entry of its own that
  * opens the lesson at that section.
  *
- * To add a course: add a case to `searchIndex` and a builder below.
+ * To add a course: add a builder below and name it in `BUILDERS`.
  */
 
 import { COMPANIES, DIFFICULTY_LABELS, KIND_LABELS, PROBLEMS, TRACKS } from '@/lib/course/catalog';
 import type { CourseSlug } from '@/lib/course/courses';
 import { getLab, LINES } from '@/lib/course/gcp/catalog';
 import { hueStyle } from '@/lib/course/hue';
+import {
+  DOJO,
+  hasDrill,
+  incidentsFor,
+  lessonHref,
+  portCode,
+  PORTS,
+} from '@/lib/course/k8s/catalog';
 import { type Block, parseMarkdown, stripInline } from '@/lib/course/markdown';
 import { sectionAnchor } from '@/lib/course/search';
 import { trackStyle } from '@/lib/course/track-style';
@@ -261,20 +269,141 @@ function gcpIndex(): SearchEntry[] {
   return entries;
 }
 
+function k8sIndex(): SearchEntry[] {
+  const entries: SearchEntry[] = [];
+  for (const port of PORTS) {
+    const dot = hueStyle(port.hue).fill;
+    const portHref = `/k8s/ports/${port.slug}`;
+    const code = portCode(port);
+    entries.push({
+      id: `port:${port.slug}`,
+      kind: 'port',
+      title: port.title,
+      context: `${code} · ${port.tag}`,
+      href: portHref,
+      dot,
+      detail: port.story,
+      keywords: port.lessons.map((lesson) => lesson.title),
+    });
+    for (const lesson of port.lessons) {
+      entries.push({
+        id: `lesson:${port.slug}:${lesson.slug}`,
+        kind: 'lesson',
+        title: lesson.title,
+        context: `${code} · ${port.title}`,
+        href: lessonHref(port.slug, lesson.slug),
+        dot,
+        detail: stripInline(lesson.pain),
+        keywords: [
+          ...termsOf(lesson.body, lesson.fix, lesson.note ?? ''),
+          ...lesson.files.map((file) => file.name),
+          // The object kinds a file declares, so "NetworkPolicy" finds its lesson.
+          ...new Set(
+            lesson.files.flatMap((file) =>
+              [...file.code.matchAll(/^kind: (\w+)$/gm)].map((match) => match[1] ?? ''),
+            ),
+          ),
+        ],
+      });
+      if (lesson.lab.length > 0) {
+        entries.push({
+          id: `lab:${port.slug}:${lesson.slug}`,
+          kind: 'lab',
+          title: `Lab: ${lesson.title}`,
+          context: `${code} · ${port.title}`,
+          href: `${lessonHref(port.slug, lesson.slug)}#lab`,
+          dot,
+          detail: `Hands-on lab · ${lesson.lab.length} steps on your kind cluster`,
+          keywords: ['lab', 'hands-on', ...termsOf(...lesson.lab.map((step) => step.text))],
+        });
+      }
+    }
+    entries.push({
+      id: `mission:${port.slug}`,
+      kind: 'drill',
+      title: `Mission: ${port.mission.title}`,
+      context: `${code} · ${port.title}`,
+      href: `${portHref}/mission`,
+      dot,
+      detail: port.mission.brief,
+      keywords: ['mission', ...termsOf(...port.mission.tasks)],
+    });
+    if (hasDrill(port.slug)) {
+      entries.push({
+        id: `drill:${port.slug}`,
+        kind: 'drill',
+        title: `Incident drill: ${port.title}`,
+        context: `${code} · ${port.title}`,
+        href: `${portHref}/drill`,
+        dot,
+        detail: 'The pager goes off. Read the output and find the cause.',
+        keywords: ['incident', 'pager', ...incidentsFor(port.slug).map((item) => item.title)],
+      });
+    }
+  }
+  const drills: readonly { slug: string; title: string; detail: string; keywords?: string[] }[] = [
+    { slug: 'flashcards', title: 'Flashcards', detail: 'Flashcards for every port.' },
+    {
+      slug: 'sprint',
+      title: 'Object sprint',
+      detail: 'A 60-second drill: match each situation to the Kubernetes object that fits.',
+    },
+    {
+      slug: 'dojo',
+      title: 'kubectl dojo',
+      detail: 'Type the real command for each task.',
+      keywords: DOJO.map((task) => task.answer),
+    },
+    {
+      slug: 'cheatsheet',
+      title: 'Cheatsheet',
+      detail:
+        'Docker commands beside their Kubernetes match, and every kubectl command of the labs.',
+      keywords: ['kubectl', 'docker', 'commands'],
+    },
+    {
+      slug: 'exam',
+      title: 'Final exam',
+      detail: '25 questions from every port: lesson checks and incidents.',
+    },
+  ];
+  for (const drill of drills) {
+    entries.push({
+      id: `practice:${drill.slug}`,
+      kind: 'drill',
+      title: drill.title,
+      context: 'Drills',
+      href: `/k8s/practice/${drill.slug}`,
+      dot: 'bg-brand',
+      detail: drill.detail,
+      keywords: ['practice', 'drill', ...(drill.keywords ?? [])],
+    });
+  }
+  return entries;
+}
+
+const BUILDERS: Readonly<Record<CourseSlug, () => SearchEntry[]>> = {
+  de: deIndex,
+  gcp: gcpIndex,
+  k8s: k8sIndex,
+};
+
 const cache = new Map<CourseSlug, readonly SearchEntry[]>();
 
 /** Every searchable item of a course. Built once per server process. */
 export function searchIndex(course: CourseSlug): readonly SearchEntry[] {
   const cached = cache.get(course);
   if (cached !== undefined) return cached;
-  const built = course === 'gcp' ? gcpIndex() : deIndex();
+  const built = BUILDERS[course]();
   cache.set(course, built);
   return built;
 }
 
-/** The top-level entries to browse before the learner types: tracks or lines. */
+/** The top-level entries to browse before the learner types: tracks, lines or ports. */
 export function browseEntries(course: CourseSlug): readonly SearchEntry[] {
-  return searchIndex(course).filter((entry) => entry.kind === 'track' || entry.kind === 'line');
+  return searchIndex(course).filter(
+    (entry) => entry.kind === 'track' || entry.kind === 'line' || entry.kind === 'port',
+  );
 }
 
 /** Example searches for each course. Each one must find something; a test checks it. */
@@ -288,10 +417,12 @@ export const SEARCH_EXAMPLES: Readonly<Record<CourseSlug, readonly string[]>> = 
     'BigQuery slots',
     'VPC Service Controls',
   ],
+  k8s: ['rolling update', 'NetworkPolicy', 'readiness probe', 'Helm', 'CrashLoopBackOff', 'Spark'],
 };
 
 /** What a course's search finds, for the heading and the placeholder. */
 export const SEARCH_SCOPE: Readonly<Record<CourseSlug, string>> = {
   de: 'topic, lesson or problem',
   gcp: 'service, station or concept',
+  k8s: 'object, command or lesson',
 };

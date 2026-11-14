@@ -1,8 +1,8 @@
 /**
  * Which pages take notes, and the stable key each note is stored under.
  *
- * A note belongs to one chapter: a DE lesson, a DE problem, a GCP station or
- * a GCP lab. Its key names the chapter, such as `de:lesson:sql:window-functions`,
+ * A note belongs to one chapter: a DE lesson, a DE problem, a GCP station, a
+ * GCP lab or a Kubernetes lesson. Its key names the chapter, such as `de:lesson:sql:window-functions`,
  * and is the Firestore document id under the learner's notebook. The server
  * accepts only keys that resolve here, so a learner has at most one note per
  * chapter and the notebook stays bounded by the catalogue.
@@ -14,6 +14,7 @@
 import { getLesson, getProblem, getTrack } from '@/lib/course/catalog';
 import type { CourseSlug } from '@/lib/course/courses';
 import { allStations, getLab } from '@/lib/course/gcp/catalog';
+import { getLesson as getK8sLesson, lessonHref, portCode } from '@/lib/course/k8s/catalog';
 
 export type NoteKind = 'lesson' | 'problem' | 'station' | 'lab';
 
@@ -37,7 +38,8 @@ export const KIND_LABEL: Readonly<Record<NoteKind, string>> = {
 };
 
 /** A key is short, lower-case and colon-separated. Anything else is refused before a lookup. */
-export const NOTE_KEY_PATTERN = /^(de|gcp):(lesson|problem|station|lab)(:[a-z0-9-]{1,80}){1,2}$/;
+export const NOTE_KEY_PATTERN =
+  /^(de|gcp|k8s):(lesson|problem|station|lab)(:[a-z0-9-]{1,80}){1,2}$/;
 
 function stationRef(slug: string) {
   return allStations().find((item) => item.station.slug === slug);
@@ -96,6 +98,18 @@ export function noteTarget(key: string): NoteTarget | undefined {
       href: `/gcp/lines/${ref.line.slug}/${first}`,
     };
   }
+  if (course === 'k8s' && kind === 'lesson' && second !== undefined) {
+    const found = getK8sLesson(first, second);
+    if (found === undefined) return undefined;
+    return {
+      key,
+      course: 'k8s',
+      kind: 'lesson',
+      title: found.lesson.title,
+      group: `${portCode(found.port)} · ${found.port.title}`,
+      href: lessonHref(first, second),
+    };
+  }
   return undefined;
 }
 
@@ -112,6 +126,13 @@ export function noteKeyForPath(path: string): string | undefined {
     key = `gcp:station:${second}`;
   } else if (course === 'gcp' && section === 'labs' && first !== undefined) {
     key = `gcp:lab:${first}`;
+  } else if (
+    course === 'k8s' &&
+    section === 'ports' &&
+    first !== undefined &&
+    second !== undefined
+  ) {
+    key = `k8s:lesson:${first}:${second}`;
   }
   return key !== undefined && noteTarget(key) !== undefined ? key : undefined;
 }
@@ -122,4 +143,5 @@ export const noteKeys = {
   problem: (slug: string): string => `de:problem:${slug}`,
   station: (slug: string): string => `gcp:station:${slug}`,
   lab: (slug: string): string => `gcp:lab:${slug}`,
+  k8sLesson: (port: string, lesson: string): string => `k8s:lesson:${port}:${lesson}`,
 };

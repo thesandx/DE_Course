@@ -17,6 +17,7 @@ import {
   problemsForTrack,
 } from '@/lib/course/catalog';
 import { getLab, getLine, getStation } from '@/lib/course/gcp/catalog';
+import { getLesson as getK8sLesson, getPort, portCode } from '@/lib/course/k8s/catalog';
 
 export interface PageContext {
   /** A few words for the panel's "Asking about" line, such as "Lesson: Window functions". */
@@ -187,6 +188,67 @@ function gcpContext(segments: readonly string[]): PageContext {
   };
 }
 
+const K8S_COURSE =
+  'the Kubernetes course, a hands-on voyage that takes one image (tugboat) from a local kind cluster to GKE';
+
+function k8sContext(segments: readonly string[]): PageContext {
+  const [section, first, second] = segments;
+  const port = section === 'ports' && first !== undefined ? getPort(first) : undefined;
+
+  if (port !== undefined && second === 'mission') {
+    return {
+      label: `Mission: ${port.mission.title}`,
+      text: cap(
+        `The learner is doing the mission at the end of ${portCode(port)} (${port.title}) in ${K8S_COURSE}. ` +
+          `They must do it without step-by-step help, so give hints before answers.\n` +
+          `${port.mission.brief}\n\nTASKS:\n${bullets(port.mission.tasks)}`,
+      ),
+    };
+  }
+
+  if (port !== undefined && second !== undefined && second !== 'drill') {
+    const found = getK8sLesson(port.slug, second);
+    if (found !== undefined) {
+      const { lesson } = found;
+      const files = lesson.files.map((file) => `FILE ${file.name}:\n${file.code}`);
+      const steps = lesson.lab.map((step, index) =>
+        [
+          `Step ${index + 1}: ${step.text}`,
+          step.code === undefined ? '' : step.code,
+          step.output === undefined ? '' : `Expected output:\n${step.output}`,
+        ]
+          .filter((part) => part !== '')
+          .join('\n'),
+      );
+      return {
+        label: `Lesson: ${lesson.title}`,
+        text: cap(
+          `The learner is studying a lesson in ${K8S_COURSE}. The labs run on a three-node kind cluster named kq.\n` +
+            `${portCode(port)}: ${port.title}. Lesson: ${lesson.title}.\n` +
+            `Problem: ${lesson.pain}\nFix: ${lesson.fix}\n\n${lesson.body}\n\n` +
+            `${files.join('\n\n')}\n\nLAB:\n${steps.join('\n\n')}`,
+        ),
+      };
+    }
+  }
+
+  if (port !== undefined) {
+    return {
+      label: `${portCode(port)}: ${port.title}`,
+      text: cap(
+        `The learner is at ${portCode(port)} (${port.title}: ${port.tag}) in ${K8S_COURSE}.\n${port.story}\n\nLessons:\n${bullets(
+          port.lessons.map((lesson) => `${lesson.title}: ${lesson.pain}`),
+        )}`,
+      ),
+    };
+  }
+
+  return {
+    label: 'K8s course',
+    text: `The learner is in ${K8S_COURSE}, on a list, practice or dashboard page. It covers pods, workloads, networking, config, storage, scaling, security, GitOps, Helm, and Spark and Airflow on Kubernetes.`,
+  };
+}
+
 function decode(segment: string): string {
   try {
     return decodeURIComponent(segment);
@@ -205,8 +267,9 @@ export function contextForPath(path: string): PageContext {
   const [course, ...rest] = segments;
   if (course === 'de') return deContext(rest);
   if (course === 'gcp') return gcpContext(rest);
+  if (course === 'k8s') return k8sContext(rest);
   return {
     label: 'Loop Ready',
-    text: 'The learner is on the course hub or their profile. The courses are data engineering interview prep and the GCP Professional Data Engineer exam.',
+    text: 'The learner is on the course hub or their profile. The courses are data engineering interview prep, the GCP Professional Data Engineer exam and Kubernetes for data engineers.',
   };
 }

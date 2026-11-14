@@ -5,6 +5,7 @@ import type { SearchEntry } from '@/types/search';
 import { getCompany, getLesson, getProblem, getTrack } from './catalog';
 import { COURSE_SLUGS } from './courses';
 import { getLab, getLine, getStation } from './gcp/catalog';
+import { getLesson as getK8sLesson, getPort, hasDrill } from './k8s/catalog';
 import { createSearcher, normalize, queryWords, sectionAnchor } from './search';
 import { browseEntries, SEARCH_EXAMPLES, searchIndex } from './search-index';
 
@@ -38,6 +39,19 @@ function resolves(href: string): boolean {
       if (fragment === undefined) return true;
       const number = Number(fragment.replace('concept-', ''));
       return number >= 1 && number <= station.concepts.length;
+    }
+  }
+  if (course === 'k8s') {
+    if (section === 'practice') {
+      return ['flashcards', 'sprint', 'dojo', 'cheatsheet', 'exam'].includes(a);
+    }
+    if (section === 'ports' && parts.length === 3) return getPort(a) !== undefined;
+    if (section === 'ports' && b === 'mission') return getPort(a) !== undefined;
+    if (section === 'ports' && b === 'drill') return hasDrill(a);
+    if (section === 'ports' && parts.length === 4) {
+      const lesson = getK8sLesson(a, b)?.lesson;
+      if (lesson === undefined) return false;
+      return fragment === undefined || (fragment === 'lab' && lesson.lab.length > 0);
     }
   }
   return false;

@@ -1,16 +1,16 @@
 import { InlineText } from '@/components/course/InlineText';
 import { cn } from '@/lib/utils';
 import type {
+  CourseDiagram,
   DiagramBox,
   DiagramColumn,
   DiagramLane,
   DiagramShape,
   DiagramTone,
-  GcpDiagram,
 } from '@/types/gcp';
 
 export interface ConceptDiagramProps {
-  diagram: GcpDiagram;
+  diagram: CourseDiagram;
   /** Makes the heading id unique when a page shows several diagrams. */
   id: string;
 }
@@ -594,7 +594,7 @@ function Pairs({ shape }: { shape: Extract<DiagramShape, { kind: 'pairs' }> }) {
   );
 }
 
-function Shape({ diagram }: { diagram: GcpDiagram }) {
+function Shape({ diagram }: { diagram: CourseDiagram }) {
   switch (diagram.kind) {
     case 'flow':
       return <Flow shape={diagram} />;

@@ -7,6 +7,7 @@ import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { Progress } from '@/components/ui/Progress';
 import { outcomeMessage, useRecordProgress } from '@/hooks/useRecordProgress';
+import type { CourseSlug } from '@/lib/course/courses';
 import { shuffle } from '@/lib/course/gcp/quiz';
 import { cn } from '@/lib/utils';
 import type { SprintRound } from '@/types/gcp';
@@ -19,6 +20,12 @@ export interface SprintMilestone {
 }
 
 export interface ServiceSprintProps {
+  /** The course whose tracker a milestone is saved to. */
+  course?: CourseSlug;
+  /** The name of the drill on the start screen. */
+  title?: string;
+  /** The rules on the start screen, after the number of seconds. */
+  intro?: string;
   rounds: readonly SprintRound[];
   seconds: number;
   milestones: readonly SprintMilestone[];
@@ -34,7 +41,14 @@ interface Card {
  * As many as you can in the time. A wrong tap costs you only time. Reaching a
  * milestone (10, then 20 right in one run) saves it once, for XP.
  */
-export function ServiceSprint({ rounds, seconds, milestones }: ServiceSprintProps) {
+export function ServiceSprint({
+  course = 'gcp',
+  title = 'Service Sprint',
+  intro = 'A requirement appears; tap the service that fits it. Picking the right store fast is the skill the exam tests most.',
+  rounds,
+  seconds,
+  milestones,
+}: ServiceSprintProps) {
   const [deck, setDeck] = useState<Card[]>([]);
   const [position, setPosition] = useState(0);
   const [score, setScore] = useState(0);
@@ -44,7 +58,7 @@ export function ServiceSprint({ rounds, seconds, milestones }: ServiceSprintProp
   const [phase, setPhase] = useState<'ready' | 'running' | 'over'>('ready');
   const [earned, setEarned] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const { record } = useRecordProgress('gcp');
+  const { record } = useRecordProgress(course);
 
   useEffect(() => {
     if (phase !== 'running') return undefined;
@@ -110,10 +124,9 @@ export function ServiceSprint({ rounds, seconds, milestones }: ServiceSprintProp
     return (
       <section className="bg-night-glow rounded-sheet text-on-night shadow-raised flex flex-col gap-5 p-6 md:p-8">
         <p className="eyebrow text-on-night-soft">Speed drill</p>
-        <h1 className="text-display">Service Sprint</h1>
+        <h1 className="text-display">{title}</h1>
         <p className="text-lead text-on-night-soft max-w-2xl">
-          {seconds} seconds. A requirement appears; tap the service that fits it. Picking the right
-          store fast is the skill the exam tests most.
+          {seconds} seconds. {intro}
         </p>
         <ul className="flex flex-wrap gap-2">
           {milestones.map((milestone) => (

@@ -52,7 +52,7 @@ export const NOTES_PAGE_SIZE = 200;
 const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
 
 export const noteSchema = z.object({
-  course: z.enum(['de', 'gcp']),
+  course: z.enum(['de', 'gcp', 'k8s']),
   kind: z.enum(['lesson', 'problem', 'station', 'lab']),
   markdown: z.string().max(MAX_NOTE_CHARS),
   editedAt: z.iso.datetime(),

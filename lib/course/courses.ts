@@ -9,11 +9,11 @@
  * To add a course: add its slug to `COURSE_SLUGS`, add an entry to
  * `COURSES`, give it rules in `rules.ts` and pages under `app/<slug>/`.
  * A course with `status: 'soon'` shows on the hub but cannot be joined, so
- * it needs only the entry here.
+ * it needs only the entry here. Every course is open today.
  */
 
 /** The courses a learner can enroll in. Each one keeps its own tracker. */
-export const COURSE_SLUGS = ['de', 'gcp'] as const;
+export const COURSE_SLUGS = ['de', 'gcp', 'k8s'] as const;
 
 export type CourseSlug = (typeof COURSE_SLUGS)[number];
 
@@ -78,15 +78,15 @@ export const COURSES: readonly CourseInfo[] = [
     slug: 'k8s',
     title: 'Kubernetes for Data Engineers',
     short: 'K8s',
-    tagline: 'Run data platforms on Kubernetes',
+    tagline: 'From docker run to GKE, hands-on',
     summary:
-      'Pods, operators, Spark and Airflow on Kubernetes, and the debugging drills a platform interview asks for.',
-    status: 'soon',
+      'Take one image through fourteen ports: pods, Deployments, networking, storage, scaling, security, GitOps, Helm, then Spark and Airflow on the cluster. Every lesson has a lab on a local kind cluster, and the last port is a real GKE cluster.',
+    status: 'open',
     hue: 3,
     href: '/k8s',
-    learn: { href: '/k8s', label: 'Learn' },
-    practice: { href: '/k8s', label: 'Practice' },
-    facts: ['Spark on Kubernetes', 'Operators', 'Debugging drills'],
+    learn: { href: '/k8s/ports', label: 'Ports' },
+    practice: { href: '/k8s/practice', label: 'Drills' },
+    facts: ['14 ports', '45 lessons', '76 incidents'],
   },
 ];
 

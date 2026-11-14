@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 
 import { COURSE_SLUGS, type CourseSlug } from '@/lib/course/courses';
 import { type GcpSummary, summarizeGcp } from '@/lib/course/gcp/summary';
+import { type K8sSummary, summarizeK8s } from '@/lib/course/k8s/summary';
 import {
   courseRecord,
   isEnrolled,
@@ -11,7 +12,12 @@ import {
   type LearnerRecord,
   type ProgressRecord,
 } from '@/lib/course/progress';
-import { deShellStats, gcpShellStats, type ShellStats } from '@/lib/course/shell-stats';
+import {
+  deShellStats,
+  gcpShellStats,
+  k8sShellStats,
+  type ShellStats,
+} from '@/lib/course/shell-stats';
 import { type LearnerSummary, summarize } from '@/lib/course/summary';
 import { getCurrentUser, type SessionUser } from '@/services/auth.service';
 import { getLearnerRecord } from '@/services/progress.service';
@@ -124,5 +130,16 @@ export async function requireGcpLearner(
   return courseLearner(await requireLearner(returnTo), 'gcp', options, (progress, today) => {
     const summary = summarizeGcp(progress, today);
     return { summary, stats: gcpShellStats(summary) };
+  });
+}
+
+/** The signed-in Kubernetes learner, their Kubernetes tracker and its summary. */
+export async function requireK8sLearner(
+  returnTo: string,
+  options: CourseOptions = {},
+): Promise<CourseLearner<K8sSummary>> {
+  return courseLearner(await requireLearner(returnTo), 'k8s', options, (progress, today) => {
+    const summary = summarizeK8s(progress, today);
+    return { summary, stats: k8sShellStats(summary) };
   });
 }

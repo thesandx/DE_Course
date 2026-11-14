@@ -37,6 +37,7 @@ const FILTERS: ReadonlyArray<{ id: Filter; label: string }> = [
   { id: 'all', label: 'All' },
   { id: 'de', label: 'DE' },
   { id: 'gcp', label: 'GCP' },
+  { id: 'k8s', label: 'K8s' },
 ];
 
 const DATE = new Intl.DateTimeFormat('en', {

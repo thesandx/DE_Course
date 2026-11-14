@@ -9,11 +9,13 @@ import { Button, buttonStyles } from '@/components/ui/Button';
 import { Face } from '@/components/ui/Face';
 import { Progress } from '@/components/ui/Progress';
 import { outcomeMessage, useRecordProgress } from '@/hooks/useRecordProgress';
+import type { CourseSlug } from '@/lib/course/courses';
 import { isChoiceCorrect, mockExam, passes, shuffle, shuffleChoices } from '@/lib/course/gcp/quiz';
 import { cn } from '@/lib/utils';
 import type { BankQuestion, GcpLine } from '@/types/gcp';
 
 import { ChoiceList, type ChoiceState } from './ChoiceList';
+import { CodeBlock } from './CodeBlock';
 
 /** The questions of one line, with what the result screen needs to name it. */
 export interface QuizGroup {
@@ -21,7 +23,52 @@ export interface QuizGroup {
   questions: readonly BankQuestion[];
 }
 
+/** The words of one kind of run. The GCP boss round and mock exam have defaults. */
+export interface QuizWords {
+  /** The eyebrow on the start screen, such as "Boss round". */
+  kind: string;
+  start: string;
+  /** The eyebrow on the result screen after a pass. */
+  passed: string;
+  /** The label of the meter in `boss` mode. */
+  meter: string;
+  /** The meter's text when nothing is left. */
+  meterEmpty: string;
+  /** What one unit on the meter is, such as "hits": "3 hits left". */
+  meterUnit: string;
+  /** What the learner reads after a right answer. */
+  right: string;
+  /** The heading of the score list in `mock` mode. */
+  breakdown: string;
+  /** The label above a question's terminal output. */
+  code: string;
+}
+
+const BOSS_WORDS: QuizWords = {
+  kind: 'Boss round',
+  start: 'Start the boss round',
+  passed: 'Boss defeated',
+  meter: 'Boss health',
+  meterEmpty: 'Defeated',
+  meterUnit: 'hits',
+  right: 'Hit! Correct.',
+  breakdown: 'Score by domain',
+  code: 'Output',
+};
+
+const MOCK_WORDS: QuizWords = {
+  ...BOSS_WORDS,
+  kind: 'Mock exam',
+  start: 'Start the mock exam',
+  passed: 'Mock exam passed',
+  right: 'Correct.',
+};
+
 export interface QuizRunProps {
+  /** The course whose tracker a pass is saved to. */
+  course?: CourseSlug;
+  /** Words that replace the defaults of the mode. */
+  words?: Partial<QuizWords>;
   /** `boss`: one line, a boss to beat. `mock`: every line, weighted like the exam. */
   mode: 'boss' | 'mock';
   title: string;
@@ -55,6 +102,8 @@ interface Answered {
  * the server render and the first client render agree.
  */
 export function QuizRun({
+  course = 'gcp',
+  words: customWords,
   mode,
   title,
   story,
@@ -76,7 +125,8 @@ export function QuizRun({
   // Whether the XP was banked before this run. `done` turns true as soon as a
   // pass saves and the page refreshes, so the result screen reads this instead.
   const [bankedBefore, setBankedBefore] = useState(done);
-  const { record, busy } = useRecordProgress('gcp');
+  const { record, busy } = useRecordProgress(course);
+  const words = { ...(mode === 'boss' ? BOSS_WORDS : MOCK_WORDS), ...customWords };
 
   const total = questions.length;
   const needed = Math.ceil(count * passRatio);
@@ -145,7 +195,7 @@ export function QuizRun({
   if (total === 0) {
     return (
       <section className="bg-night-glow rounded-sheet text-on-night shadow-raised flex flex-col gap-5 p-6 md:p-8">
-        <p className="eyebrow text-on-night-soft">{mode === 'boss' ? 'Boss round' : 'Mock exam'}</p>
+        <p className="eyebrow text-on-night-soft">{words.kind}</p>
         <h1 className="text-display">{title}</h1>
         <p className="text-lead text-on-night-soft max-w-2xl">{story}</p>
         <ul className="flex flex-wrap gap-2">
@@ -164,7 +214,7 @@ export function QuizRun({
         </ul>
         <div>
           <Button size="lg" onClick={start}>
-            {mode === 'boss' ? 'Start the boss round' : 'Start the mock exam'}
+            {words.start}
           </Button>
         </div>
       </section>
@@ -192,7 +242,7 @@ export function QuizRun({
             <Face mood={passed ? 'wow' : 'happy'} size={48} />
           </span>
           <p className={cn('eyebrow', passed ? 'text-on-night-soft' : 'text-ink-faint')}>
-            {passed ? (mode === 'boss' ? 'Boss defeated' : 'Mock exam passed') : 'Not this time'}
+            {passed ? words.passed : 'Not this time'}
           </p>
           <h2 className="text-display">
             {score} / {total}
@@ -228,7 +278,7 @@ export function QuizRun({
 
         {mode === 'mock' && (
           <section className="bg-surface border-line rounded-card shadow-card flex flex-col gap-4 border p-5 sm:p-6">
-            <h3 className="text-heading">Score by domain</h3>
+            <h3 className="text-heading">{words.breakdown}</h3>
             <ul className="flex flex-col gap-3">
               {byLine.map(({ group, right, of }) => (
                 <li key={group.line.slug}>
@@ -249,6 +299,9 @@ export function QuizRun({
             <ol className="flex flex-col gap-5">
               {missed.map(({ question }) => (
                 <li key={question.prompt} className="flex flex-col gap-2">
+                  {question.code !== undefined && (
+                    <CodeBlock label={words.code} code={question.code} />
+                  )}
                   <p className="text-body font-semibold">
                     <InlineText text={question.prompt} />
                   </p>
@@ -310,9 +363,9 @@ export function QuizRun({
         </p>
         {mode === 'boss' ? (
           <Progress
-            label="Boss health"
+            label={words.meter}
             value={needed === 0 ? 0 : (bossLeft / needed) * 100}
-            valueText={bossLeft === 0 ? 'Defeated' : `${bossLeft} hits left`}
+            valueText={bossLeft === 0 ? words.meterEmpty : `${bossLeft} ${words.meterUnit} left`}
           />
         ) : (
           <Progress
@@ -323,6 +376,7 @@ export function QuizRun({
         )}
       </div>
 
+      {question.code !== undefined && <CodeBlock label={words.code} code={question.code} />}
       <p className="text-heading">
         <InlineText text={question.prompt} />
       </p>
@@ -339,7 +393,7 @@ export function QuizRun({
       {checked && (
         <div className="flex flex-col gap-2">
           <p className={cn('text-body font-semibold', isRight ? 'text-easy' : 'text-hard')}>
-            {isRight ? (mode === 'boss' ? 'Hit! Correct.' : 'Correct.') : 'Not quite.'}
+            {isRight ? words.right : 'Not quite.'}
           </p>
           <p className="text-small text-ink-soft bg-sunken rounded-input animate-rise-in p-3">
             <InlineText text={question.why} />

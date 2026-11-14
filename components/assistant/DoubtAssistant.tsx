@@ -54,6 +54,15 @@ function suggestionsFor(path: string): readonly string[] {
       'Check my notes for mistakes',
     ];
   }
+  if (/^\/k8s\/ports\/[^/]+\/[^/]+$/.test(path) && !/\/(drill|mission)$/.test(path)) {
+    return [
+      'Explain this lesson in simple words',
+      'A lab step failed. How do I debug it?',
+      'How would an interviewer ask about this?',
+      'What breaks first in production?',
+      'Check my notes for mistakes',
+    ];
+  }
   const chapter =
     /^\/(de\/tracks\/[^/]+\/[^/]+|gcp\/lines\/[^/]+\/[^/]+)$/.test(path) && !path.endsWith('/boss');
   return [

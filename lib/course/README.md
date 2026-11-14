@@ -6,7 +6,7 @@ The platform has these courses:
 
 - **DE** (`/de`): the senior data engineering course. Its tracks, lessons, problems and loop guides are in this folder.
 - **GCP** (`/gcp`): GCP Professional Data Engineer exam prep, as a metro map game. Its content and rules are in [`gcp/`](./gcp/README.md).
-- **K8s**: listed on the hub, not open yet.
+- **K8s** (`/k8s`): Kubernetes for data engineers, as a voyage through ports. Its content and rules are in [`k8s/`](./k8s/README.md).
 
 A learner joins each course separately. Each course keeps its own tracker in `learners/{uid}`.
 
@@ -30,6 +30,7 @@ A learner joins each course separately. Each course keeps its own tracker in `le
 | `search-index.ts`                                                               | The search index of each course: its entries, examples and browse list.          |
 | `search.ts`                                                                     | Search matching and ranking. Safe for client components.                         |
 | `gcp/`                                                                          | The GCP course. See [`gcp/README.md`](./gcp/README.md).                          |
+| `k8s/`                                                                          | The Kubernetes course. See [`k8s/README.md`](./k8s/README.md).                   |
 | `videos/`                                                                       | The explainer videos of both courses. See [Explainer videos](#explainer-videos). |
 | `story-bank.ts`                                                                 | The schema of a behavioral story, shared by the API route and the editor.        |
 | `story-bank-themes.ts`                                                          | The story themes, the STAR fields and the strength checks. No zod.               |
@@ -108,7 +109,7 @@ Each course has a search page at `/<slug>/search`. The top bar opens it: a searc
 
 The index is built on the server from the catalogue and sent to the page. The page filters it in the browser, so results change on each keystroke. An entry holds the title, where the item sits, and the terms inside it: headings, **bold** terms, «code» and table headers. The full text of a lesson does not ship. So a term that a learner will search for must be marked in the text, as a heading, bold or code.
 
-A `##` section of a DE lesson is a topic entry. It opens the lesson at `#section-<n>`, which `Prose sectioned` sets. A GCP concept opens its station at `#concept-<n>`, and a GCP lab opens at `/gcp/labs/<station>`.
+A `##` section of a DE lesson is a topic entry. It opens the lesson at `#section-<n>`, which `Prose sectioned` sets. A GCP concept opens its station at `#concept-<n>`, and a GCP lab opens at `/gcp/labs/<station>`. A Kubernetes lesson opens at its page, and its lab opens at `#lab` on that page.
 
 ## Progress and XP
 
@@ -116,7 +117,7 @@ Item ids are `lesson:<track>:<lesson>` and `problem:<slug>`. A lesson is worth 4
 
 ## Add a course
 
-1. Add the slug to `COURSE_SLUGS` and an entry to `COURSES` in `courses.ts`. Set `status: 'soon'` to list it on the hub before it opens.
+1. Add the slug to `COURSE_SLUGS` and an entry to `COURSES` in `courses.ts`. Set `status: 'soon'` to list it on the hub before it opens. Then add the slug to the notes: the `course` enum in `services/notes.service.ts`, the key rules in `lib/notes/targets.ts` and the filter in `components/notes/NotesLibrary.tsx`.
 2. Put its content and rules in `lib/course/<slug>/`. Make item ids that include a kind, such as `station:<slug>`.
 3. Add an entry to `COURSE_RULES` in `rules.ts`. The server refuses every item id that `isKnownItem` does not accept.
 4. Add a case to `hubStats` in `hub.ts` and a shell stats function in `shell-stats.ts`.

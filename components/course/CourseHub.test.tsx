@@ -21,11 +21,11 @@ afterEach(() => {
 });
 
 describe('CourseHub', () => {
-  it('offers every open course to a new learner, and the later one without a button', () => {
+  it('offers every open course to a new learner', () => {
     render(<CourseHub name="Sandeep" joined={[]} activity={NO_ACTIVITY} today="2026-11-01" />);
     expect(screen.getByRole('heading', { name: 'Choose a course' })).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Join course' })).toHaveLength(2);
-    expect(screen.getByText('Opening later')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Join course' })).toHaveLength(3);
+    expect(screen.queryByText('Opening later')).not.toBeInTheDocument();
   });
 
   it('hides the study map until the learner joins a course', () => {
@@ -47,7 +47,7 @@ describe('CourseHub', () => {
       'href',
       '/gcp',
     );
-    expect(screen.getAllByRole('button', { name: 'Join course' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Join course' })).toHaveLength(2);
     expect(screen.getByText('Study streak')).toBeInTheDocument();
   });
 

@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useMemo, useSyncExternalStore }
 import { CompleteButton } from '@/components/course/CompleteButton';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Progress } from '@/components/ui/Progress';
+import type { CourseSlug } from '@/lib/course/courses';
 
 interface LabTicks {
   ticked: ReadonlySet<string>;
@@ -139,26 +140,36 @@ export interface LabFinishProps {
   xp: number;
   /** The cleanup ticks. The lab cannot be finished until every one is ticked. */
   cleanup: readonly string[];
+  /** The course whose tracker the item is saved to. */
+  course?: CourseSlug;
+  label?: string;
+  doneLabel?: string;
+  /** What the learner reads while a cleanup tick is missing. */
+  blockedReason?: string;
 }
 
 /** Saves the lab as done, but only once every cleanup step is ticked. */
-export function LabFinish({ itemId, done, xp, cleanup }: LabFinishProps) {
+export function LabFinish({
+  itemId,
+  done,
+  xp,
+  cleanup,
+  course = 'gcp',
+  label = 'Finish lab',
+  doneLabel = 'Lab finished and cleaned up',
+  blockedReason = 'Tick every cleanup step first. Nothing the lab made should keep costing you money.',
+}: LabFinishProps) {
   const { ticked } = useTicks();
   const clean = cleanup.every((id) => ticked.has(id));
   return (
     <CompleteButton
-      course="gcp"
+      course={course}
       itemId={itemId}
       done={done}
       xp={xp}
-      label="Finish lab"
-      doneLabel="Lab finished and cleaned up"
-      {...(clean
-        ? {}
-        : {
-            blockedReason:
-              'Tick every cleanup step first. Nothing the lab made should keep costing you money.',
-          })}
+      label={label}
+      doneLabel={doneLabel}
+      {...(clean ? {} : { blockedReason })}
     />
   );
 }

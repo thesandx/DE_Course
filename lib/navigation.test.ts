@@ -31,8 +31,14 @@ describe('activeTabHref', () => {
 
 describe('tabsFor', () => {
   it('lists the hub, each open course and the profile outside a course', () => {
-    expect(tabsFor('/').map((tab) => tab.href)).toEqual(['/', '/de', '/gcp', '/profile']);
-    expect(tabsFor('/profile').map((tab) => tab.href)).toEqual(['/', '/de', '/gcp', '/profile']);
+    expect(tabsFor('/').map((tab) => tab.href)).toEqual(['/', '/de', '/gcp', '/k8s', '/profile']);
+    expect(tabsFor('/profile').map((tab) => tab.href)).toEqual([
+      '/',
+      '/de',
+      '/gcp',
+      '/k8s',
+      '/profile',
+    ]);
   });
 
   it("lists the course's own destinations inside a course", () => {
@@ -41,6 +47,13 @@ describe('tabsFor', () => {
       '/gcp',
       '/gcp/lines',
       '/gcp/practice',
+      '/profile',
+    ]);
+    expect(tabsFor('/k8s/ports/setup').map((tab) => tab.href)).toEqual([
+      '/',
+      '/k8s',
+      '/k8s/ports',
+      '/k8s/practice',
       '/profile',
     ]);
     expect(tabsFor('/de/problems').map((tab) => tab.label)).toEqual([

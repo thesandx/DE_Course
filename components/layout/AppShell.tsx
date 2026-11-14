@@ -6,6 +6,7 @@ import { copyrightLine } from '@/lib/contact';
 import { PROBLEMS, TRACKS } from '@/lib/course/catalog';
 import { type CourseSlug, getCourse } from '@/lib/course/courses';
 import { CARDS, LINES } from '@/lib/course/gcp/catalog';
+import { INCIDENTS, PORTS } from '@/lib/course/k8s/catalog';
 import type { ShellStats } from '@/lib/course/shell-stats';
 import { env } from '@/lib/env';
 import { cn } from '@/lib/utils';
@@ -48,6 +49,7 @@ const FOOTER_LINKS = [
   { href: '/', label: 'All courses' },
   { href: '/de/companies/uber', label: 'Uber loop guide' },
   { href: '/gcp/practice/mock', label: 'GCP mock exam' },
+  { href: '/k8s/practice/cheatsheet', label: 'kubectl cheatsheet' },
   { href: '/design', label: 'Design system' },
 ] as const;
 
@@ -105,6 +107,8 @@ const SIDEBAR_COUNTS: Readonly<Record<string, number>> = {
   '/de/problems': PROBLEMS.length,
   '/gcp/lines': LINES.length,
   '/gcp/practice': CARDS.length,
+  '/k8s/ports': PORTS.length,
+  '/k8s/practice': INCIDENTS.length,
 };
 
 export function AppShell({
@@ -142,7 +146,8 @@ export function AppShell({
                   {stats.streak} {stats.streak === 1 ? 'day' : 'days'}
                 </p>
                 <p className="text-small text-on-night-soft">
-                  {course === 'gcp' ? 'GCP' : 'DE'} streak · best {stats.bestStreak}
+                  {course === undefined ? 'Study' : getCourse(course).short} streak · best{' '}
+                  {stats.bestStreak}
                 </p>
               </div>
             )}

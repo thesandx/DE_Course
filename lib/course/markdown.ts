@@ -39,13 +39,24 @@ function isCalloutKind(value: string): value is CalloutKind {
   return (CALLOUT_KINDS as readonly string[]).includes(value);
 }
 
+/** Splits a table row into cells. A `|` inside «code» belongs to the code, not to the table. */
 function splitRow(line: string): string[] {
-  return line
-    .trim()
-    .replace(/^\|/, '')
-    .replace(/\|$/, '')
-    .split('|')
-    .map((cell) => cell.trim());
+  const inner = line.trim().replace(/^\|/, '').replace(/\|$/, '');
+  const cells: string[] = [];
+  let cell = '';
+  let inCode = false;
+  for (const char of inner) {
+    if (char === '«') inCode = true;
+    else if (char === '»') inCode = false;
+    if (char === '|' && !inCode) {
+      cells.push(cell.trim());
+      cell = '';
+    } else {
+      cell += char;
+    }
+  }
+  cells.push(cell.trim());
+  return cells;
 }
 
 /** Removes the common leading indent, so content can be indented in source. */

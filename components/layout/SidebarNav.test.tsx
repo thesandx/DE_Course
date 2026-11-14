@@ -13,7 +13,7 @@ describe('SidebarNav', () => {
     expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: /DE course/ })).toHaveAttribute('href', '/de');
     expect(screen.getByRole('link', { name: /GCP course/ })).toHaveTextContent('Join');
-    expect(screen.getByText('Soon')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /K8s course/ })).toHaveAttribute('href', '/k8s');
   });
 
   it("opens the current course's sections for a learner in it", () => {
