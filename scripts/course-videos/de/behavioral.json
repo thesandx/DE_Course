@@ -1,0 +1,188 @@
+{
+  "station": "behavioral",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "Strong technical rounds get you to the bar.",
+          "device": "big",
+          "text": "Technical gets you to the bar"
+        },
+        {
+          "say": "The behavioral round decides the level. Offers are lost here more than in coding.",
+          "device": "card",
+          "label": "Then",
+          "head": "Behavioral decides the level",
+          "headmark": "decides the level",
+          "headmark_at": "level"
+        },
+        {
+          "say": "Three tools: the STAR shape, a story bank, and the right scope.",
+          "device": "list",
+          "label": "Track 18 · Behavioral",
+          "items": ["The STAR shape", "A story bank", "The right scope"],
+          "items_at": ["STAR", "bank", "scope"]
+        }
+      ]
+    },
+    {
+      "title": "The STAR shape",
+      "check": {
+        "prompt": "Which part of a STAR answer should be the longest?",
+        "options": ["Situation", "Action", "Task"],
+        "answer": 1,
+        "why": "The action is your work. It is the evidence the interviewer writes down."
+      },
+      "beats": [
+        {
+          "say": "First: tell every story in one shape.",
+          "device": "big",
+          "text": "One shape for stories"
+        },
+        {
+          "say": "Situation. Task. Action. Result. In about two minutes.",
+          "device": "list",
+          "label": "STAR",
+          "items": ["Situation", "Task", "Action", "Result"],
+          "items_at": ["Situation", "Task", "Action", "Result"]
+        },
+        {
+          "say": "Spend most of the time on the action. That is your work.",
+          "device": "card",
+          "label": "Where the time goes",
+          "head": "Most time on the action",
+          "headmark": "action",
+          "headmark_at": "action"
+        },
+        {
+          "say": "And say I, not we. The interviewer scores you, not your team.",
+          "device": "card",
+          "label": "One word",
+          "head": "Say I, not we",
+          "headmark": "I, not we",
+          "headmark_at": "not"
+        },
+        {
+          "say": "End with a result that has a number.",
+          "device": "card",
+          "label": "The ending",
+          "head": "A result with a number",
+          "headmark": "number",
+          "headmark_at": "number"
+        }
+      ]
+    },
+    {
+      "title": "A story bank",
+      "beats": [
+        {
+          "say": "Second: do not invent stories in the room.",
+          "device": "big",
+          "text": "Do not invent stories"
+        },
+        {
+          "say": "Prepare about 8 true stories before the loop.",
+          "device": "stat",
+          "value": 8,
+          "sub": "true stories to prepare",
+          "submark": "true"
+        },
+        {
+          "say": "Each story can answer several questions. A conflict story also shows influence.",
+          "device": "card",
+          "label": "Reuse",
+          "head": "One story, many questions",
+          "headmark": "many questions",
+          "headmark_at": "several"
+        }
+      ]
+    },
+    {
+      "title": "Senior scope",
+      "check": {
+        "prompt": "Which story shows senior scope?",
+        "options": [
+          "I fixed the bug I was given",
+          "I found the problem, aligned two teams, and fixed it",
+          "My team did well"
+        ],
+        "answer": 1,
+        "why": "Senior scope is more than your own task: you found the problem and moved other people."
+      },
+      "beats": [
+        {
+          "say": "Third: match the scope to the level.",
+          "device": "big",
+          "text": "Match scope to level"
+        },
+        {
+          "say": "A mid-level story: I did the task I was given, and I did it well.",
+          "device": "card",
+          "label": "Mid-level",
+          "head": "I did my task well",
+          "headmark": "my task",
+          "headmark_at": "task"
+        },
+        {
+          "say": "A senior story: I found the problem, and I moved other teams to fix it.",
+          "device": "card",
+          "label": "Senior",
+          "head": "I found it and moved others",
+          "headmark": "moved others",
+          "headmark_at": "moved"
+        }
+      ]
+    },
+    {
+      "title": "The hard questions",
+      "beats": [
+        {
+          "say": "Last: tell me about a failure.",
+          "device": "big",
+          "text": "Tell me about a failure"
+        },
+        {
+          "say": "Pick a real failure. Own your part. Do not blame other people.",
+          "device": "card",
+          "label": "Be honest",
+          "head": "A real failure, owned",
+          "headmark": "owned",
+          "headmark_at": "Own"
+        },
+        {
+          "say": "Then say what you changed after it. That change is the answer.",
+          "device": "card",
+          "label": "The point",
+          "head": "What you changed after",
+          "headmark": "changed",
+          "headmark_at": "changed"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Quick recap of the behavioral round.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "Use the STAR shape. Prepare eight stories. And show scope beyond your own task.",
+          "device": "list",
+          "label": "Behavioral",
+          "items": ["Use the STAR shape", "Prepare eight stories", "Scope beyond your task"],
+          "items_at": ["STAR", "eight", "scope"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

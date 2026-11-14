@@ -1,0 +1,141 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:02.520
+The team runs on AWS.
+
+2
+00:00:02.540 --> 00:00:05.030
+Your last job was on another cloud.
+
+3
+00:00:05.050 --> 00:00:07.580
+Senior loops assume you can build on any cloud.
+
+4
+00:00:07.600 --> 00:00:09.540
+The ideas are the same.
+
+5
+00:00:09.560 --> 00:00:15.615
+Four areas: the data lake, access and network, code for infrastructure, and cost.
+
+6
+00:00:15.635 --> 00:00:18.450
+First: the data lake on object storage.
+
+7
+00:00:18.470 --> 00:00:20.600
+S 3 stores objects under keys.
+
+8
+00:00:20.620 --> 00:00:22.660
+It has no real folders.
+
+9
+00:00:22.680 --> 00:00:25.910
+So a rename is a copy and a delete, for every object.
+
+10
+00:00:25.930 --> 00:00:28.145
+On big data, that is slow.
+
+11
+00:00:28.165 --> 00:00:31.445
+A catalog, like Glue, maps those files to tables.
+
+12
+00:00:31.465 --> 00:00:34.570
+Then Athena or Spark can query them.
+
+13
+00:00:34.590 --> 00:00:36.530
+Second: who can read what?
+
+14
+00:00:36.550 --> 00:00:38.293
+Give a job a role, not a key.
+
+15
+00:00:38.313 --> 00:00:41.140
+A role hands out short-lived credentials.
+
+16
+00:00:41.160 --> 00:00:42.590
+And grant least privilege.
+
+17
+00:00:42.610 --> 00:00:43.540
+Only this bucket.
+
+18
+00:00:43.560 --> 00:00:44.950
+Only read.
+
+19
+00:00:44.970 --> 00:00:47.425
+Keep traffic to storage on a private endpoint.
+
+20
+00:00:47.445 --> 00:00:50.400
+It is safer, and it is cheaper.
+
+21
+00:00:50.420 --> 00:00:52.760
+Third: no clicks in the console.
+
+22
+00:00:52.780 --> 00:00:56.048
+With Terraform, buckets, roles and clusters are code.
+
+23
+00:00:56.068 --> 00:00:58.220
+You review them like any change.
+
+24
+00:00:58.240 --> 00:01:00.508
+Docker packs a job with its libraries.
+
+25
+00:01:00.528 --> 00:01:02.955
+So it runs the same way everywhere.
+
+26
+00:01:02.975 --> 00:01:05.917
+And a CI pipeline tests and ships each change.
+
+27
+00:01:05.937 --> 00:01:08.480
+No one deploys by hand.
+
+28
+00:01:08.500 --> 00:01:10.615
+Last: why did the bill jump?
+
+29
+00:01:10.635 --> 00:01:13.790
+Look at three places first: compute that never stops,
+
+30
+00:01:13.810 --> 00:01:17.365
+data that crosses regions, and old storage.
+
+31
+00:01:17.385 --> 00:01:19.950
+Quick recap of cloud and DevOps.
+
+32
+00:01:19.970 --> 00:01:21.887
+Object storage has no rename.
+
+33
+00:01:21.907 --> 00:01:23.550
+Use roles, not keys.
+
+34
+00:01:23.570 --> 00:01:25.735
+And keep infrastructure in code.
+
+35
+00:01:25.755 --> 00:01:28.855
+Now start the first lesson below.

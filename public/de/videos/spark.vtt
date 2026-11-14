@@ -1,0 +1,145 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:02.658
+The Spark job ran for six hours.
+
+2
+00:00:02.678 --> 00:00:04.555
+Yesterday it took one.
+
+3
+00:00:04.575 --> 00:00:07.042
+A senior engineer can say why it is slow.
+
+4
+00:00:07.062 --> 00:00:08.890
+Not only how to write it.
+
+5
+00:00:08.910 --> 00:00:14.040
+Three things explain most slow jobs: shuffles, skew, and small files.
+
+6
+00:00:14.060 --> 00:00:16.500
+First: how does Spark run your code?
+
+7
+00:00:16.520 --> 00:00:18.175
+The driver makes the plan.
+
+8
+00:00:18.195 --> 00:00:21.510
+The executors do the work, in many small tasks.
+
+9
+00:00:21.530 --> 00:00:23.910
+A transformation only adds to the plan.
+
+10
+00:00:23.930 --> 00:00:25.720
+Nothing runs yet.
+
+11
+00:00:25.740 --> 00:00:27.320
+The work starts at an action.
+
+12
+00:00:27.340 --> 00:00:30.270
+For example, a write or a count.
+
+13
+00:00:30.290 --> 00:00:32.005
+Second: the shuffle.
+
+14
+00:00:32.025 --> 00:00:35.168
+A join or a group by must bring the same keys together.
+
+15
+00:00:35.188 --> 00:00:37.640
+So data moves between machines.
+
+16
+00:00:37.660 --> 00:00:39.165
+That move is the shuffle.
+
+17
+00:00:39.185 --> 00:00:42.025
+It is the most costly step in most jobs.
+
+18
+00:00:42.045 --> 00:00:44.525
+If one table is small, broadcast it.
+
+19
+00:00:44.545 --> 00:00:47.500
+Then the big table does not shuffle.
+
+20
+00:00:47.520 --> 00:00:50.160
+Third: one key has most of the rows.
+
+21
+00:00:50.180 --> 00:00:51.148
+That is skew.
+
+22
+00:00:51.168 --> 00:00:54.720
+One task gets most of the data, and runs for hours.
+
+23
+00:00:54.740 --> 00:00:56.932
+In the Spark U I, you see it at once.
+
+24
+00:00:56.952 --> 00:00:59.605
+One task is far slower than the rest.
+
+25
+00:00:59.625 --> 00:01:01.880
+Turn on adaptive query execution.
+
+26
+00:01:01.900 --> 00:01:04.880
+Or add a salt to split the hot key.
+
+27
+00:01:04.900 --> 00:01:07.340
+Last: thousands of small files.
+
+28
+00:01:07.360 --> 00:01:09.753
+Each file costs a listing and an open.
+
+29
+00:01:09.773 --> 00:01:12.725
+Many small files make every reader slow.
+
+30
+00:01:12.745 --> 00:01:14.825
+So write fewer, bigger files.
+
+31
+00:01:14.845 --> 00:01:17.825
+And compact the table on a schedule.
+
+32
+00:01:17.845 --> 00:01:19.710
+Quick recap of Spark.
+
+33
+00:01:19.730 --> 00:01:21.047
+Actions start the work.
+
+34
+00:01:21.067 --> 00:01:22.560
+Shuffles cost the most.
+
+35
+00:01:22.580 --> 00:01:25.245
+And skew shows as one slow task.
+
+36
+00:01:25.265 --> 00:01:28.365
+Now start the first lesson below.

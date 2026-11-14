@@ -12,26 +12,27 @@ A learner joins each course separately. Each course keeps its own tracker in `le
 
 ## Files
 
-| File                                                                            | What it holds                                                                   |
-| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `tracks/<slug>.ts`                                                              | One track. It exports `track` (the lessons) and `problems`.                     |
-| `tracks/spark-pyspark.ts`, `tracks/python-pandas.ts`, `tracks/company-loops.ts` | More lessons and problems that a track module spreads into its own lists.       |
-| `catalog.ts`                                                                    | The study order, the lookups, XP per item, track progress and loop readiness.   |
-| `companies.ts`                                                                  | Every loop guide, in page order, and the Uber and Google guides.                |
-| `companies-big-tech.ts`                                                         | The Amazon, Microsoft and Meta loop guides.                                     |
-| `companies-india.ts`                                                            | The Flipkart, Walmart Global Tech, PhonePe and Swiggy loop guides.              |
-| `company-meta.ts`                                                               | The name, card surface and dial colour of each company. No course content.      |
-| `markdown.ts`                                                                   | The parser for the prose dialect below.                                         |
-| `progress.ts`                                                                   | Item ids, XP values, levels, streaks, the activity grid and the learner record. |
-| `courses.ts`                                                                    | The course list: slugs, names, hues and links. Safe for client components.      |
-| `rules.ts`                                                                      | The item check and the XP table of each course.                                 |
-| `hub.ts`                                                                        | The numbers on each course card of the hub.                                     |
-| `shell-stats.ts`                                                                | The streak and XP that the app shell shows for the current course.              |
-| `search-index.ts`                                                               | The search index of each course: its entries, examples and browse list.         |
-| `search.ts`                                                                     | Search matching and ranking. Safe for client components.                        |
-| `gcp/`                                                                          | The GCP course. See [`gcp/README.md`](./gcp/README.md).                         |
-| `story-bank.ts`                                                                 | The schema of a behavioral story, shared by the API route and the editor.       |
-| `story-bank-themes.ts`                                                          | The story themes, the STAR fields and the strength checks. No zod.              |
+| File                                                                            | What it holds                                                                    |
+| ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `tracks/<slug>.ts`                                                              | One track. It exports `track` (the lessons) and `problems`.                      |
+| `tracks/spark-pyspark.ts`, `tracks/python-pandas.ts`, `tracks/company-loops.ts` | More lessons and problems that a track module spreads into its own lists.        |
+| `catalog.ts`                                                                    | The study order, the lookups, XP per item, track progress and loop readiness.    |
+| `companies.ts`                                                                  | Every loop guide, in page order, and the Uber and Google guides.                 |
+| `companies-big-tech.ts`                                                         | The Amazon, Microsoft and Meta loop guides.                                      |
+| `companies-india.ts`                                                            | The Flipkart, Walmart Global Tech, PhonePe and Swiggy loop guides.               |
+| `company-meta.ts`                                                               | The name, card surface and dial colour of each company. No course content.       |
+| `markdown.ts`                                                                   | The parser for the prose dialect below.                                          |
+| `progress.ts`                                                                   | Item ids, XP values, levels, streaks, the activity grid and the learner record.  |
+| `courses.ts`                                                                    | The course list: slugs, names, hues and links. Safe for client components.       |
+| `rules.ts`                                                                      | The item check and the XP table of each course.                                  |
+| `hub.ts`                                                                        | The numbers on each course card of the hub.                                      |
+| `shell-stats.ts`                                                                | The streak and XP that the app shell shows for the current course.               |
+| `search-index.ts`                                                               | The search index of each course: its entries, examples and browse list.          |
+| `search.ts`                                                                     | Search matching and ranking. Safe for client components.                         |
+| `gcp/`                                                                          | The GCP course. See [`gcp/README.md`](./gcp/README.md).                          |
+| `videos/`                                                                       | The explainer videos of both courses. See [Explainer videos](#explainer-videos). |
+| `story-bank.ts`                                                                 | The schema of a behavioral story, shared by the API route and the editor.        |
+| `story-bank-themes.ts`                                                          | The story themes, the STAR fields and the strength checks. No zod.               |
 
 The types are in [`types/course.ts`](../../types/course.ts).
 
@@ -124,3 +125,29 @@ Item ids are `lesson:<track>:<lesson>` and `problem:<slug>`. A lesson is worth 4
 7. Add the course's paths to `tabsFor` in `lib/navigation.ts` if its learn and practice links differ.
 8. Add the course to search: a builder and a case in `searchIndex`, and entries in `SEARCH_EXAMPLES` and `SEARCH_SCOPE`, all in `search-index.ts`. Add `app/<slug>/search/page.tsx`, which renders `CourseSearchScreen`. The top bar links to it. Extend `resolves` in `search.test.ts` for the course's paths.
 9. Run `pnpm validate` and `pnpm test:e2e`.
+
+## Explainer videos
+
+Each GCP station and each DE track has one explainer video of one to three minutes. The GCP station page and the DE track page show it under the header. The component [`components/course/CourseVideo.tsx`](../../components/course/CourseVideo.tsx) is the player. It has captions, chapters, a speed button, full screen and quick checks.
+
+A video has three parts, and each part lives in a different place. `<course>` is `gcp` or `de`.
+
+| Part                             | Where                                                  |
+| -------------------------------- | ------------------------------------------------------ |
+| The picture and the voice (MP4)  | The app bucket, at `course-videos/<course>/<slug>.mp4` |
+| The poster and the captions file | `public/<course>/videos/<slug>.jpg` and `<slug>.vtt`   |
+| The timings and the quick checks | `videos/<course>.ts`                                   |
+
+`videos/index.ts` has the lookup and the paths. `videos/timeline.ts` has the player maths: the caption, the chapter and the quick check at a time.
+
+[`services/course-video.service.ts`](../../services/course-video.service.ts) signs a read URL for the MP4 file. When the file is not in the bucket, the page shows no player. The reasons are in [ADR-0013](../../docs/adr/0013-make-station-videos-with-simcraft-and-keep-them-in-the-bucket.md).
+
+Do not edit `videos/gcp.ts` or `videos/de.ts`. To change a video, change its script and build it again. The steps are in [`scripts/course-videos/README.md`](../../scripts/course-videos/README.md).
+
+### Rules for a video
+
+- A video explains. It does not replace the lessons or the concepts, and it does not give XP.
+- Use short sentences and plain words. Write one idea in one beat.
+- Start with the problem that the station or the track solves. End with a recap and a pointer to the next step.
+- A quick check asks about the chapter that just ended. It has one correct option.
+- Say nothing in the video that the course text does not support.

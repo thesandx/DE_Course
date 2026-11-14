@@ -1,0 +1,182 @@
+{
+  "station": "system-design",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "Design the analytics for every trip in the city.",
+          "device": "big",
+          "text": "Design trip analytics"
+        },
+        {
+          "say": "The design round carries the most weight. It decides the level you are offered.",
+          "device": "card",
+          "label": "The design round",
+          "head": "It decides your level",
+          "headmark": "your level",
+          "headmark_at": "level"
+        },
+        {
+          "say": "You need three things: a framework, the building blocks, and correctness.",
+          "device": "list",
+          "label": "Track 16 · Data system design",
+          "items": ["A framework", "The building blocks", "Correctness"],
+          "items_at": ["framework", "blocks", "correctness"]
+        }
+      ]
+    },
+    {
+      "title": "A framework for the round",
+      "check": {
+        "prompt": "What do you do first in a design round?",
+        "options": ["Draw the architecture", "Ask for the requirements", "Pick the tools"],
+        "answer": 1,
+        "why": "Requirements first: who uses it, how fresh, how big. They decide the design."
+      },
+      "beats": [
+        {
+          "say": "First: a framework for the 45 minutes.",
+          "device": "big",
+          "text": "A framework for the round"
+        },
+        {
+          "say": "Ask for the requirements. Estimate the size. Draw the simple design. Then go deep on one part.",
+          "device": "list",
+          "label": "Four steps",
+          "items": ["Requirements", "Estimate", "Simple design", "Go deep"],
+          "items_at": ["requirements", "Estimate", "simple", "deep"]
+        },
+        {
+          "say": "Ask three things early. Who uses it? How fresh? How big?",
+          "device": "card",
+          "label": "Requirements",
+          "head": "Who, how fresh, how big?",
+          "headmark": "how fresh",
+          "headmark_at": "fresh"
+        },
+        {
+          "say": "Do not start with the tools. Start with what the users need.",
+          "device": "card",
+          "label": "The trap",
+          "head": "Needs first, tools later",
+          "headmark": "Needs first",
+          "headmark_at": "need"
+        }
+      ]
+    },
+    {
+      "title": "Building blocks",
+      "beats": [
+        {
+          "say": "Second: the same blocks, in every design.",
+          "device": "big",
+          "text": "The same blocks"
+        },
+        {
+          "say": "Ingest the events. Store them raw. Process them. Then serve the result.",
+          "device": "list",
+          "label": "Four layers",
+          "items": ["Ingest", "Store", "Process", "Serve"],
+          "items_at": ["Ingest", "Store", "Process", "serve"]
+        },
+        {
+          "say": "Pick the serving store by the read. A dashboard and a lookup need different stores.",
+          "device": "card",
+          "label": "Serving",
+          "head": "The read decides the store",
+          "headmark": "read",
+          "headmark_at": "read"
+        }
+      ]
+    },
+    {
+      "title": "Correctness at scale",
+      "check": {
+        "prompt": "How do you make a pipeline safe against duplicate events?",
+        "options": [
+          "Hope they do not happen",
+          "Make the writes idempotent, with a key",
+          "Use a bigger cluster"
+        ],
+        "answer": 1,
+        "why": "With a unique key and an idempotent write, a replay does not double the result."
+      },
+      "beats": [
+        {
+          "say": "Third: what goes wrong at scale?",
+          "device": "big",
+          "text": "What goes wrong at scale?"
+        },
+        {
+          "say": "Events come twice. Events come late. And one day, you must replay a week.",
+          "device": "list",
+          "label": "Three facts of life",
+          "items": ["Duplicates", "Late data", "Replays"],
+          "items_at": ["twice", "late", "replay"]
+        },
+        {
+          "say": "So give each event a unique key, and make the writes idempotent.",
+          "device": "card",
+          "label": "The defence",
+          "head": "Unique key, idempotent write",
+          "headmark": "idempotent",
+          "headmark_at": "idempotent"
+        },
+        {
+          "say": "And reconcile. Compare the counts with the source, every day.",
+          "device": "card",
+          "label": "The check",
+          "head": "Reconcile with the source",
+          "headmark": "Reconcile",
+          "headmark_at": "reconcile"
+        }
+      ]
+    },
+    {
+      "title": "Staff-level thinking",
+      "beats": [
+        {
+          "say": "Last: what lifts a design to staff level?",
+          "device": "big",
+          "text": "Lift it to staff level"
+        },
+        {
+          "say": "Add three things: how you migrate, what it costs, and how it fails.",
+          "device": "list",
+          "label": "Three additions",
+          "items": ["The migration plan", "The cost", "The failure modes"],
+          "items_at": ["migrate", "costs", "fails"]
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Quick recap of data system design.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "Requirements before tools. Four layers. And design for duplicates and late data.",
+          "device": "list",
+          "label": "Data system design",
+          "items": [
+            "Requirements before tools",
+            "Ingest, store, process, serve",
+            "Plan for duplicates and late data"
+          ],
+          "items_at": ["Requirements", "layers", "duplicates"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

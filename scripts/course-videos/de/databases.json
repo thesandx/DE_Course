@@ -1,0 +1,189 @@
+{
+  "station": "databases",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "Your pipeline is slow. But the cause is inside the database.",
+          "device": "big",
+          "text": "The cause is in the database"
+        },
+        {
+          "say": "Why does change capture lag? Why does a replica return old rows?",
+          "device": "card",
+          "label": "Interview questions",
+          "head": "Why is the replica stale?",
+          "headmark": "stale",
+          "headmark_at": "old"
+        },
+        {
+          "say": "Three ideas answer most of them: the storage engine, transactions, and replication.",
+          "device": "list",
+          "label": "Track 2 · Database foundations",
+          "items": ["Storage engine", "Transactions", "Replication"],
+          "items_at": ["storage", "transactions", "replication"]
+        }
+      ]
+    },
+    {
+      "title": "B-trees and LSM-trees",
+      "check": {
+        "prompt": "A store takes very heavy writes all day. Which engine fits?",
+        "options": ["A B-tree", "An LSM-tree", "No index at all"],
+        "answer": 1,
+        "why": "An LSM-tree only appends, so writes are very fast. It merges files later."
+      },
+      "beats": [
+        {
+          "say": "First: how does a database store rows?",
+          "device": "big",
+          "text": "How rows are stored"
+        },
+        {
+          "say": "A B-tree keeps data sorted in pages. Reads are fast. Each write updates a page in place.",
+          "device": "card",
+          "label": "B-tree",
+          "head": "Sorted pages, fast reads",
+          "headmark": "fast reads",
+          "headmark_at": "Reads"
+        },
+        {
+          "say": "An LSM-tree only appends. Writes are very fast. Later, it merges files in the background.",
+          "device": "card",
+          "label": "LSM-tree",
+          "head": "Append now, merge later",
+          "headmark": "Append now",
+          "headmark_at": "appends"
+        },
+        {
+          "say": "So: many reads, pick a B-tree. Very heavy writes, pick an LSM-tree.",
+          "device": "card",
+          "label": "The choice",
+          "head": "Reads: B-tree. Writes: LSM-tree.",
+          "headmark": "Writes: LSM-tree.",
+          "headmark_at": "heavy"
+        }
+      ]
+    },
+    {
+      "title": "Transactions and the log",
+      "check": {
+        "prompt": "Why does log-based CDC put little load on the tables?",
+        "options": [
+          "It reads the write-ahead log",
+          "It runs only at night",
+          "It reads a full dump"
+        ],
+        "answer": 0,
+        "why": "The database writes every change to the log first. CDC reads that log, not the tables."
+      },
+      "beats": [
+        {
+          "say": "Second: how does a database stay correct?",
+          "device": "big",
+          "text": "How it stays correct"
+        },
+        {
+          "say": "Before it changes any data, the database writes the change to a log.",
+          "device": "card",
+          "label": "Write-ahead log",
+          "head": "Log first, data second",
+          "headmark": "Log first",
+          "headmark_at": "log"
+        },
+        {
+          "say": "After a crash, it replays the log. Nothing that was committed is lost.",
+          "device": "card",
+          "label": "After a crash",
+          "head": "Replay the log",
+          "headmark": "Replay",
+          "headmark_at": "replays"
+        },
+        {
+          "say": "Change data capture reads that same log. That is why CDC does not load the tables.",
+          "device": "card",
+          "label": "For pipelines",
+          "head": "CDC reads the log",
+          "headmark": "reads the log",
+          "headmark_at": "log"
+        }
+      ]
+    },
+    {
+      "title": "Replication and CAP",
+      "beats": [
+        {
+          "say": "Third: copies of the data, on other machines.",
+          "device": "big",
+          "text": "Copies on other machines"
+        },
+        {
+          "say": "A leader takes the writes. Replicas copy them, a little later.",
+          "device": "card",
+          "label": "Single leader",
+          "head": "Replicas are a little behind",
+          "headmark": "a little behind",
+          "headmark_at": "later"
+        },
+        {
+          "say": "So a read from a replica can be stale. This is called replication lag.",
+          "device": "card",
+          "label": "The trap",
+          "head": "Replication lag",
+          "headmark": "Replication lag",
+          "headmark_at": "lag"
+        },
+        {
+          "say": "And when the network splits, you must choose: stay consistent, or stay available.",
+          "device": "card",
+          "label": "CAP",
+          "head": "Consistent or available",
+          "headmark": "Consistent or available",
+          "headmark_at": "consistent"
+        }
+      ]
+    },
+    {
+      "title": "Safe extraction",
+      "beats": [
+        {
+          "say": "Last: read from a source without hurting it.",
+          "device": "big",
+          "text": "Extract without harm"
+        },
+        {
+          "say": "A full dump is simple but heavy. An updated-at filter misses deletes. Log-based CDC sees everything.",
+          "device": "list",
+          "label": "Three ways to extract",
+          "items": ["Full dump: heavy", "updated_at: misses deletes", "Log-based CDC: complete"],
+          "items_at": ["dump", "filter", "CDC"]
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Quick recap of database foundations.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "B-tree for reads, LSM for writes. The log comes first. And replicas lag.",
+          "device": "list",
+          "label": "Database foundations",
+          "items": ["B-tree reads, LSM writes", "The log comes first", "Replicas lag"],
+          "items_at": ["B-tree", "log", "replicas"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

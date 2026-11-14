@@ -1,18 +1,19 @@
-# The GCP station videos
+# The course videos
 
-This folder builds the explainer video of each station in the GCP course. One station has one video of two to three minutes, with a voice, captions, chapters and quick checks.
+This folder builds the explainer videos of the courses. Each GCP station has one video, and each DE track has one video. A video is one to three minutes long, with a voice, captions, chapters and quick checks.
 
-The decision and its reasons are in [ADR-0013](../../docs/adr/0013-make-station-videos-with-simcraft-and-keep-them-in-the-bucket.md). The rules for the content are in [`lib/course/gcp/README.md`](../../lib/course/gcp/README.md#explainer-videos).
+The decision and its reasons are in [ADR-0013](../../docs/adr/0013-make-station-videos-with-simcraft-and-keep-them-in-the-bucket.md). The rules for the content are in [`lib/course/README.md`](../../lib/course/README.md#explainer-videos).
 
 ## Files
 
-| File                   | What it holds                                                                |
-| ---------------------- | ---------------------------------------------------------------------------- |
-| `stations/<slug>.json` | The script of one video: chapters, beats and quick checks. You edit this.    |
-| `brand/brand.json`     | The colours, fonts and shape of the videos. They follow the design language. |
-| `brand/fonts/`         | The font files the renderer loads.                                           |
-| `make_video.py`        | Builds one video from one script.                                            |
-| `collect.py`           | Copies the results of all videos into the files the app reads.               |
+| File               | What it holds                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------- |
+| `gcp/<slug>.json`  | The script of one GCP station video: chapters, beats and quick checks. You edit this. |
+| `de/<slug>.json`   | The script of one DE track video.                                                     |
+| `brand/brand.json` | The colours, fonts and shape of the videos. They follow the design language.          |
+| `brand/fonts/`     | The font files the renderer loads.                                                    |
+| `make_video.py`    | Builds one video from one script.                                                     |
+| `collect.py`       | Copies the results of one course into the files the app reads.                        |
 
 ## The tools
 
@@ -32,8 +33,8 @@ python3.12 -m venv ~/video-venv
 ## Build one video
 
 ```bash
-~/video-venv/bin/python scripts/gcp-videos/make_video.py \
-  scripts/gcp-videos/stations/data-lake.json \
+~/video-venv/bin/python scripts/course-videos/make_video.py \
+  scripts/course-videos/gcp/data-lake.json \
   --simcraft ~/simcraft --work ~/video-work
 ```
 
@@ -45,7 +46,9 @@ The script stops when it finds a problem. The most frequent problems are these:
 
 - A beat is longer than 8 seconds. Split it into two beats.
 - A `mark` or an `at` word is not in the sentence the voice says.
-- The picture is still for half a second. Give a `big` beat a longer text, or use a `card`.
+- The picture is still for half a second. Give a `big` beat a text of 15 characters or more, or use a `card`.
+
+Use a different `--work` folder for each course.
 
 ## Write a script
 
@@ -66,20 +69,21 @@ A script is a list of chapters. A chapter is a list of beats. A beat is one sent
 ## Put the videos into the app
 
 1. Build every video that changed.
-2. Collect the results:
+2. Collect the results of the course, `gcp` or `de`:
 
    ```bash
-   python3 scripts/gcp-videos/collect.py --work ~/video-work --videos ~/video-upload
+   python3 scripts/course-videos/collect.py --course gcp --work ~/video-work --videos ~/video-upload/gcp
    pnpm format
    ```
 
-   This writes `lib/course/gcp/videos/timings.ts` and the posters and captions in `public/gcp/videos/`.
+   This writes `lib/course/videos/gcp.ts` and the posters and captions in `public/gcp/videos/`.
 
 3. Commit those files. Do not commit an MP4 file.
 4. Upload the MP4 files to the app bucket. A person does this step, with their own Google account:
 
    ```bash
-   gcloud storage cp ~/video-upload/*.mp4 gs://<GCS_BUCKET>/course-videos/gcp/
+   gcloud storage cp ~/video-upload/gcp/*.mp4 gs://<GCS_BUCKET>/course-videos/gcp/
+   gcloud storage cp ~/video-upload/de/*.mp4 gs://<GCS_BUCKET>/course-videos/de/
    ```
 
-A station page shows its video only when the file is in the bucket. So you can merge the code before you upload. Upload a changed video and its `timings.ts` at about the same time, or the captions are out of step for a short time.
+A page shows its video only when the file is in the bucket. So you can merge the code before you upload. Upload a changed video and its timings file at about the same time, or the captions are out of step for a short time.

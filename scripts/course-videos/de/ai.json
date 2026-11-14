@@ -1,0 +1,188 @@
+{
+  "station": "ai",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "Every AI product sits on a data platform.",
+          "device": "big",
+          "text": "AI sits on data"
+        },
+        {
+          "say": "So loops now ask data engineers to design the data side of AI.",
+          "device": "card",
+          "label": "The new question",
+          "head": "Design the data side of AI",
+          "headmark": "data side",
+          "headmark_at": "data"
+        },
+        {
+          "say": "Three ideas: embeddings, RAG pipelines, and feature stores.",
+          "device": "list",
+          "label": "Track 17 · AI for data engineering",
+          "items": ["Embeddings", "RAG pipelines", "Feature stores"],
+          "items_at": ["embeddings", "RAG", "feature"]
+        }
+      ]
+    },
+    {
+      "title": "Embeddings and vector search",
+      "check": {
+        "prompt": "What does an embedding do?",
+        "options": [
+          "It compresses a file",
+          "It turns text into numbers that keep the meaning",
+          "It trains a model"
+        ],
+        "answer": 1,
+        "why": "Texts with a similar meaning get vectors that are close together."
+      },
+      "beats": [
+        { "say": "First: embeddings.", "device": "big", "text": "What is an embedding?" },
+        {
+          "say": "An embedding turns a text into a list of numbers. A vector.",
+          "device": "card",
+          "label": "Embedding",
+          "head": "Text becomes a vector",
+          "headmark": "vector",
+          "headmark_at": "vector"
+        },
+        {
+          "say": "Texts with a similar meaning get vectors that sit close together.",
+          "device": "card",
+          "label": "The useful part",
+          "head": "Similar meaning, close together",
+          "headmark": "close together",
+          "headmark_at": "close"
+        },
+        {
+          "say": "A vector index finds the nearest ones fast. It trades a little accuracy for speed.",
+          "device": "card",
+          "label": "Vector index",
+          "head": "Nearest neighbours, fast",
+          "headmark": "fast",
+          "headmark_at": "fast"
+        }
+      ]
+    },
+    {
+      "title": "RAG from document to answer",
+      "check": {
+        "prompt": "In RAG, what happens before the model writes the answer?",
+        "options": [
+          "The model is trained again",
+          "The system retrieves the relevant chunks",
+          "Nothing"
+        ],
+        "answer": 1,
+        "why": "Retrieve first, then generate. The model answers from the chunks it gets."
+      },
+      "beats": [
+        {
+          "say": "Second: RAG. Look it up, then answer.",
+          "device": "big",
+          "text": "Look it up, then answer"
+        },
+        {
+          "say": "Split the documents into chunks. Embed them. Retrieve the best ones. Then generate the answer.",
+          "device": "list",
+          "label": "The pipeline",
+          "items": ["Chunk", "Embed", "Retrieve", "Generate"],
+          "items_at": ["chunks", "Embed", "Retrieve", "generate"]
+        },
+        {
+          "say": "Treat it like any pipeline. It must be incremental, versioned, and safe to run again.",
+          "device": "card",
+          "label": "For a data engineer",
+          "head": "Incremental, versioned, rerunnable",
+          "headmark": "versioned",
+          "headmark_at": "versioned"
+        },
+        {
+          "say": "And measure it. Did we retrieve the right chunks? Was the answer correct?",
+          "device": "card",
+          "label": "Evaluation",
+          "head": "Measure retrieval and answers",
+          "headmark": "Measure",
+          "headmark_at": "measure"
+        }
+      ]
+    },
+    {
+      "title": "Feature stores",
+      "beats": [
+        { "say": "Third: features for a model.", "device": "big", "text": "Features for a model" },
+        {
+          "say": "A feature store serves the same feature for training and for live requests.",
+          "device": "card",
+          "label": "Feature store",
+          "head": "One feature, two uses",
+          "headmark": "two uses",
+          "headmark_at": "same"
+        },
+        {
+          "say": "The trap is to train with data from the future. That is leakage.",
+          "device": "card",
+          "label": "The trap",
+          "head": "Data from the future",
+          "headmark": "future",
+          "headmark_at": "future"
+        },
+        {
+          "say": "So join each row to the feature values known at that moment. Point in time.",
+          "device": "card",
+          "label": "The fix",
+          "head": "A point-in-time join",
+          "headmark": "point-in-time",
+          "headmark_at": "moment"
+        }
+      ]
+    },
+    {
+      "title": "Running it in production",
+      "beats": [
+        {
+          "say": "Last: model calls cost money.",
+          "device": "big",
+          "text": "Model calls cost money"
+        },
+        {
+          "say": "Version the prompts. Cache repeated calls. And trace every request.",
+          "device": "list",
+          "label": "Three habits",
+          "items": ["Version prompts", "Cache repeated calls", "Trace requests"],
+          "items_at": ["Version", "Cache", "trace"]
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Quick recap of AI for data engineering.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "Embeddings keep meaning. RAG retrieves, then generates. And features need point-in-time joins.",
+          "device": "list",
+          "label": "AI for data engineering",
+          "items": [
+            "Embeddings keep meaning",
+            "RAG: retrieve, then generate",
+            "Point-in-time joins"
+          ],
+          "items_at": ["Embeddings", "retrieves", "features"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

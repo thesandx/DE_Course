@@ -1,0 +1,193 @@
+{
+  "station": "lakehouse",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "The same query costs ten times more on a bad table.",
+          "device": "big",
+          "text": "Ten times the cost"
+        },
+        {
+          "say": "Storage choices decide the cost and the speed of everything above them.",
+          "device": "card",
+          "label": "Why it matters",
+          "head": "Storage decides cost and speed",
+          "headmark": "cost and speed",
+          "headmark_at": "cost"
+        },
+        {
+          "say": "Three layers to know: the file, the table format, and the layout.",
+          "device": "list",
+          "label": "Track 11 · Storage and lakehouse",
+          "items": ["The file", "The table format", "The layout"],
+          "items_at": ["file", "format", "layout"]
+        }
+      ]
+    },
+    {
+      "title": "Columnar files",
+      "check": {
+        "prompt": "Why is a Parquet file cheap to scan for analytics?",
+        "options": ["It stores data by column", "It stores data by row", "It has no metadata"],
+        "answer": 0,
+        "why": "A query reads only the columns it needs, and skips row groups with the statistics."
+      },
+      "beats": [
+        { "say": "First: the file. Parquet.", "device": "big", "text": "The Parquet file" },
+        {
+          "say": "Parquet stores data by column, not by row.",
+          "device": "card",
+          "label": "Columnar",
+          "head": "Stored by column",
+          "headmark": "by column",
+          "headmark_at": "column"
+        },
+        {
+          "say": "A query that needs three columns reads only three. The rest stays on disk.",
+          "device": "card",
+          "label": "The win",
+          "head": "Read only what you need",
+          "headmark": "only what you need",
+          "headmark_at": "only"
+        },
+        {
+          "say": "Each block also keeps a minimum and a maximum. So the reader can skip whole blocks.",
+          "device": "card",
+          "label": "Statistics",
+          "head": "Min and max let you skip",
+          "headmark": "skip",
+          "headmark_at": "skip"
+        }
+      ]
+    },
+    {
+      "title": "Table formats",
+      "check": {
+        "prompt": "What does a table format such as Iceberg add to files on object storage?",
+        "options": ["Faster disks", "Transactions and snapshots", "A dashboard"],
+        "answer": 1,
+        "why": "A table format tracks which files make the table, so commits are atomic and you can time travel."
+      },
+      "beats": [
+        {
+          "say": "Second: files alone are not a table.",
+          "device": "big",
+          "text": "Files are not a table"
+        },
+        {
+          "say": "Two jobs write at once. A reader sees half of each. That is a broken table.",
+          "device": "card",
+          "label": "The problem",
+          "head": "Half-written data",
+          "headmark": "Half-written",
+          "headmark_at": "half"
+        },
+        {
+          "say": "A table format keeps a list of the files that make the table, right now.",
+          "device": "card",
+          "label": "Iceberg, Delta, Hudi",
+          "head": "A list of the current files",
+          "headmark": "current files",
+          "headmark_at": "list"
+        },
+        {
+          "say": "A commit swaps that list in one step. So you get transactions, snapshots, and time travel.",
+          "device": "list",
+          "label": "What you get",
+          "items": ["Transactions", "Snapshots", "Time travel"],
+          "items_at": ["transactions", "snapshots", "travel"]
+        }
+      ]
+    },
+    {
+      "title": "Layout and compaction",
+      "beats": [
+        {
+          "say": "Third: lay out the table for its filters.",
+          "device": "big",
+          "text": "Lay it out for filters"
+        },
+        {
+          "say": "Partition by the column people filter on most. Often, that is the date.",
+          "device": "card",
+          "label": "Partition",
+          "head": "Partition by the common filter",
+          "headmark": "common filter",
+          "headmark_at": "filter"
+        },
+        {
+          "say": "But too many partitions give you tiny files. And tiny files are slow.",
+          "device": "card",
+          "label": "The trap",
+          "head": "Too many partitions, tiny files",
+          "headmark": "tiny files",
+          "headmark_at": "tiny"
+        },
+        {
+          "say": "So compact small files into bigger ones, on a schedule.",
+          "device": "card",
+          "label": "The fix",
+          "head": "Compact on a schedule",
+          "headmark": "Compact",
+          "headmark_at": "compact"
+        }
+      ]
+    },
+    {
+      "title": "Warehouse cost",
+      "beats": [
+        {
+          "say": "Last: what do you pay for in BigQuery?",
+          "device": "big",
+          "text": "What do you pay for?"
+        },
+        {
+          "say": "With on-demand pricing, you pay for the bytes a query scans.",
+          "device": "card",
+          "label": "On demand",
+          "head": "You pay for bytes scanned",
+          "headmark": "bytes scanned",
+          "headmark_at": "bytes"
+        },
+        {
+          "say": "So partition and cluster the table. And never select every column.",
+          "device": "card",
+          "label": "Scan less",
+          "head": "Partition, cluster, select less",
+          "headmark": "select less",
+          "headmark_at": "never"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Quick recap of storage and the lakehouse.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "Parquet reads by column. A table format adds transactions. And compact your small files.",
+          "device": "list",
+          "label": "Storage and lakehouse",
+          "items": [
+            "Parquet reads by column",
+            "Table formats add transactions",
+            "Compact small files"
+          ],
+          "items_at": ["Parquet", "format", "compact"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

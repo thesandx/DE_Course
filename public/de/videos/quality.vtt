@@ -1,0 +1,133 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:01.545
+The numbers are wrong.
+
+2
+00:00:01.565 --> 00:00:03.605
+And now it is your problem.
+
+3
+00:00:03.625 --> 00:00:05.555
+Even when another team caused it.
+
+4
+00:00:05.575 --> 00:00:08.715
+At senior level, you own the trust in the data.
+
+5
+00:00:08.735 --> 00:00:14.540
+Three steps: prevent with contracts, detect with tests, and recover from incidents.
+
+6
+00:00:14.560 --> 00:00:16.700
+First: prevent bad data.
+
+7
+00:00:16.720 --> 00:00:19.513
+A data contract is a promise from the producer.
+
+8
+00:00:19.533 --> 00:00:22.510
+These columns, these types, this freshness.
+
+9
+00:00:22.530 --> 00:00:24.622
+To add an optional column is safe.
+
+10
+00:00:24.642 --> 00:00:27.820
+To rename or remove one breaks consumers.
+
+11
+00:00:27.840 --> 00:00:32.770
+So a breaking change gets a new version, and a warning to the consumers.
+
+12
+00:00:32.790 --> 00:00:35.430
+Second: detect it before users do.
+
+13
+00:00:35.450 --> 00:00:37.342
+Write the new data to a staging place.
+
+14
+00:00:37.362 --> 00:00:38.580
+Audit it with checks.
+
+15
+00:00:38.600 --> 00:00:40.640
+Publish only if they pass.
+
+16
+00:00:40.660 --> 00:00:42.915
+So bad data never reaches a dashboard.
+
+17
+00:00:42.935 --> 00:00:46.090
+The old, good data stays in place.
+
+18
+00:00:46.110 --> 00:00:48.600
+Third: what does healthy data mean?
+
+19
+00:00:48.620 --> 00:00:53.360
+Watch four things: freshness, volume, schema, and the values themselves.
+
+20
+00:00:53.380 --> 00:00:55.385
+Then set a target that users feel.
+
+21
+00:00:55.405 --> 00:01:00.485
+For example: ready by seven, on 99 days of 100.
+
+22
+00:01:00.505 --> 00:01:03.095
+Last: the bad data is already out.
+
+23
+00:01:03.115 --> 00:01:04.170
+First contain it.
+
+24
+00:01:04.190 --> 00:01:05.270
+Then fix the cause.
+
+25
+00:01:05.290 --> 00:01:06.270
+Then backfill.
+
+26
+00:01:06.290 --> 00:01:08.355
+Then write down what you learned.
+
+27
+00:01:08.375 --> 00:01:09.705
+Tell the users early.
+
+28
+00:01:09.725 --> 00:01:12.830
+Silence costs more trust than the bug.
+
+29
+00:01:12.850 --> 00:01:15.115
+Quick recap of data quality.
+
+30
+00:01:15.135 --> 00:01:16.540
+Contracts prevent.
+
+31
+00:01:16.560 --> 00:01:18.640
+Write, audit, publish detects.
+
+32
+00:01:18.660 --> 00:01:21.250
+And contain an incident before you fix it.
+
+33
+00:01:21.270 --> 00:01:24.370
+Now start the first lesson below.

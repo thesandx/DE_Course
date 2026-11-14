@@ -1,0 +1,129 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:04.130
+The same query costs ten times more on a bad table.
+
+2
+00:00:04.150 --> 00:00:08.515
+Storage choices decide the cost and the speed of everything above them.
+
+3
+00:00:08.535 --> 00:00:13.215
+Three layers to know: the file, the table format, and the layout.
+
+4
+00:00:13.235 --> 00:00:14.140
+First: the file.
+
+5
+00:00:14.160 --> 00:00:15.400
+Parquet.
+
+6
+00:00:15.420 --> 00:00:18.610
+Parquet stores data by column, not by row.
+
+7
+00:00:18.630 --> 00:00:21.310
+A query that needs three columns reads only three.
+
+8
+00:00:21.330 --> 00:00:23.445
+The rest stays on disk.
+
+9
+00:00:23.465 --> 00:00:26.282
+Each block also keeps a minimum and a maximum.
+
+10
+00:00:26.302 --> 00:00:29.145
+So the reader can skip whole blocks.
+
+11
+00:00:29.165 --> 00:00:31.805
+Second: files alone are not a table.
+
+12
+00:00:31.825 --> 00:00:33.468
+Two jobs write at once.
+
+13
+00:00:33.488 --> 00:00:35.005
+A reader sees half of each.
+
+14
+00:00:35.025 --> 00:00:36.890
+That is a broken table.
+
+15
+00:00:36.910 --> 00:00:41.325
+A table format keeps a list of the files that make the table, right now.
+
+16
+00:00:41.345 --> 00:00:43.550
+A commit swaps that list in one step.
+
+17
+00:00:43.570 --> 00:00:47.750
+So you get transactions, snapshots, and time travel.
+
+18
+00:00:47.770 --> 00:00:50.610
+Third: lay out the table for its filters.
+
+19
+00:00:50.630 --> 00:00:53.347
+Partition by the column people filter on most.
+
+20
+00:00:53.367 --> 00:00:55.445
+Often, that is the date.
+
+21
+00:00:55.465 --> 00:00:57.945
+But too many partitions give you tiny files.
+
+22
+00:00:57.965 --> 00:01:00.030
+And tiny files are slow.
+
+23
+00:01:00.050 --> 00:01:04.230
+So compact small files into bigger ones, on a schedule.
+
+24
+00:01:04.250 --> 00:01:06.840
+Last: what do you pay for in BigQuery?
+
+25
+00:01:06.860 --> 00:01:10.775
+With on-demand pricing, you pay for the bytes a query scans.
+
+26
+00:01:10.795 --> 00:01:12.900
+So partition and cluster the table.
+
+27
+00:01:12.920 --> 00:01:15.725
+And never select every column.
+
+28
+00:01:15.745 --> 00:01:18.385
+Quick recap of storage and the lakehouse.
+
+29
+00:01:18.405 --> 00:01:20.147
+Parquet reads by column.
+
+30
+00:01:20.167 --> 00:01:22.335
+A table format adds transactions.
+
+31
+00:01:22.355 --> 00:01:24.620
+And compact your small files.
+
+32
+00:01:24.640 --> 00:01:27.740
+Now start the first lesson below.

@@ -4,6 +4,8 @@
 - **Date:** 2026-11-13
 - **Deciders:** repository owner
 
+> **Note, 2026-11-14.** The DE course now has one video per track, built and hosted the same way. The decision is unchanged. The paths changed: the scripts are in `scripts/course-videos/<course>/`, the timings are in `lib/course/videos/<course>.ts`, the MP4 files are at `course-videos/<course>/<slug>.mp4`, and the player is `components/course/CourseVideo.tsx`.
+
 ## Context
 
 The owner asked for an explainer video on each section of the GCP course. The video must have a voice and captions, look like a video on a video site, and be simple and interactive. The owner named the [simcraft](https://github.com/dotslashsimran/simcraft) repository as the tool.

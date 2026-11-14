@@ -1,0 +1,133 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:03.780
+Every pipeline answer ends with one question.
+
+2
+00:00:03.800 --> 00:00:06.815
+How is it scheduled, retried, and backfilled?
+
+3
+00:00:06.835 --> 00:00:09.840
+Three ideas answer it: what an orchestrator does,
+
+4
+00:00:09.860 --> 00:00:13.215
+data intervals, and idempotent tasks.
+
+5
+00:00:13.235 --> 00:00:15.700
+First: what is an orchestrator for?
+
+6
+00:00:15.720 --> 00:00:17.325
+It starts tasks on time.
+
+7
+00:00:17.345 --> 00:00:18.550
+It runs them in order.
+
+8
+00:00:18.570 --> 00:00:20.025
+It retries failures.
+
+9
+00:00:20.045 --> 00:00:22.035
+And it shows you what happened.
+
+10
+00:00:22.055 --> 00:00:24.135
+It should not do the heavy work itself.
+
+11
+00:00:24.155 --> 00:00:27.485
+It tells Spark or the warehouse to do it.
+
+12
+00:00:27.505 --> 00:00:30.595
+Second: the idea people get wrong in Airflow.
+
+13
+00:00:30.615 --> 00:00:32.570
+A daily run does not mean today.
+
+14
+00:00:32.590 --> 00:00:35.005
+It covers one full day of data.
+
+15
+00:00:35.025 --> 00:00:37.805
+So the run for Monday starts after Monday ends.
+
+16
+00:00:37.825 --> 00:00:39.890
+The data is complete then.
+
+17
+00:00:39.910 --> 00:00:41.990
+Use the interval dates in your queries.
+
+18
+00:00:42.010 --> 00:00:44.840
+Never use the clock time of now.
+
+19
+00:00:44.860 --> 00:00:47.075
+Third: any run can run again.
+
+20
+00:00:47.095 --> 00:00:50.175
+A retry or a backfill runs the same task twice.
+
+21
+00:00:50.195 --> 00:00:52.335
+The result must be the same.
+
+22
+00:00:52.355 --> 00:00:54.172
+An append adds the rows again.
+
+23
+00:00:54.192 --> 00:00:55.995
+Now you have duplicates.
+
+24
+00:00:56.015 --> 00:00:58.395
+So overwrite the partition of that interval.
+
+25
+00:00:58.415 --> 00:01:00.920
+Or use a merge on a key.
+
+26
+00:01:00.940 --> 00:01:03.805
+Last: Airflow, Prefect, or another tool?
+
+27
+00:01:03.825 --> 00:01:08.190
+Airflow is the standard, with a schedule and a graph you define first.
+
+28
+00:01:08.210 --> 00:01:13.740
+Prefect runs normal Python functions, and the flow can change while it runs.
+
+29
+00:01:13.760 --> 00:01:15.925
+Quick recap of orchestration.
+
+30
+00:01:15.945 --> 00:01:17.413
+The orchestrator directs.
+
+31
+00:01:17.433 --> 00:01:19.050
+A run covers an interval.
+
+32
+00:01:19.070 --> 00:01:21.510
+And every task can run twice.
+
+33
+00:01:21.530 --> 00:01:24.630
+Now start the first lesson below.

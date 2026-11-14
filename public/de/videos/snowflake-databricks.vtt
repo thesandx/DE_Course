@@ -1,0 +1,145 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:03.555
+Most job posts name Snowflake or Databricks.
+
+2
+00:00:03.575 --> 00:00:05.455
+Interviewers go past the brochure.
+
+3
+00:00:05.475 --> 00:00:08.115
+They ask how it works, and what it costs.
+
+4
+00:00:08.135 --> 00:00:10.465
+So learn each platform in one picture.
+
+5
+00:00:10.485 --> 00:00:12.815
+Then learn how to choose.
+
+6
+00:00:12.835 --> 00:00:15.375
+First: Snowflake has three layers.
+
+7
+00:00:15.395 --> 00:00:16.837
+Storage holds the data.
+
+8
+00:00:16.857 --> 00:00:19.038
+Virtual warehouses run the queries.
+
+9
+00:00:19.058 --> 00:00:21.960
+A services layer plans and secures.
+
+10
+00:00:21.980 --> 00:00:23.873
+Storage and compute are separate.
+
+11
+00:00:23.893 --> 00:00:26.520
+So each team can have its own warehouse.
+
+12
+00:00:26.540 --> 00:00:29.833
+Data sits in small blocks called micro-partitions.
+
+13
+00:00:29.853 --> 00:00:32.630
+Each one knows its minimum and maximum.
+
+14
+00:00:32.650 --> 00:00:35.380
+A good filter lets Snowflake skip most blocks.
+
+15
+00:00:35.400 --> 00:00:37.355
+That is pruning.
+
+16
+00:00:37.375 --> 00:00:40.465
+Second: three Snowflake features they ask about.
+
+17
+00:00:40.485 --> 00:00:44.825
+Time travel reads a table as it was, some hours or days ago.
+
+18
+00:00:44.845 --> 00:00:47.100
+A clone copies a table in seconds.
+
+19
+00:00:47.120 --> 00:00:50.660
+It shares the same blocks, so it costs nothing at first.
+
+20
+00:00:50.680 --> 00:00:55.085
+And Snowpipe loads new files as they land, with no schedule.
+
+21
+00:00:55.105 --> 00:00:57.520
+Third: Databricks is a lakehouse.
+
+22
+00:00:57.540 --> 00:01:01.505
+Your data stays as Delta tables, in your own cloud storage.
+
+23
+00:01:01.525 --> 00:01:05.340
+Spark clusters and SQL warehouses run on top of it.
+
+24
+00:01:05.360 --> 00:01:11.065
+And Unity Catalog governs it all: names, grants, and lineage, in one place.
+
+25
+00:01:11.085 --> 00:01:13.050
+Last: which one do you pick?
+
+26
+00:01:13.070 --> 00:01:14.850
+Mostly SQL and analysts?
+
+27
+00:01:14.870 --> 00:01:17.135
+Snowflake is simple to run.
+
+28
+00:01:17.155 --> 00:01:19.448
+Heavy Spark, streaming, or machine learning?
+
+29
+00:01:19.468 --> 00:01:21.370
+Databricks fits better.
+
+30
+00:01:21.390 --> 00:01:23.670
+In the interview, give one recommendation.
+
+31
+00:01:23.690 --> 00:01:25.970
+Then say its trade-off.
+
+32
+00:01:25.990 --> 00:01:28.405
+Quick recap of the two platforms.
+
+33
+00:01:28.425 --> 00:01:30.818
+Snowflake separates storage and compute.
+
+34
+00:01:30.838 --> 00:01:32.930
+Databricks is Delta plus Spark.
+
+35
+00:01:32.950 --> 00:01:34.990
+And always name the trade-off.
+
+36
+00:01:35.010 --> 00:01:38.110
+Now start the first lesson below.

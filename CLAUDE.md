@@ -222,7 +222,7 @@ browser bundle.
 | `firebase-admin.client.ts` | The lazy Admin app. **Auth only** — never Firestore or Storage              |
 | `openrouter.service.ts`    | The AI doubt helper's model calls. Holds the OpenRouter key; streams text   |
 | `notes.service.ts`         | Chapter notes at `notebooks/{uid}/notes/{key}`. The newer edit wins         |
-| `course-video.service.ts`  | Signed read URLs for the station videos in the bucket. `null` when absent   |
+| `course-video.service.ts`  | Signed read URLs for the course videos in the bucket. `null` when absent    |
 | `lib/storage-paths.ts`     | Path construction and upload rules — pure, so it is tested without a bucket |
 | `lib/document-ids.ts`      | Guards a caller-supplied document id against hotspot shapes — pure          |
 | `lib/session-cookie.ts`    | The cookie's name and attributes — pure                                     |

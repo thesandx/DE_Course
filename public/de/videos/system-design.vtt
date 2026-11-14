@@ -1,0 +1,145 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:03.530
+Design the analytics for every trip in the city.
+
+2
+00:00:03.550 --> 00:00:05.880
+The design round carries the most weight.
+
+3
+00:00:05.900 --> 00:00:08.440
+It decides the level you are offered.
+
+4
+00:00:08.460 --> 00:00:13.240
+You need three things: a framework, the building blocks, and correctness.
+
+5
+00:00:13.260 --> 00:00:16.175
+First: a framework for the 45 minutes.
+
+6
+00:00:16.195 --> 00:00:17.762
+Ask for the requirements.
+
+7
+00:00:17.782 --> 00:00:19.038
+Estimate the size.
+
+8
+00:00:19.058 --> 00:00:20.525
+Draw the simple design.
+
+9
+00:00:20.545 --> 00:00:22.610
+Then go deep on one part.
+
+10
+00:00:22.630 --> 00:00:23.960
+Ask three things early.
+
+11
+00:00:23.980 --> 00:00:24.535
+Who uses it?
+
+12
+00:00:24.555 --> 00:00:25.185
+How fresh?
+
+13
+00:00:25.205 --> 00:00:26.395
+How big?
+
+14
+00:00:26.415 --> 00:00:27.933
+Do not start with the tools.
+
+15
+00:00:27.953 --> 00:00:30.520
+Start with what the users need.
+
+16
+00:00:30.540 --> 00:00:33.480
+Second: the same blocks, in every design.
+
+17
+00:00:33.500 --> 00:00:34.617
+Ingest the events.
+
+18
+00:00:34.637 --> 00:00:35.430
+Store them raw.
+
+19
+00:00:35.450 --> 00:00:36.355
+Process them.
+
+20
+00:00:36.375 --> 00:00:38.190
+Then serve the result.
+
+21
+00:00:38.210 --> 00:00:40.177
+Pick the serving store by the read.
+
+22
+00:00:40.197 --> 00:00:43.615
+A dashboard and a lookup need different stores.
+
+23
+00:00:43.635 --> 00:00:45.825
+Third: what goes wrong at scale?
+
+24
+00:00:45.845 --> 00:00:47.012
+Events come twice.
+
+25
+00:00:47.032 --> 00:00:48.200
+Events come late.
+
+26
+00:00:48.220 --> 00:00:50.760
+And one day, you must replay a week.
+
+27
+00:00:50.780 --> 00:00:54.895
+So give each event a unique key, and make the writes idempotent.
+
+28
+00:00:54.915 --> 00:00:55.920
+And reconcile.
+
+29
+00:00:55.940 --> 00:00:59.195
+Compare the counts with the source, every day.
+
+30
+00:00:59.215 --> 00:01:02.105
+Last: what lifts a design to staff level?
+
+31
+00:01:02.125 --> 00:01:06.580
+Add three things: how you migrate, what it costs, and how it fails.
+
+32
+00:01:06.600 --> 00:01:09.265
+Quick recap of data system design.
+
+33
+00:01:09.285 --> 00:01:10.965
+Requirements before tools.
+
+34
+00:01:10.985 --> 00:01:11.990
+Four layers.
+
+35
+00:01:12.010 --> 00:01:14.700
+And design for duplicates and late data.
+
+36
+00:01:14.720 --> 00:01:17.820
+Now start the first lesson below.

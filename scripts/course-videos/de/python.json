@@ -1,0 +1,189 @@
+{
+  "station": "python",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "The coding round wants code you could ship.",
+          "device": "big",
+          "text": "Code you could ship"
+        },
+        {
+          "say": "Not clever code. Clean code, with the right speed, that handles failure.",
+          "device": "card",
+          "label": "What they score",
+          "head": "Clean, fast enough, safe",
+          "headmark": "safe",
+          "headmark_at": "failure"
+        },
+        {
+          "say": "Three habits: pick the right structure, stream big data, and write for production.",
+          "device": "list",
+          "label": "Track 4 · Python and data coding",
+          "items": ["Pick the right structure", "Stream big data", "Write for production"],
+          "items_at": ["structure", "stream", "production"]
+        }
+      ]
+    },
+    {
+      "title": "The right structure",
+      "check": {
+        "prompt": "You must check if an id is in a collection of ten million ids. Which structure?",
+        "options": ["A list", "A set", "A deque"],
+        "answer": 1,
+        "why": "A set uses a hash, so the check takes one step. A list reads every item."
+      },
+      "beats": [
+        {
+          "say": "First: pick the right data structure.",
+          "device": "big",
+          "text": "The right structure"
+        },
+        {
+          "say": "To check if a value is in a list, Python reads the whole list.",
+          "device": "card",
+          "label": "A list",
+          "head": "Search in a list: slow",
+          "headmark": "slow",
+          "headmark_at": "whole"
+        },
+        {
+          "say": "A set or a dict uses a hash. The same check takes one step.",
+          "device": "card",
+          "label": "A set or a dict",
+          "head": "Search in a set: one step",
+          "headmark": "one step",
+          "headmark_at": "one"
+        },
+        {
+          "say": "Use a dict to count. A deque for a queue. And a heap for the top few items.",
+          "device": "list",
+          "label": "Reach for these",
+          "items": ["dict: count and look up", "deque: a queue", "heap: the top few"],
+          "items_at": ["dict", "deque", "heap"]
+        }
+      ]
+    },
+    {
+      "title": "Data that does not fit",
+      "beats": [
+        {
+          "say": "Second: the file is bigger than memory.",
+          "device": "big",
+          "text": "Bigger than memory"
+        },
+        {
+          "say": "Do not load it all. A generator gives you one row at a time.",
+          "device": "card",
+          "label": "Generators",
+          "head": "One row at a time",
+          "headmark": "One row at a time",
+          "headmark_at": "one"
+        },
+        {
+          "say": "Memory stays flat, even for a file of 100 gigabytes.",
+          "device": "card",
+          "label": "The result",
+          "head": "Constant memory",
+          "headmark": "Constant memory",
+          "headmark_at": "flat"
+        }
+      ]
+    },
+    {
+      "title": "Production habits",
+      "check": {
+        "prompt": "What does idempotent mean for a task?",
+        "options": [
+          "It runs only once",
+          "It runs fast",
+          "Run it twice, and the result is the same"
+        ],
+        "answer": 2,
+        "why": "An idempotent task is safe to retry: a second run does not change the result."
+      },
+      "beats": [
+        {
+          "say": "Third: write it like production code.",
+          "device": "big",
+          "text": "Like production code"
+        },
+        {
+          "say": "A network call can fail. So retry, and wait longer after each try.",
+          "device": "card",
+          "label": "Retries",
+          "head": "Retry with backoff",
+          "headmark": "backoff",
+          "headmark_at": "longer"
+        },
+        {
+          "say": "And make the task idempotent. Run it twice, and the result is the same.",
+          "device": "card",
+          "label": "Idempotent",
+          "head": "Run twice, same result",
+          "headmark": "same result",
+          "headmark_at": "same"
+        },
+        {
+          "say": "Then add one small test. It shows the interviewer you check your own work.",
+          "device": "card",
+          "label": "Tests",
+          "head": "One small test",
+          "headmark": "One small test",
+          "headmark_at": "test"
+        }
+      ]
+    },
+    {
+      "title": "Threads or processes",
+      "beats": [
+        {
+          "say": "Last: how do you make Python faster?",
+          "device": "big",
+          "text": "Make Python faster"
+        },
+        {
+          "say": "For waiting on a network or a disk, use threads or asyncio.",
+          "device": "card",
+          "label": "Waiting work",
+          "head": "Waiting: threads or asyncio",
+          "headmark": "threads or asyncio",
+          "headmark_at": "threads"
+        },
+        {
+          "say": "For heavy maths on the CPU, use processes. The interpreter lock blocks threads there.",
+          "device": "card",
+          "label": "CPU work",
+          "head": "CPU: processes",
+          "headmark": "CPU: processes",
+          "headmark_at": "processes"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Quick recap of Python for data coding.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "Hash for lookups. Generators for big files. And retries with idempotent tasks.",
+          "device": "list",
+          "label": "Python and data coding",
+          "items": ["Hash for lookups", "Generators for big files", "Retries, idempotent tasks"],
+          "items_at": ["Hash", "Generators", "retries"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

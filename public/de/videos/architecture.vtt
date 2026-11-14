@@ -1,0 +1,137 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:01.345
+Name a pattern.
+
+2
+00:00:01.365 --> 00:00:02.805
+Now defend it.
+
+3
+00:00:02.825 --> 00:00:05.905
+A staff answer knows the problem each pattern solves.
+
+4
+00:00:05.925 --> 00:00:07.490
+And what it costs.
+
+5
+00:00:07.510 --> 00:00:10.190
+Four patterns come up most: Lambda and Kappa,
+
+6
+00:00:10.210 --> 00:00:13.890
+medallion layers, the outbox, and data mesh.
+
+7
+00:00:13.910 --> 00:00:16.150
+First: batch, stream, or both?
+
+8
+00:00:16.170 --> 00:00:17.812
+Lambda runs two paths.
+
+9
+00:00:17.832 --> 00:00:21.360
+A fast stream for now, and a batch for the correct result.
+
+10
+00:00:21.380 --> 00:00:25.520
+The cost: you write the same logic twice, and keep both in step.
+
+11
+00:00:25.540 --> 00:00:27.295
+Kappa keeps only the stream.
+
+12
+00:00:27.315 --> 00:00:30.320
+To fix history, you replay the log.
+
+13
+00:00:30.340 --> 00:00:32.780
+Second: bronze, silver, gold.
+
+14
+00:00:32.800 --> 00:00:35.105
+Bronze is the raw data, as it arrived.
+
+15
+00:00:35.125 --> 00:00:36.492
+Silver is clean.
+
+16
+00:00:36.512 --> 00:00:38.715
+Gold is ready for the business.
+
+17
+00:00:38.735 --> 00:00:40.365
+Keep bronze unchanged.
+
+18
+00:00:40.385 --> 00:00:43.915
+Then you can rebuild silver and gold at any time.
+
+19
+00:00:43.935 --> 00:00:47.275
+Third: save to the database, and publish an event.
+
+20
+00:00:47.295 --> 00:00:49.800
+If you do the two steps apart, one can fail.
+
+21
+00:00:49.820 --> 00:00:51.885
+Then the systems disagree.
+
+22
+00:00:51.905 --> 00:00:55.745
+So write the event to an outbox table, in the same transaction.
+
+23
+00:00:55.765 --> 00:00:58.770
+A separate process reads the outbox and publishes.
+
+24
+00:00:58.790 --> 00:01:00.970
+Nothing is lost.
+
+25
+00:01:00.990 --> 00:01:03.080
+Last: who owns the data?
+
+26
+00:01:03.100 --> 00:01:07.290
+In a data mesh, each domain team owns its data as a product.
+
+27
+00:01:07.310 --> 00:01:08.715
+It fits a large company.
+
+28
+00:01:08.735 --> 00:01:10.965
+For a small team, it is too much overhead.
+
+29
+00:01:10.985 --> 00:01:12.715
+Say no.
+
+30
+00:01:12.735 --> 00:01:14.800
+Quick recap of the patterns.
+
+31
+00:01:14.820 --> 00:01:16.712
+Lambda costs two code paths.
+
+32
+00:01:16.732 --> 00:01:17.825
+Keep bronze raw.
+
+33
+00:01:17.845 --> 00:01:20.185
+And use an outbox for two writes.
+
+34
+00:01:20.205 --> 00:01:23.305
+Now start the first lesson below.

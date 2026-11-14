@@ -1,0 +1,141 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:01.945
+Your pipeline is slow.
+
+2
+00:00:01.965 --> 00:00:04.605
+But the cause is inside the database.
+
+3
+00:00:04.625 --> 00:00:06.330
+Why does change capture lag?
+
+4
+00:00:06.350 --> 00:00:08.840
+Why does a replica return old rows?
+
+5
+00:00:08.860 --> 00:00:14.840
+Three ideas answer most of them: the storage engine, transactions, and replication.
+
+6
+00:00:14.860 --> 00:00:17.475
+First: how does a database store rows?
+
+7
+00:00:17.495 --> 00:00:19.837
+A B-tree keeps data sorted in pages.
+
+8
+00:00:19.857 --> 00:00:21.050
+Reads are fast.
+
+9
+00:00:21.070 --> 00:00:23.635
+Each write updates a page in place.
+
+10
+00:00:23.655 --> 00:00:25.423
+An LSM-tree only appends.
+
+11
+00:00:25.443 --> 00:00:26.948
+Writes are very fast.
+
+12
+00:00:26.968 --> 00:00:29.895
+Later, it merges files in the background.
+
+13
+00:00:29.915 --> 00:00:31.807
+So: many reads, pick a B-tree.
+
+14
+00:00:31.827 --> 00:00:34.920
+Very heavy writes, pick an LSM-tree.
+
+15
+00:00:34.940 --> 00:00:37.655
+Second: how does a database stay correct?
+
+16
+00:00:37.675 --> 00:00:41.965
+Before it changes any data, the database writes the change to a log.
+
+17
+00:00:41.985 --> 00:00:44.165
+After a crash, it replays the log.
+
+18
+00:00:44.185 --> 00:00:46.575
+Nothing that was committed is lost.
+
+19
+00:00:46.595 --> 00:00:49.363
+Change data capture reads that same log.
+
+20
+00:00:49.383 --> 00:00:52.925
+That is why CDC does not load the tables.
+
+21
+00:00:52.945 --> 00:00:55.860
+Third: copies of the data, on other machines.
+
+22
+00:00:55.880 --> 00:00:57.398
+A leader takes the writes.
+
+23
+00:00:57.418 --> 00:00:59.920
+Replicas copy them, a little later.
+
+24
+00:00:59.940 --> 00:01:02.283
+So a read from a replica can be stale.
+
+25
+00:01:02.303 --> 00:01:04.705
+This is called replication lag.
+
+26
+00:01:04.725 --> 00:01:10.280
+And when the network splits, you must choose: stay consistent, or stay available.
+
+27
+00:01:10.300 --> 00:01:13.115
+Last: read from a source without hurting it.
+
+28
+00:01:13.135 --> 00:01:15.115
+A full dump is simple but heavy.
+
+29
+00:01:15.135 --> 00:01:17.503
+An updated-at filter misses deletes.
+
+30
+00:01:17.523 --> 00:01:20.840
+Log-based CDC sees everything.
+
+31
+00:01:20.860 --> 00:01:23.600
+Quick recap of database foundations.
+
+32
+00:01:23.620 --> 00:01:26.075
+B-tree for reads, LSM for writes.
+
+33
+00:01:26.095 --> 00:01:27.400
+The log comes first.
+
+34
+00:01:27.420 --> 00:01:29.210
+And replicas lag.
+
+35
+00:01:29.230 --> 00:01:32.330
+Now start the first lesson below.

@@ -1,16 +1,17 @@
 import 'server-only';
 
-import { stationVideo, videoObjectPath } from '@/lib/course/gcp/videos';
+import { courseVideo, videoObjectPath } from '@/lib/course/videos';
 import { logger } from '@/lib/logger';
 import { getBucket } from '@/services/storage.client';
 import { createSignedReadUrl } from '@/services/storage.service';
+import type { VideoCourse } from '@/types/video';
 
 /**
- * Station explainer videos, read from the app bucket.
+ * Course explainer videos, read from the app bucket.
  *
- * The MP4 files live in Cloud Storage at `course-videos/gcp/<station>.mp4`,
- * not in the repository and not in the container image: the 19 files are about
- * 80 MB. The bucket is private, so the page gets a signed URL for each view
+ * The MP4 files live in Cloud Storage at `course-videos/<course>/<slug>.mp4`,
+ * not in the repository and not in the container image: the files are about
+ * 140 MB. The bucket is private, so the page gets a signed URL for each view
  * and the browser streams the file straight from Google. See ADR-0013.
  *
  * A station page must never fail because of its video. Every failure here
@@ -42,7 +43,7 @@ async function videoExists(path: string, now: number): Promise<boolean> {
   } catch (error) {
     // Local development and CI have no bucket. That is a normal state, not an
     // incident, so it is a warning, and it is remembered like a missing file.
-    logger.warn('Could not look for a station video', {
+    logger.warn('Could not look for a course video', {
       path,
       reason: error instanceof Error ? error.message : String(error),
     });
@@ -52,19 +53,21 @@ async function videoExists(path: string, now: number): Promise<boolean> {
 }
 
 /**
- * A signed URL for the video of a station, or `null` when the station has no
- * video the browser can play.
+ * A signed URL for the video of a GCP station or a DE track, or `null` when it
+ * has no video the browser can play.
  *
- * @param station The station slug.
- * @param now     The clock, in milliseconds. A test passes its own.
+ * @param course The course of the video.
+ * @param slug   The station slug or the track slug.
+ * @param now    The clock, in milliseconds. A test passes its own.
  */
-export async function getStationVideoUrl(
-  station: string,
+export async function getCourseVideoUrl(
+  course: VideoCourse,
+  slug: string,
   now: number = Date.now(),
 ): Promise<string | null> {
-  if (stationVideo(station) === undefined) return null;
+  if (courseVideo(course, slug) === undefined) return null;
 
-  const path = videoObjectPath(station);
+  const path = videoObjectPath(course, slug);
   if (!(await videoExists(path, now))) return null;
 
   try {
