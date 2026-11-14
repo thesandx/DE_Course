@@ -1,0 +1,160 @@
+{
+  "station": "dsa",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "One classic coding round sits in most loops.",
+          "device": "big",
+          "text": "The classic coding round"
+        },
+        {
+          "say": "It is a filter. A great design round does not save a failed coding round.",
+          "device": "card",
+          "label": "Why it matters",
+          "head": "A filter round",
+          "headmark": "filter",
+          "headmark_at": "filter"
+        },
+        {
+          "say": "The good news: most questions come from a small set of patterns.",
+          "device": "card",
+          "label": "The good news",
+          "head": "A small set of patterns",
+          "headmark": "small set",
+          "headmark_at": "small"
+        }
+      ]
+    },
+    {
+      "title": "Read the input size",
+      "check": {
+        "prompt": "The input has one million items. Which solution does the interviewer expect?",
+        "options": ["Two nested loops", "One pass, or a sort", "Any solution"],
+        "answer": 1,
+        "why": "Two nested loops over a million items are a trillion steps. One pass or a sort is the target."
+      },
+      "beats": [
+        { "say": "First: read the input size.", "device": "big", "text": "Read the input size" },
+        {
+          "say": "The size tells you the speed the interviewer wants.",
+          "device": "card",
+          "label": "A hidden hint",
+          "head": "The size is a hint",
+          "headmark": "hint",
+          "headmark_at": "size"
+        },
+        {
+          "say": "Up to a thousand items, two loops are fine. Up to a million, you need one pass, or a sort.",
+          "device": "list",
+          "label": "Size to speed",
+          "items": ["About 1,000: two loops", "About 1,000,000: one pass or a sort"],
+          "items_at": ["thousand", "million"]
+        }
+      ]
+    },
+    {
+      "title": "One-pass patterns",
+      "check": {
+        "prompt": "Find the longest part of a string with no repeated letter. Which pattern?",
+        "options": ["Sliding window", "Topological sort", "A heap"],
+        "answer": 0,
+        "why": "A window grows to the right, and shrinks from the left when a letter repeats."
+      },
+      "beats": [
+        { "say": "Second: solve it in one pass.", "device": "big", "text": "Solve it in one pass" },
+        {
+          "say": "A hash map remembers what you saw. So you never search the array again.",
+          "device": "card",
+          "label": "Hash map",
+          "head": "Remember what you saw",
+          "headmark": "Remember",
+          "headmark_at": "remembers"
+        },
+        {
+          "say": "Two pointers walk in from both ends of a sorted array.",
+          "device": "card",
+          "label": "Two pointers",
+          "head": "Walk in from both ends",
+          "headmark": "both ends",
+          "headmark_at": "both"
+        },
+        {
+          "say": "A sliding window grows and shrinks over the array. Use it for the longest or the shortest part.",
+          "device": "card",
+          "label": "Sliding window",
+          "head": "Grow and shrink a window",
+          "headmark": "window",
+          "headmark_at": "window"
+        }
+      ]
+    },
+    {
+      "title": "More patterns",
+      "beats": [
+        {
+          "say": "Third: a few more patterns to know.",
+          "device": "big",
+          "text": "More patterns to know"
+        },
+        {
+          "say": "A stack finds the nearest match. A heap keeps the top k. Binary search cuts the space in half.",
+          "device": "list",
+          "label": "Three tools",
+          "items": ["Stack: nearest match", "Heap: top k", "Binary search: cut in half"],
+          "items_at": ["stack", "heap", "Binary"]
+        },
+        {
+          "say": "For tasks that depend on other tasks, sort the graph. That is topological sort.",
+          "device": "card",
+          "label": "Graphs",
+          "head": "Order tasks: topological sort",
+          "headmark": "topological sort",
+          "headmark_at": "topological"
+        }
+      ]
+    },
+    {
+      "title": "The 45 minutes",
+      "beats": [
+        {
+          "say": "Last: a method for the 45 minutes.",
+          "device": "big",
+          "text": "A method for 45 minutes"
+        },
+        {
+          "say": "Restate the problem. Give a simple solution first. Improve it. Then test with a small example.",
+          "device": "list",
+          "label": "Every time",
+          "items": ["Restate", "Simple solution first", "Improve", "Test"],
+          "items_at": ["Restate", "simple", "Improve", "test"]
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Quick recap of the coding round.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "Read the size. Know the patterns. And always say the simple solution first.",
+          "device": "list",
+          "label": "Coding rounds",
+          "items": ["Read the input size", "Know the patterns", "Simple solution first"],
+          "items_at": ["size", "patterns", "simple"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

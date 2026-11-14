@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { chapterAt, checkReached, cueAt, formatClock } from '@/lib/course/gcp/videos/timeline';
-import type { VideoCheck } from '@/types/gcp';
+import { chapterAt, checkReached, cueAt, formatClock } from '@/lib/course/videos/timeline';
+import type { VideoCheck } from '@/types/video';
 
 const chapters = [
   { title: 'The mission', start: 0.3 },

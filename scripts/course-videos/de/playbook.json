@@ -1,0 +1,163 @@
+{
+  "station": "playbook",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "You gave the right answer. And you still got no offer.",
+          "device": "big",
+          "text": "Right answer, no offer"
+        },
+        {
+          "say": "Why? The interviewer could not write down proof that you are senior.",
+          "device": "card",
+          "label": "The reason",
+          "head": "No written proof of seniority",
+          "headmark": "written proof",
+          "headmark_at": "proof"
+        },
+        {
+          "say": "This track fixes that with three habits: show signal, talk out loud, and use numbers.",
+          "device": "list",
+          "label": "Track 1 · The senior loop playbook",
+          "items": ["Show senior signal", "Talk out loud", "Use numbers"],
+          "items_at": ["signal", "talk", "numbers"]
+        }
+      ]
+    },
+    {
+      "title": "How a loop is scored",
+      "check": {
+        "prompt": "Your answer was correct, but you said almost nothing. How does the round count?",
+        "options": ["As a strong round", "As a weak round", "It does not count"],
+        "answer": 1,
+        "why": "The interviewer writes down evidence. With no evidence, the report is weak, even if you were right."
+      },
+      "beats": [
+        {
+          "say": "First: how is a senior loop scored?",
+          "device": "big",
+          "text": "How a loop is scored"
+        },
+        {
+          "say": "Each interviewer writes a short report. A group reads those reports and decides.",
+          "device": "card",
+          "label": "After your rounds",
+          "head": "Written feedback decides",
+          "headmark": "Written feedback",
+          "headmark_at": "report"
+        },
+        {
+          "say": "So a round with no clear evidence counts as a weak round. Even if you were right.",
+          "device": "card",
+          "label": "The rule",
+          "head": "No evidence means a weak round",
+          "headmark": "No evidence",
+          "headmark_at": "evidence"
+        }
+      ]
+    },
+    {
+      "title": "Senior signal",
+      "beats": [
+        {
+          "say": "Second: what does senior signal sound like?",
+          "device": "big",
+          "text": "What senior sounds like"
+        },
+        {
+          "say": "A mid-level answer solves the task. A senior answer also explains the trade-off.",
+          "device": "card",
+          "label": "The difference",
+          "head": "Solve it, then explain the trade-off",
+          "headmark": "trade-off",
+          "headmark_at": "trade-off"
+        },
+        {
+          "say": "Ask about scale first. Name the failure cases. And say what you would monitor.",
+          "device": "list",
+          "label": "Three easy signals",
+          "items": ["Ask about scale", "Name the failure cases", "Say what you monitor"],
+          "items_at": ["scale", "failure", "monitor"]
+        }
+      ]
+    },
+    {
+      "title": "Run the round out loud",
+      "check": {
+        "prompt": "What is the first step of every round?",
+        "options": ["Start to write code", "Clarify the question", "Test an edge case"],
+        "answer": 1,
+        "why": "Clarify first. Then state the plan, build it, and test it."
+      },
+      "beats": [
+        { "say": "Third: run every round out loud.", "device": "big", "text": "Run it out loud" },
+        {
+          "say": "Clarify the question. State your plan. Build it. Then test it with an edge case.",
+          "device": "list",
+          "label": "One structure for every round",
+          "items": ["Clarify", "Plan", "Build", "Test"],
+          "items_at": ["Clarify", "plan", "Build", "test"]
+        },
+        {
+          "say": "Silence gives the interviewer nothing to write. So think in words.",
+          "device": "card",
+          "label": "Remember",
+          "head": "Silence writes nothing",
+          "headmark": "Silence",
+          "headmark_at": "Silence"
+        }
+      ]
+    },
+    {
+      "title": "Numbers to estimate with",
+      "beats": [
+        {
+          "say": "Last: know a few numbers by heart.",
+          "device": "big",
+          "text": "Numbers by heart"
+        },
+        {
+          "say": "One day has about 86,400 seconds. Round it to 100,000 for quick maths.",
+          "device": "stat",
+          "value": 86400,
+          "sub": "seconds in a day",
+          "submark": "seconds"
+        },
+        {
+          "say": "With that, you can turn events per day into events per second, in your head.",
+          "device": "card",
+          "label": "Why it helps",
+          "head": "Per day to per second, fast",
+          "headmark": "per second",
+          "headmark_at": "second"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Quick recap of the playbook.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "Leave written evidence. Explain the trade-off. And run the round out loud, with numbers.",
+          "device": "list",
+          "label": "The playbook",
+          "items": ["Leave written evidence", "Explain the trade-off", "Out loud, with numbers"],
+          "items_at": ["evidence", "trade-off", "loud"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,193 @@
+{
+  "station": "orchestration",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "Every pipeline answer ends with one question.",
+          "device": "big",
+          "text": "One question at the end"
+        },
+        {
+          "say": "How is it scheduled, retried, and backfilled?",
+          "device": "card",
+          "label": "The question",
+          "head": "Scheduled, retried, backfilled?",
+          "headmark": "backfilled?",
+          "headmark_at": "backfilled"
+        },
+        {
+          "say": "Three ideas answer it: what an orchestrator does, data intervals, and idempotent tasks.",
+          "device": "list",
+          "label": "Track 8 · Orchestration",
+          "items": ["What an orchestrator does", "Data intervals", "Idempotent tasks"],
+          "items_at": ["orchestrator", "intervals", "idempotent"]
+        }
+      ]
+    },
+    {
+      "title": "What an orchestrator does",
+      "beats": [
+        {
+          "say": "First: what is an orchestrator for?",
+          "device": "big",
+          "text": "What is it for?"
+        },
+        {
+          "say": "It starts tasks on time. It runs them in order. It retries failures. And it shows you what happened.",
+          "device": "list",
+          "label": "Four jobs",
+          "items": ["Schedule", "Order", "Retry", "Observe"],
+          "items_at": ["time", "order", "retries", "shows"]
+        },
+        {
+          "say": "It should not do the heavy work itself. It tells Spark or the warehouse to do it.",
+          "device": "card",
+          "label": "The rule",
+          "head": "It directs. It does not lift.",
+          "headmark": "It directs.",
+          "headmark_at": "tells"
+        }
+      ]
+    },
+    {
+      "title": "Data intervals",
+      "check": {
+        "prompt": "An Airflow run has the logical date of Monday, on a daily schedule. When does it start?",
+        "options": ["Monday morning", "After Monday ends", "Sunday night"],
+        "answer": 1,
+        "why": "A run covers a data interval. It starts when the interval is complete."
+      },
+      "beats": [
+        {
+          "say": "Second: the idea people get wrong in Airflow.",
+          "device": "big",
+          "text": "The Airflow idea"
+        },
+        {
+          "say": "A daily run does not mean today. It covers one full day of data.",
+          "device": "card",
+          "label": "Data interval",
+          "head": "A run covers an interval",
+          "headmark": "interval",
+          "headmark_at": "covers"
+        },
+        {
+          "say": "So the run for Monday starts after Monday ends. The data is complete then.",
+          "device": "card",
+          "label": "When it runs",
+          "head": "Monday runs after Monday ends",
+          "headmark": "after Monday ends",
+          "headmark_at": "after"
+        },
+        {
+          "say": "Use the interval dates in your queries. Never use the clock time of now.",
+          "device": "card",
+          "label": "The habit",
+          "head": "Use the interval, not now()",
+          "headmark": "not now()",
+          "headmark_at": "Never"
+        }
+      ]
+    },
+    {
+      "title": "Idempotent tasks",
+      "check": {
+        "prompt": "Which task is safe to run again for the same day?",
+        "options": [
+          "One that appends rows",
+          "One that overwrites the partition of that day",
+          "One that sends an email"
+        ],
+        "answer": 1,
+        "why": "An overwrite of the partition gives the same result on every run."
+      },
+      "beats": [
+        {
+          "say": "Third: any run can run again.",
+          "device": "big",
+          "text": "Any run can run again"
+        },
+        {
+          "say": "A retry or a backfill runs the same task twice. The result must be the same.",
+          "device": "card",
+          "label": "Idempotent",
+          "head": "Twice gives the same result",
+          "headmark": "same result",
+          "headmark_at": "same"
+        },
+        {
+          "say": "An append adds the rows again. Now you have duplicates.",
+          "device": "card",
+          "label": "The trap",
+          "head": "Append makes duplicates",
+          "headmark": "duplicates",
+          "headmark_at": "duplicates"
+        },
+        {
+          "say": "So overwrite the partition of that interval. Or use a merge on a key.",
+          "device": "card",
+          "label": "The fix",
+          "head": "Overwrite the partition",
+          "headmark": "Overwrite",
+          "headmark_at": "overwrite"
+        }
+      ]
+    },
+    {
+      "title": "Choosing a tool",
+      "beats": [
+        {
+          "say": "Last: Airflow, Prefect, or another tool?",
+          "device": "big",
+          "text": "Which tool to choose?"
+        },
+        {
+          "say": "Airflow is the standard, with a schedule and a graph you define first.",
+          "device": "card",
+          "label": "Airflow",
+          "head": "The standard. Graph first.",
+          "headmark": "The standard.",
+          "headmark_at": "standard"
+        },
+        {
+          "say": "Prefect runs normal Python functions, and the flow can change while it runs.",
+          "device": "card",
+          "label": "Prefect",
+          "head": "Plain Python, dynamic flows",
+          "headmark": "dynamic flows",
+          "headmark_at": "change"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Quick recap of orchestration.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "The orchestrator directs. A run covers an interval. And every task can run twice.",
+          "device": "list",
+          "label": "Orchestration",
+          "items": [
+            "It directs, it does not lift",
+            "A run covers an interval",
+            "Every task can run twice"
+          ],
+          "items_at": ["directs", "interval", "twice"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

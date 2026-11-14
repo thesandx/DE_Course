@@ -1,0 +1,172 @@
+{
+  "station": "sql",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "Every data engineering loop has a SQL round.",
+          "device": "big",
+          "text": "Every loop has SQL"
+        },
+        {
+          "say": "Senior candidates do not fail on syntax. They fail on edge cases.",
+          "device": "card",
+          "label": "Where points are lost",
+          "head": "Edge cases, not syntax",
+          "headmark": "Edge cases",
+          "headmark_at": "edge"
+        },
+        {
+          "say": "Three skills cover most rounds: window functions, deduplication, and reading a plan.",
+          "device": "list",
+          "label": "Track 3 · SQL for senior loops",
+          "items": ["Window functions", "Deduplication", "Reading a plan"],
+          "items_at": ["window", "deduplication", "plan"]
+        }
+      ]
+    },
+    {
+      "title": "Window functions",
+      "check": {
+        "prompt": "Two rows tie for second place. Which function leaves a gap after them?",
+        "options": ["ROW_NUMBER", "RANK", "DENSE_RANK"],
+        "answer": 1,
+        "why": "RANK gives 1, 2, 2, 4. DENSE_RANK gives 1, 2, 2, 3."
+      },
+      "beats": [
+        { "say": "First: window functions.", "device": "big", "text": "Window functions" },
+        {
+          "say": "A window function looks at other rows, but keeps every row. Group by would collapse them.",
+          "device": "card",
+          "label": "The idea",
+          "head": "Look at other rows, keep every row",
+          "headmark": "keep every row",
+          "headmark_at": "keeps"
+        },
+        {
+          "say": "Row number gives one, two, three. Rank leaves gaps after a tie. Dense rank leaves no gaps.",
+          "device": "list",
+          "label": "Three ranking functions",
+          "items": ["ROW_NUMBER: 1, 2, 3", "RANK: gaps after ties", "DENSE_RANK: no gaps"],
+          "items_at": ["Row", "Rank", "Dense"]
+        },
+        {
+          "say": "The trap is ties. Always say what happens when two rows have the same value.",
+          "device": "card",
+          "label": "Interview trap",
+          "head": "What about ties?",
+          "headmark": "ties",
+          "headmark_at": "ties"
+        }
+      ]
+    },
+    {
+      "title": "Deduplication",
+      "check": {
+        "prompt": "Your dedupe query gives a different row on each run. What is missing?",
+        "options": ["A tie-breaker in ORDER BY", "A GROUP BY", "A LIMIT"],
+        "answer": 0,
+        "why": "When two rows share the same time, the order is not fixed. A tie-breaker makes it deterministic."
+      },
+      "beats": [
+        { "say": "Second: keep one row per key.", "device": "big", "text": "One row per key" },
+        {
+          "say": "Number the rows inside each key, newest first. Then keep row number one.",
+          "device": "card",
+          "label": "The pattern",
+          "text": "ROW_NUMBER() OVER (PARTITION BY key ORDER BY updated_at DESC)",
+          "mark": "ROW_NUMBER()",
+          "mark_at": "Number"
+        },
+        {
+          "say": "But if two rows share the same time, the result can change on every run.",
+          "device": "card",
+          "label": "The trap",
+          "head": "Same time, random winner",
+          "headmark": "random winner",
+          "headmark_at": "change"
+        },
+        {
+          "say": "So add a tie-breaker to the order. Now the query is deterministic.",
+          "device": "card",
+          "label": "The fix",
+          "head": "Add a tie-breaker",
+          "headmark": "tie-breaker",
+          "headmark_at": "tie-breaker"
+        }
+      ]
+    },
+    {
+      "title": "Gaps and islands",
+      "beats": [
+        { "say": "Third: streaks and sessions.", "device": "big", "text": "Streaks and sessions" },
+        {
+          "say": "A user logs in five days in a row. How do you find that streak?",
+          "device": "card",
+          "label": "The question",
+          "head": "Find a streak of days",
+          "headmark": "streak",
+          "headmark_at": "streak"
+        },
+        {
+          "say": "Subtract the row number from the date. Rows in one streak get the same result.",
+          "device": "card",
+          "label": "The trick",
+          "head": "Date minus row number",
+          "headmark": "Date minus row number",
+          "headmark_at": "Subtract"
+        }
+      ]
+    },
+    {
+      "title": "Performance",
+      "beats": [
+        { "say": "Last: why is the query slow?", "device": "big", "text": "Why is it slow?" },
+        {
+          "say": "Do not guess. Read the plan. Find the step that takes the most time.",
+          "device": "card",
+          "label": "Step one",
+          "head": "Read the plan",
+          "headmark": "Read the plan",
+          "headmark_at": "plan"
+        },
+        {
+          "say": "Filter on the partition column. Select fewer columns. And watch for joins that multiply rows.",
+          "device": "list",
+          "label": "Common fixes",
+          "items": [
+            "Filter on the partition",
+            "Select fewer columns",
+            "Check joins that multiply rows"
+          ],
+          "items_at": ["Filter", "Select", "joins"]
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Quick recap of SQL for senior loops.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "Windows keep rows. Dedupe with a tie-breaker. And read the plan before you tune.",
+          "device": "list",
+          "label": "SQL for senior loops",
+          "items": ["Windows keep rows", "Dedupe with a tie-breaker", "Read the plan first"],
+          "items_at": ["Windows", "Dedupe", "read"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

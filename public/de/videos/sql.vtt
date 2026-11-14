@@ -1,0 +1,141 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:03.830
+Every data engineering loop has a SQL round.
+
+2
+00:00:03.850 --> 00:00:06.280
+Senior candidates do not fail on syntax.
+
+3
+00:00:06.300 --> 00:00:08.365
+They fail on edge cases.
+
+4
+00:00:08.385 --> 00:00:14.415
+Three skills cover most rounds: window functions, deduplication, and reading a plan.
+
+5
+00:00:14.435 --> 00:00:16.475
+First: window functions.
+
+6
+00:00:16.495 --> 00:00:20.000
+A window function looks at other rows, but keeps every row.
+
+7
+00:00:20.020 --> 00:00:22.010
+Group by would collapse them.
+
+8
+00:00:22.030 --> 00:00:24.023
+Row number gives one, two, three.
+
+9
+00:00:24.043 --> 00:00:25.923
+Rank leaves gaps after a tie.
+
+10
+00:00:25.943 --> 00:00:28.145
+Dense rank leaves no gaps.
+
+11
+00:00:28.165 --> 00:00:29.507
+The trap is ties.
+
+12
+00:00:29.527 --> 00:00:33.545
+Always say what happens when two rows have the same value.
+
+13
+00:00:33.565 --> 00:00:35.805
+Second: keep one row per key.
+
+14
+00:00:35.825 --> 00:00:38.618
+Number the rows inside each key, newest first.
+
+15
+00:00:38.638 --> 00:00:40.615
+Then keep row number one.
+
+16
+00:00:40.635 --> 00:00:45.375
+But if two rows share the same time, the result can change on every run.
+
+17
+00:00:45.395 --> 00:00:47.287
+So add a tie-breaker to the order.
+
+18
+00:00:47.307 --> 00:00:50.250
+Now the query is deterministic.
+
+19
+00:00:50.270 --> 00:00:52.385
+Third: streaks and sessions.
+
+20
+00:00:52.405 --> 00:00:54.798
+A user logs in five days in a row.
+
+21
+00:00:54.818 --> 00:00:56.645
+How do you find that streak?
+
+22
+00:00:56.665 --> 00:00:58.683
+Subtract the row number from the date.
+
+23
+00:00:58.703 --> 00:01:02.070
+Rows in one streak get the same result.
+
+24
+00:01:02.090 --> 00:01:04.380
+Last: why is the query slow?
+
+25
+00:01:04.400 --> 00:01:05.230
+Do not guess.
+
+26
+00:01:05.250 --> 00:01:06.217
+Read the plan.
+
+27
+00:01:06.237 --> 00:01:08.740
+Find the step that takes the most time.
+
+28
+00:01:08.760 --> 00:01:10.603
+Filter on the partition column.
+
+29
+00:01:10.623 --> 00:01:12.140
+Select fewer columns.
+
+30
+00:01:12.160 --> 00:01:15.565
+And watch for joins that multiply rows.
+
+31
+00:01:15.585 --> 00:01:18.275
+Quick recap of SQL for senior loops.
+
+32
+00:01:18.295 --> 00:01:19.450
+Windows keep rows.
+
+33
+00:01:19.470 --> 00:01:20.875
+Dedupe with a tie-breaker.
+
+34
+00:01:20.895 --> 00:01:23.185
+And read the plan before you tune.
+
+35
+00:01:23.205 --> 00:01:26.305
+Now start the first lesson below.

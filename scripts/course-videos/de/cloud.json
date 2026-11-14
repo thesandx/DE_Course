@@ -1,0 +1,185 @@
+{
+  "station": "cloud",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "The team runs on AWS. Your last job was on another cloud.",
+          "device": "big",
+          "text": "A cloud you do not know"
+        },
+        {
+          "say": "Senior loops assume you can build on any cloud. The ideas are the same.",
+          "device": "card",
+          "label": "The good news",
+          "head": "Same ideas, other names",
+          "headmark": "other names",
+          "headmark_at": "same"
+        },
+        {
+          "say": "Four areas: the data lake, access and network, code for infrastructure, and cost.",
+          "device": "list",
+          "label": "Track 13 · Cloud and DevOps",
+          "items": ["The data lake", "Access and network", "Infrastructure as code", "Cost"],
+          "items_at": ["lake", "access", "code", "cost"]
+        }
+      ]
+    },
+    {
+      "title": "The data lake on S3",
+      "check": {
+        "prompt": "Why is a rename of a big folder slow on S3?",
+        "options": [
+          "S3 has no rename: it copies, then deletes",
+          "S3 is a slow disk",
+          "S3 locks the bucket"
+        ],
+        "answer": 0,
+        "why": "Object storage has no real folders. A rename is a copy and a delete of every object."
+      },
+      "beats": [
+        {
+          "say": "First: the data lake on object storage.",
+          "device": "big",
+          "text": "The lake on S3"
+        },
+        {
+          "say": "S 3 stores objects under keys. It has no real folders.",
+          "device": "card",
+          "label": "Object storage",
+          "head": "Objects and keys, no folders",
+          "headmark": "no folders",
+          "headmark_at": "folders"
+        },
+        {
+          "say": "So a rename is a copy and a delete, for every object. On big data, that is slow.",
+          "device": "card",
+          "label": "The trap",
+          "head": "Rename = copy + delete",
+          "headmark": "copy + delete",
+          "headmark_at": "copy"
+        },
+        {
+          "say": "A catalog, like Glue, maps those files to tables. Then Athena or Spark can query them.",
+          "device": "card",
+          "label": "Catalog",
+          "head": "The catalog turns files into tables",
+          "headmark": "files into tables",
+          "headmark_at": "tables"
+        }
+      ]
+    },
+    {
+      "title": "Access and network",
+      "check": {
+        "prompt": "How should a job get access to a bucket?",
+        "options": [
+          "A long-lived key in the code",
+          "A role with least privilege",
+          "A public bucket"
+        ],
+        "answer": 1,
+        "why": "A role gives short-lived credentials, and only the access the job needs."
+      },
+      "beats": [
+        { "say": "Second: who can read what?", "device": "big", "text": "Who can read what?" },
+        {
+          "say": "Give a job a role, not a key. A role hands out short-lived credentials.",
+          "device": "card",
+          "label": "Roles",
+          "head": "Roles, not keys",
+          "headmark": "Roles, not keys",
+          "headmark_at": "role"
+        },
+        {
+          "say": "And grant least privilege. Only this bucket. Only read.",
+          "device": "card",
+          "label": "Least privilege",
+          "head": "Only what the job needs",
+          "headmark": "Only",
+          "headmark_at": "Only"
+        },
+        {
+          "say": "Keep traffic to storage on a private endpoint. It is safer, and it is cheaper.",
+          "device": "card",
+          "label": "Network",
+          "head": "Private endpoints",
+          "headmark": "Private",
+          "headmark_at": "private"
+        }
+      ]
+    },
+    {
+      "title": "Infrastructure as code",
+      "beats": [
+        { "say": "Third: no clicks in the console.", "device": "big", "text": "No console clicks" },
+        {
+          "say": "With Terraform, buckets, roles and clusters are code. You review them like any change.",
+          "device": "card",
+          "label": "Terraform",
+          "head": "Infrastructure in code",
+          "headmark": "in code",
+          "headmark_at": "code"
+        },
+        {
+          "say": "Docker packs a job with its libraries. So it runs the same way everywhere.",
+          "device": "card",
+          "label": "Docker",
+          "head": "Same image, everywhere",
+          "headmark": "everywhere",
+          "headmark_at": "everywhere"
+        },
+        {
+          "say": "And a CI pipeline tests and ships each change. No one deploys by hand.",
+          "device": "card",
+          "label": "CI/CD",
+          "head": "Tested, then shipped",
+          "headmark": "Tested",
+          "headmark_at": "tests"
+        }
+      ]
+    },
+    {
+      "title": "Cost",
+      "beats": [
+        {
+          "say": "Last: why did the bill jump?",
+          "device": "big",
+          "text": "Why did the bill jump?"
+        },
+        {
+          "say": "Look at three places first: compute that never stops, data that crosses regions, and old storage.",
+          "device": "list",
+          "label": "Check first",
+          "items": ["Idle compute", "Data transfer", "Old storage"],
+          "items_at": ["compute", "crosses", "storage"]
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Quick recap of cloud and DevOps.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "Object storage has no rename. Use roles, not keys. And keep infrastructure in code.",
+          "device": "list",
+          "label": "Cloud and DevOps",
+          "items": ["Object storage has no rename", "Roles, not keys", "Infrastructure in code"],
+          "items_at": ["rename", "roles", "code"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

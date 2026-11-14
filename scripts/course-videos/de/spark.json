@@ -1,0 +1,185 @@
+{
+  "station": "spark",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "The Spark job ran for six hours. Yesterday it took one.",
+          "device": "big",
+          "text": "Six hours, not one"
+        },
+        {
+          "say": "A senior engineer can say why it is slow. Not only how to write it.",
+          "device": "card",
+          "label": "What they test",
+          "head": "Explain why it is slow",
+          "headmark": "why",
+          "headmark_at": "why"
+        },
+        {
+          "say": "Three things explain most slow jobs: shuffles, skew, and small files.",
+          "device": "list",
+          "label": "Track 7 · Spark",
+          "items": ["Shuffles", "Skew", "Small files"],
+          "items_at": ["shuffles", "skew", "files"]
+        }
+      ]
+    },
+    {
+      "title": "How Spark runs your code",
+      "check": {
+        "prompt": "When does Spark start to do the work?",
+        "options": ["At each transformation", "At an action", "When the driver starts"],
+        "answer": 1,
+        "why": "Transformations only build a plan. An action, such as a write or a count, runs it."
+      },
+      "beats": [
+        {
+          "say": "First: how does Spark run your code?",
+          "device": "big",
+          "text": "How Spark runs code"
+        },
+        {
+          "say": "The driver makes the plan. The executors do the work, in many small tasks.",
+          "device": "card",
+          "label": "Two roles",
+          "head": "Driver plans, executors work",
+          "headmark": "executors work",
+          "headmark_at": "executors"
+        },
+        {
+          "say": "A transformation only adds to the plan. Nothing runs yet.",
+          "device": "card",
+          "label": "Lazy",
+          "head": "Nothing runs yet",
+          "headmark": "Nothing runs",
+          "headmark_at": "Nothing"
+        },
+        {
+          "say": "The work starts at an action. For example, a write or a count.",
+          "device": "card",
+          "label": "Action",
+          "head": "An action starts the work",
+          "headmark": "action",
+          "headmark_at": "action"
+        }
+      ]
+    },
+    {
+      "title": "Shuffles",
+      "beats": [
+        { "say": "Second: the shuffle.", "device": "big", "text": "The costly shuffle" },
+        {
+          "say": "A join or a group by must bring the same keys together. So data moves between machines.",
+          "device": "card",
+          "label": "What it is",
+          "head": "Same keys, same machine",
+          "headmark": "Same keys",
+          "headmark_at": "same"
+        },
+        {
+          "say": "That move is the shuffle. It is the most costly step in most jobs.",
+          "device": "card",
+          "label": "Why it matters",
+          "head": "The most costly step",
+          "headmark": "most costly",
+          "headmark_at": "costly"
+        },
+        {
+          "say": "If one table is small, broadcast it. Then the big table does not shuffle.",
+          "device": "card",
+          "label": "A fix",
+          "head": "Broadcast the small table",
+          "headmark": "Broadcast",
+          "headmark_at": "broadcast"
+        }
+      ]
+    },
+    {
+      "title": "Joins and skew",
+      "check": {
+        "prompt": "One task of a join runs for an hour, and the others take a minute. What is the cause?",
+        "options": ["A skewed key", "Too many small files", "A slow driver"],
+        "answer": 0,
+        "why": "One key holds most of the rows, so one partition gets most of the work."
+      },
+      "beats": [
+        {
+          "say": "Third: one key has most of the rows.",
+          "device": "big",
+          "text": "One key, most rows"
+        },
+        {
+          "say": "That is skew. One task gets most of the data, and runs for hours.",
+          "device": "card",
+          "label": "Skew",
+          "head": "One task does all the work",
+          "headmark": "One task",
+          "headmark_at": "One"
+        },
+        {
+          "say": "In the Spark U I, you see it at once. One task is far slower than the rest.",
+          "device": "card",
+          "label": "How to see it",
+          "head": "One slow task in the UI",
+          "headmark": "One slow task",
+          "headmark_at": "slower"
+        },
+        {
+          "say": "Turn on adaptive query execution. Or add a salt to split the hot key.",
+          "device": "list",
+          "label": "Two fixes",
+          "items": ["Adaptive query execution", "Salt the hot key"],
+          "items_at": ["adaptive", "salt"]
+        }
+      ]
+    },
+    {
+      "title": "Small files",
+      "beats": [
+        {
+          "say": "Last: thousands of small files.",
+          "device": "big",
+          "text": "Thousands of small files"
+        },
+        {
+          "say": "Each file costs a listing and an open. Many small files make every reader slow.",
+          "device": "card",
+          "label": "The problem",
+          "head": "Every file has a cost",
+          "headmark": "cost",
+          "headmark_at": "costs"
+        },
+        {
+          "say": "So write fewer, bigger files. And compact the table on a schedule.",
+          "device": "card",
+          "label": "The fix",
+          "head": "Fewer, bigger files",
+          "headmark": "bigger files",
+          "headmark_at": "bigger"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Quick recap of Spark.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "Actions start the work. Shuffles cost the most. And skew shows as one slow task.",
+          "device": "list",
+          "label": "Spark",
+          "items": ["Actions start the work", "Shuffles cost the most", "Skew: one slow task"],
+          "items_at": ["Actions", "Shuffles", "skew"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

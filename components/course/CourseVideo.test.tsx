@@ -1,12 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { GcpVideo } from '@/types/gcp';
+import type { CourseVideo as CourseVideoData } from '@/types/video';
 
-import { StationVideo } from './StationVideo';
+import { CourseVideo } from './CourseVideo';
 
-const VIDEO: GcpVideo = {
-  station: 'demo',
+const VIDEO: CourseVideoData = {
+  slug: 'demo',
   duration: 90,
   chapters: [
     { title: 'The mission', start: 0.3 },
@@ -39,7 +39,13 @@ const pause = vi.fn(function (this: HTMLMediaElement) {
 
 function setup(): HTMLVideoElement {
   const { container } = render(
-    <StationVideo video={VIDEO} src="/demo.mp4" poster="/demo.jpg" captionsSrc="/demo.vtt" />,
+    <CourseVideo
+      video={VIDEO}
+      title="The station in one video"
+      src="/demo.mp4"
+      poster="/demo.jpg"
+      captionsSrc="/demo.vtt"
+    />,
   );
   const media = container.querySelector('video');
   if (media === null) throw new Error('no video element');
@@ -63,7 +69,7 @@ afterEach(() => {
   pause.mockClear();
 });
 
-describe('StationVideo', () => {
+describe('CourseVideo', () => {
   it('shows the length, the chapters and one play overlay before it starts', () => {
     const media = setup();
     expect(screen.getByText(/about 2 min/)).toBeInTheDocument();

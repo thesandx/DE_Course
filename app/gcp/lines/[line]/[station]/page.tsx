@@ -2,23 +2,23 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { CourseVideo } from '@/components/course/CourseVideo';
 import { InlineText } from '@/components/course/InlineText';
 import { Prose } from '@/components/course/Prose';
 import { ConceptDiagram } from '@/components/gcp/ConceptDiagram';
 import { StationChecks } from '@/components/gcp/StationChecks';
-import { StationVideo } from '@/components/gcp/StationVideo';
 import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/layout/Icon';
 import { ChapterNotes } from '@/components/notes/ChapterNotes';
 import { buttonStyles } from '@/components/ui/Button';
 import { getLab, getStation, LAB_XP, labId, stationId, stationXp } from '@/lib/course/gcp/catalog';
 import { conceptDiagrams } from '@/lib/course/gcp/diagrams';
-import { stationVideo, videoCaptionsHref, videoPosterHref } from '@/lib/course/gcp/videos';
 import { hueStyle } from '@/lib/course/hue';
+import { courseVideo, videoCaptionsHref, videoPosterHref } from '@/lib/course/videos';
 import { env } from '@/lib/env';
 import { noteKeys } from '@/lib/notes/targets';
 import { cn } from '@/lib/utils';
-import { getStationVideoUrl } from '@/services/course-video.service';
+import { getCourseVideoUrl } from '@/services/course-video.service';
 import { requireGcpLearner } from '@/services/learner.service';
 import { getNoteOrNull } from '@/services/notes.service';
 
@@ -54,12 +54,12 @@ export default async function GcpStationPage({ params }: Props) {
     `/gcp/lines/${lineSlug}/${stationSlug}`,
   );
   const noteKey = noteKeys.station(stationSlug);
-  const video = stationVideo(station.slug);
+  const video = courseVideo('gcp', station.slug);
   // The film is optional: with no file in the bucket the URL is null, and the
   // page shows the station without a player.
   const [note, videoUrl] = await Promise.all([
     getNoteOrNull(user.uid, noteKey),
-    video === undefined ? null : getStationVideoUrl(station.slug),
+    video === undefined ? null : getCourseVideoUrl('gcp', station.slug),
   ]);
   const itemId = stationId(station.slug);
   const done = progress.done[itemId] !== undefined;
@@ -115,11 +115,12 @@ export default async function GcpStationPage({ params }: Props) {
             </header>
 
             {video !== undefined && videoUrl !== null && (
-              <StationVideo
+              <CourseVideo
                 video={video}
+                title="The station in one video"
                 src={videoUrl}
-                poster={videoPosterHref(station.slug)}
-                captionsSrc={videoCaptionsHref(station.slug)}
+                poster={videoPosterHref('gcp', station.slug)}
+                captionsSrc={videoCaptionsHref('gcp', station.slug)}
               />
             )}
 

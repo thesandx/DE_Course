@@ -1,0 +1,182 @@
+{
+  "station": "modeling",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "Design the tables for a ride-hailing app.",
+          "device": "big",
+          "text": "Design the tables"
+        },
+        {
+          "say": "This is the modeling round. The first five minutes decide the rest of the hour.",
+          "device": "card",
+          "label": "The modeling round",
+          "head": "The first five minutes decide",
+          "headmark": "first five minutes",
+          "headmark_at": "five"
+        },
+        {
+          "say": "Three ideas carry you: the grain, facts and dimensions, and history.",
+          "device": "list",
+          "label": "Track 6 · Data modeling",
+          "items": ["The grain", "Facts and dimensions", "History"],
+          "items_at": ["grain", "facts", "history"]
+        }
+      ]
+    },
+    {
+      "title": "Grain first",
+      "check": {
+        "prompt": "What do you declare first when you design a fact table?",
+        "options": ["The grain", "The indexes", "The dashboard"],
+        "answer": 0,
+        "why": "The grain says what one row means. It decides the keys and the measures."
+      },
+      "beats": [
+        { "say": "First: the grain.", "device": "big", "text": "Start with the grain" },
+        {
+          "say": "The grain says what one row means. For example: one row per trip.",
+          "device": "card",
+          "label": "The grain",
+          "head": "One row = one trip",
+          "headmark": "one trip",
+          "headmark_at": "trip"
+        },
+        {
+          "say": "Say it out loud before you draw anything. It decides the keys and the measures.",
+          "device": "card",
+          "label": "The habit",
+          "head": "Say the grain out loud",
+          "headmark": "out loud",
+          "headmark_at": "loud"
+        },
+        {
+          "say": "Mix two grains in one table, and your sums count things twice.",
+          "device": "card",
+          "label": "The trap",
+          "head": "Mixed grain, double counts",
+          "headmark": "double counts",
+          "headmark_at": "twice"
+        }
+      ]
+    },
+    {
+      "title": "Facts and dimensions",
+      "beats": [
+        { "say": "Second: facts and dimensions.", "device": "big", "text": "Facts and dimensions" },
+        {
+          "say": "A fact is something that happened, with numbers. A trip, with a fare and a distance.",
+          "device": "card",
+          "label": "Fact",
+          "head": "What happened, with numbers",
+          "headmark": "with numbers",
+          "headmark_at": "numbers"
+        },
+        {
+          "say": "A dimension is the context. The driver, the rider, the city, the date.",
+          "device": "card",
+          "label": "Dimension",
+          "head": "Who, where and when",
+          "headmark": "Who, where and when",
+          "headmark_at": "context"
+        },
+        {
+          "say": "Facts in the middle, dimensions around them. That shape is the star schema.",
+          "device": "card",
+          "label": "Together",
+          "head": "The star schema",
+          "headmark": "star schema",
+          "headmark_at": "star"
+        }
+      ]
+    },
+    {
+      "title": "History with SCD type 2",
+      "check": {
+        "prompt": "A driver moves to a new city. How does SCD type 2 record it?",
+        "options": [
+          "It overwrites the old row",
+          "It closes the old row and adds a new row",
+          "It deletes the driver"
+        ],
+        "answer": 1,
+        "why": "Type 2 keeps history: the old row gets an end date, and a new row starts."
+      },
+      "beats": [
+        {
+          "say": "Third: what happens when a dimension changes?",
+          "device": "big",
+          "text": "When a dimension changes"
+        },
+        {
+          "say": "A driver moves from Pune to Mumbai. Old trips must still show Pune.",
+          "device": "card",
+          "label": "The question",
+          "head": "Old trips keep the old city",
+          "headmark": "old city",
+          "headmark_at": "Old"
+        },
+        {
+          "say": "So do not overwrite. Close the old row with an end date, and add a new row.",
+          "device": "card",
+          "label": "SCD type 2",
+          "head": "Close the old row, add a new row",
+          "headmark": "add a new row",
+          "headmark_at": "add"
+        }
+      ]
+    },
+    {
+      "title": "Layouts for a warehouse",
+      "beats": [
+        {
+          "say": "Last: how wide should the table be?",
+          "device": "big",
+          "text": "How wide is the table?"
+        },
+        {
+          "say": "In a columnar warehouse, joins cost more than extra columns.",
+          "device": "card",
+          "label": "The fact",
+          "head": "Joins cost more than columns",
+          "headmark": "Joins cost more",
+          "headmark_at": "joins"
+        },
+        {
+          "say": "So a wide table is often fine for serving. Keep the star as the source of truth.",
+          "device": "card",
+          "label": "The choice",
+          "head": "Wide to serve, star as truth",
+          "headmark": "star as truth",
+          "headmark_at": "star"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Quick recap of data modeling.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "Say the grain first. Facts with dimensions around them. And type 2 keeps history.",
+          "device": "list",
+          "label": "Data modeling",
+          "items": ["Say the grain first", "Facts and dimensions", "Type 2 keeps history"],
+          "items_at": ["grain", "Facts", "history"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

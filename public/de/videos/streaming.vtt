@@ -1,0 +1,137 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:01.895
+A rider opens the app.
+
+2
+00:00:01.915 --> 00:00:04.055
+The price must be fresh, now.
+
+3
+00:00:04.075 --> 00:00:06.030
+A batch job each hour is too slow.
+
+4
+00:00:06.050 --> 00:00:07.590
+You need a stream.
+
+5
+00:00:07.610 --> 00:00:12.490
+Three ideas: the Kafka log, delivery guarantees, and event time.
+
+6
+00:00:12.510 --> 00:00:14.575
+First: Kafka is a log.
+
+7
+00:00:14.595 --> 00:00:16.750
+Producers append messages at the end.
+
+8
+00:00:16.770 --> 00:00:19.260
+Consumers read at their own speed.
+
+9
+00:00:19.280 --> 00:00:21.360
+A topic is split into partitions.
+
+10
+00:00:21.380 --> 00:00:23.445
+That is how Kafka scales.
+
+11
+00:00:23.465 --> 00:00:26.133
+Order holds only inside one partition.
+
+12
+00:00:26.153 --> 00:00:28.855
+So the key decides what stays in order.
+
+13
+00:00:28.875 --> 00:00:31.043
+Each consumer remembers its position.
+
+14
+00:00:31.063 --> 00:00:33.905
+That position is the offset.
+
+15
+00:00:33.925 --> 00:00:37.065
+Second: can a message be lost, or come twice?
+
+16
+00:00:37.085 --> 00:00:38.990
+At most once can lose a message.
+
+17
+00:00:39.010 --> 00:00:40.728
+At least once can repeat one.
+
+18
+00:00:40.748 --> 00:00:42.925
+Exactly once costs more.
+
+19
+00:00:42.945 --> 00:00:47.425
+Most systems pick at least once, and make the write idempotent.
+
+20
+00:00:47.445 --> 00:00:50.410
+Third: events arrive late, and out of order.
+
+21
+00:00:50.430 --> 00:00:52.135
+A phone goes into a tunnel.
+
+22
+00:00:52.155 --> 00:00:54.545
+Its events arrive ten minutes later.
+
+23
+00:00:54.565 --> 00:00:56.457
+So use the time the event happened.
+
+24
+00:00:56.477 --> 00:00:58.305
+Not the time it arrived.
+
+25
+00:00:58.325 --> 00:01:02.780
+A watermark says: I think I have seen everything up to this time.
+
+26
+00:01:02.800 --> 00:01:05.415
+Last: a stream job remembers things.
+
+27
+00:01:05.435 --> 00:01:07.078
+A count per window is state.
+
+28
+00:01:07.098 --> 00:01:09.725
+Flink saves that state in checkpoints.
+
+29
+00:01:09.745 --> 00:01:13.900
+After a crash, the job restarts from the last checkpoint.
+
+30
+00:01:13.920 --> 00:01:15.810
+Quick recap of streaming.
+
+31
+00:01:15.830 --> 00:01:17.335
+Order is per partition.
+
+32
+00:01:17.355 --> 00:01:19.485
+At least once, with idempotent writes.
+
+33
+00:01:19.505 --> 00:01:21.270
+And use event time.
+
+34
+00:01:21.290 --> 00:01:24.390
+Now start the first lesson below.

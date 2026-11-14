@@ -1,0 +1,125 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:03.055
+Design the tables for a ride-hailing app.
+
+2
+00:00:03.075 --> 00:00:04.805
+This is the modeling round.
+
+3
+00:00:04.825 --> 00:00:07.915
+The first five minutes decide the rest of the hour.
+
+4
+00:00:07.935 --> 00:00:12.990
+Three ideas carry you: the grain, facts and dimensions, and history.
+
+5
+00:00:13.010 --> 00:00:14.675
+First: the grain.
+
+6
+00:00:14.695 --> 00:00:16.475
+The grain says what one row means.
+
+7
+00:00:16.495 --> 00:00:18.985
+For example: one row per trip.
+
+8
+00:00:19.005 --> 00:00:21.135
+Say it out loud before you draw anything.
+
+9
+00:00:21.155 --> 00:00:23.745
+It decides the keys and the measures.
+
+10
+00:00:23.765 --> 00:00:28.195
+Mix two grains in one table, and your sums count things twice.
+
+11
+00:00:28.215 --> 00:00:30.480
+Second: facts and dimensions.
+
+12
+00:00:30.500 --> 00:00:32.868
+A fact is something that happened, with numbers.
+
+13
+00:00:32.888 --> 00:00:35.590
+A trip, with a fare and a distance.
+
+14
+00:00:35.610 --> 00:00:37.415
+A dimension is the context.
+
+15
+00:00:37.435 --> 00:00:40.275
+The driver, the rider, the city, the date.
+
+16
+00:00:40.295 --> 00:00:42.463
+Facts in the middle, dimensions around them.
+
+17
+00:00:42.483 --> 00:00:45.275
+That shape is the star schema.
+
+18
+00:00:45.295 --> 00:00:48.185
+Third: what happens when a dimension changes?
+
+19
+00:00:48.205 --> 00:00:50.397
+A driver moves from Pune to Mumbai.
+
+20
+00:00:50.417 --> 00:00:52.795
+Old trips must still show Pune.
+
+21
+00:00:52.815 --> 00:00:54.232
+So do not overwrite.
+
+22
+00:00:54.252 --> 00:00:58.170
+Close the old row with an end date, and add a new row.
+
+23
+00:00:58.190 --> 00:01:00.680
+Last: how wide should the table be?
+
+24
+00:01:00.700 --> 00:01:04.665
+In a columnar warehouse, joins cost more than extra columns.
+
+25
+00:01:04.685 --> 00:01:07.390
+So a wide table is often fine for serving.
+
+26
+00:01:07.410 --> 00:01:10.440
+Keep the star as the source of truth.
+
+27
+00:01:10.460 --> 00:01:12.750
+Quick recap of data modeling.
+
+28
+00:01:12.770 --> 00:01:14.062
+Say the grain first.
+
+29
+00:01:14.082 --> 00:01:15.875
+Facts with dimensions around them.
+
+30
+00:01:15.895 --> 00:01:18.135
+And type 2 keeps history.
+
+31
+00:01:18.155 --> 00:01:21.255
+Now start the first lesson below.

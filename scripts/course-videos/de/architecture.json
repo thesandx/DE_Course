@@ -1,0 +1,173 @@
+{
+  "station": "architecture",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        { "say": "Name a pattern. Now defend it.", "device": "big", "text": "Name it. Defend it." },
+        {
+          "say": "A staff answer knows the problem each pattern solves. And what it costs.",
+          "device": "card",
+          "label": "The staff answer",
+          "head": "What it solves, what it costs",
+          "headmark": "what it costs",
+          "headmark_at": "costs"
+        },
+        {
+          "say": "Four patterns come up most: Lambda and Kappa, medallion layers, the outbox, and data mesh.",
+          "device": "list",
+          "label": "Track 15 · Architecture patterns",
+          "items": ["Lambda and Kappa", "Medallion layers", "The outbox", "Data mesh"],
+          "items_at": ["Lambda", "medallion", "outbox", "mesh"]
+        }
+      ]
+    },
+    {
+      "title": "Lambda and Kappa",
+      "check": {
+        "prompt": "What is the main cost of the Lambda architecture?",
+        "options": ["Two code paths to keep in step", "It has no batch layer", "It cannot replay"],
+        "answer": 0,
+        "why": "Lambda has a batch path and a stream path, so you write and fix the logic twice."
+      },
+      "beats": [
+        {
+          "say": "First: batch, stream, or both?",
+          "device": "big",
+          "text": "Batch, stream, or both?"
+        },
+        {
+          "say": "Lambda runs two paths. A fast stream for now, and a batch for the correct result.",
+          "device": "card",
+          "label": "Lambda",
+          "head": "Two paths: fast and correct",
+          "headmark": "Two paths",
+          "headmark_at": "two"
+        },
+        {
+          "say": "The cost: you write the same logic twice, and keep both in step.",
+          "device": "card",
+          "label": "Its cost",
+          "head": "The same logic, twice",
+          "headmark": "twice",
+          "headmark_at": "twice"
+        },
+        {
+          "say": "Kappa keeps only the stream. To fix history, you replay the log.",
+          "device": "card",
+          "label": "Kappa",
+          "head": "One path. Replay to fix.",
+          "headmark": "Replay to fix.",
+          "headmark_at": "replay"
+        }
+      ]
+    },
+    {
+      "title": "Medallion layers",
+      "check": {
+        "prompt": "Which layer keeps the raw data, as it arrived?",
+        "options": ["Gold", "Silver", "Bronze"],
+        "answer": 2,
+        "why": "Bronze is raw. Silver is clean. Gold is ready for the business."
+      },
+      "beats": [
+        { "say": "Second: bronze, silver, gold.", "device": "big", "text": "Bronze, silver, gold" },
+        {
+          "say": "Bronze is the raw data, as it arrived. Silver is clean. Gold is ready for the business.",
+          "device": "list",
+          "label": "Three layers",
+          "items": ["Bronze: raw", "Silver: clean", "Gold: business-ready"],
+          "items_at": ["Bronze", "Silver", "Gold"]
+        },
+        {
+          "say": "Keep bronze unchanged. Then you can rebuild silver and gold at any time.",
+          "device": "card",
+          "label": "Why it works",
+          "head": "Raw data lets you rebuild",
+          "headmark": "rebuild",
+          "headmark_at": "rebuild"
+        }
+      ]
+    },
+    {
+      "title": "The outbox",
+      "beats": [
+        {
+          "say": "Third: save to the database, and publish an event.",
+          "device": "big",
+          "text": "Save and publish"
+        },
+        {
+          "say": "If you do the two steps apart, one can fail. Then the systems disagree.",
+          "device": "card",
+          "label": "The problem",
+          "head": "Two writes can disagree",
+          "headmark": "disagree",
+          "headmark_at": "disagree"
+        },
+        {
+          "say": "So write the event to an outbox table, in the same transaction.",
+          "device": "card",
+          "label": "The outbox",
+          "head": "One transaction, two rows",
+          "headmark": "One transaction",
+          "headmark_at": "same"
+        },
+        {
+          "say": "A separate process reads the outbox and publishes. Nothing is lost.",
+          "device": "card",
+          "label": "Then",
+          "head": "Publish from the outbox",
+          "headmark": "Publish",
+          "headmark_at": "publishes"
+        }
+      ]
+    },
+    {
+      "title": "Data mesh",
+      "beats": [
+        { "say": "Last: who owns the data?", "device": "big", "text": "Who owns the data?" },
+        {
+          "say": "In a data mesh, each domain team owns its data as a product.",
+          "device": "card",
+          "label": "Data mesh",
+          "head": "Each domain owns its data",
+          "headmark": "owns",
+          "headmark_at": "owns"
+        },
+        {
+          "say": "It fits a large company. For a small team, it is too much overhead. Say no.",
+          "device": "card",
+          "label": "When to say no",
+          "head": "Small team? Say no.",
+          "headmark": "Say no.",
+          "headmark_at": "no"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Quick recap of the patterns.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "Lambda costs two code paths. Keep bronze raw. And use an outbox for two writes.",
+          "device": "list",
+          "label": "Architecture patterns",
+          "items": ["Lambda: two code paths", "Keep bronze raw", "Outbox for two writes"],
+          "items_at": ["Lambda", "bronze", "outbox"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

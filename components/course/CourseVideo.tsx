@@ -3,17 +3,18 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { InlineText } from '@/components/course/InlineText';
+import { ChoiceList, type ChoiceState } from '@/components/gcp/ChoiceList';
 import { Icon } from '@/components/layout/Icon';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
-import { chapterAt, checkReached, cueAt, formatClock } from '@/lib/course/gcp/videos/timeline';
+import { chapterAt, checkReached, cueAt, formatClock } from '@/lib/course/videos/timeline';
 import { cn } from '@/lib/utils';
-import type { GcpVideo, VideoCheck } from '@/types/gcp';
+import type { CourseVideo as CourseVideoData, VideoCheck } from '@/types/video';
 
-import { ChoiceList, type ChoiceState } from './ChoiceList';
-
-export interface StationVideoProps {
-  video: GcpVideo;
+export interface CourseVideoProps {
+  video: CourseVideoData;
+  /** The heading of the section, for example "The station in one video". */
+  title: string;
   /** The MP4 file: a signed Cloud Storage URL. */
   src: string;
   /** One frame of the video, shown until the learner presses play. */
@@ -96,14 +97,21 @@ function QuickCheck({ check, onContinue }: QuickCheckProps) {
 }
 
 /**
- * The explainer video of a station, with its own controls: play, a bar with
+ * The explainer video of a station or a track, with its own controls: play, a bar with
  * the chapter marks, captions, speed and full screen. Under the picture are
  * the chapters, and a quick check that pauses the video when a chapter ends.
  *
  * The picture is always dark, in both colour modes, because it is a film and
  * not a page. Everything around it follows the tokens.
  */
-export function StationVideo({ video, src, poster, captionsSrc, className }: StationVideoProps) {
+export function CourseVideo({
+  video,
+  title,
+  src,
+  poster,
+  captionsSrc,
+  className,
+}: CourseVideoProps) {
   const shell = useRef<HTMLDivElement>(null);
   const media = useRef<InlineVideo>(null);
   const lastTime = useRef(0);
@@ -211,7 +219,7 @@ export function StationVideo({ video, src, poster, captionsSrc, className }: Sta
 
   return (
     <section
-      aria-labelledby="station-video-heading"
+      aria-labelledby="course-video-heading"
       className={cn(
         'bg-surface border-line rounded-card shadow-card flex flex-col gap-4 border p-5 sm:p-6',
         className,
@@ -219,11 +227,11 @@ export function StationVideo({ video, src, poster, captionsSrc, className }: Sta
     >
       <div className="flex flex-col gap-1">
         <p className="eyebrow text-ink-faint">Watch first · about {minutes} min</p>
-        <h2 id="station-video-heading" className="text-title">
-          The station in one video
+        <h2 id="course-video-heading" className="text-title">
+          {title}
         </h2>
         <p className="text-small text-ink-soft">
-          A simple walk through every concept, with captions. It stops for a quick question on the
+          A simple walk through the main ideas, with captions. It stops for a quick question on the
           way.
         </p>
       </div>

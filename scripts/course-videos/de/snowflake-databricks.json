@@ -1,0 +1,217 @@
+{
+  "station": "snowflake-databricks",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "Most job posts name Snowflake or Databricks.",
+          "device": "big",
+          "text": "Snowflake or Databricks"
+        },
+        {
+          "say": "Interviewers go past the brochure. They ask how it works, and what it costs.",
+          "device": "card",
+          "label": "What they ask",
+          "head": "How it works, what it costs",
+          "headmark": "what it costs",
+          "headmark_at": "costs"
+        },
+        {
+          "say": "So learn each platform in one picture. Then learn how to choose.",
+          "device": "list",
+          "label": "Track 12 · Snowflake and Databricks",
+          "items": ["Snowflake in one picture", "Databricks in one picture", "How to choose"],
+          "items_at": ["each", "picture", "choose"]
+        }
+      ]
+    },
+    {
+      "title": "Snowflake in one picture",
+      "check": {
+        "prompt": "Two teams run queries on the same Snowflake data. How do you stop them from slowing each other down?",
+        "options": ["Give each team its own warehouse", "Copy the data", "Run at night"],
+        "answer": 0,
+        "why": "Storage and compute are separate. Each warehouse is its own compute."
+      },
+      "beats": [
+        {
+          "say": "First: Snowflake has three layers.",
+          "device": "big",
+          "text": "Snowflake: three layers"
+        },
+        {
+          "say": "Storage holds the data. Virtual warehouses run the queries. A services layer plans and secures.",
+          "device": "list",
+          "label": "Three layers",
+          "items": ["Storage", "Virtual warehouses", "Cloud services"],
+          "items_at": ["Storage", "warehouses", "services"]
+        },
+        {
+          "say": "Storage and compute are separate. So each team can have its own warehouse.",
+          "device": "card",
+          "label": "The big idea",
+          "head": "Storage and compute are separate",
+          "headmark": "separate",
+          "headmark_at": "separate"
+        },
+        {
+          "say": "Data sits in small blocks called micro-partitions. Each one knows its minimum and maximum.",
+          "device": "card",
+          "label": "Micro-partitions",
+          "head": "Small blocks with min and max",
+          "headmark": "min and max",
+          "headmark_at": "minimum"
+        },
+        {
+          "say": "A good filter lets Snowflake skip most blocks. That is pruning.",
+          "device": "card",
+          "label": "Pruning",
+          "head": "Skip most of the blocks",
+          "headmark": "Skip",
+          "headmark_at": "skip"
+        }
+      ]
+    },
+    {
+      "title": "Snowflake features to know",
+      "beats": [
+        {
+          "say": "Second: three Snowflake features they ask about.",
+          "device": "big",
+          "text": "Three Snowflake features"
+        },
+        {
+          "say": "Time travel reads a table as it was, some hours or days ago.",
+          "device": "card",
+          "label": "Time travel",
+          "head": "Read the table as it was",
+          "headmark": "as it was",
+          "headmark_at": "was"
+        },
+        {
+          "say": "A clone copies a table in seconds. It shares the same blocks, so it costs nothing at first.",
+          "device": "card",
+          "label": "Zero-copy clone",
+          "head": "A copy that shares the blocks",
+          "headmark": "shares the blocks",
+          "headmark_at": "shares"
+        },
+        {
+          "say": "And Snowpipe loads new files as they land, with no schedule.",
+          "device": "card",
+          "label": "Snowpipe",
+          "head": "Load files as they land",
+          "headmark": "as they land",
+          "headmark_at": "land"
+        }
+      ]
+    },
+    {
+      "title": "Databricks in one picture",
+      "check": {
+        "prompt": "What does Unity Catalog do?",
+        "options": [
+          "It runs Spark jobs",
+          "It governs access to data in one place",
+          "It stores Parquet files"
+        ],
+        "answer": 1,
+        "why": "Unity Catalog holds the grants, the lineage and the names for every workspace."
+      },
+      "beats": [
+        {
+          "say": "Third: Databricks is a lakehouse.",
+          "device": "big",
+          "text": "Databricks: a lakehouse"
+        },
+        {
+          "say": "Your data stays as Delta tables, in your own cloud storage.",
+          "device": "card",
+          "label": "Storage",
+          "head": "Delta tables in your storage",
+          "headmark": "Delta tables",
+          "headmark_at": "Delta"
+        },
+        {
+          "say": "Spark clusters and SQL warehouses run on top of it.",
+          "device": "card",
+          "label": "Compute",
+          "head": "Spark and SQL on top",
+          "headmark": "Spark and SQL",
+          "headmark_at": "Spark"
+        },
+        {
+          "say": "And Unity Catalog governs it all: names, grants, and lineage, in one place.",
+          "device": "card",
+          "label": "Governance",
+          "head": "Unity Catalog: one place for access",
+          "headmark": "Unity Catalog",
+          "headmark_at": "Unity"
+        }
+      ]
+    },
+    {
+      "title": "How to choose",
+      "beats": [
+        {
+          "say": "Last: which one do you pick?",
+          "device": "big",
+          "text": "Which one do you pick?"
+        },
+        {
+          "say": "Mostly SQL and analysts? Snowflake is simple to run.",
+          "device": "card",
+          "label": "SQL first",
+          "head": "SQL teams: Snowflake",
+          "headmark": "Snowflake",
+          "headmark_at": "Snowflake"
+        },
+        {
+          "say": "Heavy Spark, streaming, or machine learning? Databricks fits better.",
+          "device": "card",
+          "label": "Engineering first",
+          "head": "Spark and ML: Databricks",
+          "headmark": "Databricks",
+          "headmark_at": "Databricks"
+        },
+        {
+          "say": "In the interview, give one recommendation. Then say its trade-off.",
+          "device": "card",
+          "label": "The senior answer",
+          "head": "Recommend, then give the trade-off",
+          "headmark": "trade-off",
+          "headmark_at": "trade-off"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Quick recap of the two platforms.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "Snowflake separates storage and compute. Databricks is Delta plus Spark. And always name the trade-off.",
+          "device": "list",
+          "label": "Snowflake and Databricks",
+          "items": [
+            "Snowflake: storage apart from compute",
+            "Databricks: Delta plus Spark",
+            "Name the trade-off"
+          ],
+          "items_at": ["separates", "Delta", "trade-off"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

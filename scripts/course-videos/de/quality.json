@@ -1,0 +1,167 @@
+{
+  "station": "quality",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "The numbers are wrong. And now it is your problem.",
+          "device": "big",
+          "text": "The numbers are wrong"
+        },
+        {
+          "say": "Even when another team caused it. At senior level, you own the trust in the data.",
+          "device": "card",
+          "label": "At senior level",
+          "head": "You own the trust",
+          "headmark": "trust",
+          "headmark_at": "trust"
+        },
+        {
+          "say": "Three steps: prevent with contracts, detect with tests, and recover from incidents.",
+          "device": "list",
+          "label": "Track 14 · Data quality",
+          "items": ["Prevent: contracts", "Detect: tests", "Recover: incidents"],
+          "items_at": ["prevent", "detect", "recover"]
+        }
+      ]
+    },
+    {
+      "title": "Data contracts",
+      "check": {
+        "prompt": "A producer wants to rename a column that your pipeline reads. What does a data contract make them do?",
+        "options": ["Nothing", "Tell the consumers and version the change", "Delete the old data"],
+        "answer": 1,
+        "why": "The contract is a promise on the schema. A breaking change needs a new version."
+      },
+      "beats": [
+        { "say": "First: prevent bad data.", "device": "big", "text": "Prevent bad data" },
+        {
+          "say": "A data contract is a promise from the producer. These columns, these types, this freshness.",
+          "device": "card",
+          "label": "Data contract",
+          "head": "A promise from the producer",
+          "headmark": "promise",
+          "headmark_at": "promise"
+        },
+        {
+          "say": "To add an optional column is safe. To rename or remove one breaks consumers.",
+          "device": "card",
+          "label": "Schema changes",
+          "head": "Add is safe. Rename breaks.",
+          "headmark": "Rename breaks.",
+          "headmark_at": "rename"
+        },
+        {
+          "say": "So a breaking change gets a new version, and a warning to the consumers.",
+          "device": "card",
+          "label": "The rule",
+          "head": "Breaking change, new version",
+          "headmark": "new version",
+          "headmark_at": "version"
+        }
+      ]
+    },
+    {
+      "title": "Test before you publish",
+      "check": {
+        "prompt": "In write-audit-publish, when do users see the new data?",
+        "options": ["Before the checks", "After the checks pass", "Never"],
+        "answer": 1,
+        "why": "Write to a staging place, audit it, and publish only when the checks pass."
+      },
+      "beats": [
+        { "say": "Second: detect it before users do.", "device": "big", "text": "Detect it first" },
+        {
+          "say": "Write the new data to a staging place. Audit it with checks. Publish only if they pass.",
+          "device": "list",
+          "label": "Write, audit, publish",
+          "items": ["Write to staging", "Audit with checks", "Publish if they pass"],
+          "items_at": ["Write", "Audit", "Publish"]
+        },
+        {
+          "say": "So bad data never reaches a dashboard. The old, good data stays in place.",
+          "device": "card",
+          "label": "The result",
+          "head": "Bad data never reaches users",
+          "headmark": "never reaches users",
+          "headmark_at": "never"
+        }
+      ]
+    },
+    {
+      "title": "Observability and SLOs",
+      "beats": [
+        {
+          "say": "Third: what does healthy data mean?",
+          "device": "big",
+          "text": "What is healthy data?"
+        },
+        {
+          "say": "Watch four things: freshness, volume, schema, and the values themselves.",
+          "device": "list",
+          "label": "Four signals",
+          "items": ["Freshness", "Volume", "Schema", "Values"],
+          "items_at": ["freshness", "volume", "schema", "values"]
+        },
+        {
+          "say": "Then set a target that users feel. For example: ready by seven, on 99 days of 100.",
+          "device": "card",
+          "label": "SLO",
+          "head": "A target that users feel",
+          "headmark": "users feel",
+          "headmark_at": "feel"
+        }
+      ]
+    },
+    {
+      "title": "Running an incident",
+      "beats": [
+        {
+          "say": "Last: the bad data is already out.",
+          "device": "big",
+          "text": "Bad data is already out"
+        },
+        {
+          "say": "First contain it. Then fix the cause. Then backfill. Then write down what you learned.",
+          "device": "list",
+          "label": "In this order",
+          "items": ["Contain", "Fix", "Backfill", "Learn"],
+          "items_at": ["contain", "fix", "backfill", "learned"]
+        },
+        {
+          "say": "Tell the users early. Silence costs more trust than the bug.",
+          "device": "card",
+          "label": "Communication",
+          "head": "Tell users early",
+          "headmark": "early",
+          "headmark_at": "early"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Quick recap of data quality.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "Contracts prevent. Write, audit, publish detects. And contain an incident before you fix it.",
+          "device": "list",
+          "label": "Data quality",
+          "items": ["Contracts prevent", "Write, audit, publish", "Contain, then fix"],
+          "items_at": ["Contracts", "audit", "contain"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

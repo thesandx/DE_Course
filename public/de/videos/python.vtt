@@ -1,0 +1,125 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:02.980
+The coding round wants code you could ship.
+
+2
+00:00:03.000 --> 00:00:04.217
+Not clever code.
+
+3
+00:00:04.237 --> 00:00:07.565
+Clean code, with the right speed, that handles failure.
+
+4
+00:00:07.585 --> 00:00:13.065
+Three habits: pick the right structure, stream big data, and write for production.
+
+5
+00:00:13.085 --> 00:00:15.675
+First: pick the right data structure.
+
+6
+00:00:15.695 --> 00:00:19.685
+To check if a value is in a list, Python reads the whole list.
+
+7
+00:00:19.705 --> 00:00:21.635
+A set or a dict uses a hash.
+
+8
+00:00:21.655 --> 00:00:23.945
+The same check takes one step.
+
+9
+00:00:23.965 --> 00:00:25.282
+Use a dict to count.
+
+10
+00:00:25.302 --> 00:00:26.370
+A deque for a queue.
+
+11
+00:00:26.390 --> 00:00:29.220
+And a heap for the top few items.
+
+12
+00:00:29.240 --> 00:00:31.930
+Second: the file is bigger than memory.
+
+13
+00:00:31.950 --> 00:00:33.043
+Do not load it all.
+
+14
+00:00:33.063 --> 00:00:35.890
+A generator gives you one row at a time.
+
+15
+00:00:35.910 --> 00:00:40.440
+Memory stays flat, even for a file of 100 gigabytes.
+
+16
+00:00:40.460 --> 00:00:42.825
+Third: write it like production code.
+
+17
+00:00:42.845 --> 00:00:44.438
+A network call can fail.
+
+18
+00:00:44.458 --> 00:00:47.685
+So retry, and wait longer after each try.
+
+19
+00:00:47.705 --> 00:00:49.623
+And make the task idempotent.
+
+20
+00:00:49.643 --> 00:00:52.570
+Run it twice, and the result is the same.
+
+21
+00:00:52.590 --> 00:00:54.370
+Then add one small test.
+
+22
+00:00:54.390 --> 00:00:57.620
+It shows the interviewer you check your own work.
+
+23
+00:00:57.640 --> 00:01:00.180
+Last: how do you make Python faster?
+
+24
+00:01:00.200 --> 00:01:04.140
+For waiting on a network or a disk, use threads or asyncio.
+
+25
+00:01:04.160 --> 00:01:07.140
+For heavy maths on the CPU, use processes.
+
+26
+00:01:07.160 --> 00:01:10.265
+The interpreter lock blocks threads there.
+
+27
+00:01:10.285 --> 00:01:13.075
+Quick recap of Python for data coding.
+
+28
+00:01:13.095 --> 00:01:14.237
+Hash for lookups.
+
+29
+00:01:14.257 --> 00:01:15.900
+Generators for big files.
+
+30
+00:01:15.920 --> 00:01:18.660
+And retries with idempotent tasks.
+
+31
+00:01:18.680 --> 00:01:21.780
+Now start the first lesson below.

@@ -1,0 +1,168 @@
+{
+  "station": "staff",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        { "say": "At staff level, depth is assumed.", "device": "big", "text": "Depth is assumed" },
+        {
+          "say": "The loop scores what you do with it. Most staff rejections happen here.",
+          "device": "card",
+          "label": "What is scored",
+          "head": "What you do with the depth",
+          "headmark": "do with the depth",
+          "headmark_at": "do"
+        },
+        {
+          "say": "Four skills: frame the problem, set a direction, review a design, and influence.",
+          "device": "list",
+          "label": "Track 19 · Staff-level judgement",
+          "items": ["Frame the problem", "Set a direction", "Review a design", "Influence"],
+          "items_at": ["frame", "direction", "review", "influence"]
+        }
+      ]
+    },
+    {
+      "title": "The staff bar",
+      "check": {
+        "prompt": "What does a staff loop score most?",
+        "options": [
+          "How fast you write SQL",
+          "What you do with your technical depth",
+          "How many tools you know"
+        ],
+        "answer": 1,
+        "why": "Depth is assumed. The loop scores how you frame, decide and bring people with you."
+      },
+      "beats": [
+        {
+          "say": "First: senior or staff? Hear the difference.",
+          "device": "big",
+          "text": "Senior or staff?"
+        },
+        {
+          "say": "A senior answer solves the problem in front of it, and solves it well.",
+          "device": "card",
+          "label": "Senior",
+          "head": "Solves the problem given",
+          "headmark": "given",
+          "headmark_at": "front"
+        },
+        {
+          "say": "A staff answer asks: is this the right problem? And who else has it?",
+          "device": "card",
+          "label": "Staff",
+          "head": "Is this the right problem?",
+          "headmark": "right problem",
+          "headmark_at": "right"
+        }
+      ]
+    },
+    {
+      "title": "From vague ask to plan",
+      "check": {
+        "prompt": "The ask is: make our data trustworthy. What do you do first?",
+        "options": [
+          "Buy a tool",
+          "Find the real problem and who feels it",
+          "Rewrite the pipelines"
+        ],
+        "answer": 1,
+        "why": "Frame the problem first. Then commit to one first step."
+      },
+      "beats": [
+        {
+          "say": "Second: make our data trustworthy.",
+          "device": "big",
+          "text": "Make data trustworthy"
+        },
+        {
+          "say": "That ask is vague on purpose. Do not start to build.",
+          "device": "card",
+          "label": "A vague ask",
+          "head": "Do not start to build",
+          "headmark": "Do not",
+          "headmark_at": "not"
+        },
+        {
+          "say": "Find who is hurt. Find the real problem. Then commit to one first step.",
+          "device": "list",
+          "label": "Three moves",
+          "items": ["Who is hurt?", "The real problem", "One first step"],
+          "items_at": ["who", "real", "first"]
+        }
+      ]
+    },
+    {
+      "title": "Strategy and design review",
+      "beats": [
+        {
+          "say": "Third: choose a direction for several teams.",
+          "device": "big",
+          "text": "A direction for teams"
+        },
+        {
+          "say": "A strategy says where we are, where we go, and in which order.",
+          "device": "list",
+          "label": "A strategy",
+          "items": ["Where we are", "Where we go", "The order of steps"],
+          "items_at": ["are", "go", "order"]
+        },
+        {
+          "say": "In a design review, find the few flaws that matter. Skip the small ones.",
+          "device": "card",
+          "label": "Design review",
+          "head": "Find the flaws that matter",
+          "headmark": "that matter",
+          "headmark_at": "matter"
+        }
+      ]
+    },
+    {
+      "title": "Influence and cost",
+      "beats": [
+        { "say": "Last: nobody reports to you.", "device": "big", "text": "Nobody reports to you" },
+        {
+          "say": "So you move people with evidence, and with what they care about.",
+          "device": "card",
+          "label": "Influence",
+          "head": "Evidence, and what they care about",
+          "headmark": "Evidence",
+          "headmark_at": "evidence"
+        },
+        {
+          "say": "And put a price on the decision. Include the time of the people.",
+          "device": "card",
+          "label": "Cost",
+          "head": "Put a price on it",
+          "headmark": "price",
+          "headmark_at": "price"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Quick recap of staff-level judgement.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "Question the problem. Commit to a first step. And move people with evidence.",
+          "device": "list",
+          "label": "Staff-level judgement",
+          "items": ["Question the problem", "Commit to a first step", "Move people with evidence"],
+          "items_at": ["Question", "first", "evidence"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

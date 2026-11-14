@@ -1,0 +1,121 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:03.455
+One classic coding round sits in most loops.
+
+2
+00:00:03.475 --> 00:00:04.643
+It is a filter.
+
+3
+00:00:04.663 --> 00:00:08.240
+A great design round does not save a failed coding round.
+
+4
+00:00:08.260 --> 00:00:12.865
+The good news: most questions come from a small set of patterns.
+
+5
+00:00:12.885 --> 00:00:15.075
+First: read the input size.
+
+6
+00:00:15.095 --> 00:00:18.185
+The size tells you the speed the interviewer wants.
+
+7
+00:00:18.205 --> 00:00:20.760
+Up to a thousand items, two loops are fine.
+
+8
+00:00:20.780 --> 00:00:24.335
+Up to a million, you need one pass, or a sort.
+
+9
+00:00:24.355 --> 00:00:26.645
+Second: solve it in one pass.
+
+10
+00:00:26.665 --> 00:00:28.732
+A hash map remembers what you saw.
+
+11
+00:00:28.752 --> 00:00:31.180
+So you never search the array again.
+
+12
+00:00:31.200 --> 00:00:34.740
+Two pointers walk in from both ends of a sorted array.
+
+13
+00:00:34.760 --> 00:00:37.690
+A sliding window grows and shrinks over the array.
+
+14
+00:00:37.710 --> 00:00:41.115
+Use it for the longest or the shortest part.
+
+15
+00:00:41.135 --> 00:00:43.550
+Third: a few more patterns to know.
+
+16
+00:00:43.570 --> 00:00:45.463
+A stack finds the nearest match.
+
+17
+00:00:45.483 --> 00:00:46.675
+A heap keeps the top k.
+
+18
+00:00:46.695 --> 00:00:49.335
+Binary search cuts the space in half.
+
+19
+00:00:49.355 --> 00:00:52.223
+For tasks that depend on other tasks, sort the graph.
+
+20
+00:00:52.243 --> 00:00:54.935
+That is topological sort.
+
+21
+00:00:54.955 --> 00:00:57.820
+Last: a method for the 45 minutes.
+
+22
+00:00:57.840 --> 00:00:59.020
+Restate the problem.
+
+23
+00:00:59.040 --> 00:01:00.695
+Give a simple solution first.
+
+24
+00:01:00.715 --> 00:01:01.582
+Improve it.
+
+25
+00:01:01.602 --> 00:01:04.545
+Then test with a small example.
+
+26
+00:01:04.565 --> 00:01:06.755
+Quick recap of the coding round.
+
+27
+00:01:06.775 --> 00:01:07.742
+Read the size.
+
+28
+00:01:07.762 --> 00:01:08.880
+Know the patterns.
+
+29
+00:01:08.900 --> 00:01:11.640
+And always say the simple solution first.
+
+30
+00:01:11.660 --> 00:01:14.760
+Now start the first lesson below.

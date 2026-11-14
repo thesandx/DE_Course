@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { CourseVideo } from '@/components/course/CourseVideo';
 import { ProblemTable } from '@/components/course/ProblemTable';
 import { ProgressRing } from '@/components/course/ProgressRing';
 import { AppShell } from '@/components/layout/AppShell';
@@ -16,7 +17,9 @@ import {
 } from '@/lib/course/catalog';
 import { lessonId, problemId } from '@/lib/course/progress';
 import { trackNumber, trackStyle } from '@/lib/course/track-style';
+import { courseVideo, videoCaptionsHref, videoPosterHref } from '@/lib/course/videos';
 import { cn } from '@/lib/utils';
+import { getCourseVideoUrl } from '@/services/course-video.service';
 import { requireDeLearner } from '@/services/learner.service';
 
 /** Tracks whose page links to the learner's own story bank. */
@@ -41,6 +44,10 @@ export default async function TrackPage({ params }: Props) {
   if (track === undefined) notFound();
 
   const { progress, shell } = await requireDeLearner(`/de/tracks/${slug}`);
+  // The film is optional: with no file in the bucket the URL is null, and the
+  // page shows the track without a player.
+  const video = courseVideo('de', slug);
+  const videoUrl = video === undefined ? null : await getCourseVideoUrl('de', slug);
   const stats = trackProgress(track, progress.done);
   const problems = problemsForTrack(slug);
   const firstOpen =
@@ -100,6 +107,16 @@ export default async function TrackPage({ params }: Props) {
             </dl>
           </div>
         </header>
+
+        {video !== undefined && videoUrl !== null && (
+          <CourseVideo
+            video={video}
+            title="The track in one video"
+            src={videoUrl}
+            poster={videoPosterHref('de', slug)}
+            captionsSrc={videoCaptionsHref('de', slug)}
+          />
+        )}
 
         <div className="grid gap-6 lg:grid-cols-12 lg:items-start">
           <section aria-labelledby="lessons-heading" className="flex flex-col gap-3 lg:col-span-7">

@@ -1,0 +1,193 @@
+{
+  "station": "streaming",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "A rider opens the app. The price must be fresh, now.",
+          "device": "big",
+          "text": "Fresh data, right now"
+        },
+        {
+          "say": "A batch job each hour is too slow. You need a stream.",
+          "device": "card",
+          "label": "Why streaming",
+          "head": "Hourly is too slow",
+          "headmark": "too slow",
+          "headmark_at": "slow"
+        },
+        {
+          "say": "Three ideas: the Kafka log, delivery guarantees, and event time.",
+          "device": "list",
+          "label": "Track 10 · Streaming",
+          "items": ["The Kafka log", "Delivery guarantees", "Event time"],
+          "items_at": ["log", "delivery", "event"]
+        }
+      ]
+    },
+    {
+      "title": "Kafka in one picture",
+      "check": {
+        "prompt": "Where does Kafka keep the order of messages?",
+        "options": ["Across the whole topic", "Inside one partition", "Nowhere"],
+        "answer": 1,
+        "why": "Order holds inside a partition. Use the key to send related events to the same partition."
+      },
+      "beats": [
+        { "say": "First: Kafka is a log.", "device": "big", "text": "Kafka is a log" },
+        {
+          "say": "Producers append messages at the end. Consumers read at their own speed.",
+          "device": "card",
+          "label": "The log",
+          "head": "Append at the end, read at your speed",
+          "headmark": "Append at the end",
+          "headmark_at": "append"
+        },
+        {
+          "say": "A topic is split into partitions. That is how Kafka scales.",
+          "device": "card",
+          "label": "Partitions",
+          "head": "A topic has partitions",
+          "headmark": "partitions",
+          "headmark_at": "partitions"
+        },
+        {
+          "say": "Order holds only inside one partition. So the key decides what stays in order.",
+          "device": "card",
+          "label": "Order",
+          "head": "Order is per partition",
+          "headmark": "per partition",
+          "headmark_at": "inside"
+        },
+        {
+          "say": "Each consumer remembers its position. That position is the offset.",
+          "device": "card",
+          "label": "Offset",
+          "head": "The offset is your position",
+          "headmark": "offset",
+          "headmark_at": "offset"
+        }
+      ]
+    },
+    {
+      "title": "Delivery guarantees",
+      "check": {
+        "prompt": "A consumer processes a message, then crashes before it commits. What happens?",
+        "options": [
+          "The message is lost",
+          "The message is processed again",
+          "The topic is deleted"
+        ],
+        "answer": 1,
+        "why": "This is at-least-once delivery. So make the processing idempotent."
+      },
+      "beats": [
+        {
+          "say": "Second: can a message be lost, or come twice?",
+          "device": "big",
+          "text": "Lost, or twice?"
+        },
+        {
+          "say": "At most once can lose a message. At least once can repeat one. Exactly once costs more.",
+          "device": "list",
+          "label": "Three guarantees",
+          "items": [
+            "At most once: can lose",
+            "At least once: can repeat",
+            "Exactly once: costs more"
+          ],
+          "items_at": ["most", "least", "Exactly"]
+        },
+        {
+          "say": "Most systems pick at least once, and make the write idempotent.",
+          "device": "card",
+          "label": "In practice",
+          "head": "At least once + idempotent",
+          "headmark": "idempotent",
+          "headmark_at": "idempotent"
+        }
+      ]
+    },
+    {
+      "title": "Event time and watermarks",
+      "beats": [
+        {
+          "say": "Third: events arrive late, and out of order.",
+          "device": "big",
+          "text": "Late and out of order"
+        },
+        {
+          "say": "A phone goes into a tunnel. Its events arrive ten minutes later.",
+          "device": "card",
+          "label": "Example",
+          "head": "Ten minutes late",
+          "headmark": "late",
+          "headmark_at": "later"
+        },
+        {
+          "say": "So use the time the event happened. Not the time it arrived.",
+          "device": "card",
+          "label": "Event time",
+          "head": "When it happened, not when it arrived",
+          "headmark": "When it happened",
+          "headmark_at": "happened"
+        },
+        {
+          "say": "A watermark says: I think I have seen everything up to this time.",
+          "device": "card",
+          "label": "Watermark",
+          "head": "Seen everything up to here",
+          "headmark": "up to here",
+          "headmark_at": "everything"
+        }
+      ]
+    },
+    {
+      "title": "State and checkpoints",
+      "beats": [
+        {
+          "say": "Last: a stream job remembers things.",
+          "device": "big",
+          "text": "A job that remembers"
+        },
+        {
+          "say": "A count per window is state. Flink saves that state in checkpoints.",
+          "device": "card",
+          "label": "State",
+          "head": "State is saved in checkpoints",
+          "headmark": "checkpoints",
+          "headmark_at": "checkpoints"
+        },
+        {
+          "say": "After a crash, the job restarts from the last checkpoint.",
+          "device": "card",
+          "label": "After a crash",
+          "head": "Restart from the checkpoint",
+          "headmark": "Restart",
+          "headmark_at": "restarts"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Quick recap of streaming.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "Order is per partition. At least once, with idempotent writes. And use event time.",
+          "device": "list",
+          "label": "Streaming",
+          "items": ["Order is per partition", "At least once + idempotent", "Use event time"],
+          "items_at": ["Order", "least", "event"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

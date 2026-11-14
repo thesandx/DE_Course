@@ -1,0 +1,125 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:03.020
+A warehouse has 1,000 SQL models.
+
+2
+00:00:03.040 --> 00:00:04.830
+Someone changes one.
+
+3
+00:00:04.850 --> 00:00:05.455
+What breaks?
+
+4
+00:00:05.475 --> 00:00:06.905
+In which order do you rebuild?
+
+5
+00:00:06.925 --> 00:00:08.415
+And who tests it?
+
+6
+00:00:08.435 --> 00:00:13.965
+dbt answers with three things: a graph, incremental models, and tests.
+
+7
+00:00:13.985 --> 00:00:16.275
+First: what does dbt do?
+
+8
+00:00:16.295 --> 00:00:17.937
+You write a select statement.
+
+9
+00:00:17.957 --> 00:00:21.060
+dbt wraps it and builds the table for you.
+
+10
+00:00:21.080 --> 00:00:23.297
+To use another model, you call ref.
+
+11
+00:00:23.317 --> 00:00:26.470
+dbt reads those calls and builds a graph.
+
+12
+00:00:26.490 --> 00:00:28.370
+So dbt knows the order.
+
+13
+00:00:28.390 --> 00:00:31.670
+And it knows what is downstream of a change.
+
+14
+00:00:31.690 --> 00:00:34.580
+Second: do not rebuild everything each day.
+
+15
+00:00:34.600 --> 00:00:39.265
+An incremental model processes only the new rows, and merges them in.
+
+16
+00:00:39.285 --> 00:00:40.752
+The trap is late data.
+
+17
+00:00:40.772 --> 00:00:44.050
+A row arrives two days late, and the filter skips it.
+
+18
+00:00:44.070 --> 00:00:46.100
+So look back a few days on each run.
+
+19
+00:00:46.120 --> 00:00:48.700
+And merge on a unique key.
+
+20
+00:00:48.720 --> 00:00:51.535
+Third: catch a bad change before it ships.
+
+21
+00:00:51.555 --> 00:00:53.398
+Data tests check the rows.
+
+22
+00:00:53.418 --> 00:00:55.085
+Unit tests check the logic.
+
+23
+00:00:55.105 --> 00:00:57.470
+A contract fixes the columns.
+
+24
+00:00:57.490 --> 00:01:01.820
+Start with two tests on every key: unique, and not null.
+
+25
+00:01:01.840 --> 00:01:04.280
+Last: keep a big project fast.
+
+26
+00:01:04.300 --> 00:01:09.205
+In CI, build only the models that changed, and what depends on them.
+
+27
+00:01:09.225 --> 00:01:11.365
+Quick recap of dbt.
+
+28
+00:01:11.385 --> 00:01:12.790
+Ref builds the graph.
+
+29
+00:01:12.810 --> 00:01:14.365
+Incremental needs a lookback.
+
+30
+00:01:14.385 --> 00:01:16.225
+And test every key.
+
+31
+00:01:16.245 --> 00:01:19.345
+Now start the first lesson below.

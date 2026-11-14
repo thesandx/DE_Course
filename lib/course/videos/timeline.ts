@@ -1,7 +1,7 @@
-import type { VideoChapter, VideoCheck, VideoCue } from '@/types/gcp';
+import type { VideoChapter, VideoCheck, VideoCue } from '@/types/video';
 
 /**
- * The pure parts of the station video player: which caption, chapter and quick
+ * The pure parts of the video player: which caption, chapter and quick
  * check belong to a moment of the video. The player keeps the state; these
  * functions only read the data.
  */

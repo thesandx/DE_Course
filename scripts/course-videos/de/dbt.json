@@ -1,0 +1,166 @@
+{
+  "station": "dbt",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "A warehouse has 1,000 SQL models. Someone changes one.",
+          "device": "stat",
+          "value": 1000,
+          "sub": "SQL models in one project"
+        },
+        {
+          "say": "What breaks? In which order do you rebuild? And who tests it?",
+          "device": "card",
+          "label": "The questions",
+          "head": "What breaks downstream?",
+          "headmark": "downstream",
+          "headmark_at": "breaks"
+        },
+        {
+          "say": "dbt answers with three things: a graph, incremental models, and tests.",
+          "device": "list",
+          "label": "Track 9 · dbt",
+          "items": ["A graph", "Incremental models", "Tests"],
+          "items_at": ["graph", "incremental", "tests"]
+        }
+      ]
+    },
+    {
+      "title": "dbt in one picture",
+      "check": {
+        "prompt": "How does dbt know the order to build the models in?",
+        "options": ["From the file names", "From the ref calls", "From a schedule"],
+        "answer": 1,
+        "why": "Each ref is a dependency. dbt builds the graph from them."
+      },
+      "beats": [
+        { "say": "First: what does dbt do?", "device": "big", "text": "What does dbt do?" },
+        {
+          "say": "You write a select statement. dbt wraps it and builds the table for you.",
+          "device": "card",
+          "label": "A model",
+          "head": "One select = one model",
+          "headmark": "one model",
+          "headmark_at": "select"
+        },
+        {
+          "say": "To use another model, you call ref. dbt reads those calls and builds a graph.",
+          "device": "card",
+          "label": "The graph",
+          "text": "select * from {{ ref('stg_orders') }}",
+          "mark": "ref('stg_orders')",
+          "mark_at": "ref"
+        },
+        {
+          "say": "So dbt knows the order. And it knows what is downstream of a change.",
+          "device": "card",
+          "label": "Why it matters",
+          "head": "The graph gives the order",
+          "headmark": "order",
+          "headmark_at": "order"
+        }
+      ]
+    },
+    {
+      "title": "Incremental models",
+      "check": {
+        "prompt": "Your incremental model missed rows that arrived late. What do you add?",
+        "options": ["A lookback window", "A bigger warehouse", "A snapshot"],
+        "answer": 0,
+        "why": "Reprocess the last few days on each run, so late rows are picked up."
+      },
+      "beats": [
+        {
+          "say": "Second: do not rebuild everything each day.",
+          "device": "big",
+          "text": "Do not rebuild it all"
+        },
+        {
+          "say": "An incremental model processes only the new rows, and merges them in.",
+          "device": "card",
+          "label": "Incremental",
+          "head": "Only the new rows",
+          "headmark": "new rows",
+          "headmark_at": "new"
+        },
+        {
+          "say": "The trap is late data. A row arrives two days late, and the filter skips it.",
+          "device": "card",
+          "label": "The trap",
+          "head": "Late rows get skipped",
+          "headmark": "skipped",
+          "headmark_at": "skips"
+        },
+        {
+          "say": "So look back a few days on each run. And merge on a unique key.",
+          "device": "card",
+          "label": "The fix",
+          "head": "A lookback window",
+          "headmark": "lookback",
+          "headmark_at": "back"
+        }
+      ]
+    },
+    {
+      "title": "Tests and contracts",
+      "beats": [
+        {
+          "say": "Third: catch a bad change before it ships.",
+          "device": "big",
+          "text": "Catch the bad change"
+        },
+        {
+          "say": "Data tests check the rows. Unit tests check the logic. A contract fixes the columns.",
+          "device": "list",
+          "label": "Three layers",
+          "items": ["Data tests: the rows", "Unit tests: the logic", "Contract: the columns"],
+          "items_at": ["Data", "Unit", "contract"]
+        },
+        {
+          "say": "Start with two tests on every key: unique, and not null.",
+          "device": "card",
+          "label": "A good start",
+          "head": "unique + not_null on keys",
+          "headmark": "unique + not_null",
+          "headmark_at": "unique"
+        }
+      ]
+    },
+    {
+      "title": "In production",
+      "beats": [
+        { "say": "Last: keep a big project fast.", "device": "big", "text": "Keep it fast" },
+        {
+          "say": "In CI, build only the models that changed, and what depends on them.",
+          "device": "card",
+          "label": "Slim CI",
+          "head": "Build only what changed",
+          "headmark": "only what changed",
+          "headmark_at": "only"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Quick recap of dbt.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "Ref builds the graph. Incremental needs a lookback. And test every key.",
+          "device": "list",
+          "label": "dbt",
+          "items": ["ref builds the graph", "Incremental needs a lookback", "Test every key"],
+          "items_at": ["Ref", "Incremental", "test"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}
