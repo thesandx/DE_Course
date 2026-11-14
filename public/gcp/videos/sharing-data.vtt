@@ -1,0 +1,113 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:03.080
+Other companies want Cymbal's data.
+
+2
+00:00:03.100 --> 00:00:05.865
+Suppliers want to see how their products sell.
+
+3
+00:00:05.885 --> 00:00:10.600
+And a partner wants joint insights, but must never see customer rows.
+
+4
+00:00:10.620 --> 00:00:13.587
+The old way is to export files, and send copies.
+
+5
+00:00:13.607 --> 00:00:16.475
+Copies go stale, and they leak.
+
+6
+00:00:16.495 --> 00:00:17.850
+The new way: share live.
+
+7
+00:00:17.870 --> 00:00:19.285
+Do not copy.
+
+8
+00:00:19.305 --> 00:00:20.460
+Think of a library.
+
+9
+00:00:20.480 --> 00:00:21.535
+You lend the book.
+
+10
+00:00:21.555 --> 00:00:24.220
+You do not print a new one for every reader.
+
+11
+00:00:24.240 --> 00:00:26.045
+Analytics Hub works like that.
+
+12
+00:00:26.065 --> 00:00:28.555
+It is now called BigQuery sharing.
+
+13
+00:00:28.575 --> 00:00:30.830
+You publish a listing in an exchange.
+
+14
+00:00:30.850 --> 00:00:34.265
+The subscriber gets a linked dataset, read only.
+
+15
+00:00:34.285 --> 00:00:35.640
+No data is copied.
+
+16
+00:00:35.660 --> 00:00:37.040
+It is always current.
+
+17
+00:00:37.060 --> 00:00:40.440
+And the subscriber pays for their own queries.
+
+18
+00:00:40.460 --> 00:00:43.050
+And the partner who must not see rows?
+
+19
+00:00:43.070 --> 00:00:44.537
+Use a data clean room.
+
+20
+00:00:44.557 --> 00:00:46.163
+Both sides bring data.
+
+21
+00:00:46.183 --> 00:00:49.285
+Only combined, aggregated answers come out.
+
+22
+00:00:49.305 --> 00:00:53.670
+And egress controls on a listing can block copying and exporting.
+
+23
+00:00:53.690 --> 00:00:59.470
+The trap: scheduled exports to partners, when a live listing avoids copies.
+
+24
+00:00:59.490 --> 00:01:00.730
+Recap.
+
+25
+00:01:00.750 --> 00:01:02.480
+Share live with Analytics Hub.
+
+26
+00:01:02.500 --> 00:01:05.565
+And use a clean room when rows must stay hidden.
+
+27
+00:01:05.585 --> 00:01:06.652
+Line four, done.
+
+28
+00:01:06.672 --> 00:01:09.385
+Try the checkpoint below.

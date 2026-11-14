@@ -23,7 +23,11 @@ export type IconName =
   | 'moon'
   | 'monitor'
   | 'globe'
-  | 'note';
+  | 'note'
+  | 'play'
+  | 'pause'
+  | 'expand'
+  | 'shrink';
 
 const PATHS: Record<IconName, React.ReactNode> = {
   home: <path d="M4 11l8-7 8 7v8a1 1 0 01-1 1h-4v-6h-6v6H5a1 1 0 01-1-1z" />,
@@ -96,6 +100,10 @@ const PATHS: Record<IconName, React.ReactNode> = {
       <path d="M8.5 20h7M12 16.5V20" />
     </>
   ),
+  play: <path d="M8 5.5v13l10.5-6.5z" />,
+  pause: <path d="M8.5 5.5v13M15.5 5.5v13" />,
+  expand: <path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" />,
+  shrink: <path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5" />,
 };
 
 export interface IconProps {

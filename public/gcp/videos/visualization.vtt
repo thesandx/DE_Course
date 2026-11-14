@@ -1,0 +1,169 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:04.280
+The CEO's sales dashboard takes 40 seconds to load.
+
+2
+00:00:04.300 --> 00:00:06.665
+And it shows yesterday's numbers.
+
+3
+00:00:06.685 --> 00:00:11.015
+Fix three things: the speed, the freshness, and who can see what.
+
+4
+00:00:11.035 --> 00:00:13.475
+First: which tool shows the data?
+
+5
+00:00:13.495 --> 00:00:15.513
+Looker Studio is free and quick.
+
+6
+00:00:15.533 --> 00:00:17.710
+Great for simple dashboards.
+
+7
+00:00:17.730 --> 00:00:23.020
+Looker adds a shared dictionary of metrics, so revenue means one thing for everyone.
+
+8
+00:00:23.040 --> 00:00:26.845
+Connected Sheets lets spreadsheet people work on billions of rows,
+
+9
+00:00:26.865 --> 00:00:28.530
+without an export.
+
+10
+00:00:28.550 --> 00:00:33.690
+And BI Engine keeps data in memory, so dashboards answer in under a second.
+
+11
+00:00:33.710 --> 00:00:35.027
+One classic trap.
+
+12
+00:00:35.047 --> 00:00:36.940
+Looker Studio shows old data?
+
+13
+00:00:36.960 --> 00:00:38.102
+It is the cache.
+
+14
+00:00:38.122 --> 00:00:40.915
+Change the data freshness setting.
+
+15
+00:00:40.935 --> 00:00:44.000
+Second: stop doing the same work again and again.
+
+16
+00:00:44.020 --> 00:00:46.612
+A dashboard asks the same question all day.
+
+17
+00:00:46.632 --> 00:00:48.710
+So work out the answer once.
+
+18
+00:00:48.730 --> 00:00:53.270
+Use a materialized view, a scheduled summary table, or BI Engine.
+
+19
+00:00:53.290 --> 00:00:59.345
+And the same query, asked twice, is served from the cache, free, for about 24 hours.
+
+20
+00:00:59.365 --> 00:01:01.145
+Third: one query is still slow.
+
+21
+00:01:01.165 --> 00:01:02.355
+Now what?
+
+22
+00:01:02.375 --> 00:01:03.105
+Do not guess.
+
+23
+00:01:03.125 --> 00:01:04.455
+Open the query plan.
+
+24
+00:01:04.475 --> 00:01:07.140
+It shows bytes, slot time, and skew.
+
+25
+00:01:07.160 --> 00:01:09.377
+Almost every fix is one of two things.
+
+26
+00:01:09.397 --> 00:01:11.700
+Scan less, or shuffle less.
+
+27
+00:01:11.720 --> 00:01:13.612
+Select only the columns you need.
+
+28
+00:01:13.632 --> 00:01:15.525
+Filter on the partition early.
+
+29
+00:01:15.545 --> 00:01:17.960
+And cut data down before a join.
+
+30
+00:01:17.980 --> 00:01:20.123
+The trap: adding LIMIT to save money.
+
+31
+00:01:20.143 --> 00:01:23.285
+BigQuery still scans every byte.
+
+32
+00:01:23.305 --> 00:01:25.920
+Last: who can see what on the dashboard?
+
+33
+00:01:25.940 --> 00:01:28.545
+Give viewers a view, or a curated dataset.
+
+34
+00:01:28.565 --> 00:01:30.380
+Never the raw tables.
+
+35
+00:01:30.400 --> 00:01:33.155
+And mask sensitive columns with policy tags.
+
+36
+00:01:33.175 --> 00:01:35.855
+Share with groups, not people.
+
+37
+00:01:35.875 --> 00:01:37.115
+Recap.
+
+38
+00:01:37.135 --> 00:01:39.040
+Pick the BI tool for the audience.
+
+39
+00:01:39.060 --> 00:01:41.625
+Compute once, and read many times.
+
+40
+00:01:41.645 --> 00:01:43.475
+Read the plan, then scan less.
+
+41
+00:01:43.495 --> 00:01:46.285
+And give viewers views, not raw tables.
+
+42
+00:01:46.305 --> 00:01:49.080
+Try the checkpoint below.

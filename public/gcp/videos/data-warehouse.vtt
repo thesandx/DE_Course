@@ -1,0 +1,149 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:03.855
+Finance has a sales table of 40 terabytes.
+
+2
+00:00:03.875 --> 00:00:06.005
+Every monthly report scans all of it.
+
+3
+00:00:06.025 --> 00:00:07.790
+And costs a fortune.
+
+4
+00:00:07.810 --> 00:00:10.090
+The goal: scan gigabytes, not terabytes.
+
+5
+00:00:10.110 --> 00:00:12.365
+Three ideas do it.
+
+6
+00:00:12.385 --> 00:00:14.675
+First: how you shape the tables.
+
+7
+00:00:14.695 --> 00:00:16.612
+App databases normalize.
+
+8
+00:00:16.632 --> 00:00:20.110
+Every fact is stored once, in many small tables.
+
+9
+00:00:20.130 --> 00:00:21.622
+BigQuery likes the opposite.
+
+10
+00:00:21.642 --> 00:00:22.873
+Storage is cheap.
+
+11
+00:00:22.893 --> 00:00:25.195
+Joining huge tables is not.
+
+12
+00:00:25.215 --> 00:00:30.355
+So keep the order lines inside the order row, with nested and repeated fields.
+
+13
+00:00:30.375 --> 00:00:33.930
+Data that is read together is stored together.
+
+14
+00:00:33.950 --> 00:00:36.515
+Second, and the big one: partitioning.
+
+15
+00:00:36.535 --> 00:00:39.700
+Think of a filing cabinet with one drawer per day.
+
+16
+00:00:39.720 --> 00:00:42.850
+Ask for last week, and BigQuery opens seven drawers.
+
+17
+00:00:42.870 --> 00:00:44.885
+It never touches the rest.
+
+18
+00:00:44.905 --> 00:00:47.620
+So partition on the date you filter by.
+
+19
+00:00:47.640 --> 00:00:52.005
+Clustering sorts the data inside each drawer, by up to four columns.
+
+20
+00:00:52.025 --> 00:00:55.940
+Use it for columns with many values, like customer ID.
+
+21
+00:00:55.960 --> 00:00:57.740
+The best setup uses both.
+
+22
+00:00:57.760 --> 00:01:01.625
+Partition by date, then cluster by your common filters.
+
+23
+00:01:01.645 --> 00:01:04.013
+The trap: partitioning on an ID column.
+
+24
+00:01:04.033 --> 00:01:06.350
+Cluster on it instead.
+
+25
+00:01:06.370 --> 00:01:08.135
+Third: views.
+
+26
+00:01:08.155 --> 00:01:10.210
+A normal view is a saved query.
+
+27
+00:01:10.230 --> 00:01:12.345
+It runs again every time.
+
+28
+00:01:12.365 --> 00:01:15.920
+A materialized view stores the answer, and keeps it fresh.
+
+29
+00:01:15.940 --> 00:01:18.105
+Great for repeated totals.
+
+30
+00:01:18.125 --> 00:01:19.605
+To change a column's type,
+
+31
+00:01:19.625 --> 00:01:23.980
+rebuild the table with create or replace table, as select.
+
+32
+00:01:24.000 --> 00:01:25.240
+Recap.
+
+33
+00:01:25.260 --> 00:01:27.190
+Denormalize with nested fields.
+
+34
+00:01:27.210 --> 00:01:29.002
+Partition on your date filter.
+
+35
+00:01:29.022 --> 00:01:31.150
+Cluster on busy columns.
+
+36
+00:01:31.170 --> 00:01:32.687
+Now make that report cheap.
+
+37
+00:01:32.707 --> 00:01:35.220
+Checkpoint below.

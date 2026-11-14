@@ -1,0 +1,321 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:01.955
+Time to build.
+
+2
+00:00:01.975 --> 00:00:04.067
+This is the biggest station on the exam.
+
+3
+00:00:04.087 --> 00:00:05.855
+Nine tools and ideas.
+
+4
+00:00:05.875 --> 00:00:08.855
+We go fast, one picture each.
+
+5
+00:00:08.875 --> 00:00:10.017
+One: Pub/Sub.
+
+6
+00:00:10.037 --> 00:00:12.315
+Think of a post office for events.
+
+7
+00:00:12.335 --> 00:00:14.827
+Publishers drop messages on a topic.
+
+8
+00:00:14.847 --> 00:00:17.575
+Every subscription gets its own copy.
+
+9
+00:00:17.595 --> 00:00:19.225
+Delivery is at least once.
+
+10
+00:00:19.245 --> 00:00:20.638
+So duplicates will happen.
+
+11
+00:00:20.658 --> 00:00:22.035
+Plan for them.
+
+12
+00:00:22.055 --> 00:00:25.385
+A subscriber must say thanks, or ack, within the deadline.
+
+13
+00:00:25.405 --> 00:00:27.545
+The default is 10 seconds.
+
+14
+00:00:27.565 --> 00:00:28.220
+Need order?
+
+15
+00:00:28.240 --> 00:00:29.420
+Use ordering keys.
+
+16
+00:00:29.440 --> 00:00:30.433
+Made a mistake?
+
+17
+00:00:30.453 --> 00:00:32.780
+Seek back in time, and replay.
+
+18
+00:00:32.800 --> 00:00:37.655
+And to copy messages into BigQuery unchanged, use a BigQuery subscription.
+
+19
+00:00:37.675 --> 00:00:40.055
+No Dataflow needed.
+
+20
+00:00:40.075 --> 00:00:43.390
+Two: Apache Beam, the language of Dataflow.
+
+21
+00:00:43.410 --> 00:00:45.278
+A PCollection is the data.
+
+22
+00:00:45.298 --> 00:00:46.965
+A PTransform is a step.
+
+23
+00:00:46.985 --> 00:00:49.375
+And the pipeline is the whole graph.
+
+24
+00:00:49.395 --> 00:00:54.110
+ParDo works on one element at a time, like a worker on an assembly line.
+
+25
+00:00:54.130 --> 00:00:56.260
+To add things up, use Combine.
+
+26
+00:00:56.280 --> 00:01:00.195
+It pre-adds on each worker, so it scales better than GroupByKey.
+
+27
+00:01:00.215 --> 00:01:05.320
+A side input is a small lookup table that every worker can read.
+
+28
+00:01:05.340 --> 00:01:06.607
+Three: windows.
+
+29
+00:01:06.627 --> 00:01:09.655
+A stream never ends, so you cut it into pieces.
+
+30
+00:01:09.675 --> 00:01:12.268
+Always cut by event time: when it happened.
+
+31
+00:01:12.288 --> 00:01:13.940
+Not when it arrived.
+
+32
+00:01:13.960 --> 00:01:15.815
+Fixed windows are like tiles.
+
+33
+00:01:15.835 --> 00:01:17.328
+Every five minutes, a new one.
+
+34
+00:01:17.348 --> 00:01:18.850
+No overlap.
+
+35
+00:01:18.870 --> 00:01:20.525
+Sliding windows overlap.
+
+36
+00:01:20.545 --> 00:01:23.660
+The last hour, updated every five minutes.
+
+37
+00:01:23.680 --> 00:01:25.760
+Session windows follow the user.
+
+38
+00:01:25.780 --> 00:01:28.545
+They close after a gap with no activity.
+
+39
+00:01:28.565 --> 00:01:32.582
+The watermark is Dataflow's guess that all data up to a time has arrived.
+
+40
+00:01:32.602 --> 00:01:34.955
+After that, data is late.
+
+41
+00:01:34.975 --> 00:01:38.218
+The trap: a fixed window for no activity for an hour.
+
+42
+00:01:38.238 --> 00:01:40.705
+That is a session window.
+
+43
+00:01:40.725 --> 00:01:43.415
+Four: running Dataflow jobs safely.
+
+44
+00:01:43.435 --> 00:01:46.715
+To stop a streaming job without losing data, drain it.
+
+45
+00:01:46.735 --> 00:01:48.925
+It finishes what is in flight.
+
+46
+00:01:48.945 --> 00:01:52.385
+Cancel stops at once, and in-flight data is lost.
+
+47
+00:01:52.405 --> 00:01:55.820
+To ship a new version and keep the state, use update.
+
+48
+00:01:55.840 --> 00:01:59.245
+For batch jobs that can wait, FlexRS is cheaper.
+
+49
+00:01:59.265 --> 00:02:02.720
+And flex templates let others launch your job.
+
+50
+00:02:02.740 --> 00:02:06.130
+Five: Dataproc, for teams that already have Spark.
+
+51
+00:02:06.150 --> 00:02:08.518
+Best practice: one cluster per job.
+
+52
+00:02:08.538 --> 00:02:11.015
+Create it, run the job, delete it.
+
+53
+00:02:11.035 --> 00:02:15.575
+That works because the data lives in Cloud Storage, not on the cluster.
+
+54
+00:02:15.595 --> 00:02:18.050
+Add cheap Spot workers for extra compute.
+
+55
+00:02:18.070 --> 00:02:20.110
+But never keep data on them.
+
+56
+00:02:20.130 --> 00:02:24.260
+Or skip the cluster completely, with Dataproc Serverless.
+
+57
+00:02:24.280 --> 00:02:26.870
+Six: getting data into BigQuery.
+
+58
+00:02:26.890 --> 00:02:28.608
+Batch load jobs are free.
+
+59
+00:02:28.628 --> 00:02:31.280
+Use them when minutes of delay are fine.
+
+60
+00:02:31.300 --> 00:02:34.080
+For streaming, use the Storage Write API.
+
+61
+00:02:34.100 --> 00:02:36.490
+It gives exactly-once delivery.
+
+62
+00:02:36.510 --> 00:02:39.165
+For files, Avro and Parquet load fastest.
+
+63
+00:02:39.185 --> 00:02:41.175
+They carry their own schema.
+
+64
+00:02:41.195 --> 00:02:44.588
+The trap: zipping CSV files to speed things up.
+
+65
+00:02:44.608 --> 00:02:48.100
+A gzip file cannot be read in parallel.
+
+66
+00:02:48.120 --> 00:02:50.310
+Seven, eight and nine, quickly.
+
+67
+00:02:50.330 --> 00:02:54.248
+Kafka: keep it if your apps already speak Kafka, on the managed service.
+
+68
+00:02:54.268 --> 00:02:56.220
+Otherwise, Pub/Sub.
+
+69
+00:02:56.240 --> 00:02:59.870
+Duplicates: remove them by key, with ROW_NUMBER or MERGE.
+
+70
+00:02:59.890 --> 00:03:02.480
+And never drop bad rows silently.
+
+71
+00:03:02.500 --> 00:03:05.018
+And AI: bring the model to the data.
+
+72
+00:03:05.038 --> 00:03:10.405
+Call Gemini from SQL in BigQuery, or use RunInference in Dataflow.
+
+73
+00:03:10.425 --> 00:03:11.030
+Recap.
+
+74
+00:03:11.050 --> 00:03:12.940
+The four you must not forget.
+
+75
+00:03:12.960 --> 00:03:14.677
+Pub/Sub means at least once.
+
+76
+00:03:14.697 --> 00:03:16.700
+Windows use event time.
+
+77
+00:03:16.720 --> 00:03:18.200
+Drain to stop safely.
+
+78
+00:03:18.220 --> 00:03:20.960
+And batch loads into BigQuery are free.
+
+79
+00:03:20.980 --> 00:03:22.435
+Nine checkpoints wait below.
+
+80
+00:03:22.455 --> 00:03:24.730
+Take your time.

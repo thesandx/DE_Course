@@ -1,0 +1,220 @@
+{
+  "station": "data-migrations",
+  "chapters": [
+    {
+      "title": "The mission",
+      "beats": [
+        {
+          "say": "The data centre lease ends in March.",
+          "device": "big",
+          "text": "The lease ends in March"
+        },
+        {
+          "say": "400 terabytes of history have to move to Google Cloud.",
+          "device": "stat",
+          "value": 400,
+          "sub": "of history to move",
+          "suffix": " TB"
+        },
+        {
+          "say": "Plus MySQL, SQL Server and a Hadoop cluster. And not one row can go missing.",
+          "device": "card",
+          "label": "Also moving",
+          "head": "Not one row can go missing",
+          "headmark": "Not one row",
+          "headmark_at": "not"
+        },
+        {
+          "say": "Two ideas: how to move the bytes, and how to plan the move.",
+          "device": "card",
+          "label": "Station 1.4 · Data migrations",
+          "head": "Move the bytes. Plan the move.",
+          "headmark": "Plan the move.",
+          "headmark_at": "plan"
+        }
+      ]
+    },
+    {
+      "title": "Do the maths first",
+      "check": {
+        "prompt": "The copy would take months on your network line. What do you pick?",
+        "options": ["gcloud storage cp", "Transfer Appliance", "Datastream"],
+        "answer": 1,
+        "why": "When the network needs more than about a week, ship a Transfer Appliance."
+      },
+      "beats": [
+        { "say": "Before you pick a tool, do the maths.", "device": "big", "text": "Do the maths" },
+        {
+          "say": "One terabyte over a 100 megabit line takes about 1 day.",
+          "device": "stat",
+          "value": 1,
+          "sub": "per terabyte, on a 100 Mbps line",
+          "suffix": " day",
+          "submark": "per terabyte",
+          "submark_at": "terabyte"
+        },
+        {
+          "say": "So 400 terabytes would take more than a year. That is no good.",
+          "device": "card",
+          "label": "On that line",
+          "head": "400 TB = more than a year",
+          "headmark": "more than a year",
+          "headmark_at": "more"
+        },
+        {
+          "say": "The rule: if the network needs more than about a week, ship a device.",
+          "device": "card",
+          "label": "The rule",
+          "head": "More than a week? Ship a device.",
+          "headmark": "Ship a device.",
+          "headmark_at": "ship"
+        }
+      ]
+    },
+    {
+      "title": "Pick the transfer tool",
+      "check": {
+        "prompt": "You must copy every MySQL change into BigQuery, all day. Which tool?",
+        "options": ["Datastream", "Transfer Appliance", "Storage Transfer Service"],
+        "answer": 0,
+        "why": "Datastream is serverless change data capture into BigQuery."
+      },
+      "beats": [
+        { "say": "Now match the job to the tool.", "device": "big", "text": "Job, meet tool" },
+        {
+          "say": "Huge data and a slow line? Transfer Appliance. Google ships you a box.",
+          "device": "card",
+          "label": "Huge data, slow network",
+          "head": "Transfer Appliance",
+          "text": "A physical box, shipped to Google",
+          "headmark": "Transfer Appliance",
+          "headmark_at": "Transfer"
+        },
+        {
+          "say": "Big or repeating file copies, from S3 or on-prem? Storage Transfer Service.",
+          "device": "card",
+          "label": "Files, big or recurring",
+          "head": "Storage Transfer Service",
+          "text": "From S3, Azure, HDFS or on-prem",
+          "headmark": "Storage Transfer Service",
+          "headmark_at": "Storage"
+        },
+        {
+          "say": "Moving MySQL to Cloud SQL with almost no downtime? Database Migration Service.",
+          "device": "card",
+          "label": "Database to database",
+          "head": "Database Migration Service",
+          "text": "To Cloud SQL or AlloyDB, minimal downtime",
+          "headmark": "Database Migration Service",
+          "headmark_at": "Database"
+        },
+        {
+          "say": "Streaming every database change into BigQuery? Datastream.",
+          "device": "card",
+          "label": "Changes into BigQuery",
+          "head": "Datastream",
+          "text": "Serverless change data capture",
+          "headmark": "Datastream"
+        },
+        {
+          "say": "And BigQuery Data Transfer Service loads tables on a schedule, from apps and other warehouses.",
+          "device": "card",
+          "label": "Scheduled loads into BigQuery",
+          "head": "BigQuery Data Transfer Service",
+          "headmark": "Data Transfer Service",
+          "headmark_at": "Data"
+        },
+        {
+          "say": "The trap: Storage Transfer Service moves files into buckets. It does not load BigQuery tables.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "Storage Transfer Service moves files, not tables.",
+          "mark": "files, not tables",
+          "mark_at": "files"
+        }
+      ]
+    },
+    {
+      "title": "The migration plan",
+      "beats": [
+        {
+          "say": "Idea two: the plan. Five steps, always in this order.",
+          "device": "big",
+          "text": "Five steps"
+        },
+        {
+          "say": "Assess what you have. Plan the target. Migrate in waves. Validate against the source. Then optimize.",
+          "device": "list",
+          "label": "The order",
+          "items": ["Assess", "Plan", "Migrate in waves", "Validate", "Optimize"],
+          "items_at": ["Assess", "Plan", "Migrate", "Validate", "optimize"]
+        },
+        {
+          "say": "Run old and new side by side. That is how you prove no row went missing.",
+          "device": "card",
+          "label": "Why waves",
+          "head": "Run old and new side by side",
+          "headmark": "side by side",
+          "headmark_at": "side"
+        }
+      ]
+    },
+    {
+      "title": "Moving Hadoop",
+      "beats": [
+        {
+          "say": "And the Hadoop cluster? Swap each part for a managed one.",
+          "device": "big",
+          "text": "Hadoop, part by part"
+        },
+        {
+          "say": "Spark jobs go to Dataproc. HDFS becomes Cloud Storage. HBase becomes Bigtable.",
+          "device": "list",
+          "label": "Hadoop to Google Cloud",
+          "items": ["Spark jobs → Dataproc", "HDFS → Cloud Storage", "HBase → Bigtable"],
+          "items_at": ["Spark", "HDFS", "HBase"]
+        },
+        {
+          "say": "And your scheduler becomes Cloud Composer, which is managed Airflow.",
+          "device": "card",
+          "label": "The scheduler",
+          "head": "Cron, Oozie → Cloud Composer",
+          "headmark": "Cloud Composer",
+          "headmark_at": "Cloud"
+        },
+        {
+          "say": "Keep the data in Cloud Storage, not on cluster disks. Then you can delete the cluster after each job.",
+          "device": "card",
+          "label": "Why Cloud Storage",
+          "head": "Data outlives the cluster",
+          "headmark": "outlives the cluster",
+          "headmark_at": "delete"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Recap.", "device": "big", "text": "Quick recap" },
+        {
+          "say": "Do the maths first. Match the job to the tool. And follow the five steps, with validation before the switch.",
+          "device": "list",
+          "label": "Station 1.4",
+          "items": [
+            "Do the maths first",
+            "Match job to tool",
+            "Five steps, validate before the switch"
+          ],
+          "items_at": ["maths", "Match", "follow"]
+        },
+        {
+          "say": "That is line one done. Try the checkpoint below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Pass the checkpoint below.",
+          "submark": "checkpoint"
+        }
+      ]
+    }
+  ]
+}

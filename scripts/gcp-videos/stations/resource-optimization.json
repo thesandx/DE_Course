@@ -1,0 +1,209 @@
+{
+  "station": "resource-optimization",
+  "chapters": [
+    {
+      "title": "The mission",
+      "beats": [
+        {
+          "say": "The cloud bill doubled after launch.",
+          "device": "big",
+          "text": "The bill doubled"
+        },
+        {
+          "say": "Cut the cost. But the nightly finance close must never slow down.",
+          "device": "card",
+          "label": "The catch",
+          "head": "Cut cost, keep the finance close fast",
+          "headmark": "Cut cost",
+          "headmark_at": "Cut"
+        },
+        {
+          "say": "Three ideas: how BigQuery charges, paying only for work, and guaranteed capacity.",
+          "device": "card",
+          "label": "Station 5.1 · Optimizing resources",
+          "head": "Know the price. Pay for work. Reserve.",
+          "headmark": "Know the price.",
+          "headmark_at": "charges"
+        }
+      ]
+    },
+    {
+      "title": "How BigQuery charges",
+      "beats": [
+        {
+          "say": "First: BigQuery has two ways to pay.",
+          "device": "big",
+          "text": "Two ways to pay"
+        },
+        {
+          "say": "On-demand is like a taxi. You pay for each trip: every byte your query scans.",
+          "device": "card",
+          "label": "On-demand",
+          "head": "Like a taxi: pay per byte scanned",
+          "headmark": "pay per byte scanned",
+          "headmark_at": "pay"
+        },
+        {
+          "say": "Editions are like renting a car. You pay for slots, which is compute, by the hour.",
+          "device": "card",
+          "label": "Editions",
+          "head": "Like a rental: pay for slots",
+          "headmark": "pay for slots",
+          "headmark_at": "slots"
+        },
+        {
+          "say": "Spiky, small use? Take the taxi. Heavy, steady use? Rent the car.",
+          "device": "card",
+          "label": "Which one",
+          "head": "Spiky: on-demand. Steady: Editions.",
+          "headmark": "Steady: Editions.",
+          "headmark_at": "Heavy"
+        }
+      ]
+    },
+    {
+      "title": "Guardrails on spend",
+      "check": {
+        "prompt": "What does a budget alert do when the spend reaches the limit?",
+        "options": [
+          "It stops all queries",
+          "It deletes old tables",
+          "It only sends a notification"
+        ],
+        "answer": 2,
+        "why": "A budget alerts. A custom quota or maximum bytes billed is what stops the spend."
+      },
+      "beats": [
+        {
+          "say": "Now, three guardrails that stop a runaway bill.",
+          "device": "big",
+          "text": "Three guardrails"
+        },
+        {
+          "say": "A custom quota caps bytes per day. Maximum bytes billed stops one big query. And a partition filter can be required.",
+          "device": "list",
+          "label": "Guardrails",
+          "items": [
+            "Custom quota: bytes per day",
+            "maximum_bytes_billed: per query",
+            "Required partition filter"
+          ],
+          "items_at": ["quota", "Maximum", "partition"]
+        },
+        {
+          "say": "The trap: a budget alert does not stop spending. It only sends an email.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "A budget alert does not cap spending.",
+          "mark": "does not cap",
+          "mark_at": "does"
+        }
+      ]
+    },
+    {
+      "title": "Pay only while it works",
+      "beats": [
+        {
+          "say": "Second: pay for compute only while it works.",
+          "device": "big",
+          "text": "Pay only while it works"
+        },
+        {
+          "say": "A Dataproc cluster that runs all day, for one nightly job, wastes money for 23 hours.",
+          "device": "card",
+          "label": "The waste",
+          "head": "Always on, for one nightly job",
+          "headmark": "Always on",
+          "headmark_at": "all"
+        },
+        {
+          "say": "So use a cluster per job. Add Spot workers. Or go serverless.",
+          "device": "list",
+          "label": "Dataproc",
+          "items": ["A cluster per job", "Spot secondary workers", "Dataproc Serverless"],
+          "items_at": ["cluster", "Spot", "serverless"]
+        },
+        {
+          "say": "For Dataflow batch jobs that can wait, FlexRS is cheaper.",
+          "device": "card",
+          "label": "Dataflow",
+          "head": "FlexRS for batch that can wait",
+          "headmark": "FlexRS"
+        }
+      ]
+    },
+    {
+      "title": "Guaranteed capacity",
+      "check": {
+        "prompt": "The finance close must always have slots. What do you set?",
+        "options": ["A reservation with a baseline", "A budget alert", "A larger dataset"],
+        "answer": 0,
+        "why": "A baseline is the guaranteed part of a reservation."
+      },
+      "beats": [
+        {
+          "say": "Third: protect the finance close.",
+          "device": "big",
+          "text": "Protect the finance close"
+        },
+        {
+          "say": "A reservation is a fence around some slots. Production gets its own fence.",
+          "device": "card",
+          "label": "Reservation",
+          "head": "A fence around slots",
+          "headmark": "A fence",
+          "headmark_at": "fence"
+        },
+        {
+          "say": "A baseline is the part that is always there, guaranteed.",
+          "device": "card",
+          "label": "Baseline",
+          "head": "Baseline = guaranteed slots",
+          "headmark": "guaranteed"
+        },
+        {
+          "say": "And an assignment says which project uses which fence.",
+          "device": "card",
+          "label": "Assignment",
+          "head": "Assignment: project → reservation",
+          "headmark": "Assignment",
+          "headmark_at": "assignment"
+        },
+        {
+          "say": "Idle slots are shared with others. So nothing is wasted.",
+          "device": "card",
+          "label": "Bonus",
+          "head": "Idle slots are shared",
+          "headmark": "shared"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Recap.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "Taxi or rental: know how you pay. Set guardrails. A budget only alerts.",
+          "device": "list",
+          "label": "Station 5.1 · 1 of 2",
+          "items": ["On-demand or Editions", "Set guardrails", "A budget only alerts"],
+          "items_at": ["Taxi", "guardrails", "budget"]
+        },
+        {
+          "say": "Pay only while compute works. And reserve slots for critical jobs.",
+          "device": "list",
+          "label": "Station 5.1 · 2 of 2",
+          "items": ["Pay only while it works", "Reserve slots for critical jobs"],
+          "items_at": ["Pay", "reserve"]
+        },
+        {
+          "say": "Try the checkpoint below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Pass the checkpoint below.",
+          "submark": "checkpoint"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:04.580
+Cymbal runs 40 pipelines from cron, on one small machine.
+
+2
+00:00:04.600 --> 00:00:06.990
+When one fails, nobody knows.
+
+3
+00:00:07.010 --> 00:00:11.540
+Turn them into DAGs that repeat, backfill, and shout when they break.
+
+4
+00:00:11.560 --> 00:00:14.550
+A DAG is a recipe with steps in order.
+
+5
+00:00:14.570 --> 00:00:16.938
+In Cloud Composer, you write it in Python.
+
+6
+00:00:16.958 --> 00:00:19.310
+Tasks, and arrows between them.
+
+7
+00:00:19.330 --> 00:00:21.397
+Composer only gives the orders.
+
+8
+00:00:21.417 --> 00:00:24.660
+BigQuery and Dataflow do the cooking.
+
+9
+00:00:24.680 --> 00:00:28.320
+The golden rule: a task must be safe to run twice.
+
+10
+00:00:28.340 --> 00:00:29.720
+Tasks get retried.
+
+11
+00:00:29.740 --> 00:00:32.905
+If each retry appends rows, you get duplicates.
+
+12
+00:00:32.925 --> 00:00:36.018
+So overwrite the partition for that day, or use MERGE.
+
+13
+00:00:36.038 --> 00:00:38.765
+Run it ten times: same result.
+
+14
+00:00:38.785 --> 00:00:41.690
+The word for this is idempotent.
+
+15
+00:00:41.710 --> 00:00:44.150
+Rule two: never ask the clock.
+
+16
+00:00:44.170 --> 00:00:47.285
+Use the run date that Airflow gives you, not now.
+
+17
+00:00:47.305 --> 00:00:50.670
+Then a backfill for last March really loads last March.
+
+18
+00:00:50.690 --> 00:00:55.920
+Finally, add retries with a delay, a timeout, and an alert on failure.
+
+19
+00:00:55.940 --> 00:00:57.180
+Recap.
+
+20
+00:00:57.200 --> 00:01:02.790
+A good task is idempotent, uses the run date, retries, and is loud when it fails.
+
+21
+00:01:02.810 --> 00:01:05.585
+Try the checkpoint below.

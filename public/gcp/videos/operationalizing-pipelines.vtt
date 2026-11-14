@@ -1,0 +1,165 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:02.395
+Your pipeline works on your laptop.
+
+2
+00:00:02.415 --> 00:00:03.705
+Good start.
+
+3
+00:00:03.725 --> 00:00:08.390
+Now it must run every night, retry on its own, and alert you when it is stuck.
+
+4
+00:00:08.410 --> 00:00:13.240
+Two ideas: who conducts the work, and how you ship changes safely.
+
+5
+00:00:13.260 --> 00:00:14.352
+Think of an orchestra.
+
+6
+00:00:14.372 --> 00:00:16.175
+Someone has to conduct.
+
+7
+00:00:16.195 --> 00:00:18.450
+Cloud Composer is managed Airflow.
+
+8
+00:00:18.470 --> 00:00:22.560
+Pick it for big jobs with many steps, retries and backfills.
+
+9
+00:00:22.580 --> 00:00:24.635
+Workflows is light and serverless.
+
+10
+00:00:24.655 --> 00:00:27.420
+Pick it for a short chain of API calls.
+
+11
+00:00:27.440 --> 00:00:29.820
+Cloud Scheduler is just an alarm clock.
+
+12
+00:00:29.840 --> 00:00:32.330
+It fires one thing, on a schedule.
+
+13
+00:00:32.350 --> 00:00:36.815
+And for a single SQL query each night, a scheduled query is enough.
+
+14
+00:00:36.835 --> 00:00:39.215
+The trap: Composer for one nightly query.
+
+15
+00:00:39.235 --> 00:00:40.900
+That is far too much.
+
+16
+00:00:40.920 --> 00:00:41.600
+One more.
+
+17
+00:00:41.620 --> 00:00:43.350
+Airflow only conducts.
+
+18
+00:00:43.370 --> 00:00:47.675
+The heavy work runs in BigQuery, Dataflow or Dataproc.
+
+19
+00:00:47.695 --> 00:00:51.160
+A good task can run twice, and give the same result.
+
+20
+00:00:51.180 --> 00:00:53.272
+The word for that is idempotent.
+
+21
+00:00:53.292 --> 00:00:54.960
+Overwrite the day's partition.
+
+22
+00:00:54.980 --> 00:00:56.595
+Do not append again.
+
+23
+00:00:56.615 --> 00:00:59.508
+And use the run's date from Airflow, not the clock.
+
+24
+00:00:59.528 --> 00:01:02.345
+Then backfills load the right day.
+
+25
+00:01:02.365 --> 00:01:05.155
+Idea two: shipping changes safely.
+
+26
+00:01:05.175 --> 00:01:06.330
+The rule is simple.
+
+27
+00:01:06.350 --> 00:01:07.867
+Everything lives in Git.
+
+28
+00:01:07.887 --> 00:01:10.290
+Nobody edits production by hand.
+
+29
+00:01:10.310 --> 00:01:12.402
+Cloud Build tests and deploys.
+
+30
+00:01:12.422 --> 00:01:14.928
+Artifact Registry stores the images.
+
+31
+00:01:14.948 --> 00:01:17.425
+Terraform builds the infrastructure.
+
+32
+00:01:17.445 --> 00:01:21.137
+With Terraform, dev, test and prod are built the same way.
+
+33
+00:01:21.157 --> 00:01:24.200
+So what works in test works in prod.
+
+34
+00:01:24.220 --> 00:01:25.460
+Recap.
+
+35
+00:01:25.480 --> 00:01:27.023
+Composer for big DAGs.
+
+36
+00:01:27.043 --> 00:01:28.710
+Workflows for light chains.
+
+37
+00:01:28.730 --> 00:01:31.170
+Scheduler for one thing on a clock.
+
+38
+00:01:31.190 --> 00:01:33.020
+Make tasks safe to run twice.
+
+39
+00:01:33.040 --> 00:01:35.080
+And keep everything as code.
+
+40
+00:01:35.100 --> 00:01:36.167
+Line two, done.
+
+41
+00:01:36.187 --> 00:01:38.925
+Try the checkpoint below.

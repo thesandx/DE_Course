@@ -1,0 +1,317 @@
+{
+  "station": "storage-selection",
+  "chapters": [
+    {
+      "title": "The mission",
+      "beats": [
+        {
+          "say": "Every team at Cymbal wants a database.",
+          "device": "big",
+          "text": "\"We need a database\""
+        },
+        {
+          "say": "The catalog, the carts, price history, sessions, and product images.",
+          "device": "list",
+          "label": "They all want one",
+          "items": [
+            "Product catalog",
+            "Shopping carts",
+            "Price history",
+            "Sessions",
+            "Product images"
+          ],
+          "items_at": ["catalog", "carts", "price", "sessions", "images"]
+        },
+        {
+          "say": "There is no one best store. Pick by how the data is read and written.",
+          "device": "card",
+          "label": "Station 3.1 · Selecting storage",
+          "head": "Pick by how it is read and written",
+          "headmark": "read and written",
+          "headmark_at": "read"
+        }
+      ]
+    },
+    {
+      "title": "The decision tree",
+      "check": {
+        "prompt": "Billions of sensor readings, very fast writes, and lookups by key. Which store?",
+        "options": ["Cloud SQL", "BigQuery", "Bigtable"],
+        "answer": 2,
+        "why": "Bigtable is built for huge key-value data with fast writes."
+      },
+      "beats": [
+        { "say": "Ask four questions, in this order.", "device": "big", "text": "Four questions" },
+        {
+          "say": "Analytics or transactions? Relational or not? How big, and how global? And how fast?",
+          "device": "list",
+          "label": "In order",
+          "items": [
+            "Analytics or transactions?",
+            "Relational or not?",
+            "How big, how global?",
+            "How fast?"
+          ],
+          "items_at": ["Analytics", "Relational", "big", "fast"]
+        },
+        {
+          "say": "Analytics over huge data, with SQL? That is BigQuery.",
+          "device": "card",
+          "label": "Analytics",
+          "head": "BigQuery",
+          "text": "A warehouse. Not an app database.",
+          "headmark": "BigQuery"
+        },
+        {
+          "say": "Files, images and backups go to Cloud Storage.",
+          "device": "card",
+          "label": "Files and blobs",
+          "head": "Cloud Storage",
+          "headmark": "Cloud Storage",
+          "headmark_at": "Cloud"
+        },
+        {
+          "say": "A normal relational app, in one region? Cloud SQL.",
+          "device": "card",
+          "label": "Relational, one region",
+          "head": "Cloud SQL",
+          "headmark": "Cloud SQL",
+          "headmark_at": "Cloud"
+        },
+        {
+          "say": "Relational, but global, with strong consistency? Spanner.",
+          "device": "card",
+          "label": "Relational, global",
+          "head": "Spanner",
+          "headmark": "Spanner"
+        },
+        {
+          "say": "Huge key-value data, with very fast writes, like sensors? Bigtable.",
+          "device": "card",
+          "label": "Huge and fast",
+          "head": "Bigtable",
+          "text": "Key-value, millisecond latency",
+          "headmark": "Bigtable"
+        },
+        {
+          "say": "Documents for a mobile app? Firestore. A cache? Memorystore.",
+          "device": "card",
+          "label": "Two more",
+          "head": "Documents: Firestore. Cache: Memorystore.",
+          "headmark": "Firestore"
+        },
+        {
+          "say": "The trap: BigQuery as an app database, for single row lookups and updates.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "BigQuery as an app database",
+          "mark": "app database",
+          "mark_at": "app"
+        }
+      ]
+    },
+    {
+      "title": "Bigtable row keys",
+      "check": {
+        "prompt": "Which row key avoids a hotspot?",
+        "options": ["timestamp#sensorId", "sensorId#timestamp", "timestamp"],
+        "answer": 1,
+        "why": "A key that starts with the sensor ID spreads the writes across servers."
+      },
+      "beats": [
+        {
+          "say": "Bigtable has one index only: the row key.",
+          "device": "big",
+          "text": "One index: the row key"
+        },
+        {
+          "say": "Rows are stored sorted by key, like words in a dictionary.",
+          "device": "card",
+          "label": "How it is stored",
+          "head": "Sorted, like a dictionary",
+          "headmark": "like a dictionary",
+          "headmark_at": "dictionary"
+        },
+        {
+          "say": "So if every key starts with the time, all new writes land on one server. A hotspot.",
+          "device": "card",
+          "label": "The danger",
+          "head": "Key starts with a timestamp = hotspot",
+          "headmark": "hotspot"
+        },
+        {
+          "say": "The fix: start the key with something that spreads, like the sensor ID. Then the time.",
+          "device": "card",
+          "label": "The fix",
+          "head": "sensorId#timestamp",
+          "headmark": "sensorId",
+          "headmark_at": "sensor"
+        },
+        {
+          "say": "And design the key around your most common query.",
+          "device": "card",
+          "label": "The rule",
+          "head": "Design the key for your main query",
+          "headmark": "main query",
+          "headmark_at": "common"
+        }
+      ]
+    },
+    {
+      "title": "The relational family",
+      "beats": [
+        {
+          "say": "Next, the relational family, in one line each.",
+          "device": "big",
+          "text": "The relational family"
+        },
+        {
+          "say": "Cloud SQL scales up, not out. High availability adds a standby in another zone.",
+          "device": "card",
+          "label": "Cloud SQL",
+          "head": "Scales up. HA standby in another zone.",
+          "headmark": "Scales up.",
+          "headmark_at": "up"
+        },
+        {
+          "say": "AlloyDB is PostgreSQL that is also fast for analytics.",
+          "device": "card",
+          "label": "AlloyDB",
+          "head": "PostgreSQL, fast at analytics too",
+          "headmark": "analytics too",
+          "headmark_at": "analytics"
+        },
+        {
+          "say": "Spanner scales out across the world, with 99.999 percent availability.",
+          "device": "stat",
+          "value": 99.999,
+          "sub": "Spanner multi-region availability",
+          "suffix": "%"
+        },
+        {
+          "say": "Memorystore is a cache. Never make it your system of record.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "Memorystore is a cache, not the system of record.",
+          "mark": "a cache",
+          "mark_at": "cache"
+        }
+      ]
+    },
+    {
+      "title": "Cloud Storage classes",
+      "check": {
+        "prompt": "How is the Archive class different from Standard?",
+        "options": [
+          "It costs less to store and more to read",
+          "It is slower to read",
+          "It is less durable"
+        ],
+        "answer": 0,
+        "why": "All classes have the same speed and durability. Only the prices differ."
+      },
+      "beats": [
+        {
+          "say": "Now Cloud Storage. Four classes, by how often you read.",
+          "device": "big",
+          "text": "Four classes"
+        },
+        {
+          "say": "Standard for hot data. Nearline for monthly. Coldline for quarterly. Archive for yearly.",
+          "device": "list",
+          "label": "By how often you read",
+          "items": ["Standard: hot", "Nearline: monthly", "Coldline: quarterly", "Archive: yearly"],
+          "items_at": ["Standard", "Nearline", "Coldline", "Archive"]
+        },
+        {
+          "say": "Here is the surprise. All four are equally fast and equally safe.",
+          "device": "card",
+          "label": "The surprise",
+          "head": "Same speed. Same durability.",
+          "headmark": "Same speed.",
+          "headmark_at": "fast"
+        },
+        {
+          "say": "Colder classes are cheaper to store, but you pay to read, and for deleting early.",
+          "device": "card",
+          "label": "The trade",
+          "head": "Cheaper to store, costly to read",
+          "headmark": "costly to read",
+          "headmark_at": "pay"
+        },
+        {
+          "say": "Lifecycle rules move objects for you. Autoclass does it when you do not know the pattern.",
+          "device": "card",
+          "label": "Automation",
+          "head": "Lifecycle rules. Or Autoclass.",
+          "headmark": "Autoclass"
+        },
+        {
+          "say": "For compliance, a retention policy with Bucket Lock makes objects impossible to delete.",
+          "device": "card",
+          "label": "Compliance",
+          "head": "Retention policy + Bucket Lock",
+          "headmark": "Bucket Lock",
+          "headmark_at": "Bucket"
+        }
+      ]
+    },
+    {
+      "title": "Storage cost",
+      "beats": [
+        { "say": "Last: let time save you money.", "device": "big", "text": "Let time save money" },
+        {
+          "say": "In BigQuery, a table you have not changed for 90 days gets cheaper by itself.",
+          "device": "stat",
+          "value": 90,
+          "sub": "untouched days, then about half price",
+          "suffix": " days",
+          "submark": "half price",
+          "submark_at": "cheaper"
+        },
+        {
+          "say": "So do not export old tables to Cloud Storage just to save money.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "Exporting old BigQuery data just to save money",
+          "mark": "just to save money",
+          "mark_at": "just"
+        },
+        {
+          "say": "And set an expiration on data you do not need. It deletes itself.",
+          "device": "card",
+          "label": "Housekeeping",
+          "head": "Set an expiration",
+          "headmark": "expiration"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Recap.", "device": "big", "text": "Quick recap" },
+        {
+          "say": "Four questions pick the store. The row key is Bigtable's only index.",
+          "device": "list",
+          "label": "Station 3.1 · 1 of 2",
+          "items": ["Four questions pick the store", "Row key: Bigtable's only index"],
+          "items_at": ["Four", "row"]
+        },
+        {
+          "say": "Storage classes share speed, not price. And old BigQuery data gets cheaper by itself.",
+          "device": "list",
+          "label": "Station 3.1 · 2 of 2",
+          "items": ["Classes: same speed, different price", "Old BigQuery data gets cheaper"],
+          "items_at": ["classes", "old"]
+        },
+        {
+          "say": "Try the checkpoint below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Pass the checkpoint below.",
+          "submark": "checkpoint"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,161 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:02.905
+The cloud bill doubled after launch.
+
+2
+00:00:02.925 --> 00:00:03.905
+Cut the cost.
+
+3
+00:00:03.925 --> 00:00:07.165
+But the nightly finance close must never slow down.
+
+4
+00:00:07.185 --> 00:00:13.340
+Three ideas: how BigQuery charges, paying only for work, and guaranteed capacity.
+
+5
+00:00:13.360 --> 00:00:16.125
+First: BigQuery has two ways to pay.
+
+6
+00:00:16.145 --> 00:00:17.900
+On-demand is like a taxi.
+
+7
+00:00:17.920 --> 00:00:21.260
+You pay for each trip: every byte your query scans.
+
+8
+00:00:21.280 --> 00:00:23.185
+Editions are like renting a car.
+
+9
+00:00:23.205 --> 00:00:26.570
+You pay for slots, which is compute, by the hour.
+
+10
+00:00:26.590 --> 00:00:27.695
+Spiky, small use?
+
+11
+00:00:27.715 --> 00:00:28.595
+Take the taxi.
+
+12
+00:00:28.615 --> 00:00:29.720
+Heavy, steady use?
+
+13
+00:00:29.740 --> 00:00:31.570
+Rent the car.
+
+14
+00:00:31.590 --> 00:00:34.605
+Now, three guardrails that stop a runaway bill.
+
+15
+00:00:34.625 --> 00:00:36.918
+A custom quota caps bytes per day.
+
+16
+00:00:36.938 --> 00:00:39.630
+Maximum bytes billed stops one big query.
+
+17
+00:00:39.650 --> 00:00:42.390
+And a partition filter can be required.
+
+18
+00:00:42.410 --> 00:00:45.290
+The trap: a budget alert does not stop spending.
+
+19
+00:00:45.310 --> 00:00:47.715
+It only sends an email.
+
+20
+00:00:47.735 --> 00:00:50.650
+Second: pay for compute only while it works.
+
+21
+00:00:50.670 --> 00:00:52.925
+A Dataproc cluster that runs all day,
+
+22
+00:00:52.945 --> 00:00:56.835
+for one nightly job, wastes money for 23 hours.
+
+23
+00:00:56.855 --> 00:00:58.547
+So use a cluster per job.
+
+24
+00:00:58.567 --> 00:00:59.660
+Add Spot workers.
+
+25
+00:00:59.680 --> 00:01:01.270
+Or go serverless.
+
+26
+00:01:01.290 --> 00:01:05.770
+For Dataflow batch jobs that can wait, FlexRS is cheaper.
+
+27
+00:01:05.790 --> 00:01:08.130
+Third: protect the finance close.
+
+28
+00:01:08.150 --> 00:01:10.780
+A reservation is a fence around some slots.
+
+29
+00:01:10.800 --> 00:01:13.090
+Production gets its own fence.
+
+30
+00:01:13.110 --> 00:01:16.700
+A baseline is the part that is always there, guaranteed.
+
+31
+00:01:16.720 --> 00:01:20.110
+And an assignment says which project uses which fence.
+
+32
+00:01:20.130 --> 00:01:21.973
+Idle slots are shared with others.
+
+33
+00:01:21.993 --> 00:01:24.360
+So nothing is wasted.
+
+34
+00:01:24.380 --> 00:01:25.620
+Recap.
+
+35
+00:01:25.640 --> 00:01:27.658
+Taxi or rental: know how you pay.
+
+36
+00:01:27.678 --> 00:01:28.620
+Set guardrails.
+
+37
+00:01:28.640 --> 00:01:30.530
+A budget only alerts.
+
+38
+00:01:30.550 --> 00:01:32.330
+Pay only while compute works.
+
+39
+00:01:32.350 --> 00:01:35.065
+And reserve slots for critical jobs.
+
+40
+00:01:35.085 --> 00:01:37.860
+Try the checkpoint below.

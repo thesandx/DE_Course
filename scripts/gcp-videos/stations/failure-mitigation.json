@@ -1,0 +1,237 @@
+{
+  "station": "failure-mitigation",
+  "chapters": [
+    {
+      "title": "The mission",
+      "beats": [
+        { "say": "Three bad days are coming.", "device": "big", "text": "Three bad days" },
+        {
+          "say": "A region goes dark. A bad update wipes the prices. And a partner feed shows up late.",
+          "device": "list",
+          "label": "What will go wrong",
+          "items": ["A region goes dark", "A bad UPDATE wipes prices", "A partner feed is late"],
+          "items_at": ["region", "update", "feed"]
+        },
+        {
+          "say": "Design the platform so each one is a non-event.",
+          "device": "card",
+          "label": "Station 5.5 · Failure mitigation",
+          "head": "Make each one a non-event",
+          "headmark": "non-event"
+        }
+      ]
+    },
+    {
+      "title": "Survive small failures",
+      "check": {
+        "prompt": "One message crashes the pipeline every time. Where does it go?",
+        "options": [
+          "Back to the front of the queue",
+          "Nowhere: stop the pipeline",
+          "A dead-letter queue"
+        ],
+        "answer": 2,
+        "why": "A dead-letter queue takes the bad message aside. The pipeline continues."
+      },
+      "beats": [
+        {
+          "say": "First: assume everything fails sometimes.",
+          "device": "big",
+          "text": "Everything fails sometimes"
+        },
+        {
+          "say": "When a call fails, retry. But wait longer each time, with a little randomness.",
+          "device": "card",
+          "label": "Retry the right way",
+          "head": "Backoff, with jitter",
+          "headmark": "Backoff",
+          "headmark_at": "wait"
+        },
+        {
+          "say": "If everyone retries every second, they knock the service down again.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "Retrying every second until it is back",
+          "mark": "every second",
+          "mark_at": "every"
+        },
+        {
+          "say": "Make writes safe to repeat, so a retry never doubles the data.",
+          "device": "card",
+          "label": "Idempotent writes",
+          "head": "A retry must not double the data",
+          "headmark": "must not double",
+          "headmark_at": "never"
+        },
+        {
+          "say": "Save your place with checkpoints. Then a restart picks up where it stopped.",
+          "device": "card",
+          "label": "Checkpoints",
+          "head": "Save your place",
+          "headmark": "Save your place",
+          "headmark_at": "Save"
+        },
+        {
+          "say": "And send poison messages to a dead-letter queue. The pipeline keeps going.",
+          "device": "card",
+          "label": "Dead letters",
+          "head": "Poison messages go aside",
+          "headmark": "go aside",
+          "headmark_at": "dead-letter"
+        }
+      ]
+    },
+    {
+      "title": "Zones and regions",
+      "beats": [
+        {
+          "say": "Second: a whole location fails.",
+          "device": "big",
+          "text": "A whole location fails"
+        },
+        {
+          "say": "A zone is one building. A region is a city with several buildings.",
+          "device": "card",
+          "label": "Zone or region",
+          "head": "Zone: a building. Region: a city.",
+          "headmark": "Region: a city.",
+          "headmark_at": "region"
+        },
+        {
+          "say": "Most managed services are regional. They survive one zone failing, on their own.",
+          "device": "card",
+          "label": "Zone failure",
+          "head": "Regional services survive a zone",
+          "headmark": "survive a zone",
+          "headmark_at": "survive"
+        },
+        {
+          "say": "A whole region failing needs two things from you.",
+          "device": "card",
+          "label": "Region failure",
+          "head": "A region needs two things",
+          "headmark": "two things",
+          "headmark_at": "two"
+        },
+        {
+          "say": "Data that is copied to another region. And a way to start the compute again over there.",
+          "device": "list",
+          "label": "For a region outage",
+          "items": ["Data replicated cross-region", "Compute you can relaunch there"],
+          "items_at": ["Data", "compute"]
+        }
+      ]
+    },
+    {
+      "title": "The undo buttons",
+      "check": {
+        "prompt": "A bad UPDATE ran 10 minutes ago in BigQuery. What is the fastest fix?",
+        "options": [
+          "Restore the backup from last night",
+          "Time travel to 15 minutes ago",
+          "Rebuild the table from raw files"
+        ],
+        "answer": 1,
+        "why": "Time travel reads the table as it was at any moment in the last 7 days."
+      },
+      "beats": [
+        {
+          "say": "Third: someone runs a bad update.",
+          "device": "big",
+          "text": "A bad update ships"
+        },
+        {
+          "say": "Do not reach for last night's backup yet. BigQuery has time travel.",
+          "device": "card",
+          "label": "First choice",
+          "head": "BigQuery time travel",
+          "headmark": "time travel",
+          "headmark_at": "time"
+        },
+        {
+          "say": "You can read any table as it was, up to 7 days ago.",
+          "device": "stat",
+          "value": 7,
+          "sub": "of time travel, to undo a mistake",
+          "suffix": " days"
+        },
+        {
+          "say": "Other undo buttons: table snapshots, object versioning in Cloud Storage, and seek in Pub/Sub.",
+          "device": "list",
+          "label": "More undo buttons",
+          "items": ["Table snapshots", "Object versioning", "Pub/Sub seek"],
+          "items_at": ["snapshots", "versioning", "seek"]
+        },
+        {
+          "say": "And always keep the raw data unchanged. Then you can rebuild everything.",
+          "device": "card",
+          "label": "The master undo",
+          "head": "Keep raw data. Rebuild anything.",
+          "headmark": "Keep raw data.",
+          "headmark_at": "raw"
+        }
+      ]
+    },
+    {
+      "title": "Late data and failover",
+      "beats": [
+        {
+          "say": "For the late partner feed: wait for the data with a sensor, check the row count, then backfill.",
+          "device": "card",
+          "label": "Late or missing data",
+          "head": "Sense. Check. Backfill.",
+          "headmark": "Backfill.",
+          "headmark_at": "backfill"
+        },
+        {
+          "say": "Cloud SQL high availability fails over by itself. A cross-region replica needs you to promote it.",
+          "device": "card",
+          "label": "Failover",
+          "head": "HA: automatic. Replica: promote it.",
+          "headmark": "promote it",
+          "headmark_at": "promote"
+        },
+        {
+          "say": "And test your failover before the bad day. Not during it.",
+          "device": "card",
+          "label": "Last rule",
+          "head": "Test failover before you need it",
+          "headmark": "before you need it",
+          "headmark_at": "before"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Recap. The last one of the course.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "Retry with backoff. Write idempotently. Replicate across regions.",
+          "device": "list",
+          "label": "Station 5.5 · 1 of 2",
+          "items": ["Retry with backoff", "Idempotent writes", "Replicate across regions"],
+          "items_at": ["Retry", "Write", "Replicate"]
+        },
+        {
+          "say": "Keep an undo button, like time travel. And test your failover.",
+          "device": "list",
+          "label": "Station 5.5 · 2 of 2",
+          "items": ["Keep an undo button", "Test your failover"],
+          "items_at": ["undo", "test"]
+        },
+        {
+          "say": "That was the last station. Finish the checkpoint, then face the boss.",
+          "device": "big",
+          "text": "Last station, done",
+          "sub": "Finish the checkpoint, then face the boss.",
+          "submark": "face the boss",
+          "submark_at": "face"
+        }
+      ]
+    }
+  ]
+}
