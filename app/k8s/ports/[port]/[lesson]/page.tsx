@@ -9,6 +9,7 @@ import { LabMeter, LabProgress } from '@/components/gcp/LabProgress';
 import { StationChecks } from '@/components/gcp/StationChecks';
 import { K8sLabStepCard } from '@/components/k8s/LabStepCard';
 import { ManifestFile } from '@/components/k8s/ManifestFile';
+import { Simulator } from '@/components/k8s/sims/Simulator';
 import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/layout/Icon';
 import { ChapterNotes } from '@/components/notes/ChapterNotes';
@@ -66,6 +67,7 @@ export default async function K8sLessonPage({ params }: Props) {
     { href: '#story', label: 'The problem and the fix' },
     ...(diagram !== undefined ? [{ href: '#picture', label: 'The picture' }] : []),
     { href: '#explain', label: 'How it works' },
+    ...(lesson.sim !== undefined ? [{ href: '#simulator', label: 'Simulator' }] : []),
     ...(lesson.files.length > 0 ? [{ href: '#files', label: 'The files' }] : []),
     ...(lesson.lab.length > 0 ? [{ href: '#lab', label: `Lab · ${lesson.lab.length} steps` }] : []),
     { href: '#checks', label: 'Quick check' },
@@ -93,7 +95,7 @@ export default async function K8sLessonPage({ params }: Props) {
                   </span>
                   <span className="eyebrow text-on-night-soft">{port.title}</span>
                 </p>
-                <h1 className="text-display">{lesson.title}</h1>
+                <h1 className="text-display break-words">{lesson.title}</h1>
                 <dl className="border-night-line mt-1 grid grid-cols-3 gap-4 border-t pt-5">
                   {[
                     {
@@ -174,6 +176,12 @@ export default async function K8sLessonPage({ params }: Props) {
                   </div>
                 )}
               </section>
+
+              {lesson.sim !== undefined && (
+                <div id="simulator" className="scroll-mt-20">
+                  <Simulator id={lesson.sim} />
+                </div>
+              )}
 
               {lesson.files.length > 0 && (
                 <section

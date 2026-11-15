@@ -90,4 +90,29 @@ The lab commands of the Helmsman ports come from the source page without changes
 
 ## The simulators
 
-The source page has eight interactive simulators, such as a rollout and a NetworkPolicy model. Each lesson that had one keeps its name in the `sim` field. The lesson page does not show them yet.
+Eight lessons have an interactive simulator. The lesson names it in its `sim` field, and the lesson page shows it after the explanation, at `#simulator`.
+
+| `sim`       | Lesson                        | What the learner does                                          |
+| ----------- | ----------------------------- | -------------------------------------------------------------- |
+| `loop`      | `workloads`, Deployments      | Deletes pods, crashes a container and stops a node             |
+| `rollout`   | `workloads`, rolling updates  | Sets `maxSurge` and `maxUnavailable`, ships a broken version   |
+| `selector`  | `networking`, Services        | Edits a Service selector and the readiness of each pod         |
+| `probes`    | `health`, probes              | Sets liveness and startup probes for an app that starts slowly |
+| `resources` | `health`, requests and limits | Sets requests, limits and the real usage of one pod            |
+| `autoscale` | `health`, the HPA             | Runs traffic against the HPA and the node autoscaler           |
+| `rbac`      | `security`, RBAC              | Builds a role and a binding for three missions                 |
+| `netpol`    | `netpol`, the flat network    | Turns NetworkPolicies on and tests six connections             |
+
+A simulator has two parts:
+
+- **The model** is in `lib/course/k8s/sims/<sim>.ts`. It is pure: each function takes a state and returns a new one. A model that needs a random choice keeps a seed in its state (`random.ts`), so the same clicks give the same result and a test can assert exact output.
+- **The component** is in `components/k8s/sims/`. It holds the state, runs the clock when the model has one, and draws the result. `Simulator.tsx` picks the component for a `SimId`.
+
+A simulator is a model, not a cluster. It is correct about the rule it teaches and it leaves out the rest. A simulator gives no XP: the lab and the checks are the proof of the lesson.
+
+To add a simulator:
+
+1. Add its name to `SimId` in `types/k8s.ts`.
+2. Write the model and its tests in `lib/course/k8s/sims/`.
+3. Write the component with `SimFrame` and the controls in `SimControls.tsx`, and add it to `Simulator.tsx`. TypeScript refuses a `SimId` with no component.
+4. Set `sim` on the lesson.
