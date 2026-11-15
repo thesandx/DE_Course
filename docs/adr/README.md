@@ -46,3 +46,4 @@ Do **not** write one for a routine choice with an obvious answer. An ADR per pul
 | [0011](./0011-keep-chapter-notes-as-markdown-on-the-device-first.md)            | Keep chapter notes as Markdown, saved on the device first                       | Accepted |
 | [0012](./0012-track-study-time-with-a-browser-heartbeat.md)                     | Track study time with a browser heartbeat, in the learner document              | Accepted |
 | [0013](./0013-make-station-videos-with-simcraft-and-keep-them-in-the-bucket.md) | Make station videos with simcraft, and keep the files in the bucket             | Accepted |
+| [0014](./0014-send-images-to-the-ai-helper-inline.md)                           | Send images to the AI helper inline, not through the bucket                     | Accepted |

@@ -125,4 +125,112 @@ describe('DoubtAssistant', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
+
+  describe('images', () => {
+    const PNG = new File([new Uint8Array([137, 80, 78, 71])], 'error.png', { type: 'image/png' });
+    const JPEG_URL = 'data:image/jpeg;base64,/9j/AAAA';
+
+    beforeEach(() => {
+      vi.stubGlobal(
+        'createImageBitmap',
+        vi.fn(async () => ({ width: 3200, height: 1600, close: vi.fn() })),
+      );
+      vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+        fillRect: vi.fn(),
+        drawImage: vi.fn(),
+        fillStyle: '',
+      } as unknown as CanvasRenderingContext2D);
+      vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue(JPEG_URL);
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    function attach(...files: File[]) {
+      const input = document.querySelector('input[type="file"]');
+      if (!(input instanceof HTMLInputElement)) throw new Error('No file input');
+      fireEvent.change(input, { target: { files } });
+    }
+
+    it('attaches a photo, shrinks it, and sends it with the question', async () => {
+      fetchMock.mockResolvedValue(streamed('That error means the column is ambiguous.'));
+      render(<DoubtAssistant enabled />);
+      fireEvent.click(screen.getByRole('button', { name: /Ask Pip/ }));
+      expect(screen.getByRole('button', { name: 'Attach an image' })).toBeInTheDocument();
+
+      attach(PNG);
+      expect(await screen.findByAltText('Image 1 to send')).toHaveAttribute('src', JPEG_URL);
+      fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+      expect(await screen.findByText(/column is ambiguous/)).toBeInTheDocument();
+      expect(screen.getByAltText('Image 1 you attached')).toBeInTheDocument();
+      expect(screen.queryByAltText('Image 1 to send')).not.toBeInTheDocument();
+      const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as {
+        messages: { content: string; images?: string[] }[];
+      };
+      expect(body.messages[0]).toEqual({
+        role: 'user',
+        content: 'Explain this image in the context of this page.',
+        images: [JPEG_URL],
+      });
+      // Session storage keeps how many images there were, never the images.
+      await waitFor(() => {
+        const saved = window.sessionStorage.getItem(
+          'loop-ready-assistant-chat:/de/tracks/sql/window-functions',
+        );
+        expect(saved).toContain('"imageCount":1');
+        expect(saved).not.toContain('base64');
+      });
+    });
+
+    it('removes an attached image', async () => {
+      render(<DoubtAssistant enabled />);
+      fireEvent.click(screen.getByRole('button', { name: /Ask Pip/ }));
+      attach(PNG);
+      await screen.findByAltText('Image 1 to send');
+      fireEvent.click(screen.getByRole('button', { name: 'Remove image 1' }));
+      expect(screen.queryByAltText('Image 1 to send')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
+    });
+
+    it('refuses a file that is not an image and a fourth image', async () => {
+      render(<DoubtAssistant enabled />);
+      fireEvent.click(screen.getByRole('button', { name: /Ask Pip/ }));
+      attach(new File(['a,b'], 'rows.csv', { type: 'text/csv' }));
+      expect(await screen.findByText('Attach a PNG, JPEG, WebP or GIF image.')).toBeInTheDocument();
+
+      attach(PNG, PNG, PNG, PNG);
+      expect(await screen.findByAltText('Image 3 to send')).toBeInTheDocument();
+      expect(screen.getByText(/Only 3 images fit on one question/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Attach an image' })).toBeDisabled();
+    });
+
+    it('takes a pasted screenshot', async () => {
+      render(<DoubtAssistant enabled />);
+      fireEvent.click(screen.getByRole('button', { name: /Ask Pip/ }));
+      fireEvent.paste(screen.getByLabelText('Your doubt'), {
+        clipboardData: { items: [{ kind: 'file', type: 'image/png', getAsFile: () => PNG }] },
+      });
+      expect(await screen.findByAltText('Image 1 to send')).toBeInTheDocument();
+    });
+
+    it('gives the question and the image back when the send fails', async () => {
+      fetchMock.mockResolvedValue(
+        Response.json(
+          { error: 'upstream', message: 'The model could not answer.' },
+          { status: 502 },
+        ),
+      );
+      render(<DoubtAssistant enabled />);
+      fireEvent.click(screen.getByRole('button', { name: /Ask Pip/ }));
+      attach(PNG);
+      await screen.findByAltText('Image 1 to send');
+      fireEvent.change(screen.getByLabelText('Your doubt'), { target: { value: 'What is this?' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+      expect(await screen.findByText('The model could not answer.')).toBeInTheDocument();
+      expect(screen.getByLabelText('Your doubt')).toHaveValue('What is this?');
+      expect(screen.getByAltText('Image 1 to send')).toBeInTheDocument();
+    });
+  });
 });

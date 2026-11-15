@@ -6,12 +6,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Prose } from '@/components/course/Prose';
 import { Icon } from '@/components/layout/Icon';
 import { Alert } from '@/components/ui/Alert';
+import { IMAGE_ACCEPT, useImageAttachments } from '@/hooks/useImageAttachments';
 import {
   ASSISTANT_NAME,
   type ChatMessage,
+  defaultImageQuestion,
   MAX_HISTORY,
+  MAX_IMAGES_PER_MESSAGE,
   MAX_MESSAGE_CHARS,
   MAX_QUOTE_CHARS,
+  messagesToSend,
   toCourseDialect,
 } from '@/lib/assistant/chat';
 import {
@@ -19,6 +23,7 @@ import {
   DEFAULT_MODEL_ID,
   isAssistantModel,
   MODEL_STORAGE_KEY,
+  modelReadsImages,
 } from '@/lib/assistant/models';
 import { hostOf, isWebUrl, splitSources, type WebSource } from '@/lib/assistant/sources';
 import { cn } from '@/lib/utils';
@@ -73,8 +78,12 @@ function suggestionsFor(path: string): readonly string[] {
   ];
 }
 
-/** A chat turn in the panel. An answer can carry the web pages it used. */
-type PanelMessage = ChatMessage & { sources?: WebSource[] };
+/**
+ * A chat turn in the panel. An answer can carry the web pages it used. A
+ * question can carry images; after a reload only their number is left, because
+ * images are too large for session storage.
+ */
+type PanelMessage = ChatMessage & { sources?: WebSource[]; imageCount?: number };
 
 function sourcesOf(value: unknown): WebSource[] | undefined {
   if (!Array.isArray(value)) return undefined;
@@ -127,10 +136,13 @@ function loadChat(path: string): PanelMessage[] {
       )
       .map((item) => {
         const sources = 'sources' in item ? sourcesOf(item.sources) : undefined;
+        const imageCount =
+          'imageCount' in item && typeof item.imageCount === 'number' ? item.imageCount : 0;
         return {
           role: item.role,
           content: item.content,
           ...(sources !== undefined && { sources }),
+          ...(imageCount > 0 && { imageCount }),
         };
       });
   } catch {
@@ -150,6 +162,11 @@ function loadChat(path: string): PanelMessage[] {
  *
  * The model comes from the dropdown and is remembered in this browser. The
  * chat is remembered per page for the browser session.
+ *
+ * The photo button attaches up to three images to a question: a screenshot
+ * of an error, a query plan, a diagram or a photo of handwritten notes. A
+ * paste or a drop on the panel works too. The browser shrinks each image
+ * before it is sent, and nothing is stored on the server.
  *
  * The globe button turns on web search. The model then also reads fresh web
  * results, and the answer lists the pages it used. It is off by default,
@@ -172,6 +189,10 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const selectionRef = useRef<{ text: string; at: number } | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const attachments = useImageAttachments();
+  const [dragging, setDragging] = useState(false);
+  const canAttach = modelReadsImages(model);
 
   // The chat belongs to the page. A new page loads its own chat. Updating
   // state during render is React's pattern for resetting on a prop change.
@@ -187,6 +208,7 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
     setMessages(loadChat(pathname));
     setQuote(null);
     setError(null);
+    attachments.clear();
   }
 
   useEffect(() => {
@@ -194,7 +216,15 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
     writeStorage(
       () => window.sessionStorage,
       CHAT_KEY_PREFIX + loadedPath,
-      messages.length === 0 ? null : JSON.stringify(messages.slice(-MAX_HISTORY)),
+      messages.length === 0
+        ? null
+        : JSON.stringify(
+            // Images are too large for session storage; keep only how many there were.
+            messages.slice(-MAX_HISTORY).map(({ images, ...rest }) => {
+              const count = images?.length ?? rest.imageCount ?? 0;
+              return count > 0 ? { ...rest, imageCount: count } : rest;
+            }),
+          ),
     );
   }, [messages, loadedPath, streaming]);
 
@@ -254,12 +284,18 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
 
   const ask = useCallback(
     async (question: string) => {
-      const text = question.trim().slice(0, MAX_MESSAGE_CHARS);
-      if (text === '' || streaming || !enabled) return;
+      const images = canAttach ? attachments.images : [];
+      const typed = question.trim().slice(0, MAX_MESSAGE_CHARS);
+      const text = typed === '' && images.length > 0 ? defaultImageQuestion(images.length) : typed;
+      if (text === '' || streaming || !enabled || attachments.busy) return;
 
-      const history: PanelMessage[] = [...messages, { role: 'user', content: text }];
+      const history: PanelMessage[] = [
+        ...messages,
+        { role: 'user', content: text, ...(images.length > 0 && { images }) },
+      ];
       setMessages([...history, { role: 'assistant', content: '' }]);
       setDraft('');
+      attachments.clear();
       setError(null);
       setStreaming(true);
 
@@ -276,10 +312,8 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
             path: pathname,
             ...(quote !== null && { quote }),
             ...(webSearch && { webSearch: true }),
-            // The server takes only the role and the text of each turn.
-            messages: history
-              .slice(-MAX_HISTORY)
-              .map((message) => ({ role: message.role, content: message.content })),
+            // The server takes the role, the text and the newest images of each turn.
+            messages: messagesToSend(history.slice(-MAX_HISTORY)),
           }),
           signal: controller.signal,
         });
@@ -313,7 +347,12 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
         setQuote(null);
       } catch (caught) {
         const stopped = controller.signal.aborted;
-        if (answer.trim() === '') setMessages(history);
+        if (answer.trim() === '') {
+          setMessages(messages);
+          // Give the question back, so a failed send loses neither text nor images.
+          setDraft(typed);
+          if (images.length > 0) attachments.restore(images);
+        }
         if (!stopped) {
           setError(caught instanceof Error ? caught.message : 'Pip could not answer just now.');
         }
@@ -322,7 +361,7 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
         setStreaming(false);
       }
     },
-    [enabled, messages, model, pathname, quote, streaming, webSearch],
+    [attachments, canAttach, enabled, messages, model, pathname, quote, streaming, webSearch],
   );
 
   function clearChat() {
@@ -330,6 +369,14 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
     setMessages([]);
     setError(null);
     setQuote(null);
+    attachments.clear();
+  }
+
+  function pastedImages(items: DataTransferItemList | undefined): File[] {
+    return [...(items ?? [])]
+      .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
+      .map((item) => item.getAsFile())
+      .filter((file): file is File => file !== null);
   }
 
   const lastIndex = messages.length - 1;
@@ -357,8 +404,29 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
           ref={panelRef}
           role="dialog"
           aria-label={`${ASSISTANT_NAME}, your AI doubt helper`}
+          onDragOver={(event) => {
+            if (!canAttach || !enabled || !event.dataTransfer.types.includes('Files')) return;
+            event.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+              setDragging(false);
+          }}
+          onDrop={(event) => {
+            if (!canAttach || !enabled) return;
+            event.preventDefault();
+            setDragging(false);
+            void attachments.add(event.dataTransfer.files);
+          }}
           className="bg-paper border-line shadow-float rounded-t-sheet animate-rise-in fixed inset-x-0 top-16 bottom-0 z-40 flex flex-col overflow-hidden border md:inset-auto md:top-24 md:right-6 md:bottom-6 md:w-full md:max-w-md md:rounded-sheet"
         >
+          {dragging && (
+            <div className="bg-paper/90 border-brand rounded-sheet text-heading text-brand-deep pointer-events-none absolute inset-2 z-10 flex flex-col items-center justify-center gap-2 border border-dashed font-semibold">
+              <Icon name="image" className="size-8" />
+              Drop the image to ask about it
+            </div>
+          )}
           <header className="bg-night-glow text-on-night flex items-center gap-3 px-4 py-3">
             <PipMascot size={40} mood={streaming ? 'thinking' : 'happy'} blink={!streaming} />
             <div className="flex min-w-0 flex-1 flex-col">
@@ -496,11 +564,32 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
             ) : (
               messages.map((message, index) =>
                 message.role === 'user' ? (
-                  <div
-                    key={index}
-                    className="bg-ink text-on-ink rounded-card text-body ml-10 self-end px-4 py-2.5 whitespace-pre-wrap"
-                  >
-                    {message.content}
+                  <div key={index} className="ml-10 flex flex-col items-end gap-1.5 self-end">
+                    {message.images !== undefined && message.images.length > 0 && (
+                      <ul className="flex flex-wrap justify-end gap-1.5">
+                        {message.images.map((url, imageIndex) => (
+                          <li key={imageIndex}>
+                            {/* A data URL the learner just attached: next/image adds nothing here. */}
+                            {/* eslint-disable-next-line @next/next/no-img-element -- a local data URL, not a remote asset */}
+                            <img
+                              src={url}
+                              alt={`Image ${imageIndex + 1} you attached`}
+                              className="border-line rounded-input bg-sunken size-24 border object-cover"
+                            />
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {message.images === undefined && (message.imageCount ?? 0) > 0 && (
+                      <p className="text-small text-ink-faint flex items-center gap-1">
+                        <Icon name="image" className="size-4" />
+                        {message.imageCount === 1 ? '1 image' : `${message.imageCount} images`}{' '}
+                        attached
+                      </p>
+                    )}
+                    <div className="bg-ink text-on-ink rounded-card text-body px-4 py-2.5 whitespace-pre-wrap">
+                      {message.content}
+                    </div>
                   </div>
                 ) : (
                   <div key={index} className="flex min-w-0 items-start gap-2">
@@ -564,6 +653,11 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
                 {error}
               </Alert>
             )}
+            {attachments.error !== null && (
+              <Alert tone="danger" title="Image not added">
+                {attachments.error}
+              </Alert>
+            )}
           </div>
 
           {enabled && (
@@ -598,7 +692,73 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
                   </button>
                 </div>
               )}
+              {(attachments.images.length > 0 || attachments.busy) && (
+                <ul className="flex flex-wrap gap-2" aria-label="Images to send">
+                  {attachments.images.map((url, index) => (
+                    <li key={index} className="relative">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- a local data URL, not a remote asset */}
+                      <img
+                        src={url}
+                        alt={`Image ${index + 1} to send`}
+                        className="border-line rounded-input bg-sunken size-16 border object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => attachments.remove(index)}
+                        aria-label={`Remove image ${index + 1}`}
+                        className="absolute -top-3 -right-3 inline-grid size-11 place-items-center"
+                      >
+                        <span className="bg-ink text-on-ink shadow-card inline-grid size-6 place-items-center rounded-full">
+                          <svg
+                            viewBox="0 0 24 24"
+                            aria-hidden="true"
+                            className="size-3.5 stroke-current"
+                            fill="none"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                          >
+                            <path d="M6 6l12 12M18 6L6 18" />
+                          </svg>
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                  {attachments.busy && (
+                    <li className="border-line rounded-input bg-sunken text-ink-faint text-micro inline-grid size-16 place-items-center border">
+                      <span className="animate-breathe">Reading…</span>
+                    </li>
+                  )}
+                </ul>
+              )}
               <div className="flex items-end gap-2">
+                {canAttach && (
+                  <>
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept={IMAGE_ACCEPT}
+                      multiple
+                      className="sr-only"
+                      tabIndex={-1}
+                      aria-hidden="true"
+                      onChange={(event) => {
+                        const files = event.target.files;
+                        if (files !== null) void attachments.add(files);
+                        event.target.value = '';
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileRef.current?.click()}
+                      disabled={attachments.images.length >= MAX_IMAGES_PER_MESSAGE || streaming}
+                      aria-label="Attach an image"
+                      title="Attach a screenshot or photo (or paste one)"
+                      className="bg-sunken border-line text-ink-soft hover:text-ink disabled:text-ink-faint inline-grid size-12 shrink-0 place-items-center rounded-full border disabled:cursor-not-allowed"
+                    >
+                      <Icon name="image" className="size-5" />
+                    </button>
+                  </>
+                )}
                 <label htmlFor="assistant-question" className="sr-only">
                   Your doubt
                 </label>
@@ -607,6 +767,13 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
                   ref={inputRef}
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
+                  onPaste={(event) => {
+                    if (!canAttach) return;
+                    const files = pastedImages(event.clipboardData.items);
+                    if (files.length === 0) return;
+                    event.preventDefault();
+                    void attachments.add(files);
+                  }}
                   onKeyDown={(event) => {
                     if (
                       event.key === 'Enter' &&
@@ -619,7 +786,9 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
                   }}
                   rows={2}
                   maxLength={MAX_MESSAGE_CHARS}
-                  placeholder="Ask your doubt…"
+                  placeholder={
+                    attachments.images.length > 0 ? 'Ask about the image…' : 'Ask your doubt…'
+                  }
                   className="bg-paper border-line-strong rounded-input text-body placeholder:text-ink-faint focus:border-ink-faint min-h-12 flex-1 resize-none border px-3 py-2.5 outline-none"
                 />
                 {streaming ? (
@@ -633,7 +802,9 @@ export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
                 ) : (
                   <button
                     type="submit"
-                    disabled={draft.trim() === ''}
+                    disabled={
+                      (draft.trim() === '' && attachments.images.length === 0) || attachments.busy
+                    }
                     aria-label="Send"
                     className="squish bg-brand text-on-night shadow-glow hover:bg-brand-hover disabled:bg-sunken disabled:text-ink-faint inline-grid size-12 shrink-0 place-items-center rounded-full"
                   >

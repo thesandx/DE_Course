@@ -27,7 +27,8 @@ export type IconName =
   | 'play'
   | 'pause'
   | 'expand'
-  | 'shrink';
+  | 'shrink'
+  | 'image';
 
 const PATHS: Record<IconName, React.ReactNode> = {
   home: <path d="M4 11l8-7 8 7v8a1 1 0 01-1 1h-4v-6h-6v6H5a1 1 0 01-1-1z" />,
@@ -104,6 +105,13 @@ const PATHS: Record<IconName, React.ReactNode> = {
   pause: <path d="M8.5 5.5v13M15.5 5.5v13" />,
   expand: <path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" />,
   shrink: <path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5" />,
+  image: (
+    <>
+      <rect x="3.5" y="5" width="17" height="14" rx="2.5" />
+      <circle cx="9" cy="10" r="1.6" />
+      <path d="M4 17l5-4.5 3.5 3 3-2.5L20 16.5" />
+    </>
+  ),
 };
 
 export interface IconProps {
