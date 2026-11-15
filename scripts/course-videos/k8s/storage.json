@@ -1,0 +1,144 @@
+{
+  "station": "storage",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "Your pod restarts, and every file it wrote is gone.",
+          "device": "big",
+          "text": "A restart loses the files"
+        },
+        {
+          "say": "A container starts with a clean disk each time. That is by design.",
+          "device": "card",
+          "label": "Ephemeral",
+          "head": "A clean disk on every start",
+          "headmark": "clean disk",
+          "headmark_at": "clean"
+        },
+        {
+          "say": "This port has three steps: volumes, claims, and StatefulSets.",
+          "device": "list",
+          "label": "Port 5 · Storage",
+          "items": ["Volumes", "Claims", "StatefulSets"],
+          "items_at": ["volumes", "claims", "StatefulSets"]
+        }
+      ]
+    },
+    {
+      "title": "Volumes",
+      "beats": [
+        {
+          "say": "First: storage that outlives a crash.",
+          "device": "big",
+          "text": "Outlive a crash"
+        },
+        {
+          "say": "A volume belongs to the pod, not to the container. A crash does not clear it.",
+          "device": "card",
+          "label": "Volume",
+          "head": "It belongs to the pod",
+          "headmark": "the pod",
+          "headmark_at": "pod"
+        },
+        {
+          "say": "But the simplest volume is deleted with the pod. It is scratch space.",
+          "device": "card",
+          "label": "emptyDir",
+          "head": "Gone when the pod is gone",
+          "headmark": "Gone",
+          "headmark_at": "deleted"
+        }
+      ]
+    },
+    {
+      "title": "Claims",
+      "check": {
+        "prompt": "Your pod is deleted. Its data was on a PersistentVolumeClaim. Where is the data?",
+        "options": ["Gone with the pod", "Still on the disk", "On the node only"],
+        "answer": 1,
+        "why": "A claim outlives the pod. A new pod that mounts the same claim reads the same data."
+      },
+      "beats": [
+        {
+          "say": "Second: storage that outlives the pod.",
+          "device": "big",
+          "text": "Outlive the pod"
+        },
+        {
+          "say": "Your app asks for a size. It does not name a disk.",
+          "device": "card",
+          "label": "Claim",
+          "head": "Ask for size, not for a disk",
+          "headmark": "size",
+          "headmark_at": "size"
+        },
+        {
+          "say": "A storage class makes the disk. The claim binds to it and stays.",
+          "device": "card",
+          "label": "Dynamic provisioning",
+          "head": "The class makes the disk",
+          "headmark": "makes the disk",
+          "headmark_at": "makes"
+        }
+      ]
+    },
+    {
+      "title": "StatefulSets",
+      "check": {
+        "prompt": "Pod pg-1 of a StatefulSet is replaced. What does the new pod get?",
+        "options": [
+          "A random name and a new disk",
+          "The name pg-1 and the same disk",
+          "The disk of pg-0"
+        ],
+        "answer": 1,
+        "why": "A StatefulSet gives each replica a stable name and its own claim."
+      },
+      "beats": [
+        {
+          "say": "Third: a database needs a name.",
+          "device": "big",
+          "text": "A database needs a name"
+        },
+        {
+          "say": "A StatefulSet gives each pod a fixed name, and its own disk.",
+          "device": "card",
+          "label": "StatefulSet",
+          "head": "A fixed name and its own disk",
+          "headmark": "its own disk",
+          "headmark_at": "own"
+        },
+        {
+          "say": "Pods start in order. And when you delete the set, the disks stay.",
+          "device": "card",
+          "label": "Careful",
+          "head": "Delete the set: disks stay",
+          "headmark": "disks stay",
+          "headmark_at": "stay"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Quick recap of storage.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "Containers forget. Claims remember. StatefulSets give a name and a disk.",
+          "device": "list",
+          "label": "Storage",
+          "items": ["Containers forget", "Claims remember", "StatefulSets: name and disk"],
+          "items_at": ["forget", "remember", "name"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "station": "config",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "The database address is baked into your image.",
+          "device": "big",
+          "text": "Config baked into the image"
+        },
+        {
+          "say": "So you build one image for dev, one for staging, and one for production.",
+          "device": "card",
+          "label": "The pain",
+          "head": "Three images for one app",
+          "headmark": "Three images",
+          "headmark_at": "one"
+        },
+        {
+          "say": "This port has three tools: ConfigMaps, Secrets, and Kustomize.",
+          "device": "list",
+          "label": "Port 4 · Config and secrets",
+          "items": ["ConfigMap", "Secret", "Kustomize"],
+          "items_at": ["ConfigMaps", "Secrets", "Kustomize"]
+        }
+      ]
+    },
+    {
+      "title": "ConfigMaps",
+      "check": {
+        "prompt": "You change a ConfigMap that pods read as environment variables. What do the pods see?",
+        "options": ["The new value at once", "The old value, until they restart", "An error"],
+        "answer": 1,
+        "why": "Environment variables are read once, at start. Restart the pods to pick up a change."
+      },
+      "beats": [
+        {
+          "say": "First: take the config out of the image.",
+          "device": "big",
+          "text": "Config out of the image"
+        },
+        {
+          "say": "A ConfigMap holds keys and values. The pod gets them as variables or as files.",
+          "device": "card",
+          "label": "ConfigMap",
+          "head": "Variables or mounted files",
+          "headmark": "files",
+          "headmark_at": "files"
+        },
+        {
+          "say": "A change does not restart your pods. Variables keep the old value until a restart.",
+          "device": "card",
+          "label": "The trap",
+          "head": "Old value until a restart",
+          "headmark": "until a restart",
+          "headmark_at": "restart"
+        }
+      ]
+    },
+    {
+      "title": "Secrets",
+      "check": {
+        "prompt": "What protects the value in a Secret?",
+        "options": ["base64", "Access rules and encryption at rest", "The Secret name"],
+        "answer": 1,
+        "why": "base64 is an encoding, not encryption. The protection is RBAC and encryption of the store."
+      },
+      "beats": [
+        { "say": "Second: passwords and keys.", "device": "big", "text": "Passwords and keys" },
+        {
+          "say": "A Secret looks hidden. But base64 is an encoding. Anyone can decode it.",
+          "device": "card",
+          "label": "Not magic",
+          "head": "base64 is not encryption",
+          "headmark": "not encryption",
+          "headmark_at": "decode"
+        },
+        {
+          "say": "The real protection is access rules, and encryption of the store.",
+          "device": "card",
+          "label": "What protects it",
+          "head": "Access rules + encryption at rest",
+          "headmark": "Access rules",
+          "headmark_at": "access"
+        }
+      ]
+    },
+    {
+      "title": "Kustomize",
+      "beats": [
+        {
+          "say": "Third: one base, many environments.",
+          "device": "big",
+          "text": "One base, many places"
+        },
+        {
+          "say": "You keep one base. Each environment adds a small patch on top.",
+          "device": "card",
+          "label": "Kustomize",
+          "head": "A base plus small overlays",
+          "headmark": "overlays",
+          "headmark_at": "patch"
+        },
+        {
+          "say": "A generated ConfigMap gets a new name when it changes. So the pods roll.",
+          "device": "card",
+          "label": "A nice effect",
+          "head": "New name, so the pods roll",
+          "headmark": "pods roll",
+          "headmark_at": "roll"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Quick recap of config.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "One image everywhere. base64 is not encryption. And a config change needs a rollout.",
+          "device": "list",
+          "label": "Config and secrets",
+          "items": ["One image everywhere", "base64 is not encryption", "A change needs a rollout"],
+          "items_at": ["image", "encryption", "rollout"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

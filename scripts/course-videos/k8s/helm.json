@@ -1,0 +1,130 @@
+{
+  "station": "helm",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "Ten teams copy the same twelve files and change three lines.",
+          "device": "big",
+          "text": "Ten copies of twelve files"
+        },
+        {
+          "say": "Then one fix must be made in ten places.",
+          "device": "card",
+          "label": "The pain",
+          "head": "One fix, ten places",
+          "headmark": "ten places",
+          "headmark_at": "ten"
+        },
+        {
+          "say": "This port has three steps: use a chart, write a chart, and choose your tool.",
+          "device": "list",
+          "label": "Port 11 · Helm",
+          "items": ["Charts and releases", "Your own chart", "Helm or Kustomize"],
+          "items_at": ["use", "write", "choose"]
+        }
+      ]
+    },
+    {
+      "title": "Charts and releases",
+      "check": {
+        "prompt": "An upgrade breaks your release. What takes you back?",
+        "options": ["helm rollback", "Delete the namespace", "Rebuild the image"],
+        "answer": 0,
+        "why": "Helm keeps every revision of a release. A rollback applies an older one."
+      },
+      "beats": [
+        {
+          "say": "First: a package for Kubernetes.",
+          "device": "big",
+          "text": "A package for the cluster"
+        },
+        {
+          "say": "A chart is a set of templates with a version. Values fill the blanks.",
+          "device": "card",
+          "label": "Chart",
+          "head": "Templates plus values",
+          "headmark": "values",
+          "headmark_at": "Values"
+        },
+        {
+          "say": "Each install is a release. Helm keeps every revision of it.",
+          "device": "card",
+          "label": "Release",
+          "head": "A release has revisions",
+          "headmark": "revisions",
+          "headmark_at": "revision"
+        },
+        {
+          "say": "So an upgrade that goes wrong is one rollback away.",
+          "device": "card",
+          "label": "Safety",
+          "head": "Upgrade, or roll back",
+          "headmark": "roll back",
+          "headmark_at": "rollback"
+        }
+      ]
+    },
+    {
+      "title": "Your own chart",
+      "beats": [
+        {
+          "say": "Second: write one chart for all teams.",
+          "device": "big",
+          "text": "One chart for all teams"
+        },
+        {
+          "say": "Put good defaults in the values file. Each team changes only what differs.",
+          "device": "card",
+          "label": "values.yaml",
+          "head": "Good defaults, few overrides",
+          "headmark": "few overrides",
+          "headmark_at": "only"
+        },
+        {
+          "say": "Render the chart before you install it. Read the output.",
+          "device": "card",
+          "label": "A habit",
+          "head": "Render first, then install",
+          "headmark": "Render first",
+          "headmark_at": "Render"
+        }
+      ]
+    },
+    {
+      "title": "Helm or Kustomize",
+      "beats": [
+        { "say": "Third: which tool, and when?", "device": "big", "text": "Which tool, and when?" },
+        {
+          "say": "Helm packages software for others. Kustomize patches your own files.",
+          "device": "card",
+          "label": "The rule",
+          "head": "Helm packages. Kustomize patches.",
+          "headmark": "Kustomize patches.",
+          "headmark_at": "patches"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Quick recap of Helm.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "A chart is templates plus values. A release has revisions. Render before you install.",
+          "device": "list",
+          "label": "Helm",
+          "items": ["Templates plus values", "A release has revisions", "Render before install"],
+          "items_at": ["chart", "release", "Render"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

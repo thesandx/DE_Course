@@ -5,6 +5,8 @@
 - **Deciders:** repository owner
 
 > **Note, 2026-11-14.** The DE course now has one video per track, built and hosted the same way. The decision is unchanged. The paths changed: the scripts are in `scripts/course-videos/<course>/`, the timings are in `lib/course/videos/<course>.ts`, the MP4 files are at `course-videos/<course>/<slug>.mp4`, and the player is `components/course/CourseVideo.tsx`.
+>
+> **Note, 2026-11-15.** The Kubernetes course now has one video per port, built and hosted the same way. Its course folder is `k8s`.
 
 ## Context
 

@@ -1,0 +1,161 @@
+{
+  "station": "fundamentals",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "At 3 a.m. your container dies. With Docker alone, it stays dead.",
+          "device": "big",
+          "text": "3 a.m. and it stays dead"
+        },
+        {
+          "say": "Docker runs what you tell it, once. Nobody watches it for you.",
+          "device": "card",
+          "label": "Docker alone",
+          "head": "It runs once. Nobody watches.",
+          "headmark": "Nobody watches",
+          "headmark_at": "watches"
+        },
+        {
+          "say": "This port has three ideas: the control loop, the pod, and the manifest.",
+          "device": "list",
+          "label": "Port 1 · Fundamentals",
+          "items": ["The control loop", "The pod", "The manifest"],
+          "items_at": ["loop", "pod", "manifest"]
+        }
+      ]
+    },
+    {
+      "title": "The control loop",
+      "check": {
+        "prompt": "You ask for three copies and one dies. What does Kubernetes do?",
+        "options": [
+          "Nothing, until you run a command",
+          "It starts a new copy",
+          "It deletes the other two"
+        ],
+        "answer": 1,
+        "why": "A controller compares what you asked for with what exists, and fixes the difference."
+      },
+      "beats": [
+        {
+          "say": "First: the one idea behind all of Kubernetes.",
+          "device": "big",
+          "text": "The idea behind it all"
+        },
+        {
+          "say": "You declare what you want. For example: three copies of my app.",
+          "device": "card",
+          "label": "Desired state",
+          "head": "You say what you want",
+          "headmark": "what you want",
+          "headmark_at": "want"
+        },
+        {
+          "say": "A controller observes, compares, and acts. Then it does that again, without end.",
+          "device": "list",
+          "label": "The loop",
+          "items": ["Observe", "Compare", "Act"],
+          "items_at": ["observes", "compares", "acts"]
+        }
+      ]
+    },
+    {
+      "title": "The pod",
+      "beats": [
+        {
+          "say": "Second: what does Kubernetes run?",
+          "device": "big",
+          "text": "What Kubernetes runs"
+        },
+        {
+          "say": "It runs pods. A pod is one or more containers that share one address.",
+          "device": "card",
+          "label": "Pod",
+          "head": "Containers that share one IP",
+          "headmark": "one IP",
+          "headmark_at": "address"
+        },
+        {
+          "say": "Most pods hold one container. Think of a pod as a wrapper around it.",
+          "device": "card",
+          "label": "In practice",
+          "head": "Usually one container per pod",
+          "headmark": "one container",
+          "headmark_at": "one"
+        }
+      ]
+    },
+    {
+      "title": "Crash and delete",
+      "check": {
+        "prompt": "You delete a pod that has no controller. What happens?",
+        "options": ["It comes back", "It is gone", "It restarts in place"],
+        "answer": 1,
+        "why": "The kubelet restarts a crashed container. Nothing recreates a bare pod that is deleted."
+      },
+      "beats": [
+        { "say": "Third: who heals what?", "device": "big", "text": "Who heals what?" },
+        {
+          "say": "If a container crashes, the node restarts it inside the same pod.",
+          "device": "card",
+          "label": "A crash",
+          "head": "The node restarts the container",
+          "headmark": "restarts",
+          "headmark_at": "restarts"
+        },
+        {
+          "say": "But if you delete a bare pod, nothing brings it back. That is why controllers exist.",
+          "device": "card",
+          "label": "A delete",
+          "head": "A deleted pod stays gone",
+          "headmark": "stays gone",
+          "headmark_at": "nothing"
+        }
+      ]
+    },
+    {
+      "title": "The manifest",
+      "beats": [
+        {
+          "say": "Last: how do you say what you want?",
+          "device": "big",
+          "text": "Say what you want"
+        },
+        {
+          "say": "You write a file. You fill in the spec, and the cluster fills in the status.",
+          "device": "card",
+          "label": "A manifest",
+          "head": "You write spec. It writes status.",
+          "headmark": "spec",
+          "headmark_at": "spec"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Quick recap of the fundamentals.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "Declare, do not command. A pod wraps containers. And a bare pod does not come back.",
+          "device": "list",
+          "label": "Fundamentals",
+          "items": ["Declare, do not command", "A pod wraps containers", "A bare pod stays gone"],
+          "items_at": ["Declare", "wraps", "bare"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

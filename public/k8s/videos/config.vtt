@@ -1,0 +1,93 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:03.480
+The database address is baked into your image.
+
+2
+00:00:03.500 --> 00:00:08.165
+So you build one image for dev, one for staging, and one for production.
+
+3
+00:00:08.185 --> 00:00:13.140
+This port has three tools: ConfigMaps, Secrets, and Kustomize.
+
+4
+00:00:13.160 --> 00:00:15.850
+First: take the config out of the image.
+
+5
+00:00:15.870 --> 00:00:18.425
+A ConfigMap holds keys and values.
+
+6
+00:00:18.445 --> 00:00:21.510
+The pod gets them as variables or as files.
+
+7
+00:00:21.530 --> 00:00:23.823
+A change does not restart your pods.
+
+8
+00:00:23.843 --> 00:00:27.460
+Variables keep the old value until a restart.
+
+9
+00:00:27.480 --> 00:00:29.645
+Second: passwords and keys.
+
+10
+00:00:29.665 --> 00:00:31.095
+A Secret looks hidden.
+
+11
+00:00:31.115 --> 00:00:33.333
+But base64 is an encoding.
+
+12
+00:00:33.353 --> 00:00:35.180
+Anyone can decode it.
+
+13
+00:00:35.200 --> 00:00:39.755
+The real protection is access rules, and encryption of the store.
+
+14
+00:00:39.775 --> 00:00:42.440
+Third: one base, many environments.
+
+15
+00:00:42.460 --> 00:00:43.753
+You keep one base.
+
+16
+00:00:43.773 --> 00:00:46.750
+Each environment adds a small patch on top.
+
+17
+00:00:46.770 --> 00:00:50.063
+A generated ConfigMap gets a new name when it changes.
+
+18
+00:00:50.083 --> 00:00:52.325
+So the pods roll.
+
+19
+00:00:52.345 --> 00:00:54.310
+Quick recap of config.
+
+20
+00:00:54.330 --> 00:00:55.922
+One image everywhere.
+
+21
+00:00:55.942 --> 00:00:58.135
+base64 is not encryption.
+
+22
+00:00:58.155 --> 00:01:00.745
+And a config change needs a rollout.
+
+23
+00:01:00.765 --> 00:01:03.865
+Now start the first lesson below.

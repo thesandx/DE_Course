@@ -1,0 +1,97 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:04.405
+Your Spark cluster runs all night, and sits idle all day.
+
+2
+00:00:04.425 --> 00:00:06.330
+You pay for machines that do nothing.
+
+3
+00:00:06.350 --> 00:00:08.990
+And every team wants its own version.
+
+4
+00:00:09.010 --> 00:00:14.565
+This port has three steps: operators, Spark and Airflow, and a lane for batch.
+
+5
+00:00:14.585 --> 00:00:17.275
+First: teach the cluster a new object.
+
+6
+00:00:17.295 --> 00:00:20.175
+A custom resource definition adds a new kind.
+
+7
+00:00:20.195 --> 00:00:22.985
+For example: a Spark application.
+
+8
+00:00:23.005 --> 00:00:25.610
+An operator is a controller for that kind.
+
+9
+00:00:25.630 --> 00:00:28.360
+It does the manual steps for you.
+
+10
+00:00:28.380 --> 00:00:30.845
+Second: one pod per piece of work.
+
+11
+00:00:30.865 --> 00:00:33.445
+Each Spark job gets its own driver pod.
+
+12
+00:00:33.465 --> 00:00:36.205
+The driver asks for executor pods.
+
+13
+00:00:36.225 --> 00:00:38.330
+When the job ends, the pods go away.
+
+14
+00:00:38.350 --> 00:00:40.240
+You pay for the run only.
+
+15
+00:00:40.260 --> 00:00:44.690
+Airflow can do the same: every task runs in its own pod.
+
+16
+00:00:44.710 --> 00:00:47.300
+Third: keep batch away from serving.
+
+17
+00:00:47.320 --> 00:00:51.735
+Use a tainted node pool, a low priority, and a quota for each team.
+
+18
+00:00:51.755 --> 00:00:53.923
+A taint only keeps other pods out.
+
+19
+00:00:53.943 --> 00:00:57.010
+Add a node selector to keep batch in.
+
+20
+00:00:57.030 --> 00:00:59.445
+Quick recap of data platforms.
+
+21
+00:00:59.465 --> 00:01:01.232
+Operators add new kinds.
+
+22
+00:01:01.252 --> 00:01:02.845
+Jobs bring their own pods.
+
+23
+00:01:02.865 --> 00:01:04.980
+And batch gets its own lane.
+
+24
+00:01:05.000 --> 00:01:08.100
+Now start the first lesson below.

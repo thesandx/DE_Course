@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { CourseVideo } from '@/components/course/CourseVideo';
 import { InlineText } from '@/components/course/InlineText';
 import { ProgressRing } from '@/components/course/ProgressRing';
 import { PortRoute } from '@/components/k8s/PortRoute';
@@ -22,7 +23,9 @@ import {
 } from '@/lib/course/k8s/catalog';
 import { LAB_ROOT } from '@/lib/course/k8s/lab';
 import { stripInline } from '@/lib/course/markdown';
+import { courseVideo, videoCaptionsHref, videoPosterHref } from '@/lib/course/videos';
 import { cn } from '@/lib/utils';
+import { getCourseVideoUrl } from '@/services/course-video.service';
 import { requireK8sLearner } from '@/services/learner.service';
 
 interface Props {
@@ -45,6 +48,10 @@ export default async function K8sPortPage({ params }: Props) {
   if (port === undefined) notFound();
 
   const { progress, shell } = await requireK8sLearner(`/k8s/ports/${slug}`);
+  // The film is optional: with no file in the bucket the URL is null, and the
+  // page shows the port without a player.
+  const video = courseVideo('k8s', slug);
+  const videoUrl = video === undefined ? null : await getCourseVideoUrl('k8s', slug);
   const stats = portProgress(port, progress.done);
   const next = port.lessons.find(
     (lesson) => progress.done[lessonId(port.slug, lesson.slug)] === undefined,
@@ -108,6 +115,16 @@ export default async function K8sPortPage({ params }: Props) {
             </span>
           </ProgressRing>
         </header>
+
+        {video !== undefined && videoUrl !== null && (
+          <CourseVideo
+            video={video}
+            title="The port in one video"
+            src={videoUrl}
+            poster={videoPosterHref('k8s', slug)}
+            captionsSrc={videoCaptionsHref('k8s', slug)}
+          />
+        )}
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start">
           <section aria-labelledby="route-heading" className="flex flex-col gap-3 lg:col-span-8">

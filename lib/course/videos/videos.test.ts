@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { TRACKS } from '@/lib/course/catalog';
 import { LINES } from '@/lib/course/gcp/catalog';
+import { PORTS } from '@/lib/course/k8s/catalog';
 import {
   COURSE_VIDEOS,
   courseVideo,
@@ -14,10 +15,11 @@ import {
 } from '@/lib/course/videos';
 import type { VideoCourse } from '@/types/video';
 
-/** Every place that must have a video: each GCP station and each DE track. */
+/** Every place that must have a video: each GCP station, DE track and Kubernetes port. */
 const EXPECTED: Readonly<Record<VideoCourse, readonly string[]>> = {
   gcp: LINES.flatMap((line) => line.stations.map((station) => station.slug)),
   de: TRACKS.map((track) => track.slug),
+  k8s: PORTS.map((port) => port.slug),
 };
 
 const ALL = (Object.keys(EXPECTED) as VideoCourse[]).flatMap((course) =>
@@ -85,6 +87,7 @@ describe('the course videos', () => {
   it('keeps the MP4 files under one bucket prefix for each course', () => {
     expect(videoObjectPath('gcp', 'data-lake')).toBe('course-videos/gcp/data-lake.mp4');
     expect(videoObjectPath('de', 'sql')).toBe('course-videos/de/sql.mp4');
+    expect(videoObjectPath('k8s', 'helm')).toBe('course-videos/k8s/helm.mp4');
     expect(courseVideo('gcp', 'no-such-station')).toBeUndefined();
   });
 });

@@ -1,0 +1,77 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:03.930
+Your build robot has admin rights on the whole cluster.
+
+2
+00:00:03.950 --> 00:00:07.665
+One leaked token, and an attacker owns every namespace.
+
+3
+00:00:07.685 --> 00:00:12.515
+This port has two guards: access control, and pod security.
+
+4
+00:00:12.535 --> 00:00:14.775
+First: who can do what, and where?
+
+5
+00:00:14.795 --> 00:00:17.175
+A role is a list of verbs on resources.
+
+6
+00:00:17.195 --> 00:00:19.860
+For example: get and list pods.
+
+7
+00:00:19.880 --> 00:00:23.745
+A binding gives that role to a user or a service account.
+
+8
+00:00:23.765 --> 00:00:25.195
+There is no deny rule.
+
+9
+00:00:25.215 --> 00:00:27.920
+What you did not grant is denied.
+
+10
+00:00:27.940 --> 00:00:30.280
+Second: what may a container do?
+
+11
+00:00:30.300 --> 00:00:32.818
+By default, many images run as root.
+
+12
+00:00:32.838 --> 00:00:35.115
+A break-out is then much worse.
+
+13
+00:00:35.135 --> 00:00:40.375
+So run as a normal user, block privilege escalation, and drop capabilities.
+
+14
+00:00:40.395 --> 00:00:45.725
+A label on the namespace makes the cluster reject pods that break these rules.
+
+15
+00:00:45.745 --> 00:00:47.810
+Quick recap of security.
+
+16
+00:00:47.830 --> 00:00:49.172
+Grant small roles.
+
+17
+00:00:49.192 --> 00:00:50.860
+Nothing is allowed by default.
+
+18
+00:00:50.880 --> 00:00:52.720
+And do not run as root.
+
+19
+00:00:52.740 --> 00:00:55.840
+Now start the first lesson below.

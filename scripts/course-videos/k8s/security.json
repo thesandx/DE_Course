@@ -1,0 +1,123 @@
+{
+  "station": "security",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "Your build robot has admin rights on the whole cluster.",
+          "device": "big",
+          "text": "The robot is an admin"
+        },
+        {
+          "say": "One leaked token, and an attacker owns every namespace.",
+          "device": "card",
+          "label": "The risk",
+          "head": "One token owns everything",
+          "headmark": "everything",
+          "headmark_at": "every"
+        },
+        {
+          "say": "This port has two guards: access control, and pod security.",
+          "device": "list",
+          "label": "Port 7 · Security",
+          "items": ["Access control", "Pod security"],
+          "items_at": ["access", "pod"]
+        }
+      ]
+    },
+    {
+      "title": "Roles and bindings",
+      "check": {
+        "prompt": "A new service account has no bindings. What can it do?",
+        "options": ["Read everything", "Almost nothing", "Everything in its namespace"],
+        "answer": 1,
+        "why": "Access control only adds permissions. With no binding, a request is denied."
+      },
+      "beats": [
+        {
+          "say": "First: who can do what, and where?",
+          "device": "big",
+          "text": "Who can do what?"
+        },
+        {
+          "say": "A role is a list of verbs on resources. For example: get and list pods.",
+          "device": "card",
+          "label": "Role",
+          "head": "Verbs on resources",
+          "headmark": "Verbs",
+          "headmark_at": "verbs"
+        },
+        {
+          "say": "A binding gives that role to a user or a service account.",
+          "device": "card",
+          "label": "Binding",
+          "head": "A binding grants the role",
+          "headmark": "grants",
+          "headmark_at": "gives"
+        },
+        {
+          "say": "There is no deny rule. What you did not grant is denied.",
+          "device": "card",
+          "label": "Default",
+          "head": "Not granted means denied",
+          "headmark": "denied",
+          "headmark_at": "denied"
+        }
+      ]
+    },
+    {
+      "title": "Pod security",
+      "beats": [
+        {
+          "say": "Second: what may a container do?",
+          "device": "big",
+          "text": "What may a container do?"
+        },
+        {
+          "say": "By default, many images run as root. A break-out is then much worse.",
+          "device": "card",
+          "label": "The default",
+          "head": "Root inside the container",
+          "headmark": "Root",
+          "headmark_at": "root"
+        },
+        {
+          "say": "So run as a normal user, block privilege escalation, and drop capabilities.",
+          "device": "list",
+          "label": "Harden the pod",
+          "items": ["Run as non-root", "No privilege escalation", "Drop all capabilities"],
+          "items_at": ["normal", "block", "drop"]
+        },
+        {
+          "say": "A label on the namespace makes the cluster reject pods that break these rules.",
+          "device": "card",
+          "label": "Enforce it",
+          "head": "The namespace rejects bad pods",
+          "headmark": "rejects",
+          "headmark_at": "reject"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Quick recap of security.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "Grant small roles. Nothing is allowed by default. And do not run as root.",
+          "device": "list",
+          "label": "Security",
+          "items": ["Grant small roles", "Denied by default", "Do not run as root"],
+          "items_at": ["small", "default", "root"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

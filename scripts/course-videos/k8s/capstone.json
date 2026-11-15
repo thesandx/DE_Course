@@ -1,0 +1,134 @@
+{
+  "station": "capstone",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "Each port solved one problem alone. Production needs all of them at once.",
+          "device": "big",
+          "text": "Production needs all of it"
+        },
+        {
+          "say": "So now you build one system, and then you try to break it.",
+          "device": "card",
+          "label": "The capstone",
+          "head": "Build it, then break it",
+          "headmark": "break it",
+          "headmark_at": "break"
+        },
+        {
+          "say": "This port has two parts: the fleet on your laptop, and the same fleet on Google Cloud.",
+          "device": "list",
+          "label": "Port 13 · Capstone",
+          "items": ["The fleet", "Sail to GKE"],
+          "items_at": ["laptop", "Cloud"]
+        }
+      ]
+    },
+    {
+      "title": "The fleet",
+      "check": {
+        "prompt": "In the capstone, an intruder pod in another namespace calls the database. What stops it?",
+        "options": ["The Service", "A NetworkPolicy", "The readiness probe"],
+        "answer": 1,
+        "why": "The namespace denies inbound traffic by default. Only the app has a rule that allows it."
+      },
+      "beats": [
+        {
+          "say": "First: one namespace with everything.",
+          "device": "big",
+          "text": "One namespace, everything"
+        },
+        {
+          "say": "Tugboat with probes and autoscaling. A database with its own disk. And a scheduled job.",
+          "device": "list",
+          "label": "The fleet",
+          "items": [
+            "tugboat: probes, autoscaling",
+            "A database with a disk",
+            "A scheduled ingest job"
+          ],
+          "items_at": ["Tugboat", "database", "scheduled"]
+        },
+        {
+          "say": "Around them: a gateway, network policies, and least-privilege accounts.",
+          "device": "list",
+          "label": "The guards",
+          "items": ["A gateway", "Network policies", "Least-privilege accounts"],
+          "items_at": ["gateway", "network", "accounts"]
+        },
+        {
+          "say": "Then the chaos drills. Delete a pod. Drain a node. Send an intruder.",
+          "device": "card",
+          "label": "Chaos drills",
+          "head": "Break it and watch it heal",
+          "headmark": "watch it heal",
+          "headmark_at": "Drain"
+        }
+      ]
+    },
+    {
+      "title": "Sail to GKE",
+      "beats": [
+        {
+          "say": "Second: the same files, on a real cloud.",
+          "device": "big",
+          "text": "The same files on GKE"
+        },
+        {
+          "say": "You push the image to a registry, and change two lines.",
+          "device": "card",
+          "label": "What changes",
+          "head": "Push the image, change two lines",
+          "headmark": "two lines",
+          "headmark_at": "two"
+        },
+        {
+          "say": "The manifests stay the same. That is the point of Kubernetes.",
+          "device": "card",
+          "label": "The point",
+          "head": "One API on every cluster",
+          "headmark": "One API",
+          "headmark_at": "same"
+        },
+        {
+          "say": "Delete the cluster when you finish. A load balancer costs money every hour.",
+          "device": "card",
+          "label": "Do not forget",
+          "head": "Clean up, or keep paying",
+          "headmark": "Clean up",
+          "headmark_at": "Delete"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Quick recap of the capstone.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "Every port in one namespace. Prove it with chaos. And the same files run anywhere.",
+          "device": "list",
+          "label": "Capstone",
+          "items": [
+            "Every port in one namespace",
+            "Prove it with chaos",
+            "The same files run anywhere"
+          ],
+          "items_at": ["Every", "chaos", "same"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

@@ -1,19 +1,22 @@
 import { VIDEO_TIMINGS as DE_TIMINGS } from '@/lib/course/videos/de';
 import { VIDEO_TIMINGS as GCP_TIMINGS } from '@/lib/course/videos/gcp';
+import { VIDEO_TIMINGS as K8S_TIMINGS } from '@/lib/course/videos/k8s';
 import type { CourseVideo, VideoCourse } from '@/types/video';
 
 /**
- * The explainer videos: one per GCP station and one per DE track.
+ * The explainer videos: one per GCP station, one per DE track and one per
+ * Kubernetes port.
  *
- * `gcp.ts` and `de.ts` are written by `scripts/course-videos/collect.py`. Do
+ * `gcp.ts`, `de.ts` and `k8s.ts` are written by `scripts/course-videos/collect.py`. Do
  * not edit them by hand: change the script of the video and build it again.
  * The rules are in `lib/course/README.md` > Explainer videos.
  */
 
-/** Every video of each course, keyed by station slug or track slug. */
+/** Every video of each course, keyed by station, track or port slug. */
 export const COURSE_VIDEOS: Readonly<Record<VideoCourse, Readonly<Record<string, CourseVideo>>>> = {
   gcp: GCP_TIMINGS,
   de: DE_TIMINGS,
+  k8s: K8S_TIMINGS,
 };
 
 /** The video of a station or a track, if it has one. */

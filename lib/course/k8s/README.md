@@ -80,6 +80,10 @@ A mission has no steps. The learner ticks each task and the cleanup, and then th
 
 Every lesson has one diagram. The diagrams use the same shapes and the same component as the GCP course. The rules are in [`../gcp/README.md`](../gcp/README.md#diagrams). The key of a diagram is `<port>/<lesson>`. The tests fail when a lesson has no diagram.
 
+## Explainer videos
+
+Every port has one explainer video of about one minute. The port page shows it under the header. The scripts are in `scripts/course-videos/k8s/`. The files and the rules are in [`../README.md`](../README.md#explainer-videos).
+
 ## Lab commands
 
 The lab commands of the Helmsman ports come from the source page without changes. The lab commands of the `data` port were written for this course and were not run on a cluster. Run them on kind before you change them, and correct this section when you have done so.

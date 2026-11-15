@@ -1,0 +1,155 @@
+{
+  "station": "data",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "Your Spark cluster runs all night, and sits idle all day.",
+          "device": "big",
+          "text": "A cluster that sits idle"
+        },
+        {
+          "say": "You pay for machines that do nothing. And every team wants its own version.",
+          "device": "card",
+          "label": "The pain",
+          "head": "Idle machines, version fights",
+          "headmark": "Idle machines",
+          "headmark_at": "nothing"
+        },
+        {
+          "say": "This port has three steps: operators, Spark and Airflow, and a lane for batch.",
+          "device": "list",
+          "label": "Port 12 · Data platforms",
+          "items": ["Operators", "Spark and Airflow", "A lane for batch"],
+          "items_at": ["operators", "Spark", "lane"]
+        }
+      ]
+    },
+    {
+      "title": "Operators",
+      "check": {
+        "prompt": "You create a custom resource and nothing happens. What do you check first?",
+        "options": ["That the operator pod runs", "The node count", "The image size"],
+        "answer": 0,
+        "why": "A custom resource is only data. The operator is the controller that acts on it."
+      },
+      "beats": [
+        {
+          "say": "First: teach the cluster a new object.",
+          "device": "big",
+          "text": "Teach it a new object"
+        },
+        {
+          "say": "A custom resource definition adds a new kind. For example: a Spark application.",
+          "device": "card",
+          "label": "A new kind",
+          "head": "A new kind in the API",
+          "headmark": "new kind",
+          "headmark_at": "kind"
+        },
+        {
+          "say": "An operator is a controller for that kind. It does the manual steps for you.",
+          "device": "card",
+          "label": "Operator",
+          "head": "A control loop you install",
+          "headmark": "control loop",
+          "headmark_at": "controller"
+        }
+      ]
+    },
+    {
+      "title": "Spark and Airflow",
+      "check": {
+        "prompt": "In Spark on Kubernetes, who asks for the executor pods?",
+        "options": ["The scheduler", "The driver pod", "The operator"],
+        "answer": 1,
+        "why": "The driver asks the API server for executors, so its service account needs that permission."
+      },
+      "beats": [
+        {
+          "say": "Second: one pod per piece of work.",
+          "device": "big",
+          "text": "A pod per piece of work"
+        },
+        {
+          "say": "Each Spark job gets its own driver pod. The driver asks for executor pods.",
+          "device": "card",
+          "label": "Spark",
+          "head": "The driver asks for executors",
+          "headmark": "driver",
+          "headmark_at": "driver"
+        },
+        {
+          "say": "When the job ends, the pods go away. You pay for the run only.",
+          "device": "card",
+          "label": "No idle cluster",
+          "head": "Pods leave when the job ends",
+          "headmark": "leave",
+          "headmark_at": "away"
+        },
+        {
+          "say": "Airflow can do the same: every task runs in its own pod.",
+          "device": "card",
+          "label": "Airflow",
+          "head": "One pod per task",
+          "headmark": "per task",
+          "headmark_at": "task"
+        }
+      ]
+    },
+    {
+      "title": "A lane for batch",
+      "beats": [
+        {
+          "say": "Third: keep batch away from serving.",
+          "device": "big",
+          "text": "Keep batch in its lane"
+        },
+        {
+          "say": "Use a tainted node pool, a low priority, and a quota for each team.",
+          "device": "list",
+          "label": "Three guards",
+          "items": ["A tainted node pool", "A low priority class", "A quota per team"],
+          "items_at": ["tainted", "priority", "quota"]
+        },
+        {
+          "say": "A taint only keeps other pods out. Add a node selector to keep batch in.",
+          "device": "card",
+          "label": "The trap",
+          "head": "Taint plus a node selector",
+          "headmark": "node selector",
+          "headmark_at": "selector"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Quick recap of data platforms.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "Operators add new kinds. Jobs bring their own pods. And batch gets its own lane.",
+          "device": "list",
+          "label": "Data platforms",
+          "items": [
+            "Operators add new kinds",
+            "Jobs bring their own pods",
+            "Batch gets its own lane"
+          ],
+          "items_at": ["Operators", "Jobs", "batch"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

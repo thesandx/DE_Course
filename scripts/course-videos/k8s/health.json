@@ -1,0 +1,144 @@
+{
+  "station": "health",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "Your app is running. But is it working?",
+          "device": "big",
+          "text": "Running is not working"
+        },
+        {
+          "say": "A process can be alive and stuck. Kubernetes cannot know, unless you tell it.",
+          "device": "card",
+          "label": "The gap",
+          "head": "Alive, but stuck",
+          "headmark": "stuck",
+          "headmark_at": "stuck"
+        },
+        {
+          "say": "This port has three tools: probes, resource limits, and autoscaling.",
+          "device": "list",
+          "label": "Port 6 · Health and scaling",
+          "items": ["Probes", "Requests and limits", "Autoscaling"],
+          "items_at": ["probes", "limits", "autoscaling"]
+        }
+      ]
+    },
+    {
+      "title": "Probes",
+      "check": {
+        "prompt": "A pod needs 30 seconds to warm up. Which probe keeps traffic away until then?",
+        "options": ["Liveness", "Readiness", "None"],
+        "answer": 1,
+        "why": "A pod that fails readiness is removed from the Service. It is not restarted."
+      },
+      "beats": [
+        {
+          "say": "First: let the cluster ask your app.",
+          "device": "big",
+          "text": "Let the cluster ask"
+        },
+        {
+          "say": "Readiness asks: can you serve now? If not, the pod gets no traffic.",
+          "device": "card",
+          "label": "Readiness",
+          "head": "Not ready: no traffic",
+          "headmark": "no traffic",
+          "headmark_at": "traffic"
+        },
+        {
+          "say": "Liveness asks: are you stuck? If yes, the container restarts.",
+          "device": "card",
+          "label": "Liveness",
+          "head": "Stuck: restart",
+          "headmark": "restart",
+          "headmark_at": "restarts"
+        },
+        {
+          "say": "Never check the database in a liveness probe. One slow database restarts every pod.",
+          "device": "card",
+          "label": "The trap",
+          "head": "No dependencies in liveness",
+          "headmark": "No dependencies",
+          "headmark_at": "database"
+        }
+      ]
+    },
+    {
+      "title": "Requests and limits",
+      "check": {
+        "prompt": "A container uses more memory than its limit. What happens?",
+        "options": ["It is slowed down", "It is killed", "The node adds memory"],
+        "answer": 1,
+        "why": "Memory cannot be squeezed. The container is killed with exit code 137."
+      },
+      "beats": [
+        {
+          "say": "Second: how much may a pod take?",
+          "device": "big",
+          "text": "How much may it take?"
+        },
+        {
+          "say": "A request reserves capacity. The scheduler uses it to place the pod.",
+          "device": "card",
+          "label": "Request",
+          "head": "The scheduler reads requests",
+          "headmark": "requests",
+          "headmark_at": "request"
+        },
+        {
+          "say": "Over the processor limit, you are slowed down. Over the memory limit, you are killed.",
+          "device": "card",
+          "label": "Limit",
+          "head": "CPU: throttled. Memory: killed.",
+          "headmark": "Memory: killed.",
+          "headmark_at": "killed"
+        }
+      ]
+    },
+    {
+      "title": "Autoscaling",
+      "beats": [
+        { "say": "Third: follow the load.", "device": "big", "text": "Follow the load up" },
+        {
+          "say": "An autoscaler watches the processor use, and adds or removes pods.",
+          "device": "card",
+          "label": "Pod autoscaler",
+          "head": "More load, more pods",
+          "headmark": "more pods",
+          "headmark_at": "adds"
+        },
+        {
+          "say": "No room for the new pods? A node autoscaler adds machines.",
+          "device": "card",
+          "label": "Node autoscaler",
+          "head": "Pending pods bring new nodes",
+          "headmark": "new nodes",
+          "headmark_at": "machines"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Quick recap of health.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "Readiness gates traffic. Liveness restarts. And memory over the limit is killed.",
+          "device": "list",
+          "label": "Health and scaling",
+          "items": ["Readiness gates traffic", "Liveness restarts", "Memory over limit: killed"],
+          "items_at": ["Readiness", "Liveness", "memory"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

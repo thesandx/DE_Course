@@ -1,0 +1,122 @@
+{
+  "station": "netpol",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "Inside the cluster, every pod can call every other pod.",
+          "device": "big",
+          "text": "Every pod can call every pod"
+        },
+        {
+          "say": "A namespace is a folder for names. It is not a firewall.",
+          "device": "card",
+          "label": "A wrong idea",
+          "head": "A namespace is not a firewall",
+          "headmark": "not a firewall",
+          "headmark_at": "firewall"
+        },
+        {
+          "say": "This port has three steps: see the flat network, deny by default, and allow DNS.",
+          "device": "list",
+          "label": "Port 8 · Network policies",
+          "items": ["The flat network", "Default deny", "Egress and DNS"],
+          "items_at": ["flat", "deny", "DNS"]
+        }
+      ]
+    },
+    {
+      "title": "Default deny",
+      "check": {
+        "prompt": "Two policies select the same pod. One allows A, the other allows B. What gets in?",
+        "options": ["Only A", "A and B", "Nothing"],
+        "answer": 1,
+        "why": "Policies add up. A pod accepts the union of every rule that selects it."
+      },
+      "beats": [
+        { "say": "First: close every door.", "device": "big", "text": "Close every door first" },
+        {
+          "say": "One policy selects every pod and allows nothing. Now all inbound traffic is blocked.",
+          "device": "card",
+          "label": "Default deny",
+          "head": "Select all, allow nothing",
+          "headmark": "allow nothing",
+          "headmark_at": "nothing"
+        },
+        {
+          "say": "Then you add one small rule for each real path. For example: web to API.",
+          "device": "card",
+          "label": "Then allow",
+          "head": "One rule per real path",
+          "headmark": "real path",
+          "headmark_at": "path"
+        },
+        {
+          "say": "Rules select pods by label. And the rules add up.",
+          "device": "card",
+          "label": "How rules work",
+          "head": "Labels again. Rules add up.",
+          "headmark": "add up",
+          "headmark_at": "add"
+        }
+      ]
+    },
+    {
+      "title": "The DNS trap",
+      "check": {
+        "prompt": "After a default-deny egress policy, every call by name times out. Why?",
+        "options": ["The pods crashed", "DNS lookups are blocked", "The Service was deleted"],
+        "answer": 1,
+        "why": "A lookup goes to the cluster DNS on port 53. Allow that first."
+      },
+      "beats": [
+        {
+          "say": "Second: block outbound traffic too.",
+          "device": "big",
+          "text": "Block outbound too"
+        },
+        {
+          "say": "You deny all egress. And then every call by name fails.",
+          "device": "card",
+          "label": "Surprise",
+          "head": "Every name lookup fails",
+          "headmark": "name lookup",
+          "headmark_at": "name"
+        },
+        {
+          "say": "So allow the cluster DNS on port 53 first. Then open what each app needs.",
+          "device": "card",
+          "label": "The fix",
+          "head": "Allow DNS on port 53 first",
+          "headmark": "port 53",
+          "headmark_at": "53"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Quick recap of network policies.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "Deny by default. Allow each real path. And never forget DNS.",
+          "device": "list",
+          "label": "Network policies",
+          "items": ["Deny by default", "Allow each real path", "Never forget DNS"],
+          "items_at": ["Deny", "Allow", "DNS"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

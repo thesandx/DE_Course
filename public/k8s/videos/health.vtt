@@ -1,0 +1,105 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:01.570
+Your app is running.
+
+2
+00:00:01.590 --> 00:00:03.180
+But is it working?
+
+3
+00:00:03.200 --> 00:00:05.392
+A process can be alive and stuck.
+
+4
+00:00:05.412 --> 00:00:08.465
+Kubernetes cannot know, unless you tell it.
+
+5
+00:00:08.485 --> 00:00:13.540
+This port has three tools: probes, resource limits, and autoscaling.
+
+6
+00:00:13.560 --> 00:00:16.025
+First: let the cluster ask your app.
+
+7
+00:00:16.045 --> 00:00:18.150
+Readiness asks: can you serve now?
+
+8
+00:00:18.170 --> 00:00:20.610
+If not, the pod gets no traffic.
+
+9
+00:00:20.630 --> 00:00:22.360
+Liveness asks: are you stuck?
+
+10
+00:00:22.380 --> 00:00:24.845
+If yes, the container restarts.
+
+11
+00:00:24.865 --> 00:00:27.483
+Never check the database in a liveness probe.
+
+12
+00:00:27.503 --> 00:00:31.045
+One slow database restarts every pod.
+
+13
+00:00:31.065 --> 00:00:33.330
+Second: how much may a pod take?
+
+14
+00:00:33.350 --> 00:00:35.455
+A request reserves capacity.
+
+15
+00:00:35.475 --> 00:00:38.165
+The scheduler uses it to place the pod.
+
+16
+00:00:38.185 --> 00:00:40.690
+Over the processor limit, you are slowed down.
+
+17
+00:00:40.710 --> 00:00:43.615
+Over the memory limit, you are killed.
+
+18
+00:00:43.635 --> 00:00:45.550
+Third: follow the load.
+
+19
+00:00:45.570 --> 00:00:50.285
+An autoscaler watches the processor use, and adds or removes pods.
+
+20
+00:00:50.305 --> 00:00:51.822
+No room for the new pods?
+
+21
+00:00:51.842 --> 00:00:54.910
+A node autoscaler adds machines.
+
+22
+00:00:54.930 --> 00:00:56.745
+Quick recap of health.
+
+23
+00:00:56.765 --> 00:00:58.232
+Readiness gates traffic.
+
+24
+00:00:58.252 --> 00:00:59.495
+Liveness restarts.
+
+25
+00:00:59.515 --> 00:01:01.980
+And memory over the limit is killed.
+
+26
+00:01:02.000 --> 00:01:05.100
+Now start the first lesson below.

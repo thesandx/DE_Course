@@ -1,0 +1,101 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:02.133
+Your pod died overnight.
+
+2
+00:00:02.153 --> 00:00:04.755
+Nobody noticed until a customer did.
+
+3
+00:00:04.775 --> 00:00:07.255
+A bare pod is a single point of failure.
+
+4
+00:00:07.275 --> 00:00:09.590
+You need something that never sleeps.
+
+5
+00:00:09.610 --> 00:00:14.890
+This port has three controllers: the Deployment, the Job, and the DaemonSet.
+
+6
+00:00:14.910 --> 00:00:17.425
+First: the controller you use most.
+
+7
+00:00:17.445 --> 00:00:18.875
+You say: I want three.
+
+8
+00:00:18.895 --> 00:00:21.335
+A Deployment keeps three pods running.
+
+9
+00:00:21.355 --> 00:00:23.248
+Delete a pod, or lose a node.
+
+10
+00:00:23.268 --> 00:00:25.985
+A new pod appears in seconds.
+
+11
+00:00:26.005 --> 00:00:28.945
+Second: ship a new version with no downtime.
+
+12
+00:00:28.965 --> 00:00:31.145
+New pods start, one by one.
+
+13
+00:00:31.165 --> 00:00:34.380
+An old pod leaves only when a new pod is ready.
+
+14
+00:00:34.400 --> 00:00:35.517
+A bad release?
+
+15
+00:00:35.537 --> 00:00:39.005
+One command takes you back to the last version.
+
+16
+00:00:39.025 --> 00:00:41.115
+Third: some work has an end.
+
+17
+00:00:41.135 --> 00:00:43.503
+A Job runs a pod until it succeeds.
+
+18
+00:00:43.523 --> 00:00:46.300
+A CronJob starts a Job on a schedule.
+
+19
+00:00:46.320 --> 00:00:48.975
+A DaemonSet runs one copy on every node.
+
+20
+00:00:48.995 --> 00:00:51.525
+Use it for log agents.
+
+21
+00:00:51.545 --> 00:00:53.610
+Quick recap of workloads.
+
+22
+00:00:53.630 --> 00:00:55.122
+Deployments heal and roll.
+
+23
+00:00:55.142 --> 00:00:56.197
+Jobs finish.
+
+24
+00:00:56.217 --> 00:00:58.570
+DaemonSets cover every node.
+
+25
+00:00:58.590 --> 00:01:01.690
+Now start the first lesson below.

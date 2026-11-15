@@ -1,0 +1,81 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:03.655
+A key file for your cloud account sits in a Secret.
+
+2
+00:00:03.675 --> 00:00:05.330
+It is valid for years.
+
+3
+00:00:05.350 --> 00:00:08.140
+And it works from any machine that has a copy.
+
+4
+00:00:08.160 --> 00:00:14.040
+This port has two ideas: the identity of a pod, and cloud access with no keys.
+
+5
+00:00:14.060 --> 00:00:16.750
+First: every pod has an identity.
+
+6
+00:00:16.770 --> 00:00:19.050
+A pod runs as a service account.
+
+7
+00:00:19.070 --> 00:00:21.735
+The node gives it a token for that account.
+
+8
+00:00:21.755 --> 00:00:25.970
+The token lives for about an hour, and stops when the pod is deleted.
+
+9
+00:00:25.990 --> 00:00:27.557
+The token says who you are.
+
+10
+00:00:27.577 --> 00:00:30.770
+Access control decides what you may do.
+
+11
+00:00:30.790 --> 00:00:33.530
+Second: reach the cloud with no key file.
+
+12
+00:00:33.550 --> 00:00:36.305
+The cloud trusts the service account of the cluster.
+
+13
+00:00:36.325 --> 00:00:38.090
+You grant a role to it.
+
+14
+00:00:38.110 --> 00:00:40.802
+The pod gets a short cloud token when it asks.
+
+15
+00:00:40.822 --> 00:00:44.140
+Nothing to store, nothing to rotate.
+
+16
+00:00:44.160 --> 00:00:46.200
+Quick recap of identity.
+
+17
+00:00:46.220 --> 00:00:47.900
+One service account per app.
+
+18
+00:00:47.920 --> 00:00:49.275
+Tokens are short-lived.
+
+19
+00:00:49.295 --> 00:00:51.085
+And no key files.
+
+20
+00:00:51.105 --> 00:00:54.205
+Now start the first lesson below.

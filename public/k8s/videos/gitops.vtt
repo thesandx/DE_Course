@@ -1,0 +1,101 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:02.458
+Someone fixed production by hand.
+
+2
+00:00:02.478 --> 00:00:04.730
+Now nobody knows what runs there.
+
+3
+00:00:04.750 --> 00:00:07.815
+The cluster and your files have drifted apart.
+
+4
+00:00:07.835 --> 00:00:12.865
+This port has three steps: the idea, Argo CD, and promotion.
+
+5
+00:00:12.885 --> 00:00:15.125
+First: make Git the only door.
+
+6
+00:00:15.145 --> 00:00:17.100
+Git holds the desired state.
+
+7
+00:00:17.120 --> 00:00:20.235
+An agent in the cluster pulls it and applies it.
+
+8
+00:00:20.255 --> 00:00:23.270
+It is the control loop again, one level up.
+
+9
+00:00:23.290 --> 00:00:25.395
+A rollback is a revert in Git.
+
+10
+00:00:25.415 --> 00:00:28.845
+And your pipeline needs no cluster password.
+
+11
+00:00:28.865 --> 00:00:30.605
+Second: the agent.
+
+12
+00:00:30.625 --> 00:00:35.865
+You give Argo CD one object: which repository, which path, which namespace.
+
+13
+00:00:35.885 --> 00:00:37.977
+Synced means the cluster matches Git.
+
+14
+00:00:37.997 --> 00:00:39.490
+Healthy means the app works.
+
+15
+00:00:39.510 --> 00:00:41.365
+You need both.
+
+16
+00:00:41.385 --> 00:00:43.825
+Third: move a release to production.
+
+17
+00:00:43.845 --> 00:00:45.750
+Keep one folder per environment.
+
+18
+00:00:45.770 --> 00:00:47.785
+Promote with a pull request.
+
+19
+00:00:47.805 --> 00:00:49.523
+Never put a secret in Git.
+
+20
+00:00:49.543 --> 00:00:52.785
+A tool copies it from a secret manager.
+
+21
+00:00:52.805 --> 00:00:54.770
+Quick recap of GitOps.
+
+22
+00:00:54.790 --> 00:00:55.820
+Git is the truth.
+
+23
+00:00:55.840 --> 00:00:57.020
+The cluster pulls.
+
+24
+00:00:57.040 --> 00:00:59.180
+And a rollback is a revert.
+
+25
+00:00:59.200 --> 00:01:02.300
+Now start the first lesson below.

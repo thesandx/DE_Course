@@ -1,0 +1,136 @@
+{
+  "station": "workloads",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "Your pod died overnight. Nobody noticed until a customer did.",
+          "device": "big",
+          "text": "Nobody noticed the dead pod"
+        },
+        {
+          "say": "A bare pod is a single point of failure. You need something that never sleeps.",
+          "device": "card",
+          "label": "The gap",
+          "head": "A bare pod is one point of failure",
+          "headmark": "one point of failure",
+          "headmark_at": "failure"
+        },
+        {
+          "say": "This port has three controllers: the Deployment, the Job, and the DaemonSet.",
+          "device": "list",
+          "label": "Port 2 · Workloads",
+          "items": ["Deployment", "Job and CronJob", "DaemonSet"],
+          "items_at": ["Deployment", "Job", "DaemonSet"]
+        }
+      ]
+    },
+    {
+      "title": "Deployments",
+      "check": {
+        "prompt": "A node dies and takes two of your three pods. What does the Deployment do?",
+        "options": ["It waits for the node", "It creates two new pods", "It scales down to one"],
+        "answer": 1,
+        "why": "The Deployment keeps the number you asked for. It replaces the pods on another node."
+      },
+      "beats": [
+        {
+          "say": "First: the controller you use most.",
+          "device": "big",
+          "text": "The one you use most"
+        },
+        {
+          "say": "You say: I want three. A Deployment keeps three pods running.",
+          "device": "card",
+          "label": "Deployment",
+          "head": "Keeps the number you asked for",
+          "headmark": "number",
+          "headmark_at": "three"
+        },
+        {
+          "say": "Delete a pod, or lose a node. A new pod appears in seconds.",
+          "device": "card",
+          "label": "Self-healing",
+          "head": "A lost pod is replaced",
+          "headmark": "replaced",
+          "headmark_at": "new"
+        }
+      ]
+    },
+    {
+      "title": "Rolling updates",
+      "check": {
+        "prompt": "A new version fails to start during a rollout. What happens to the old pods?",
+        "options": ["They keep serving", "They are all deleted", "They restart"],
+        "answer": 0,
+        "why": "A rollout waits for a new pod to be ready before it removes an old one."
+      },
+      "beats": [
+        {
+          "say": "Second: ship a new version with no downtime.",
+          "device": "big",
+          "text": "Ship with no downtime"
+        },
+        {
+          "say": "New pods start, one by one. An old pod leaves only when a new pod is ready.",
+          "device": "card",
+          "label": "Rollout",
+          "head": "New in, then old out",
+          "headmark": "then old out",
+          "headmark_at": "leaves"
+        },
+        {
+          "say": "A bad release? One command takes you back to the last version.",
+          "device": "card",
+          "label": "Rollback",
+          "head": "Undo in seconds",
+          "headmark": "Undo",
+          "headmark_at": "back"
+        }
+      ]
+    },
+    {
+      "title": "Work that finishes",
+      "beats": [
+        { "say": "Third: some work has an end.", "device": "big", "text": "Work that has an end" },
+        {
+          "say": "A Job runs a pod until it succeeds. A CronJob starts a Job on a schedule.",
+          "device": "card",
+          "label": "Batch",
+          "head": "Job: once. CronJob: on a schedule.",
+          "headmark": "on a schedule",
+          "headmark_at": "schedule"
+        },
+        {
+          "say": "A DaemonSet runs one copy on every node. Use it for log agents.",
+          "device": "card",
+          "label": "DaemonSet",
+          "head": "One pod on every node",
+          "headmark": "every node",
+          "headmark_at": "every"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Quick recap of workloads.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "Deployments heal and roll. Jobs finish. DaemonSets cover every node.",
+          "device": "list",
+          "label": "Workloads",
+          "items": ["Deployments heal and roll", "Jobs finish", "DaemonSets cover every node"],
+          "items_at": ["heal", "finish", "cover"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

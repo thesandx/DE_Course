@@ -1,0 +1,89 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:04.605
+Ten teams copy the same twelve files and change three lines.
+
+2
+00:00:04.625 --> 00:00:07.490
+Then one fix must be made in ten places.
+
+3
+00:00:07.510 --> 00:00:12.565
+This port has three steps: use a chart, write a chart, and choose your tool.
+
+4
+00:00:12.585 --> 00:00:15.125
+First: a package for Kubernetes.
+
+5
+00:00:15.145 --> 00:00:17.475
+A chart is a set of templates with a version.
+
+6
+00:00:17.495 --> 00:00:19.535
+Values fill the blanks.
+
+7
+00:00:19.555 --> 00:00:21.298
+Each install is a release.
+
+8
+00:00:21.318 --> 00:00:23.645
+Helm keeps every revision of it.
+
+9
+00:00:23.665 --> 00:00:27.470
+So an upgrade that goes wrong is one rollback away.
+
+10
+00:00:27.490 --> 00:00:30.205
+Second: write one chart for all teams.
+
+11
+00:00:30.225 --> 00:00:32.317
+Put good defaults in the values file.
+
+12
+00:00:32.337 --> 00:00:34.940
+Each team changes only what differs.
+
+13
+00:00:34.960 --> 00:00:36.803
+Render the chart before you install it.
+
+14
+00:00:36.823 --> 00:00:38.865
+Read the output.
+
+15
+00:00:38.885 --> 00:00:40.950
+Third: which tool, and when?
+
+16
+00:00:40.970 --> 00:00:42.963
+Helm packages software for others.
+
+17
+00:00:42.983 --> 00:00:46.025
+Kustomize patches your own files.
+
+18
+00:00:46.045 --> 00:00:47.860
+Quick recap of Helm.
+
+19
+00:00:47.880 --> 00:00:50.048
+A chart is templates plus values.
+
+20
+00:00:50.068 --> 00:00:51.685
+A release has revisions.
+
+21
+00:00:51.705 --> 00:00:53.820
+Render before you install.
+
+22
+00:00:53.840 --> 00:00:56.940
+Now start the first lesson below.
