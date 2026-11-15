@@ -1,6 +1,6 @@
 # The course videos
 
-This folder builds the explainer videos of the courses. Each GCP station has one video, and each DE track has one video. A video is one to three minutes long, with a voice, captions, chapters and quick checks.
+This folder builds the explainer videos of the courses. Each GCP station, each DE track and each Kubernetes port has one video. A video is one to three minutes long, with a voice, captions, chapters and quick checks.
 
 The decision and its reasons are in [ADR-0013](../../docs/adr/0013-make-station-videos-with-simcraft-and-keep-them-in-the-bucket.md). The rules for the content are in [`lib/course/README.md`](../../lib/course/README.md#explainer-videos).
 
@@ -10,6 +10,7 @@ The decision and its reasons are in [ADR-0013](../../docs/adr/0013-make-station-
 | ------------------ | ------------------------------------------------------------------------------------- |
 | `gcp/<slug>.json`  | The script of one GCP station video: chapters, beats and quick checks. You edit this. |
 | `de/<slug>.json`   | The script of one DE track video.                                                     |
+| `k8s/<slug>.json`  | The script of one Kubernetes port video.                                              |
 | `brand/brand.json` | The colours, fonts and shape of the videos. They follow the design language.          |
 | `brand/fonts/`     | The font files the renderer loads.                                                    |
 | `make_video.py`    | Builds one video from one script.                                                     |
@@ -69,7 +70,7 @@ A script is a list of chapters. A chapter is a list of beats. A beat is one sent
 ## Put the videos into the app
 
 1. Build every video that changed.
-2. Collect the results of the course, `gcp` or `de`:
+2. Collect the results of the course, `gcp`, `de` or `k8s`:
 
    ```bash
    python3 scripts/course-videos/collect.py --course gcp --work ~/video-work --videos ~/video-upload/gcp
@@ -84,6 +85,7 @@ A script is a list of chapters. A chapter is a list of beats. A beat is one sent
    ```bash
    gcloud storage cp ~/video-upload/gcp/*.mp4 gs://<GCS_BUCKET>/course-videos/gcp/
    gcloud storage cp ~/video-upload/de/*.mp4 gs://<GCS_BUCKET>/course-videos/de/
+   gcloud storage cp ~/video-upload/k8s/*.mp4 gs://<GCS_BUCKET>/course-videos/k8s/
    ```
 
 A page shows its video only when the file is in the bucket. So you can merge the code before you upload. Upload a changed video and its timings file at about the same time, or the captions are out of step for a short time.

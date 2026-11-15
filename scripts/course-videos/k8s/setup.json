@@ -1,0 +1,144 @@
+{
+  "station": "setup",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "You want to learn Kubernetes. But a cloud cluster costs money every hour.",
+          "device": "big",
+          "text": "A cloud cluster costs money"
+        },
+        {
+          "say": "And you already know Docker. So start there.",
+          "device": "card",
+          "label": "Good news",
+          "head": "You already know Docker",
+          "headmark": "Docker",
+          "headmark_at": "Docker"
+        },
+        {
+          "say": "This port gives you three things: the tools, a cluster, and an image to sail with.",
+          "device": "list",
+          "label": "Port 0 · Shipyard setup",
+          "items": ["The tools", "A local cluster", "The tugboat image"],
+          "items_at": ["tools", "cluster", "image"]
+        }
+      ]
+    },
+    {
+      "title": "A cluster in containers",
+      "check": {
+        "prompt": "On kind, what is a Kubernetes node?",
+        "options": ["A virtual machine", "A Docker container", "A cloud server"],
+        "answer": 1,
+        "why": "kind means Kubernetes in Docker. Each node is one container on your laptop."
+      },
+      "beats": [
+        {
+          "say": "First: where does the cluster run?",
+          "device": "big",
+          "text": "Where the cluster runs"
+        },
+        {
+          "say": "A tool named kind runs every Kubernetes node as one Docker container.",
+          "device": "card",
+          "label": "kind",
+          "head": "A node is a container",
+          "headmark": "container",
+          "headmark_at": "container"
+        },
+        {
+          "say": "You start three nodes: one control plane and two workers.",
+          "device": "card",
+          "label": "Three nodes",
+          "head": "One control plane, two workers",
+          "headmark": "two workers",
+          "headmark_at": "workers"
+        },
+        {
+          "say": "It is free, it starts in a minute, and you can delete it at any time.",
+          "device": "card",
+          "label": "Why kind",
+          "head": "Free, fast, safe to break",
+          "headmark": "safe to break",
+          "headmark_at": "delete"
+        }
+      ]
+    },
+    {
+      "title": "Two tools",
+      "beats": [
+        { "say": "Second: you need two tools.", "device": "big", "text": "Two tools to install" },
+        {
+          "say": "kind builds the cluster. You use it a few times.",
+          "device": "card",
+          "label": "Tool one",
+          "head": "kind builds the cluster",
+          "headmark": "builds",
+          "headmark_at": "builds"
+        },
+        {
+          "say": "The second tool talks to the cluster. You use it all day, on any cluster.",
+          "device": "card",
+          "label": "Tool two",
+          "head": "kubectl talks to the cluster",
+          "headmark": "talks",
+          "headmark_at": "talks"
+        }
+      ]
+    },
+    {
+      "title": "Load your image",
+      "check": {
+        "prompt": "Your pod cannot pull an image you built on your laptop. What did you miss?",
+        "options": ["kind load", "docker push to a public registry", "A bigger node"],
+        "answer": 0,
+        "why": "A kind node has its own image store. kind load copies your image into it."
+      },
+      "beats": [
+        {
+          "say": "Third: the image you take through every port.",
+          "device": "big",
+          "text": "The tugboat image"
+        },
+        {
+          "say": "Tugboat is a small web app. You deploy it, scale it, break it and secure it.",
+          "device": "card",
+          "label": "tugboat",
+          "head": "One app for the whole course",
+          "headmark": "whole course",
+          "headmark_at": "deploy"
+        },
+        {
+          "say": "A kind node cannot see the images on your laptop. So you load the image into the nodes.",
+          "device": "card",
+          "label": "The trap",
+          "head": "Load the image into the nodes",
+          "headmark": "Load",
+          "headmark_at": "load"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Quick recap of the setup.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "A node is a container. One tool builds, one tool talks. And load your image.",
+          "device": "list",
+          "label": "Shipyard setup",
+          "items": ["A node is a container", "kind builds, kubectl talks", "Load your image"],
+          "items_at": ["node", "builds", "load"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

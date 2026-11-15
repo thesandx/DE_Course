@@ -81,8 +81,10 @@ export interface GcpLine {
 
 /** A question in the shared bank, used by boss rounds and the mock exam. */
 export interface BankQuestion extends ChoiceQuestion {
-  /** The station slug the question tests. */
+  /** The station slug the question tests. In the Kubernetes course, the port slug. */
   station: string;
+  /** Terminal output to read before the question. Plain text. The Kubernetes incidents use it. */
+  code?: string;
 }
 
 export interface Flashcard {
@@ -273,13 +275,17 @@ export type DiagramShape =
       pairs: ReadonlyArray<readonly [string, string]>;
     };
 
+/** A picture with its title and caption. Every course draws it with `ConceptDiagram`. */
+export type CourseDiagram = DiagramShape & {
+  title: string;
+  /** One or two sentences: what the picture shows and what to remember. */
+  caption: string;
+};
+
 /**
  * A picture that explains one concept of a station. The station page shows it
  * at the top of the concept, above the text. `concept` is 1-based.
  */
-export type GcpDiagram = DiagramShape & {
+export type GcpDiagram = CourseDiagram & {
   concept: number;
-  title: string;
-  /** One or two sentences: what the picture shows and what to remember. */
-  caption: string;
 };

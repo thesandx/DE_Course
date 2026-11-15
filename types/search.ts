@@ -12,6 +12,7 @@ export type SearchKind =
   | 'problem'
   | 'guide'
   | 'line'
+  | 'port'
   | 'station'
   | 'concept'
   | 'lab'

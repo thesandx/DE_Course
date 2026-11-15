@@ -1,0 +1,138 @@
+{
+  "station": "gitops",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "Someone fixed production by hand. Now nobody knows what runs there.",
+          "device": "big",
+          "text": "Nobody knows what runs"
+        },
+        {
+          "say": "The cluster and your files have drifted apart.",
+          "device": "card",
+          "label": "Drift",
+          "head": "The cluster and Git disagree",
+          "headmark": "disagree",
+          "headmark_at": "drifted"
+        },
+        {
+          "say": "This port has three steps: the idea, Argo CD, and promotion.",
+          "device": "list",
+          "label": "Port 10 · GitOps",
+          "items": ["Pull, not push", "Argo CD", "Promotion and secrets"],
+          "items_at": ["idea", "Argo", "promotion"]
+        }
+      ]
+    },
+    {
+      "title": "Pull, not push",
+      "check": {
+        "prompt": "Someone changes a Deployment by hand. Self-heal is on. What does the agent do?",
+        "options": ["It keeps the change", "It reverts the change", "It deletes the app"],
+        "answer": 1,
+        "why": "Git is the desired state. The agent makes the cluster match Git again."
+      },
+      "beats": [
+        {
+          "say": "First: make Git the only door.",
+          "device": "big",
+          "text": "Git is the only door"
+        },
+        {
+          "say": "Git holds the desired state. An agent in the cluster pulls it and applies it.",
+          "device": "card",
+          "label": "GitOps",
+          "head": "The cluster pulls from Git",
+          "headmark": "pulls",
+          "headmark_at": "pulls"
+        },
+        {
+          "say": "It is the control loop again, one level up.",
+          "device": "card",
+          "label": "Familiar",
+          "head": "The same loop, one level up",
+          "headmark": "same loop",
+          "headmark_at": "loop"
+        },
+        {
+          "say": "A rollback is a revert in Git. And your pipeline needs no cluster password.",
+          "device": "card",
+          "label": "What you gain",
+          "head": "Rollback = git revert",
+          "headmark": "git revert",
+          "headmark_at": "revert"
+        }
+      ]
+    },
+    {
+      "title": "Argo CD",
+      "beats": [
+        { "say": "Second: the agent.", "device": "big", "text": "The agent: Argo CD" },
+        {
+          "say": "You give Argo CD one object: which repository, which path, which namespace.",
+          "device": "card",
+          "label": "Application",
+          "head": "Repository, path, namespace",
+          "headmark": "path",
+          "headmark_at": "path"
+        },
+        {
+          "say": "Synced means the cluster matches Git. Healthy means the app works. You need both.",
+          "device": "card",
+          "label": "Two states",
+          "head": "Synced and Healthy",
+          "headmark": "Healthy",
+          "headmark_at": "Healthy"
+        }
+      ]
+    },
+    {
+      "title": "Promotion and secrets",
+      "beats": [
+        {
+          "say": "Third: move a release to production.",
+          "device": "big",
+          "text": "Move it to production"
+        },
+        {
+          "say": "Keep one folder per environment. Promote with a pull request.",
+          "device": "card",
+          "label": "Promotion",
+          "head": "A folder per environment",
+          "headmark": "folder",
+          "headmark_at": "folder"
+        },
+        {
+          "say": "Never put a secret in Git. A tool copies it from a secret manager.",
+          "device": "card",
+          "label": "Secrets",
+          "head": "Secrets stay out of Git",
+          "headmark": "out of Git",
+          "headmark_at": "Never"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Quick recap of GitOps.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "Git is the truth. The cluster pulls. And a rollback is a revert.",
+          "device": "list",
+          "label": "GitOps",
+          "items": ["Git is the truth", "The cluster pulls", "Rollback is a revert"],
+          "items_at": ["truth", "pulls", "revert"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,101 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:02.620
+Each port solved one problem alone.
+
+2
+00:00:02.640 --> 00:00:05.080
+Production needs all of them at once.
+
+3
+00:00:05.100 --> 00:00:08.690
+So now you build one system, and then you try to break it.
+
+4
+00:00:08.710 --> 00:00:11.640
+This port has two parts: the fleet on your laptop,
+
+5
+00:00:11.660 --> 00:00:14.615
+and the same fleet on Google Cloud.
+
+6
+00:00:14.635 --> 00:00:17.375
+First: one namespace with everything.
+
+7
+00:00:17.395 --> 00:00:19.563
+Tugboat with probes and autoscaling.
+
+8
+00:00:19.583 --> 00:00:21.400
+A database with its own disk.
+
+9
+00:00:21.420 --> 00:00:23.235
+And a scheduled job.
+
+10
+00:00:23.255 --> 00:00:27.695
+Around them: a gateway, network policies, and least-privilege accounts.
+
+11
+00:00:27.715 --> 00:00:28.995
+Then the chaos drills.
+
+12
+00:00:29.015 --> 00:00:29.958
+Delete a pod.
+
+13
+00:00:29.978 --> 00:00:30.858
+Drain a node.
+
+14
+00:00:30.878 --> 00:00:32.970
+Send an intruder.
+
+15
+00:00:32.990 --> 00:00:35.880
+Second: the same files, on a real cloud.
+
+16
+00:00:35.900 --> 00:00:39.490
+You push the image to a registry, and change two lines.
+
+17
+00:00:39.510 --> 00:00:41.228
+The manifests stay the same.
+
+18
+00:00:41.248 --> 00:00:43.450
+That is the point of Kubernetes.
+
+19
+00:00:43.470 --> 00:00:45.312
+Delete the cluster when you finish.
+
+20
+00:00:45.332 --> 00:00:48.925
+A load balancer costs money every hour.
+
+21
+00:00:48.945 --> 00:00:51.085
+Quick recap of the capstone.
+
+22
+00:00:51.105 --> 00:00:52.748
+Every port in one namespace.
+
+23
+00:00:52.768 --> 00:00:54.035
+Prove it with chaos.
+
+24
+00:00:54.055 --> 00:00:56.445
+And the same files run anywhere.
+
+25
+00:00:56.465 --> 00:00:59.565
+Now start the first lesson below.

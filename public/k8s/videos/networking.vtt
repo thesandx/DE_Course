@@ -1,0 +1,101 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:03.480
+Every pod gets a new address when it restarts.
+
+2
+00:00:03.500 --> 00:00:05.280
+So how does one app find another?
+
+3
+00:00:05.300 --> 00:00:07.390
+You cannot store an address.
+
+4
+00:00:07.410 --> 00:00:12.790
+This port has three answers: the Service, the load balancer, and the Gateway.
+
+5
+00:00:12.810 --> 00:00:15.225
+First: a name that does not move.
+
+6
+00:00:15.245 --> 00:00:19.260
+A Service has one stable address and one name in the cluster.
+
+7
+00:00:19.280 --> 00:00:23.670
+It finds its pods by label, and sends each request to a ready pod.
+
+8
+00:00:23.690 --> 00:00:25.095
+No pods behind it?
+
+9
+00:00:25.115 --> 00:00:28.820
+Then the label does not match, or no pod is ready.
+
+10
+00:00:28.840 --> 00:00:31.455
+Second: reach it from outside the cluster.
+
+11
+00:00:31.475 --> 00:00:33.117
+Port-forward for a quick look.
+
+12
+00:00:33.137 --> 00:00:34.792
+NodePort for a fixed port.
+
+13
+00:00:34.812 --> 00:00:37.240
+LoadBalancer for a real address.
+
+14
+00:00:37.260 --> 00:00:39.753
+One load balancer per app costs a lot.
+
+15
+00:00:39.773 --> 00:00:42.865
+So put one front door before many apps.
+
+16
+00:00:42.885 --> 00:00:45.375
+Third: route by host and by path.
+
+17
+00:00:45.395 --> 00:00:47.175
+An Ingress is only rules.
+
+18
+00:00:47.195 --> 00:00:49.710
+A controller must run to read them.
+
+19
+00:00:49.730 --> 00:00:51.935
+The Gateway API is the newer way.
+
+20
+00:00:51.955 --> 00:00:54.910
+It can also split traffic by weight.
+
+21
+00:00:54.930 --> 00:00:56.970
+Quick recap of networking.
+
+22
+00:00:56.990 --> 00:00:59.057
+Services find pods by label.
+
+23
+00:00:59.077 --> 00:01:01.307
+Empty endpoints mean a label problem.
+
+24
+00:01:01.327 --> 00:01:03.180
+One door, many routes.
+
+25
+00:01:03.200 --> 00:01:06.300
+Now start the first lesson below.

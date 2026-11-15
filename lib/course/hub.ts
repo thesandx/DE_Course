@@ -8,6 +8,14 @@ import { isKnownItem, nextLesson, PROBLEMS, TRACKS } from '@/lib/course/catalog'
 import { type CourseSlug } from '@/lib/course/courses';
 import { examReadiness, nextStation, stationXp } from '@/lib/course/gcp/catalog';
 import { summarizeGcp } from '@/lib/course/gcp/summary';
+import {
+  lessonHref,
+  lessonXp,
+  nextLesson as nextK8sLesson,
+  portCode,
+  voyageProgress,
+} from '@/lib/course/k8s/catalog';
+import { summarizeK8s } from '@/lib/course/k8s/summary';
 import { courseRecord, type LearnerRecord, LESSON_XP } from '@/lib/course/progress';
 import { summarize } from '@/lib/course/summary';
 
@@ -48,6 +56,23 @@ export function hubStats(record: LearnerRecord, course: CourseSlug, today: strin
           ? '/gcp/practice/mock'
           : `/gcp/lines/${next.line.slug}/${next.station.slug}`,
       nextXp: next === undefined ? null : stationXp(next.station),
+    };
+  }
+  if (course === 'k8s') {
+    const summary = summarizeK8s(progress, today);
+    const next = nextK8sLesson(progress.done);
+    return {
+      course,
+      xp: summary.xp,
+      levelLine: `Rank ${summary.rank.number} · ${summary.rank.title}`,
+      streak: summary.streak,
+      ratio: voyageProgress(progress.done),
+      ratioLabel: 'Voyage progress',
+      nextLabel:
+        next === undefined ? 'Sit the final exam' : `${portCode(next.port)}: ${next.lesson.title}`,
+      nextHref:
+        next === undefined ? '/k8s/practice/exam' : lessonHref(next.port.slug, next.lesson.slug),
+      nextXp: next === undefined ? null : lessonXp(next.lesson),
     };
   }
   const summary = summarize(progress, today);

@@ -5,16 +5,17 @@ import { hubStats } from './hub';
 import { applyCourseCompletion, EMPTY_LEARNER } from './progress';
 
 describe('the course list', () => {
-  it('has an entry for every open course, and a later course that cannot be joined', () => {
+  it('has an open entry for every course a learner can join', () => {
     for (const slug of COURSE_SLUGS) expect(getCourse(slug).status).toBe('open');
-    const k8s = COURSES.find((course) => course.slug === 'k8s');
-    expect(k8s?.status).toBe('soon');
-    expect(isCourseSlug('k8s')).toBe(false);
+    expect(COURSES.map((course) => course.slug)).toEqual(['de', 'gcp', 'k8s']);
+    expect(isCourseSlug('k8s')).toBe(true);
+    expect(isCourseSlug('rust')).toBe(false);
   });
 
   it('finds the course a path sits in', () => {
     expect(courseFromPath('/gcp/lines/design')).toBe('gcp');
     expect(courseFromPath('/de')).toBe('de');
+    expect(courseFromPath('/k8s/ports/setup')).toBe('k8s');
     expect(courseFromPath('/profile')).toBeUndefined();
     expect(courseFromPath('/')).toBeUndefined();
   });

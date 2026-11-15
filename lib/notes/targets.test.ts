@@ -3,10 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { PROBLEMS, TRACKS } from '@/lib/course/catalog';
 import { getLab } from '@/lib/course/gcp/catalog';
 import { allStations } from '@/lib/course/gcp/catalog';
+import { allLessons as allK8sLessons } from '@/lib/course/k8s/catalog';
 import { noteKeyForPath, noteKeys, noteTarget } from '@/lib/notes/targets';
 
 describe('noteTarget', () => {
-  it('resolves a note key for every chapter in both courses', () => {
+  it('resolves a note key for every chapter in every course', () => {
     const keys = [
       ...TRACKS.flatMap((track) =>
         track.lessons.map((lesson) => noteKeys.lesson(track.slug, lesson.slug)),
@@ -16,6 +17,7 @@ describe('noteTarget', () => {
       ...allStations()
         .filter(({ station }) => getLab(station.slug) !== undefined)
         .map(({ station }) => noteKeys.lab(station.slug)),
+      ...allK8sLessons().map((ref) => noteKeys.k8sLesson(ref.port.slug, ref.lesson.slug)),
     ];
     const missing = keys.filter((key) => noteTarget(key) === undefined);
     expect(missing).toEqual([]);
@@ -40,6 +42,8 @@ describe('noteTarget', () => {
     expect(noteTarget('de:problem:../../etc')).toBeUndefined();
     expect(noteTarget('users/x')).toBeUndefined();
     expect(noteTarget('gcp:lab:nope')).toBeUndefined();
+    expect(noteTarget('k8s:lesson:workloads:nope')).toBeUndefined();
+    expect(noteTarget('k8s:lesson:workloads')).toBeUndefined();
   });
 });
 
@@ -67,6 +71,14 @@ describe('noteKeyForPath', () => {
     expect(noteKeyForPath(`/gcp/lines/${station.line.slug}/${station.station.slug}`)).toBe(
       noteKeys.station(station.station.slug),
     );
+    expect(noteKeyForPath('/k8s/ports/workloads/deployments')).toBe(
+      noteKeys.k8sLesson('workloads', 'deployments'),
+    );
+    expect(noteTarget(noteKeys.k8sLesson('workloads', 'deployments'))).toMatchObject({
+      course: 'k8s',
+      href: '/k8s/ports/workloads/deployments',
+    });
+    expect(noteKeyForPath('/k8s/ports/workloads/mission')).toBeUndefined();
   });
 
   it('gives pages without notes no key', () => {

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { CompleteButton } from '@/components/course/CompleteButton';
 import { InlineText } from '@/components/course/InlineText';
 import { Button } from '@/components/ui/Button';
+import type { CourseSlug } from '@/lib/course/courses';
 import {
   isMatchCorrect,
   isOrderCorrect,
@@ -24,6 +25,12 @@ export interface StationChecksProps {
   xp: number;
   /** A link back to the previous station, shown beside the finish button. */
   previous?: React.ReactNode;
+  /** The course whose tracker the item is saved to. */
+  course?: CourseSlug;
+  /** What the page is: "station" for GCP, "lesson" for Kubernetes. */
+  unit?: string;
+  /** The heading above the checks. */
+  heading?: string;
 }
 
 type CheckProps<T extends StationCheck['type']> = {
@@ -242,7 +249,17 @@ const KIND_LABEL: Record<StationCheck['type'], string> = {
  * kinds (pick, match, order). The finish button waits until every check is
  * right, so a finished station means the learner proved each point.
  */
-export function StationChecks({ itemId, checks, done, xp, previous }: StationChecksProps) {
+export function StationChecks({
+  itemId,
+  checks,
+  done,
+  xp,
+  previous,
+  course = 'gcp',
+  unit = 'station',
+  heading = 'Prove each key point',
+}: StationChecksProps) {
+  const unitTitle = `${unit.charAt(0).toUpperCase()}${unit.slice(1)}`;
   const [solved, setSolved] = useState<ReadonlySet<number>>(new Set());
   const allCorrect = solved.size === checks.length;
 
@@ -263,7 +280,7 @@ export function StationChecks({ itemId, checks, done, xp, previous }: StationChe
                 Checkpoint
               </span>
               <h2 id="checkpoint-heading" className="text-title">
-                Prove each key point
+                {heading}
               </h2>
             </div>
             <p className="text-small text-ink-faint font-mono" aria-live="polite">
@@ -296,19 +313,19 @@ export function StationChecks({ itemId, checks, done, xp, previous }: StationChe
       )}
 
       <section
-        aria-label="Finish the station"
+        aria-label={`Finish the ${unit}`}
         className="bg-surface border-line rounded-card shadow-card flex flex-col gap-4 border p-5 sm:p-6"
       >
         <CompleteButton
-          course="gcp"
+          course={course}
           itemId={itemId}
           done={done}
           xp={xp}
-          label="Finish station"
-          doneLabel="Station finished"
+          label={`Finish ${unit}`}
+          doneLabel={`${unitTitle} finished`}
           {...(previous !== undefined ? { secondary: previous } : {})}
           {...(!allCorrect && !done
-            ? { blockedReason: 'Get every checkpoint right to finish the station.' }
+            ? { blockedReason: `Get every checkpoint right to finish the ${unit}.` }
             : {})}
         />
       </section>

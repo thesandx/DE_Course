@@ -1,0 +1,97 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:02.045
+You want to learn Kubernetes.
+
+2
+00:00:02.065 --> 00:00:05.205
+But a cloud cluster costs money every hour.
+
+3
+00:00:05.225 --> 00:00:06.618
+And you already know Docker.
+
+4
+00:00:06.638 --> 00:00:08.115
+So start there.
+
+5
+00:00:08.135 --> 00:00:13.490
+This port gives you three things: the tools, a cluster, and an image to sail with.
+
+6
+00:00:13.510 --> 00:00:15.825
+First: where does the cluster run?
+
+7
+00:00:15.845 --> 00:00:21.110
+A tool named kind runs every Kubernetes node as one Docker container.
+
+8
+00:00:21.130 --> 00:00:25.045
+You start three nodes: one control plane and two workers.
+
+9
+00:00:25.065 --> 00:00:29.920
+It is free, it starts in a minute, and you can delete it at any time.
+
+10
+00:00:29.940 --> 00:00:32.055
+Second: you need two tools.
+
+11
+00:00:32.075 --> 00:00:33.580
+kind builds the cluster.
+
+12
+00:00:33.600 --> 00:00:35.390
+You use it a few times.
+
+13
+00:00:35.410 --> 00:00:37.490
+The second tool talks to the cluster.
+
+14
+00:00:37.510 --> 00:00:40.540
+You use it all day, on any cluster.
+
+15
+00:00:40.560 --> 00:00:43.400
+Third: the image you take through every port.
+
+16
+00:00:43.420 --> 00:00:45.100
+Tugboat is a small web app.
+
+17
+00:00:45.120 --> 00:00:48.185
+You deploy it, scale it, break it and secure it.
+
+18
+00:00:48.205 --> 00:00:51.047
+A kind node cannot see the images on your laptop.
+
+19
+00:00:51.067 --> 00:00:53.985
+So you load the image into the nodes.
+
+20
+00:00:54.005 --> 00:00:55.970
+Quick recap of the setup.
+
+21
+00:00:55.990 --> 00:00:57.432
+A node is a container.
+
+22
+00:00:57.452 --> 00:00:59.445
+One tool builds, one tool talks.
+
+23
+00:00:59.465 --> 00:01:01.055
+And load your image.
+
+24
+00:01:01.075 --> 00:01:04.175
+Now start the first lesson below.

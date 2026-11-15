@@ -1,0 +1,93 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:03.905
+Your pod restarts, and every file it wrote is gone.
+
+2
+00:00:03.925 --> 00:00:06.617
+A container starts with a clean disk each time.
+
+3
+00:00:06.637 --> 00:00:08.465
+That is by design.
+
+4
+00:00:08.485 --> 00:00:13.290
+This port has three steps: volumes, claims, and StatefulSets.
+
+5
+00:00:13.310 --> 00:00:15.925
+First: storage that outlives a crash.
+
+6
+00:00:15.945 --> 00:00:19.037
+A volume belongs to the pod, not to the container.
+
+7
+00:00:19.057 --> 00:00:21.135
+A crash does not clear it.
+
+8
+00:00:21.155 --> 00:00:23.810
+But the simplest volume is deleted with the pod.
+
+9
+00:00:23.830 --> 00:00:26.110
+It is scratch space.
+
+10
+00:00:26.130 --> 00:00:28.795
+Second: storage that outlives the pod.
+
+11
+00:00:28.815 --> 00:00:30.345
+Your app asks for a size.
+
+12
+00:00:30.365 --> 00:00:32.105
+It does not name a disk.
+
+13
+00:00:32.125 --> 00:00:34.005
+A storage class makes the disk.
+
+14
+00:00:34.025 --> 00:00:36.855
+The claim binds to it and stays.
+
+15
+00:00:36.875 --> 00:00:39.340
+Third: a database needs a name.
+
+16
+00:00:39.360 --> 00:00:43.250
+A StatefulSet gives each pod a fixed name, and its own disk.
+
+17
+00:00:43.270 --> 00:00:44.525
+Pods start in order.
+
+18
+00:00:44.545 --> 00:00:47.600
+And when you delete the set, the disks stay.
+
+19
+00:00:47.620 --> 00:00:49.535
+Quick recap of storage.
+
+20
+00:00:49.555 --> 00:00:50.723
+Containers forget.
+
+21
+00:00:50.743 --> 00:00:51.973
+Claims remember.
+
+22
+00:00:51.993 --> 00:00:54.595
+StatefulSets give a name and a disk.
+
+23
+00:00:54.615 --> 00:00:57.715
+Now start the first lesson below.

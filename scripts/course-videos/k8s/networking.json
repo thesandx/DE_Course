@@ -1,0 +1,147 @@
+{
+  "station": "networking",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "Every pod gets a new address when it restarts.",
+          "device": "big",
+          "text": "Pod addresses keep changing"
+        },
+        {
+          "say": "So how does one app find another? You cannot store an address.",
+          "device": "card",
+          "label": "The question",
+          "head": "Who do you call?",
+          "headmark": "call",
+          "headmark_at": "find"
+        },
+        {
+          "say": "This port has three answers: the Service, the load balancer, and the Gateway.",
+          "device": "list",
+          "label": "Port 3 · Networking",
+          "items": ["Service", "Load balancer", "Ingress and Gateway"],
+          "items_at": ["Service", "load", "Gateway"]
+        }
+      ]
+    },
+    {
+      "title": "Services",
+      "check": {
+        "prompt": "How does a Service find its pods?",
+        "options": ["By their IP addresses", "By their labels", "By their names"],
+        "answer": 1,
+        "why": "A Service selects pods by label. Pod addresses change, labels do not."
+      },
+      "beats": [
+        {
+          "say": "First: a name that does not move.",
+          "device": "big",
+          "text": "A name that stays put"
+        },
+        {
+          "say": "A Service has one stable address and one name in the cluster.",
+          "device": "card",
+          "label": "Service",
+          "head": "One stable name and address",
+          "headmark": "stable",
+          "headmark_at": "stable"
+        },
+        {
+          "say": "It finds its pods by label, and sends each request to a ready pod.",
+          "device": "card",
+          "label": "How it works",
+          "head": "Labels choose the pods",
+          "headmark": "Labels",
+          "headmark_at": "label"
+        },
+        {
+          "say": "No pods behind it? Then the label does not match, or no pod is ready.",
+          "device": "card",
+          "label": "Debug",
+          "head": "Empty endpoints: check labels",
+          "headmark": "check labels",
+          "headmark_at": "label"
+        }
+      ]
+    },
+    {
+      "title": "From outside",
+      "check": {
+        "prompt": "You want one entry point with paths that go to many Services. What do you use?",
+        "options": ["A NodePort for each", "An Ingress or a Gateway", "port-forward"],
+        "answer": 1,
+        "why": "An Ingress or a Gateway routes by host and path, behind one load balancer."
+      },
+      "beats": [
+        {
+          "say": "Second: reach it from outside the cluster.",
+          "device": "big",
+          "text": "Reach it from outside"
+        },
+        {
+          "say": "Port-forward for a quick look. NodePort for a fixed port. LoadBalancer for a real address.",
+          "device": "list",
+          "label": "Three ways in",
+          "items": ["port-forward: debug", "NodePort: a fixed port", "LoadBalancer: a real IP"],
+          "items_at": ["quick", "fixed", "real"]
+        },
+        {
+          "say": "One load balancer per app costs a lot. So put one front door before many apps.",
+          "device": "card",
+          "label": "The cost",
+          "head": "One front door for many apps",
+          "headmark": "One front door",
+          "headmark_at": "door"
+        }
+      ]
+    },
+    {
+      "title": "Ingress and Gateway",
+      "beats": [
+        {
+          "say": "Third: route by host and by path.",
+          "device": "big",
+          "text": "Route by host and path"
+        },
+        {
+          "say": "An Ingress is only rules. A controller must run to read them.",
+          "device": "card",
+          "label": "Ingress",
+          "head": "Rules need a controller",
+          "headmark": "controller",
+          "headmark_at": "controller"
+        },
+        {
+          "say": "The Gateway API is the newer way. It can also split traffic by weight.",
+          "device": "card",
+          "label": "Gateway API",
+          "head": "Routes, plus traffic splitting",
+          "headmark": "traffic splitting",
+          "headmark_at": "split"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Quick recap of networking.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "Services find pods by label. Empty endpoints mean a label problem. One door, many routes.",
+          "device": "list",
+          "label": "Networking",
+          "items": ["Services select by label", "Empty endpoints: labels", "One door, many routes"],
+          "items_at": ["Services", "Empty", "door"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

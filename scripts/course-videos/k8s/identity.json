@@ -1,0 +1,120 @@
+{
+  "station": "identity",
+  "chapters": [
+    {
+      "title": "The problem",
+      "beats": [
+        {
+          "say": "A key file for your cloud account sits in a Secret.",
+          "device": "big",
+          "text": "A key file in a Secret"
+        },
+        {
+          "say": "It is valid for years. And it works from any machine that has a copy.",
+          "device": "card",
+          "label": "The risk",
+          "head": "Valid for years, from anywhere",
+          "headmark": "from anywhere",
+          "headmark_at": "any"
+        },
+        {
+          "say": "This port has two ideas: the identity of a pod, and cloud access with no keys.",
+          "device": "list",
+          "label": "Port 9 · Workload identity",
+          "items": ["Pod identity", "Keyless cloud access"],
+          "items_at": ["identity", "keys"]
+        }
+      ]
+    },
+    {
+      "title": "Pod identity",
+      "check": {
+        "prompt": "What does a pod use to prove who it is to the API server?",
+        "options": [
+          "Its IP address",
+          "A short-lived token of its service account",
+          "Its image name"
+        ],
+        "answer": 1,
+        "why": "The node mounts a token for the pod's service account. It expires and is rotated."
+      },
+      "beats": [
+        {
+          "say": "First: every pod has an identity.",
+          "device": "big",
+          "text": "Every pod has an ID"
+        },
+        {
+          "say": "A pod runs as a service account. The node gives it a token for that account.",
+          "device": "card",
+          "label": "Service account",
+          "head": "A token for each pod",
+          "headmark": "token",
+          "headmark_at": "token"
+        },
+        {
+          "say": "The token lives for about an hour, and stops when the pod is deleted.",
+          "device": "card",
+          "label": "Short-lived",
+          "head": "About one hour, then renewed",
+          "headmark": "one hour",
+          "headmark_at": "hour"
+        },
+        {
+          "say": "The token says who you are. Access control decides what you may do.",
+          "device": "card",
+          "label": "Two questions",
+          "head": "Who you are, then what you may do",
+          "headmark": "Who you are",
+          "headmark_at": "who"
+        }
+      ]
+    },
+    {
+      "title": "Keyless cloud access",
+      "beats": [
+        {
+          "say": "Second: reach the cloud with no key file.",
+          "device": "big",
+          "text": "Cloud with no key file"
+        },
+        {
+          "say": "The cloud trusts the service account of the cluster. You grant a role to it.",
+          "device": "card",
+          "label": "Workload identity",
+          "head": "The cloud trusts the pod identity",
+          "headmark": "trusts",
+          "headmark_at": "trusts"
+        },
+        {
+          "say": "The pod gets a short cloud token when it asks. Nothing to store, nothing to rotate.",
+          "device": "card",
+          "label": "The result",
+          "head": "No key to leak or rotate",
+          "headmark": "No key",
+          "headmark_at": "Nothing"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        { "say": "Quick recap of identity.", "device": "big", "text": "Recap: what to remember" },
+        {
+          "say": "One service account per app. Tokens are short-lived. And no key files.",
+          "device": "list",
+          "label": "Workload identity",
+          "items": ["One account per app", "Short-lived tokens", "No key files"],
+          "items_at": ["account", "short-lived", "key"]
+        },
+        {
+          "say": "Now start the first lesson below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Start the first lesson below.",
+          "submark": "first lesson"
+        }
+      ]
+    }
+  ]
+}

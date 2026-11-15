@@ -7,6 +7,7 @@ import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { Progress } from '@/components/ui/Progress';
 import { outcomeMessage, useRecordProgress } from '@/hooks/useRecordProgress';
+import type { CourseSlug } from '@/lib/course/courses';
 import { hueStyle } from '@/lib/course/hue';
 import { cn } from '@/lib/utils';
 
@@ -23,6 +24,10 @@ export interface FlashcardsProps {
   /** Ids of the cards the learner already knows. */
   known: readonly string[];
   xpPerCard: number;
+  /** The course whose tracker a known card is saved to. */
+  course?: CourseSlug;
+  /** What a group of cards is called: "line" for GCP, "port" for Kubernetes. */
+  groupWord?: string;
 }
 
 /**
@@ -31,13 +36,20 @@ export interface FlashcardsProps {
  * (a little XP the first time) and takes it out. A chip row filters the deck
  * by line.
  */
-export function Flashcards({ cards, lines, known, xpPerCard }: FlashcardsProps) {
+export function Flashcards({
+  cards,
+  lines,
+  known,
+  xpPerCard,
+  course = 'gcp',
+  groupWord = 'line',
+}: FlashcardsProps) {
   const [filter, setFilter] = useState<string>('all');
   const [showKnown, setShowKnown] = useState(false);
   const [queue, setQueue] = useState<string[] | null>(null);
   const [flipped, setFlipped] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { record, busy } = useRecordProgress('gcp');
+  const { record, busy } = useRecordProgress(course);
 
   const knownSet = new Set(known);
   const inFilter = cards.filter((card) => filter === 'all' || card.line === filter);
@@ -77,8 +89,8 @@ export function Flashcards({ cards, lines, known, xpPerCard }: FlashcardsProps) 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-3">
-        <ul className="flex flex-wrap gap-2" aria-label="Filter by line">
-          {[{ slug: 'all', short: 'All lines', hue: 0 }, ...lines].map((line) => (
+        <ul className="flex flex-wrap gap-2" aria-label={`Filter by ${groupWord}`}>
+          {[{ slug: 'all', short: `All ${groupWord}s`, hue: 0 }, ...lines].map((line) => (
             <li key={line.slug}>
               <button
                 type="button"

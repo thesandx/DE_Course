@@ -10,6 +10,7 @@
 import { isKnownItem, xpForItem } from '@/lib/course/catalog';
 import type { CourseSlug } from '@/lib/course/courses';
 import { gcpXpForItem, isKnownGcpItem } from '@/lib/course/gcp/catalog';
+import { isKnownK8sItem, k8sXpForItem } from '@/lib/course/k8s/catalog';
 import type { DoneMap } from '@/lib/course/progress';
 
 export interface CourseRules {
@@ -20,6 +21,7 @@ export interface CourseRules {
 export const COURSE_RULES: Readonly<Record<CourseSlug, CourseRules>> = {
   de: { isKnownItem, xpForItem },
   gcp: { isKnownItem: isKnownGcpItem, xpForItem: gcpXpForItem },
+  k8s: { isKnownItem: isKnownK8sItem, xpForItem: k8sXpForItem },
 };
 
 export function courseXp(course: CourseSlug, done: DoneMap): number {

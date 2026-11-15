@@ -36,6 +36,18 @@ describe('contextForPath', () => {
     expect(contextForPath('/gcp/labs/visualization').label).toMatch(/^Lab: /);
   });
 
+  it('gives a Kubernetes lesson, mission and port their own text', () => {
+    const lesson = contextForPath('/k8s/ports/workloads/deployments');
+    expect(lesson.label).toMatch(/^Lesson: /);
+    expect(lesson.text).toContain('Deployment');
+    expect(lesson.text.length).toBeLessThanOrEqual(MAX_CONTEXT_CHARS + 120);
+    expect(contextForPath('/k8s/ports/workloads/mission').label).toMatch(/^Mission: /);
+    expect(contextForPath('/k8s/ports/workloads/drill').label).toMatch(/Port 02|Workloads/);
+    expect(contextForPath('/k8s/ports/workloads').label).toMatch(/Port 02|Workloads/);
+    expect(contextForPath('/k8s/practice/dojo').label).toMatch(/K8s|Kubernetes/);
+    expect(contextForPath('/k8s/ports/nope/x').label).toMatch(/K8s|Kubernetes/);
+  });
+
   it('falls back to the course for a list page or an unknown slug', () => {
     expect(contextForPath('/de/problems').label).toBe('DE course');
     expect(contextForPath('/de/tracks/nope/nothing').label).toBe('DE course');

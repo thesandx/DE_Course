@@ -1,11 +1,12 @@
 /**
  * What the signed-in shell shows for the course on screen: the streak, the
  * XP and the level line. Each course has its own tracker and its own ladder
- * (levels for DE, ranks for GCP), so each derives these numbers its own way
+ * (levels for DE, ranks for GCP and Kubernetes), so each derives these numbers its own way
  * and the shell stays course-agnostic.
  */
 
 import type { GcpSummary } from '@/lib/course/gcp/summary';
+import type { K8sSummary } from '@/lib/course/k8s/summary';
 import type { LearnerSummary } from '@/lib/course/summary';
 
 export interface ShellStats {
@@ -29,6 +30,16 @@ export function deShellStats(summary: LearnerSummary): ShellStats {
 }
 
 export function gcpShellStats(summary: GcpSummary): ShellStats {
+  return {
+    streak: summary.streak,
+    bestStreak: summary.bestStreak,
+    xp: summary.xp,
+    xpTarget: summary.rank.to,
+    levelLine: `Rank ${summary.rank.number} · ${summary.rank.title}`,
+  };
+}
+
+export function k8sShellStats(summary: K8sSummary): ShellStats {
   return {
     streak: summary.streak,
     bestStreak: summary.bestStreak,

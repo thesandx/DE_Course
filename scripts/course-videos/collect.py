@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Collect the built videos into the files the app reads.
 
-    python collect.py --course gcp|de --work <dir> [--videos <dir>] [--partial]
+    python collect.py --course gcp|de|k8s --work <dir> [--videos <dir>] [--partial]
 
 `--work` is the folder `make_video.py` wrote to. For each script in the
 course folder (`gcp/` or `de/`) this reads `<work>/<slug>/meta.json` and writes:
@@ -24,7 +24,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent.parent
-COURSES = ("gcp", "de")
+COURSES = ("gcp", "de", "k8s")
 
 # A quick check opens this long before the next chapter starts, in the silence
 # between two chapters.

@@ -1,11 +1,12 @@
 /**
  * The explainer videos of the courses. The GCP course has one video per
- * station, and the DE course has one video per track. The rules are in
+ * station, the DE course has one per track, and the Kubernetes course has one
+ * per port. The rules are in
  * `lib/course/README.md` > Explainer videos.
  */
 
 /** The courses that have explainer videos. Also the folder name in the bucket and in `public/`. */
-export type VideoCourse = 'gcp' | 'de';
+export type VideoCourse = 'gcp' | 'de' | 'k8s';
 
 /** A chapter of a video. The player lists the chapters and jumps to one on a tap. */
 export interface VideoChapter {

@@ -51,6 +51,19 @@ describe('parseMarkdown', () => {
     ]);
   });
 
+  it('keeps a pipe inside code in one table cell', () => {
+    const blocks = parseMarkdown(
+      '| Template | Does |\n|---|---|\n| «{{ .Values.a | quote }}» | Quotes |',
+    );
+    expect(blocks).toEqual([
+      {
+        kind: 'table',
+        head: ['Template', 'Does'],
+        rows: [['«{{ .Values.a | quote }}»', 'Quotes']],
+      },
+    ]);
+  });
+
   it('reads tables and skips the rule row', () => {
     const blocks = parseMarkdown(`
       | Setting | Effect |

@@ -67,6 +67,9 @@ test('course pages send a signed-out visitor to sign in', async ({ page }) => {
     '/de/companies/uber',
     '/gcp/lines',
     '/gcp/practice/mock',
+    '/k8s/ports',
+    '/k8s/ports/workloads/deployments',
+    '/k8s/practice/dojo',
   ]) {
     await page.goto(path);
     await expect(page, `redirect from ${path}`).toHaveURL(/\/sign-in\?next=/);
