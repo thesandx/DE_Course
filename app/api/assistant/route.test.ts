@@ -125,4 +125,25 @@ describe('POST /api/assistant', () => {
     expect(statuses.slice(0, 30).every((status) => status === 200)).toBe(true);
     expect(statuses[30]).toBe(429);
   });
+
+  it('passes attached images to the model as image parts', async () => {
+    const image = 'data:image/jpeg;base64,/9j/4AAQ';
+    const response = await POST(
+      post({ ...VALID, messages: [{ role: 'user', content: 'What is this?', images: [image] }] }),
+    );
+    expect(response.status).toBe(200);
+    const [, messages] = streamAnswer.mock.calls[0] ?? [];
+    expect(JSON.stringify(messages)).toContain('"type":"image_url"');
+  });
+
+  it('refuses an image that is not a data URL', async () => {
+    const response = await POST(
+      post({
+        ...VALID,
+        messages: [{ role: 'user', content: 'Hi', images: ['https://evil.example/a.png'] }],
+      }),
+    );
+    expect(response.status).toBe(400);
+    expect(streamAnswer).not.toHaveBeenCalled();
+  });
 });

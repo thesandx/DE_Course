@@ -469,6 +469,7 @@ Recorded in [`docs/adr/`](./docs/adr/). Read before proposing a change to any of
 | [0011](./docs/adr/0011-keep-chapter-notes-as-markdown-on-the-device-first.md)            | Chapter notes as Markdown in a rich editor, saved on the device first — over a library, over stored HTML         |
 | [0012](./docs/adr/0012-track-study-time-with-a-browser-heartbeat.md)                     | Study time counted in the browser, one `studyTime` map in `learners/{uid}` — over a sessions subcollection       |
 | [0013](./docs/adr/0013-make-station-videos-with-simcraft-and-keep-them-in-the-bucket.md) | Station videos made with simcraft and a local voice, MP4 files in the bucket — over files in Git or a video site |
+| [0014](./docs/adr/0014-send-images-to-the-ai-helper-inline.md)                           | Images in the AI helper's chat go inline as small JPEG data URLs and are never stored — over a bucket upload     |
 
 Add an ADR when a decision is expensive to reverse, affects how everyone works, or rejects an obvious alternative. Never edit an accepted ADR to change its decision — write a new one that supersedes it, and link both ways.
 
