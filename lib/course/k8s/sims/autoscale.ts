@@ -114,13 +114,13 @@ function utilisation(load: number, running: number): number {
 export function tickAutoscale(before: AutoscaleState, config: AutoscaleConfig): AutoscaleState {
   const state = structuredClone(before);
   const load = demand(config.profile, state.tick);
-  let { running, pending } = podCounts(state);
+  const atStart = podCounts(state).running;
 
   if (config.hpa) {
-    const used = utilisation(load, running);
+    const used = utilisation(load, atStart);
     const want = Math.max(
       MIN_REPLICAS,
-      Math.min(MAX_REPLICAS, Math.ceil((running * used) / config.target) || MIN_REPLICAS),
+      Math.min(MAX_REPLICAS, Math.ceil((atStart * used) / config.target) || MIN_REPLICAS),
     );
     if (want > state.desired) {
       say(
@@ -141,7 +141,7 @@ export function tickAutoscale(before: AutoscaleState, config: AutoscaleConfig): 
     }
   }
 
-  ({ running, pending } = podCounts(state));
+  const scaled = podCounts(state);
   if (config.nodeAutoscaler) {
     for (const node of state.provisioning) node.left -= 1;
     for (const node of state.provisioning.filter((item) => item.left <= 0)) {
@@ -150,9 +150,9 @@ export function tickAutoscale(before: AutoscaleState, config: AutoscaleConfig): 
     }
     state.provisioning = state.provisioning.filter((item) => item.left > 0);
 
-    if (pending > 0) {
+    if (scaled.pending > 0) {
       state.pendingTicks += 1;
-      const missing = Math.ceil(pending / PODS_PER_NODE) - state.provisioning.length;
+      const missing = Math.ceil(scaled.pending / PODS_PER_NODE) - state.provisioning.length;
       const total = state.nodes.length + state.provisioning.length;
       if (state.pendingTicks >= 2 && missing > 0 && total < MAX_NODES) {
         const id =
@@ -160,14 +160,14 @@ export function tickAutoscale(before: AutoscaleState, config: AutoscaleConfig): 
         state.provisioning.push({ id, left: NODE_BOOT_TICKS });
         say(
           state,
-          `${pending} pods are Pending. The node autoscaler creates node-${id} (about 1 minute).`,
+          `${scaled.pending} pods are Pending. The node autoscaler creates node-${id} (about 1 minute).`,
         );
       }
     } else {
       state.pendingTicks = 0;
     }
 
-    const nodesInUse = Math.ceil(running / PODS_PER_NODE);
+    const nodesInUse = Math.ceil(scaled.running / PODS_PER_NODE);
     state.nodes.forEach((node, index) => {
       node.empty = index >= nodesInUse && state.nodes.length > 1 ? node.empty + 1 : 0;
     });
@@ -179,7 +179,7 @@ export function tickAutoscale(before: AutoscaleState, config: AutoscaleConfig): 
     }
   }
 
-  ({ running, pending } = podCounts(state));
+  const { running, pending } = podCounts(state);
   state.history = [
     ...state.history,
     {
