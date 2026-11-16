@@ -1,15 +1,34 @@
 import { describe, expect, it } from 'vitest';
 
-import { COURSE_SLUGS, courseFromPath, COURSES, getCourse, isCourseSlug } from './courses';
+import {
+  COURSE_SLUGS,
+  courseFromPath,
+  COURSES,
+  getCourse,
+  getSoonCourse,
+  isCourseSlug,
+} from './courses';
 import { hubStats } from './hub';
 import { applyCourseCompletion, EMPTY_LEARNER } from './progress';
 
 describe('the course list', () => {
   it('has an open entry for every course a learner can join', () => {
     for (const slug of COURSE_SLUGS) expect(getCourse(slug).status).toBe('open');
-    expect(COURSES.map((course) => course.slug)).toEqual(['de', 'gcp', 'k8s']);
+    expect(COURSES.map((course) => course.slug)).toEqual(['de', 'gcp', 'k8s', 'gcp-architect']);
     expect(isCourseSlug('k8s')).toBe(true);
     expect(isCourseSlug('rust')).toBe(false);
+    expect(isCourseSlug('gcp-architect')).toBe(false);
+  });
+
+  it('keeps a course that is not open yet out of the joinable slugs', () => {
+    const soon = COURSES.filter((course) => course.status === 'soon');
+    expect(soon.map((course) => course.slug)).toEqual(['gcp-architect']);
+    for (const course of soon) {
+      expect(isCourseSlug(course.slug)).toBe(false);
+      expect(course.plan?.length ?? 0).toBeGreaterThan(0);
+    }
+    expect(getSoonCourse('gcp-architect').href).toBe('/gcp-architect');
+    expect(() => getSoonCourse('gcp')).toThrow();
   });
 
   it('finds the course a path sits in', () => {
@@ -17,6 +36,8 @@ describe('the course list', () => {
     expect(courseFromPath('/de')).toBe('de');
     expect(courseFromPath('/k8s/ports/setup')).toBe('k8s');
     expect(courseFromPath('/profile')).toBeUndefined();
+    // A course that is not open yet is not a course a path sits in.
+    expect(courseFromPath('/gcp-architect')).toBeUndefined();
     expect(courseFromPath('/')).toBeUndefined();
   });
 });
