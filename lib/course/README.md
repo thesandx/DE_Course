@@ -117,7 +117,7 @@ Item ids are `lesson:<track>:<lesson>` and `problem:<slug>`. A lesson is worth 4
 
 ## Add a course
 
-1. Add the slug to `COURSE_SLUGS` and an entry to `COURSES` in `courses.ts`. Set `status: 'soon'` to list it on the hub before it opens. Then add the slug to the notes: the `course` enum in `services/notes.service.ts`, the key rules in `lib/notes/targets.ts` and the filter in `components/notes/NotesLibrary.tsx`.
+1. Add the slug to `COURSE_SLUGS` and an entry to `COURSES` in `courses.ts`. Set `status: 'soon'` to list it on the hub before it opens. A course that is not open keeps its slug out of `COURSE_SLUGS`, gives a `plan` of its parts, and has one page at its `href` that renders `CourseComingSoon` (see `app/gcp-architect/page.tsx`). Then add the slug to the notes: the `course` enum in `services/notes.service.ts`, the key rules in `lib/notes/targets.ts` and the filter in `components/notes/NotesLibrary.tsx`.
 2. Put its content and rules in `lib/course/<slug>/`. Make item ids that include a kind, such as `station:<slug>`.
 3. Add an entry to `COURSE_RULES` in `rules.ts`. The server refuses every item id that `isKnownItem` does not accept.
 4. Add a case to `hubStats` in `hub.ts` and a shell stats function in `shell-stats.ts`.

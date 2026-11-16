@@ -8,8 +8,9 @@
  *
  * To add a course: add its slug to `COURSE_SLUGS`, add an entry to
  * `COURSES`, give it rules in `rules.ts` and pages under `app/<slug>/`.
- * A course with `status: 'soon'` shows on the hub but cannot be joined, so
- * it needs only the entry here. Every course is open today.
+ * A course with `status: 'soon'` shows on the hub but cannot be joined. It
+ * needs only the entry here and a page at its `href` that renders
+ * `CourseComingSoon`. Its slug stays out of `COURSE_SLUGS` until it opens.
  */
 
 /** The courses a learner can enroll in. Each one keeps its own tracker. */
@@ -33,6 +34,11 @@ export interface CourseInfo {
   /** Two sentences for the course card. */
   summary: string;
   status: 'open' | 'soon';
+  /**
+   * For a course that is not open yet: what it will hold, one short line
+   * per part, shown on its waiting page.
+   */
+  plan?: readonly string[];
   /** Which `--color-track-*` hue the course card uses. */
   hue: number;
   /** The course dashboard. */
@@ -88,6 +94,28 @@ export const COURSES: readonly CourseInfo[] = [
     practice: { href: '/k8s/practice', label: 'Drills' },
     facts: ['14 ports', '45 lessons', '76 incidents'],
   },
+  {
+    slug: 'gcp-architect',
+    title: 'GCP Professional Cloud Architect',
+    short: 'PCA',
+    tagline: 'Google Cloud Certified exam prep',
+    summary:
+      'Prep for the Google Cloud Certified Professional Cloud Architect exam: design, build, secure and run solutions on Google Cloud, with the case studies the exam is built on.',
+    status: 'soon',
+    hue: 4,
+    href: '/gcp-architect',
+    learn: { href: '/gcp-architect', label: 'Outline' },
+    practice: { href: '/gcp-architect', label: 'Outline' },
+    facts: ['6 exam sections', 'Case studies'],
+    plan: [
+      'Design and plan a cloud solution architecture',
+      'Manage and provision a solution infrastructure',
+      'Design for security and compliance',
+      'Analyze and optimize technical and business processes',
+      'Manage the implementation',
+      'Make the solution and its operations reliable',
+    ],
+  },
 ];
 
 export function isCourseSlug(value: string): value is CourseSlug {
@@ -97,6 +125,13 @@ export function isCourseSlug(value: string): value is CourseSlug {
 export function getCourse(slug: CourseSlug): CourseInfo {
   const course = COURSES.find((item) => item.slug === slug);
   if (course === undefined) throw new Error(`Course ${slug} has no entry in COURSES`);
+  return course;
+}
+
+/** A course that is not open yet, by its slug. It has no tracker. */
+export function getSoonCourse(slug: string): CourseInfo {
+  const course = COURSES.find((item) => item.slug === slug && item.status === 'soon');
+  if (course === undefined) throw new Error(`Course ${slug} is not a course that opens later`);
   return course;
 }
 

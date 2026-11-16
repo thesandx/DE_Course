@@ -86,13 +86,21 @@ export function SidebarNav({ enrolled, counts = {} }: SidebarNavProps) {
             const joined = (enrolled as readonly string[]).includes(course.slug);
             if (course.status === 'soon') {
               return (
-                <li
-                  key={course.slug}
-                  className="text-ink-faint flex min-h-10 items-center gap-3 px-3"
-                >
-                  <CourseBadge hue={course.hue} short={course.short} muted />
-                  <span className="text-body grow">{course.short}</span>
-                  <span className="text-micro rounded-pill bg-sunken px-2 py-0.5">Soon</span>
+                <li key={course.slug}>
+                  <Link
+                    href={course.href}
+                    aria-current={pathname === course.href ? 'page' : undefined}
+                    className={cn(
+                      'rounded-input flex min-h-10 items-center gap-3 px-3 transition-colors',
+                      pathname === course.href
+                        ? 'text-ink'
+                        : 'text-ink-faint hover:bg-sunken hover:text-ink',
+                    )}
+                  >
+                    <CourseBadge hue={course.hue} short={course.short} muted />
+                    <span className="text-body grow truncate">{course.short}</span>
+                    <span className="text-micro rounded-pill bg-sunken px-2 py-0.5">Soon</span>
+                  </Link>
                 </li>
               );
             }

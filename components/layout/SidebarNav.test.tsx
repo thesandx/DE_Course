@@ -14,6 +14,9 @@ describe('SidebarNav', () => {
     expect(screen.getByRole('link', { name: /DE course/ })).toHaveAttribute('href', '/de');
     expect(screen.getByRole('link', { name: /GCP course/ })).toHaveTextContent('Join');
     expect(screen.getByRole('link', { name: /K8s course/ })).toHaveAttribute('href', '/k8s');
+    const soon = screen.getByRole('link', { name: /PCA/ });
+    expect(soon).toHaveAttribute('href', '/gcp-architect');
+    expect(soon).toHaveTextContent('Soon');
   });
 
   it("opens the current course's sections for a learner in it", () => {

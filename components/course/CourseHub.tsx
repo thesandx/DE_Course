@@ -113,7 +113,13 @@ function OpenCard({ course, primary }: { course: CourseInfo; primary: boolean })
       </ul>
       <div className="mt-auto">
         {soon || !isCourseSlug(course.slug) ? (
-          <p className="text-small text-ink-faint font-semibold">Opening later</p>
+          <div className="flex flex-col items-start gap-2">
+            <p className="text-small text-ink-faint font-semibold">Opening later</p>
+            <Link href={course.href} className={buttonStyles({ variant: 'quiet', size: 'sm' })}>
+              See what it will cover
+              <Icon name="arrow-right" className="size-4" />
+            </Link>
+          </div>
         ) : (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <EnrollButton

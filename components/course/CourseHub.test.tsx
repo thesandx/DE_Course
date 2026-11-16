@@ -25,7 +25,12 @@ describe('CourseHub', () => {
     render(<CourseHub name="Sandeep" joined={[]} activity={NO_ACTIVITY} today="2026-11-01" />);
     expect(screen.getByRole('heading', { name: 'Choose a course' })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Join course' })).toHaveLength(3);
-    expect(screen.queryByText('Opening later')).not.toBeInTheDocument();
+    // The Cloud Architect course is not open: no join button, one link to its plan.
+    expect(screen.getAllByText('Opening later')).toHaveLength(1);
+    expect(screen.getByRole('link', { name: /See what it will cover/ })).toHaveAttribute(
+      'href',
+      '/gcp-architect',
+    );
   });
 
   it('hides the study map until the learner joins a course', () => {
