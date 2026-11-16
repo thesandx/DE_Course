@@ -90,6 +90,32 @@ describe('ConceptDiagram', () => {
     expect(screen.getByText('Allowed')).toBeInTheDocument();
   });
 
+  it('shows the scenario, the icons, the numbered walk-through and what to remember', () => {
+    const { container } = render(
+      <ConceptDiagram
+        id="d5"
+        diagram={{
+          ...base,
+          kind: 'flow',
+          title: 'Load a file',
+          scenario: 'A partner drops a file every night.',
+          steps: [
+            { n: 1, icon: 'cloud-storage', label: 'Bucket' },
+            { n: 2, icon: 'bigquery', label: 'Table' },
+          ],
+          walk: ['The file lands in the bucket.', 'A load job writes it to the table.'],
+        }}
+      />,
+    );
+    expect(screen.getByText('Scenario')).toBeInTheDocument();
+    expect(screen.getByText('A partner drops a file every night.')).toBeInTheDocument();
+    expect(screen.getByText('Read it step by step')).toBeInTheDocument();
+    expect(screen.getByText('A load job writes it to the table.')).toBeInTheDocument();
+    expect(screen.getByText('Remember')).toBeInTheDocument();
+    const sources = [...container.querySelectorAll('img')].map((img) => img.getAttribute('src'));
+    expect(sources).toEqual(['/gcp/icons/cloud-storage.svg', '/gcp/icons/bigquery.svg']);
+  });
+
   it('renders every diagram of the course without an error', () => {
     const all: GcpDiagram[] = Object.values(DIAGRAMS).flat();
     for (const [index, diagram] of all.entries()) {

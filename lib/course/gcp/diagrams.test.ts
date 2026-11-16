@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import type { DiagramBox, GcpDiagram } from '@/types/gcp';
@@ -10,7 +13,7 @@ const all: GcpDiagram[] = Object.values(DIAGRAMS).flat();
 /** Every piece of text a diagram shows. */
 function texts(diagram: GcpDiagram): string[] {
   const box = (item: DiagramBox): string[] => [item.label, item.note ?? '', ...(item.chips ?? [])];
-  const base = [diagram.title, diagram.caption];
+  const base = [diagram.title, diagram.caption, diagram.scenario ?? '', ...(diagram.walk ?? [])];
   switch (diagram.kind) {
     case 'flow':
       return [
@@ -63,6 +66,28 @@ function texts(diagram: GcpDiagram): string[] {
       ];
     case 'pairs':
       return [...base, diagram.left, diagram.right, ...diagram.pairs.flat()];
+  }
+}
+
+/** Every box a diagram draws. */
+function boxes(diagram: GcpDiagram): DiagramBox[] {
+  switch (diagram.kind) {
+    case 'flow':
+      return [...diagram.steps, ...(diagram.fork?.boxes ?? [])];
+    case 'decision':
+      return [...diagram.questions.map((question) => question.yes), diagram.otherwise];
+    case 'layers':
+      return [...diagram.layers];
+    case 'spectrum':
+      return [...diagram.stops];
+    case 'compare':
+      return [...diagram.columns];
+    case 'hub':
+      return [diagram.center, ...diagram.spokes];
+    case 'boundary':
+      return [...diagram.inside.boxes, ...diagram.outside];
+    default:
+      return [];
   }
 }
 
@@ -164,6 +189,26 @@ describe('GCP concept diagrams', () => {
                       ? diagram.lanes.map((lane) => lane.label)
                       : [];
       expect(new Set(labels).size, diagram.title).toBe(labels.length);
+    }
+  });
+
+  it('tells the full story: a scenario, a numbered walk-through, and real icons', () => {
+    for (const diagram of all) {
+      const name = diagram.title;
+      expect(diagram.scenario?.length ?? 0, name).toBeGreaterThan(60);
+      const walk = diagram.walk ?? [];
+      expect(walk.length, name).toBeGreaterThanOrEqual(2);
+      for (const line of walk) expect(line.length, name).toBeGreaterThan(20);
+      for (const box of boxes(diagram)) {
+        if (box.n !== undefined)
+          expect(box.n, `${name}: ${box.label}`).toBeLessThanOrEqual(walk.length);
+        if (box.icon !== undefined) {
+          expect(
+            existsSync(join(process.cwd(), 'public', 'gcp', 'icons', `${box.icon}.svg`)),
+            `${name}: ${box.icon}`,
+          ).toBe(true);
+        }
+      }
     }
   });
 });

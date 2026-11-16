@@ -25,7 +25,8 @@ export type StationCheck =
       type: 'match';
       prompt: string;
       /** Left side, right side. The learner sees the right side shuffled. */
-      pairs: ReadonlyArray<readonly [string, string]>;
+      /** From, to, and an optional icon for the right side. */
+      pairs: ReadonlyArray<readonly [string, string] | readonly [string, string, GcpIcon]>;
       why: string;
     }
   | {
@@ -174,6 +175,99 @@ export interface GcpLab {
 export type DiagramTone =
   'plain' | 'brand' | 'iris' | 'gold' | 'easy' | 'medium' | 'hard' | 'sky' | 'teal';
 
+/**
+ * An icon in a diagram: a file in `public/gcp/icons/`. Product icons are the
+ * official Google Cloud ones; the plain grey ones (`user`, `server`, `file`…)
+ * stand for things that are not a Google Cloud product.
+ */
+export type GcpIcon =
+  | 'alloydb'
+  | 'analytics-hub'
+  | 'apis'
+  | 'artifact-registry'
+  | 'audit-logs'
+  | 'automl'
+  | 'bigquery'
+  | 'bigtable'
+  | 'billing'
+  | 'box'
+  | 'bq-transfer'
+  | 'brain'
+  | 'catalog'
+  | 'chart'
+  | 'clock'
+  | 'cloud'
+  | 'cloud-build'
+  | 'cloud-run'
+  | 'cloud-sql'
+  | 'cloud-storage'
+  | 'code'
+  | 'composer'
+  | 'compute-engine'
+  | 'data-fusion'
+  | 'database'
+  | 'dataflow'
+  | 'dataplex'
+  | 'dataprep'
+  | 'dataproc'
+  | 'dataproc-metastore'
+  | 'datastream'
+  | 'device'
+  | 'dlp'
+  | 'dms'
+  | 'document-ai'
+  | 'dollar'
+  | 'ekm'
+  | 'error-reporting'
+  | 'eventarc'
+  | 'file'
+  | 'firestore'
+  | 'firewall'
+  | 'functions'
+  | 'gke'
+  | 'globe'
+  | 'hsm'
+  | 'iam'
+  | 'interconnect'
+  | 'key'
+  | 'kms'
+  | 'layers'
+  | 'lock'
+  | 'logging'
+  | 'looker'
+  | 'looker-studio'
+  | 'memorystore'
+  | 'monitoring'
+  | 'nat'
+  | 'natural-language'
+  | 'org'
+  | 'permissions'
+  | 'private-access'
+  | 'project'
+  | 'pubsub'
+  | 'quotas'
+  | 'refresh'
+  | 'scheduler'
+  | 'search'
+  | 'secret-manager'
+  | 'security'
+  | 'server'
+  | 'shield'
+  | 'spanner'
+  | 'spark'
+  | 'storage-transfer'
+  | 'stream'
+  | 'table'
+  | 'transfer-appliance'
+  | 'user'
+  | 'users'
+  | 'vertex-ai'
+  | 'vpc'
+  | 'vpc-sc'
+  | 'vpn'
+  | 'warning'
+  | 'workflows';
+
 /** One box in a diagram. Text fields use the inline markers only («code», **bold**). */
 export interface DiagramBox {
   label: string;
@@ -182,6 +276,12 @@ export interface DiagramBox {
   tone?: DiagramTone;
   /** Short tags, such as service names or flags. */
   chips?: readonly string[];
+  /** The product or thing the box stands for. */
+  icon?: GcpIcon;
+  /** The step number, shown on the box. It points at the same number in `walk`. */
+  n?: number;
+  /** Where the box lives, such as "On premises". Shown above the label. */
+  zone?: string;
 }
 
 /** A box with a list of points, for a side-by-side comparison. */
@@ -272,14 +372,19 @@ export type DiagramShape =
       kind: 'pairs';
       left: string;
       right: string;
-      pairs: ReadonlyArray<readonly [string, string]>;
+      /** From, to, and an optional icon for the right side. */
+      pairs: ReadonlyArray<readonly [string, string] | readonly [string, string, GcpIcon]>;
     };
 
 /** A picture with its title and caption. Every course draws it with `ConceptDiagram`. */
 export type CourseDiagram = DiagramShape & {
   title: string;
-  /** One or two sentences: what the picture shows and what to remember. */
+  /** One or two sentences: what to remember, and the exam trap. */
   caption: string;
+  /** The situation the picture answers, in full sentences. Shown above the picture. */
+  scenario?: string;
+  /** The picture in words, one full sentence per step. Shown under the picture, numbered. */
+  walk?: readonly string[];
 };
 
 /**

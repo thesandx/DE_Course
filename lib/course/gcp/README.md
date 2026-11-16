@@ -96,14 +96,38 @@ A diagram has a `kind`. Each kind reads top to bottom on a phone and spreads out
 | `boundary` | A perimeter, and which calls from outside it are blocked or allowed          |
 | `pairs`    | One thing on the left becomes one thing on the right                         |
 
+### The parts of a diagram
+
+A diagram tells the full story of the concept. A learner must understand it without the concept text.
+
+| Part       | Where it shows                   | What to write                                                  |
+| ---------- | -------------------------------- | -------------------------------------------------------------- |
+| `scenario` | Above the picture, as "Scenario" | The real situation, in full sentences. Use the Cymbal company. |
+| `icon`     | On each box                      | The product the box stands for. See [Icons](#icons).           |
+| `n`        | A number badge on the box        | The step number. It points at the same line in `walk`.         |
+| `zone`     | Above the label of the box       | Where the box lives, such as "On premises".                    |
+| `walk`     | Under the picture, numbered      | One full sentence for each step: what happens and why.         |
+| `caption`  | At the bottom, as "Remember"     | One or two sentences: the rule to remember and the exam trap.  |
+
+### Icons
+
+The icons are SVG files in [`public/gcp/icons/`](../../../public/gcp/icons/). The `GcpIcon` type in `types/gcp.ts` lists every file name.
+
+- The product icons are the official Google Cloud icons. The core set comes from Google's core products pack. The others come from Google's full icon pack.
+- The plain grey icons (`user`, `server`, `file`, `database` and others) stand for things that are not a Google Cloud product.
+- To add an icon, put the SVG file in the folder and add its name to `GcpIcon`. The tests fail when a diagram names an icon that has no file.
+- An icon is decorative. The label of the box gives its meaning to a screen reader.
+
 ### Rules for a diagram
 
 1. Give every concept at least one diagram. Set `concept` to the concept number, from 1. The tests fail when a concept has none.
-2. Show the mechanism or the decision, not a copy of the text. Keep labels short: a phone is 320px wide.
-3. Write a `caption` of one or two sentences: what the picture shows and the exam trap to remember.
-4. Use a `tone` for meaning: `hard` for wrong or costly, `easy` for right or safe, `brand` for the answer to remember. Use the other tones to tell boxes apart.
-5. Text fields use the inline markers only («code», **bold**). Do not write backticks or `${`.
-6. Run `pnpm test lib/course/gcp components/gcp`. The tests check concepts, positions, grid cells and unique labels, and render every diagram.
+2. Show the mechanism or the decision, not a copy of the text.
+3. Write a `scenario` and a `walk` of two or more lines on every GCP diagram. The tests fail without them.
+4. Give each box an `icon`. Give each step an `n`, and write the same number of lines in `walk`.
+5. Keep timeline span labels very short. A phone is 320px wide.
+6. Use a `tone` for meaning: `hard` for wrong or costly, `easy` for right or safe, `brand` for the answer to remember. Use the other tones to tell boxes apart.
+7. Text fields use the inline markers only («code», **bold**). Do not write backticks or `${`.
+8. Run `pnpm test lib/course/gcp components/gcp`. The tests check concepts, positions, grid cells, unique labels, the scenario, the walk-through and the icon files. They also render every diagram.
 
 ## Explainer videos
 

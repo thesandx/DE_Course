@@ -1,3 +1,5 @@
+import Image from 'next/image';
+
 import { InlineText } from '@/components/course/InlineText';
 import { cn } from '@/lib/utils';
 import type {
@@ -7,6 +9,7 @@ import type {
   DiagramLane,
   DiagramShape,
   DiagramTone,
+  GcpIcon,
 } from '@/types/gcp';
 
 export interface ConceptDiagramProps {
@@ -63,7 +66,7 @@ const COLUMNS: Readonly<Record<number, string>> = {
 const columns = (count: number): string => COLUMNS[count] ?? 'sm:grid-cols-2 lg:grid-cols-3';
 
 /** How far each band of a nested stack steps in. */
-const INDENT: readonly string[] = ['', 'ml-3 sm:ml-6', 'ml-6 sm:ml-12', 'ml-9 sm:ml-18'];
+const INDENT: readonly string[] = ['', 'ml-2 sm:ml-6', 'ml-4 sm:ml-12', 'ml-6 sm:ml-18'];
 
 type Direction = 'down' | 'right' | 'flow' | 'flow-wide';
 
@@ -110,25 +113,82 @@ function Chips({ chips }: { chips: readonly string[] | undefined }) {
   );
 }
 
-/** One box: a coloured top edge, a label, a note and chips. */
-function Box({ box, className }: { box: DiagramBox; className?: string }) {
+/**
+ * A product icon from `public/gcp/icons/`. Decoration only: the label next to
+ * it carries the name. `unoptimized` because the files are small SVGs that the
+ * image optimiser would refuse.
+ */
+function ProductIcon({ icon, className }: { icon: GcpIcon; className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        'bg-surface border-line rounded-input grid size-11 shrink-0 place-items-center border',
+        className,
+      )}
+    >
+      <Image src={`/gcp/icons/${icon}.svg`} alt="" width={28} height={28} unoptimized />
+    </span>
+  );
+}
+
+/** The step number on a box. It matches a line of the walkthrough under the picture. */
+function StepNumber({ n }: { n: number }) {
+  return (
+    <span className="bg-ink text-on-ink text-micro grid size-5 shrink-0 place-items-center rounded-full font-mono font-semibold">
+      <span className="sr-only">Step </span>
+      {n}
+    </span>
+  );
+}
+
+/** Lays a box out as a column with a centred icon, from this width up. */
+type Stack = 'md' | 'lg' | undefined;
+
+/** One box: a coloured top edge, an icon, a label, a note and chips. */
+function Box({ box, className, stack }: { box: DiagramBox; className?: string; stack?: Stack }) {
   return (
     <div
       className={cn(
-        'bg-surface border-line rounded-input shadow-card flex min-w-0 flex-col gap-1.5 border border-t-4 p-3',
+        'bg-surface border-line rounded-input shadow-card flex min-w-0 items-start gap-3 border border-t-4 p-3',
+        stack === 'md' && 'md:flex-col md:items-center md:text-center',
+        stack === 'lg' && 'lg:flex-col lg:items-center lg:text-center',
         tone(box.tone).edge,
         className,
       )}
     >
-      <p className="text-small text-ink font-semibold break-words">
-        <InlineText text={box.label} />
-      </p>
-      {box.note !== undefined && (
-        <p className="text-micro text-ink-soft break-words">
-          <InlineText text={box.note} />
+      {box.icon !== undefined && <ProductIcon icon={box.icon} />}
+      <div
+        className={cn(
+          'flex min-w-0 flex-1 flex-col gap-1.5',
+          stack === 'md' && 'md:items-center',
+          stack === 'lg' && 'lg:items-center',
+        )}
+      >
+        {box.zone !== undefined && <p className="eyebrow text-ink-faint">{box.zone}</p>}
+        <p
+          className={cn(
+            'text-body text-ink flex items-start gap-2 font-semibold break-words',
+            stack === 'md' && 'md:justify-center',
+            stack === 'lg' && 'lg:justify-center',
+          )}
+        >
+          {box.n !== undefined && (
+            <span className="mt-0.5">
+              <StepNumber n={box.n} />
+            </span>
+          )}
+          <span className="min-w-0">
+            <InlineText text={box.label} />
+          </span>
         </p>
-      )}
-      <Chips chips={box.chips} />
+        {box.note !== undefined && (
+          <p className="text-small text-ink-soft break-words">
+            <InlineText text={box.note} />
+          </p>
+        )}
+        <Chips chips={box.chips} />
+      </div>
     </div>
   );
 }
@@ -158,6 +218,7 @@ function Flow({ shape }: { shape: Extract<DiagramShape, { kind: 'flow' }> }) {
             >
               <Box
                 box={step}
+                stack={wide ? 'lg' : 'md'}
                 className={wide ? 'lg:flex-1 lg:self-stretch' : 'md:flex-1 md:self-stretch'}
               />
               {index < shape.steps.length - 1 && (
@@ -303,14 +364,24 @@ function Column({ column }: { column: DiagramColumn }) {
         tone(column.tone).edge,
       )}
     >
-      <p className="text-small text-ink font-semibold">
-        <InlineText text={column.label} />
-      </p>
-      {column.note !== undefined && (
-        <p className="text-micro text-ink-soft">
-          <InlineText text={column.note} />
-        </p>
-      )}
+      <div className="flex items-center gap-3">
+        {column.icon !== undefined && <ProductIcon icon={column.icon} />}
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <p className="text-body text-ink flex items-start gap-2 font-semibold">
+            {column.n !== undefined && (
+              <span className="mt-0.5">
+                <StepNumber n={column.n} />
+              </span>
+            )}
+            <InlineText text={column.label} />
+          </p>
+          {column.note !== undefined && (
+            <p className="text-small text-ink-soft">
+              <InlineText text={column.note} />
+            </p>
+          )}
+        </div>
+      </div>
       <ul className="flex flex-col gap-1.5">
         {column.points.map((point) => (
           <li key={point} className="text-small text-ink-soft flex gap-2">
@@ -362,15 +433,18 @@ function Hub({ shape }: { shape: Extract<DiagramShape, { kind: 'hub' }> }) {
         ))}
       </ul>
       <div className="order-1 flex flex-col items-stretch gap-1 md:order-2">
-        <div className="bg-night text-on-night border-night-line rounded-card shadow-raised flex flex-col gap-1.5 border p-4 md:mx-0">
-          <p className="text-small font-semibold">
-            <InlineText text={shape.center.label} />
-          </p>
-          {shape.center.note !== undefined && (
-            <p className="text-micro text-on-night-soft">
-              <InlineText text={shape.center.note} />
+        <div className="bg-night text-on-night border-night-line rounded-card shadow-raised flex items-center gap-3 border p-4 md:flex-col md:text-center">
+          {shape.center.icon !== undefined && <ProductIcon icon={shape.center.icon} />}
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <p className="text-body font-semibold">
+              <InlineText text={shape.center.label} />
             </p>
-          )}
+            {shape.center.note !== undefined && (
+              <p className="text-small text-on-night-soft">
+                <InlineText text={shape.center.note} />
+              </p>
+            )}
+          </div>
         </div>
         <span aria-hidden="true" className="flex justify-center md:hidden">
           <Arrow direction="down" />
@@ -578,14 +652,17 @@ function Pairs({ shape }: { shape: Extract<DiagramShape, { kind: 'pairs' }> }) {
         <span className="flex-1">{shape.right}</span>
       </p>
       <ul className="flex flex-col gap-2">
-        {shape.pairs.map(([from, to]) => (
+        {shape.pairs.map(([from, to, icon]) => (
           <li key={from} className="flex items-center gap-2">
             <span className="bg-surface border-line rounded-input text-small text-ink-soft min-w-0 flex-1 border p-2.5 break-words">
               <InlineText text={from} />
             </span>
             <Arrow direction="right" />
-            <span className="bg-surface border-line border-t-track-5 rounded-input text-small text-ink min-w-0 flex-1 border border-t-4 p-2.5 font-semibold break-words">
-              <InlineText text={to} />
+            <span className="bg-surface border-line border-t-track-5 rounded-input text-small text-ink flex min-w-0 flex-1 items-center gap-2 border border-t-4 p-2.5 font-semibold break-words">
+              {icon !== undefined && <ProductIcon icon={icon} className="size-9" />}
+              <span className="min-w-0">
+                <InlineText text={to} />
+              </span>
             </span>
           </li>
         ))}
@@ -640,9 +717,35 @@ export function ConceptDiagram({ diagram, id }: ConceptDiagramProps) {
           {diagram.title}
         </span>
       </p>
+      {diagram.scenario !== undefined && (
+        <p className="text-body text-ink-soft">
+          <span className="eyebrow text-brand-deep mr-2">Scenario</span>
+          <InlineText text={diagram.scenario} />
+        </p>
+      )}
       <Shape diagram={diagram} />
-      <figcaption className="text-small text-ink-soft border-line border-t pt-3">
-        <InlineText text={diagram.caption} />
+      {diagram.walk !== undefined && diagram.walk.length > 0 && (
+        <div className="bg-surface border-line rounded-input flex flex-col gap-3 border p-4">
+          <p className="eyebrow text-ink-faint">Read it step by step</p>
+          <ol className="flex flex-col gap-2.5">
+            {diagram.walk.map((line, index) => (
+              <li key={line} className="text-body text-ink-soft flex items-start gap-2.5">
+                <span className="mt-0.5">
+                  <StepNumber n={index + 1} />
+                </span>
+                <span className="min-w-0">
+                  <InlineText text={line} />
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+      <figcaption className="border-l-gold text-body text-ink flex flex-col gap-1 border-l-4 pl-3">
+        <span className="eyebrow text-ink-faint">Remember</span>
+        <span>
+          <InlineText text={diagram.caption} />
+        </span>
       </figcaption>
     </figure>
   );
