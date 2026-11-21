@@ -81,7 +81,9 @@ The learner ticks each step. The ticks stay in the browser (`localStorage`) beca
 
 Every concept on a station opens with at least one diagram. The station page shows it above the concept text. The diagrams are data in `diagrams/<line>.ts`. The component [`components/gcp/ConceptDiagram.tsx`](../../../components/gcp/ConceptDiagram.tsx) draws them in HTML with the design tokens. So a diagram follows light and dark mode, stays readable on a phone, and reaches a screen reader.
 
-A diagram has a `kind`. Each kind reads top to bottom on a phone and spreads out from `md` up.
+A diagram has a `kind`. Each kind reads top to bottom when it is narrow and spreads out as it gets wider.
+
+The layout uses container queries (`@md:`, `@2xl:`, `@4xl:`), not viewport breakpoints. The diagram measures its own width. On a desktop the lesson column is only two thirds of the page, so a viewport breakpoint gives five columns of about 100px and the titles break letter by letter. Do not add `sm:`, `md:` or `lg:` inside a shape.
 
 | Kind       | Use it for                                                                   |
 | ---------- | ---------------------------------------------------------------------------- |

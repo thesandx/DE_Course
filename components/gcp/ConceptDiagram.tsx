@@ -53,26 +53,32 @@ const TONES: Readonly<Record<DiagramTone, ToneStyle>> = {
 
 const tone = (value: DiagramTone | undefined): ToneStyle => TONES[value ?? 'plain'];
 
-/** Column counts as literal classes. A phone always gets one column. */
+/**
+ * Column counts as literal classes. They are container queries, not viewport
+ * breakpoints: the lesson column is narrow on a desktop, and a side panel can
+ * make it narrower still, so the diagram counts the room it has. A box needs
+ * about 10rem before its title wraps badly. A phone always gets one column.
+ */
 const COLUMNS: Readonly<Record<number, string>> = {
   1: '',
-  2: 'sm:grid-cols-2',
-  3: 'sm:grid-cols-2 lg:grid-cols-3',
-  4: 'sm:grid-cols-2 lg:grid-cols-4',
-  5: 'sm:grid-cols-2 lg:grid-cols-5',
-  6: 'sm:grid-cols-2 lg:grid-cols-3',
+  2: '@md:grid-cols-2',
+  3: '@md:grid-cols-2 @2xl:grid-cols-3',
+  4: '@md:grid-cols-2 @4xl:grid-cols-4',
+  5: '@md:grid-cols-2 @2xl:grid-cols-3 @5xl:grid-cols-5',
+  6: '@md:grid-cols-2 @2xl:grid-cols-3',
 };
 
-const columns = (count: number): string => COLUMNS[count] ?? 'sm:grid-cols-2 lg:grid-cols-3';
+const columns = (count: number): string => COLUMNS[count] ?? '@md:grid-cols-2 @2xl:grid-cols-3';
 
 /** How far each band of a nested stack steps in. */
-const INDENT: readonly string[] = ['', 'ml-2 sm:ml-6', 'ml-4 sm:ml-12', 'ml-6 sm:ml-18'];
+const INDENT: readonly string[] = ['', 'ml-2 @md:ml-6', 'ml-4 @md:ml-12', 'ml-6 @md:ml-18'];
 
 type Direction = 'down' | 'right' | 'flow' | 'flow-wide';
 
 /**
- * An arrow. `flow` points down on a phone and right from `md` up; `flow-wide`
- * waits for `lg`, for a flow with five or more steps.
+ * An arrow. `flow` points down in a narrow diagram and right once the diagram
+ * is `@2xl` wide; `flow-wide` waits for `@4xl`, for a flow with five or more
+ * steps. Both measure the diagram, not the window.
  */
 function Arrow({ direction, className }: { direction: Direction; className?: string }) {
   return (
@@ -87,8 +93,8 @@ function Arrow({ direction, className }: { direction: Direction; className?: str
       className={cn(
         'text-ink-faint size-5 shrink-0',
         direction === 'down' && 'rotate-90',
-        direction === 'flow' && 'rotate-90 md:rotate-0',
-        direction === 'flow-wide' && 'rotate-90 lg:rotate-0',
+        direction === 'flow' && 'rotate-90 @2xl:rotate-0',
+        direction === 'flow-wide' && 'rotate-90 @4xl:rotate-0',
         className,
       )}
     >
@@ -151,8 +157,8 @@ function Box({ box, className, stack }: { box: DiagramBox; className?: string; s
     <div
       className={cn(
         'bg-surface border-line rounded-input shadow-card flex min-w-0 items-start gap-3 border border-t-4 p-3',
-        stack === 'md' && 'md:flex-col md:items-center md:text-center',
-        stack === 'lg' && 'lg:flex-col lg:items-center lg:text-center',
+        stack === 'md' && '@2xl:flex-col @2xl:items-center @2xl:text-center',
+        stack === 'lg' && '@4xl:flex-col @4xl:items-center @4xl:text-center',
         tone(box.tone).edge,
         className,
       )}
@@ -161,16 +167,16 @@ function Box({ box, className, stack }: { box: DiagramBox; className?: string; s
       <div
         className={cn(
           'flex min-w-0 flex-1 flex-col gap-1.5',
-          stack === 'md' && 'md:items-center',
-          stack === 'lg' && 'lg:items-center',
+          stack === 'md' && '@2xl:items-center',
+          stack === 'lg' && '@4xl:items-center',
         )}
       >
         {box.zone !== undefined && <p className="eyebrow text-ink-faint">{box.zone}</p>}
         <p
           className={cn(
             'text-body text-ink flex items-start gap-2 font-semibold break-words',
-            stack === 'md' && 'md:justify-center',
-            stack === 'lg' && 'lg:justify-center',
+            stack === 'md' && '@2xl:justify-center',
+            stack === 'lg' && '@4xl:justify-center',
           )}
         >
           {box.n !== undefined && (
@@ -201,7 +207,7 @@ function Flow({ shape }: { shape: Extract<DiagramShape, { kind: 'flow' }> }) {
       <ol
         className={cn(
           'flex flex-col items-stretch gap-1',
-          wide ? 'lg:flex-row lg:items-center' : 'md:flex-row md:items-center',
+          wide ? '@4xl:flex-row @4xl:items-center' : '@2xl:flex-row @2xl:items-center',
         )}
       >
         {shape.steps.map((step, index) => {
@@ -212,27 +218,27 @@ function Flow({ shape }: { shape: Extract<DiagramShape, { kind: 'flow' }> }) {
               className={cn(
                 'flex min-w-0 flex-col items-stretch gap-1',
                 wide
-                  ? 'lg:flex-1 lg:flex-row lg:items-center'
-                  : 'md:flex-1 md:flex-row md:items-center',
+                  ? '@4xl:flex-1 @4xl:flex-row @4xl:items-center'
+                  : '@2xl:flex-1 @2xl:flex-row @2xl:items-center',
               )}
             >
               <Box
                 box={step}
                 stack={wide ? 'lg' : 'md'}
-                className={wide ? 'lg:flex-1 lg:self-stretch' : 'md:flex-1 md:self-stretch'}
+                className={wide ? '@4xl:flex-1 @4xl:self-stretch' : '@2xl:flex-1 @2xl:self-stretch'}
               />
               {index < shape.steps.length - 1 && (
                 <div
                   className={cn(
                     'flex items-center gap-2 py-1 pl-4',
                     wide
-                      ? 'lg:w-14 lg:shrink-0 lg:flex-col lg:gap-0.5 lg:px-0 lg:py-0'
-                      : 'md:w-14 md:shrink-0 md:flex-col md:gap-0.5 md:px-0 md:py-0',
+                      ? '@4xl:w-14 @4xl:shrink-0 @4xl:flex-col @4xl:gap-0.5 @4xl:px-0 @4xl:py-0'
+                      : '@2xl:w-14 @2xl:shrink-0 @2xl:flex-col @2xl:gap-0.5 @2xl:px-0 @2xl:py-0',
                   )}
                 >
                   <Arrow direction={direction} />
                   {edge !== undefined && (
-                    <span className="text-micro text-ink-soft font-mono lg:text-center">
+                    <span className="text-micro text-ink-soft font-mono @4xl:text-center">
                       {edge}
                     </span>
                   )}
@@ -266,8 +272,8 @@ function Decision({ shape }: { shape: Extract<DiagramShape, { kind: 'decision' }
     <ol className="flex flex-col">
       {shape.questions.map((question, index) => (
         <li key={question.ask} className="flex flex-col">
-          <div className="flex flex-col gap-1 md:flex-row md:items-center md:gap-2">
-            <p className="bg-surface border-line-strong rounded-input text-small text-ink flex min-w-0 items-start gap-2 border border-dashed p-3 md:flex-1">
+          <div className="flex flex-col gap-1 @2xl:flex-row @2xl:items-center @2xl:gap-2">
+            <p className="bg-surface border-line-strong rounded-input text-small text-ink flex min-w-0 items-start gap-2 border border-dashed p-3 @2xl:flex-1">
               <span className="bg-ink text-on-ink rounded-box text-micro shrink-0 px-1.5 py-0.5 font-mono">
                 Q{index + 1}
               </span>
@@ -275,11 +281,11 @@ function Decision({ shape }: { shape: Extract<DiagramShape, { kind: 'decision' }
                 <InlineText text={question.ask} />
               </span>
             </p>
-            <span className="text-micro text-easy flex items-center gap-1 pl-4 font-mono font-semibold md:flex-col md:gap-0 md:pl-0">
+            <span className="text-micro text-easy flex items-center gap-1 pl-4 font-mono font-semibold @2xl:flex-col @2xl:gap-0 @2xl:pl-0">
               <Arrow direction="flow" className="text-easy" />
               Yes
             </span>
-            <Box box={question.yes} className="md:w-2/5 md:shrink-0" />
+            <Box box={question.yes} className="@2xl:w-2/5 @2xl:shrink-0" />
           </div>
           <p className="text-micro text-hard flex items-center gap-1 py-1.5 pl-4 font-mono font-semibold">
             <Arrow direction="down" className="text-hard" />
@@ -287,11 +293,11 @@ function Decision({ shape }: { shape: Extract<DiagramShape, { kind: 'decision' }
           </p>
         </li>
       ))}
-      <li className="flex flex-col gap-1 md:flex-row md:items-center md:gap-2">
-        <p className="text-micro text-ink-soft font-mono md:flex-1 md:text-right">
+      <li className="flex flex-col gap-1 @2xl:flex-row @2xl:items-center @2xl:gap-2">
+        <p className="text-micro text-ink-soft font-mono @2xl:flex-1 @2xl:text-right">
           None of the above
         </p>
-        <Box box={shape.otherwise} className="md:w-2/5 md:shrink-0" />
+        <Box box={shape.otherwise} className="@2xl:w-2/5 @2xl:shrink-0" />
       </li>
     </ol>
   );
@@ -331,15 +337,15 @@ function Layers({ shape }: { shape: Extract<DiagramShape, { kind: 'layers' }> })
 function Spectrum({ shape }: { shape: Extract<DiagramShape, { kind: 'spectrum' }> }) {
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-micro text-ink-soft hidden items-center gap-2 font-mono md:flex">
+      <p className="text-micro text-ink-soft hidden items-center gap-2 font-mono @2xl:flex">
         <span className="shrink-0">{shape.from}</span>
         <span aria-hidden="true" className="bg-line-strong h-px flex-1" />
         <Arrow direction="right" className="-ml-3" />
         <span className="shrink-0">{shape.to}</span>
       </p>
-      <p className="text-micro text-ink-soft font-mono md:hidden">{shape.from}</p>
+      <p className="text-micro text-ink-soft font-mono @2xl:hidden">{shape.from}</p>
       <div className="flex gap-3">
-        <div aria-hidden="true" className="flex flex-col items-center md:hidden">
+        <div aria-hidden="true" className="flex flex-col items-center @2xl:hidden">
           <span className="bg-line-strong w-px flex-1" />
           <Arrow direction="down" className="-mt-1" />
         </div>
@@ -351,7 +357,7 @@ function Spectrum({ shape }: { shape: Extract<DiagramShape, { kind: 'spectrum' }
           ))}
         </ol>
       </div>
-      <p className="text-micro text-ink-soft font-mono md:hidden">{shape.to}</p>
+      <p className="text-micro text-ink-soft font-mono @2xl:hidden">{shape.to}</p>
     </div>
   );
 }
@@ -414,8 +420,8 @@ function Compare({ shape }: { shape: Extract<DiagramShape, { kind: 'compare' }> 
 
 function Spoke({ box, side }: { box: DiagramBox; side: 'left' | 'right' }) {
   return (
-    <li className={cn('flex items-center', side === 'left' && 'md:flex-row-reverse')}>
-      <span aria-hidden="true" className="bg-line-strong hidden h-px w-4 shrink-0 md:block" />
+    <li className={cn('flex items-center', side === 'left' && '@2xl:flex-row-reverse')}>
+      <span aria-hidden="true" className="bg-line-strong hidden h-px w-4 shrink-0 @2xl:block" />
       <Box box={box} className="flex-1" />
     </li>
   );
@@ -426,14 +432,14 @@ function Hub({ shape }: { shape: Extract<DiagramShape, { kind: 'hub' }> }) {
   const left = shape.spokes.slice(0, half);
   const right = shape.spokes.slice(half);
   return (
-    <div className="flex flex-col gap-2 md:grid md:grid-cols-3 md:items-center md:gap-0">
-      <ul className="order-3 flex flex-col gap-2 md:order-1">
+    <div className="flex flex-col gap-2 @2xl:grid @2xl:grid-cols-3 @2xl:items-center @2xl:gap-0">
+      <ul className="order-3 flex flex-col gap-2 @2xl:order-1">
         {left.map((box) => (
           <Spoke key={box.label} box={box} side="left" />
         ))}
       </ul>
-      <div className="order-1 flex flex-col items-stretch gap-1 md:order-2">
-        <div className="bg-night text-on-night border-night-line rounded-card shadow-raised flex items-center gap-3 border p-4 md:flex-col md:text-center">
+      <div className="order-1 flex flex-col items-stretch gap-1 @2xl:order-2">
+        <div className="bg-night text-on-night border-night-line rounded-card shadow-raised flex items-center gap-3 border p-4 @2xl:flex-col @2xl:text-center">
           {shape.center.icon !== undefined && <ProductIcon icon={shape.center.icon} />}
           <div className="flex min-w-0 flex-col gap-1.5">
             <p className="text-body font-semibold">
@@ -446,11 +452,11 @@ function Hub({ shape }: { shape: Extract<DiagramShape, { kind: 'hub' }> }) {
             )}
           </div>
         </div>
-        <span aria-hidden="true" className="flex justify-center md:hidden">
+        <span aria-hidden="true" className="flex justify-center @2xl:hidden">
           <Arrow direction="down" />
         </span>
       </div>
-      <ul className="order-4 flex flex-col gap-2 md:order-3">
+      <ul className="order-4 flex flex-col gap-2 @2xl:order-3">
         {right.map((box) => (
           <Spoke key={box.label} box={box} side="right" />
         ))}
@@ -462,11 +468,11 @@ function Hub({ shape }: { shape: Extract<DiagramShape, { kind: 'hub' }> }) {
 function Lane({ lane, marks }: { lane: DiagramLane; marks: readonly { at: number }[] }) {
   const twoRows = lane.spans?.some((span) => span.row === 1) ?? false;
   return (
-    <li className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
-      <p className="text-micro text-ink-soft font-mono sm:w-28 sm:shrink-0">{lane.label}</p>
+    <li className="flex flex-col gap-1 @md:flex-row @md:items-center @md:gap-3">
+      <p className="text-micro text-ink-soft font-mono @md:w-28 @md:shrink-0">{lane.label}</p>
       <div
         className={cn(
-          'bg-surface border-line rounded-input relative w-full shrink-0 overflow-hidden border sm:w-auto sm:flex-1',
+          'bg-surface border-line rounded-input relative w-full shrink-0 overflow-hidden border @md:w-auto @md:flex-1',
           twoRows ? 'h-16' : 'h-10',
         )}
       >
@@ -512,8 +518,8 @@ function Timeline({ shape }: { shape: Extract<DiagramShape, { kind: 'timeline' }
   return (
     <div className="flex flex-col gap-2">
       {marks.length > 0 && (
-        <div className="flex sm:gap-3">
-          <span aria-hidden="true" className="hidden sm:block sm:w-28 sm:shrink-0" />
+        <div className="flex @md:gap-3">
+          <span aria-hidden="true" className="hidden @md:block @md:w-28 @md:shrink-0" />
           <p className="text-micro text-hard relative h-4 flex-1 font-mono">
             {marks.map((mark) => (
               <span
@@ -532,8 +538,8 @@ function Timeline({ shape }: { shape: Extract<DiagramShape, { kind: 'timeline' }
           <Lane key={lane.label} lane={lane} marks={marks} />
         ))}
       </ol>
-      <div className="flex sm:gap-3">
-        <span aria-hidden="true" className="hidden sm:block sm:w-28 sm:shrink-0" />
+      <div className="flex @md:gap-3">
+        <span aria-hidden="true" className="hidden @md:block @md:w-28 @md:shrink-0" />
         <p className="text-micro text-ink-soft flex flex-1 items-center gap-2 font-mono">
           <span>{shape.axis.start}</span>
           <span aria-hidden="true" className="bg-line-strong h-px flex-1" />
@@ -552,7 +558,7 @@ function Grid({ shape }: { shape: Extract<DiagramShape, { kind: 'grid' }> }) {
       <table className="w-full table-fixed border-separate border-spacing-1">
         <thead>
           <tr>
-            <th scope="col" className="w-20 sm:w-28">
+            <th scope="col" className="w-20 @md:w-28">
               <span className="sr-only">Block</span>
             </th>
             {shape.columns.map((column) => (
@@ -612,7 +618,7 @@ function Grid({ shape }: { shape: Extract<DiagramShape, { kind: 'grid' }> }) {
 
 function Boundary({ shape }: { shape: Extract<DiagramShape, { kind: 'boundary' }> }) {
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:items-center">
+    <div className="grid grid-cols-1 gap-3 @2xl:grid-cols-2 @2xl:items-center">
       <div className="border-brand rounded-card flex flex-col gap-2 border border-dashed p-3">
         <p className="eyebrow text-brand-deep">{shape.inside.label}</p>
         <ul className="grid grid-cols-1 gap-2">
@@ -700,7 +706,9 @@ function Shape({ diagram }: { diagram: CourseDiagram }) {
  * A picture of one concept, drawn from data in `lib/course/gcp/diagrams/`.
  * The boxes are HTML, not an image, so the text stays readable on a phone,
  * follows light and dark mode, and reaches a screen reader. Every shape reads
- * top to bottom on a phone and spreads out from `md` up.
+ * top to bottom when it is narrow and spreads out as its container grows. The
+ * shape measures its own width (`@container`), never the window, because the
+ * same lesson column is narrow on a desktop beside the outline or a panel.
  */
 export function ConceptDiagram({ diagram, id }: ConceptDiagramProps) {
   const headingId = `${id}-title`;
@@ -723,7 +731,9 @@ export function ConceptDiagram({ diagram, id }: ConceptDiagramProps) {
           <InlineText text={diagram.scenario} />
         </p>
       )}
-      <Shape diagram={diagram} />
+      <div className="@container">
+        <Shape diagram={diagram} />
+      </div>
       {diagram.walk !== undefined && diagram.walk.length > 0 && (
         <div className="bg-surface border-line rounded-input flex flex-col gap-3 border p-4">
           <p className="eyebrow text-ink-faint">Read it step by step</p>
