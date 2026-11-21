@@ -17,6 +17,7 @@ import {
   FORMAT_MODES,
   type FormatMode,
   MAX_FORMAT_INSTRUCTION,
+  needsNote,
 } from '@/lib/notes/limits';
 import { cn } from '@/lib/utils';
 
@@ -28,8 +29,12 @@ export interface NoteFormatPanelProps {
   enabled: boolean;
   /** The note as it is now in the editor. */
   getMarkdown: () => string;
-  /** The learner chose Pip's version. */
+  /** The learner chose Pip's version of their note. */
   onUse: (markdown: string) => void;
+  /** The learner chose to add Pip's revision notes under their own. */
+  onAppend: (markdown: string) => void;
+  /** True when the note has no words yet. Only "Revision notes" works then. */
+  empty: boolean;
   onClose: () => void;
   className?: string | undefined;
 }
@@ -46,20 +51,24 @@ function readModel(): string {
 }
 
 /**
- * "Format with Pip": the learner picks how (tidy, revision sheet, or their own
- * words), Pip streams a formatted copy, and the learner sees it before
- * choosing. Nothing changes until they press "Use Pip's version", and undo in
- * the editor brings their own version back after that.
+ * "Notes with Pip": the learner picks what Pip does. "Revision notes" writes
+ * quick notes from the chapter, which go under the learner's own. The other
+ * modes (tidy, revision sheet, or their own words) rewrite the learner's
+ * note. Pip streams the answer, and the learner sees it before choosing.
+ * Nothing changes until they press "Add to my notes" or "Use Pip's version",
+ * and undo in the editor takes it back after that.
  */
 export function NoteFormatPanel({
   noteKey,
   enabled,
   getMarkdown,
   onUse,
+  onAppend,
+  empty,
   onClose,
   className,
 }: NoteFormatPanelProps) {
-  const [mode, setMode] = useState<FormatMode>('tidy');
+  const [mode, setMode] = useState<FormatMode>(empty ? 'summary' : 'tidy');
   const [instruction, setInstruction] = useState('');
   // The panel opens on a click, so it never renders on the server.
   const [model, setModel] = useState(readModel);
@@ -155,13 +164,15 @@ export function NoteFormatPanel({
           blink={phase !== 'working'}
         />
         <div className="flex min-w-0 flex-1 flex-col">
-          <p className="text-heading font-display leading-tight font-semibold">Format with Pip</p>
+          <p className="text-heading font-display leading-tight font-semibold">Notes with Pip</p>
           <p className="text-small text-ink-soft">
             {phase === 'working'
-              ? 'Pip is tidying your notes…'
+              ? mode === 'summary'
+                ? 'Pip is reading the chapter…'
+                : 'Pip is tidying your notes…'
               : phase === 'done'
                 ? 'Here is Pip’s version. Your note has not changed yet.'
-                : 'Pip rewrites a copy. You choose whether to use it.'}
+                : 'Pip writes a copy. You choose whether to use it.'}
           </p>
         </div>
         <button
@@ -170,7 +181,7 @@ export function NoteFormatPanel({
             abortRef.current?.abort();
             onClose();
           }}
-          aria-label="Close Format with Pip"
+          aria-label="Close Notes with Pip"
           className="text-ink-faint hover:text-ink inline-grid size-11 shrink-0 place-items-center"
         >
           <svg
@@ -188,19 +199,24 @@ export function NoteFormatPanel({
 
       {!enabled ? (
         <Alert tone="info" title="Pip is not set up yet">
-          Add the OpenRouter key on the server to turn on formatting. Your notes work without it.
+          Add the OpenRouter key on the server to turn on Pip for notes. Your notes work without it.
         </Alert>
       ) : phase === 'choose' ? (
         <>
           <fieldset className="flex flex-col gap-2">
-            <legend className="eyebrow text-ink-faint mb-2">How should Pip format it?</legend>
-            <div className="grid gap-2 sm:grid-cols-3">
+            <legend className="eyebrow text-ink-faint mb-2">What should Pip do?</legend>
+            <div className="grid gap-2 sm:grid-cols-2">
               {FORMAT_MODES.map((option) => (
                 <label
                   key={option}
                   className={cn(
-                    'rounded-input bg-surface flex min-h-11 cursor-pointer flex-col gap-0.5 border px-3 py-2',
-                    mode === option ? 'border-ink' : 'border-line hover:border-line-strong',
+                    'rounded-input bg-surface flex min-h-11 flex-col gap-0.5 border px-3 py-2',
+                    empty && needsNote(option)
+                      ? 'border-line cursor-not-allowed opacity-50'
+                      : 'cursor-pointer',
+                    mode === option
+                      ? 'border-ink'
+                      : !(empty && needsNote(option)) && 'border-line hover:border-line-strong',
                   )}
                 >
                   <span className="flex items-center gap-2">
@@ -209,6 +225,7 @@ export function NoteFormatPanel({
                       name={`format-mode-${noteKey}`}
                       value={option}
                       checked={mode === option}
+                      disabled={empty && needsNote(option)}
                       onChange={() => setMode(option)}
                       className="accent-brand size-4"
                     />
@@ -254,13 +271,15 @@ export function NoteFormatPanel({
             <Button
               className="w-full sm:w-auto"
               onClick={() => void start()}
-              disabled={mode === 'custom' && instruction.trim() === ''}
+              disabled={
+                (mode === 'custom' && instruction.trim() === '') || (empty && needsNote(mode))
+              }
             >
-              Format my notes
+              {mode === 'summary' ? 'Write revision notes' : 'Format my notes'}
             </Button>
           </div>
           {error !== null && (
-            <Alert tone="danger" title="Pip could not format the note">
+            <Alert tone="danger" title="Pip could not help just now">
               {error}
             </Alert>
           )}
@@ -273,7 +292,9 @@ export function NoteFormatPanel({
                 <span className="animate-breathe bg-brand size-2 rounded-full" />
                 <span className="animate-breathe bg-iris size-2 rounded-full" />
                 <span className="animate-breathe bg-gold-deep size-2 rounded-full" />
-                <span className="ml-1">Reading your notes…</span>
+                <span className="ml-1">
+                  {mode === 'summary' ? 'Reading the chapter…' : 'Reading your notes…'}
+                </span>
               </p>
             ) : (
               <NoteView markdown={unwrapAnswer(result)} />
@@ -286,7 +307,11 @@ export function NoteFormatPanel({
               </Button>
             ) : (
               <>
-                <Button onClick={() => onUse(unwrapAnswer(result))}>Use Pip’s version</Button>
+                {mode === 'summary' ? (
+                  <Button onClick={() => onAppend(unwrapAnswer(result))}>Add to my notes</Button>
+                ) : (
+                  <Button onClick={() => onUse(unwrapAnswer(result))}>Use Pip’s version</Button>
+                )}
                 <Button variant="secondary" onClick={() => setPhase('choose')}>
                   Try another way
                 </Button>

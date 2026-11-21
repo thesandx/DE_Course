@@ -8,6 +8,7 @@ import {
   escapeHtml,
   HIGHLIGHT_COLORS,
   type HighlightColor,
+  imageToHtml,
   inlineToHtml,
   parseNote,
   serializeNote,
@@ -22,6 +23,10 @@ export interface NoteEditorHandle {
   replace: (markdown: string) => void;
   /** Adds text from the lesson as a quote at the end of the note. */
   appendQuote: (text: string) => void;
+  /** Adds Markdown (such as Pip's revision notes) at the end of the note. Undo takes it out. */
+  appendMarkdown: (markdown: string) => void;
+  /** Puts an uploaded image where the caret was, or at the end. */
+  insertImage: (id: string, alt: string) => void;
   focus: () => void;
 }
 
@@ -35,6 +40,12 @@ export interface NoteEditorProps {
   placeholder?: string;
   /** Taller writing area, for the full-screen mode. */
   tall?: boolean;
+  /**
+   * Called with image files the learner picked, pasted or dropped. The editor
+   * shows an image button only when this is set. The caller uploads the files
+   * and calls `insertImage` for each.
+   */
+  onImageFiles?: (files: File[]) => void;
   ref?: React.Ref<NoteEditorHandle>;
 }
 
@@ -229,7 +240,19 @@ function convertBlock(block: HTMLElement, kind: string): void {
 }
 
 function isEmptyDoc(root: HTMLElement): boolean {
-  return (root.textContent ?? '').trim() === '' && root.querySelector('hr,li') === null;
+  return (root.textContent ?? '').trim() === '' && root.querySelector('hr,li,figure') === null;
+}
+
+/** Image files in a paste or a drop. Anything else is left to the text path. */
+function imageFiles(list: FileList | null | undefined): File[] {
+  return Array.from(list ?? []).filter((file) => file.type.startsWith('image/'));
+}
+
+/** The child of `root` that holds `node`, or null when the node is not inside it. */
+function topBlock(root: HTMLElement, node: Node | null): HTMLElement | null {
+  let current: Node | null = node;
+  while (current !== null && current.parentNode !== root) current = current.parentNode;
+  return current !== null && current.nodeType === 1 ? (current as HTMLElement) : null;
 }
 
 interface Tool {
@@ -282,8 +305,11 @@ export function NoteEditor({
   label,
   placeholder,
   tall = false,
+  onImageFiles,
   ref,
 }: NoteEditorProps) {
+  const fileInput = useRef<HTMLInputElement | null>(null);
+  const [picked, setPicked] = useState<HTMLElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const savedRange = useRef<Range | null>(null);
   const history = useRef<{ stack: Snapshot[]; index: number }>({ stack: [], index: -1 });
@@ -391,7 +417,7 @@ export function NoteEditor({
     for (const paragraph of Array.from(element.querySelectorAll('p'))) {
       if (
         paragraph.querySelector(
-          ':scope > ul, :scope > ol, :scope > blockquote, :scope > pre, :scope > h2, :scope > h3, :scope > h4, :scope > p',
+          ':scope > ul, :scope > ol, :scope > blockquote, :scope > pre, :scope > h2, :scope > h3, :scope > h4, :scope > p, :scope > figure',
         ) !== null
       ) {
         paragraph.replaceWith(...Array.from(paragraph.childNodes));
@@ -400,7 +426,7 @@ export function NoteEditor({
     // A code block, quote or divider at the very end needs a line after it,
     // or the caret cannot leave it.
     const last = element.lastElementChild;
-    if (last !== null && ['PRE', 'HR', 'BLOCKQUOTE'].includes(last.tagName)) {
+    if (last !== null && ['PRE', 'HR', 'BLOCKQUOTE', 'FIGURE'].includes(last.tagName)) {
       element.insertAdjacentHTML('beforeend', EMPTY_HTML);
     }
   }, []);
@@ -647,6 +673,39 @@ export function NoteEditor({
           element.lastElementChild?.scrollIntoView({ block: 'nearest' });
         });
       },
+      appendMarkdown(markdown: string) {
+        run((element) => {
+          if (isEmptyDoc(element)) element.innerHTML = '';
+          element.insertAdjacentHTML('beforeend', blocksToHtml(parseNote(markdown)) + EMPTY_HTML);
+          placeCaret(element, null);
+        });
+      },
+      insertImage(id: string, alt: string) {
+        const html = imageToHtml(id, alt);
+        if (html === '') return;
+        run((element) => {
+          const at = topBlock(element, savedRange.current?.endContainer ?? null);
+          const template = document.createElement('template');
+          template.innerHTML = html;
+          const figure = template.content.firstElementChild;
+          if (figure === null) return;
+          if (at === null) element.append(figure);
+          else if (at.tagName === 'P' && (at.textContent ?? '').trim() === '')
+            at.replaceWith(figure);
+          else at.after(figure);
+          // A line after the image, so the learner keeps writing under it.
+          const after = figure.nextElementSibling;
+          let line: Element;
+          if (after?.tagName === 'P' && (after.textContent ?? '').trim() === '') line = after;
+          else {
+            figure.insertAdjacentHTML('afterend', EMPTY_HTML);
+            line = figure.nextElementSibling ?? figure;
+          }
+          placeAtStart(line as HTMLElement);
+          savedRange.current = currentRange(element)?.cloneRange() ?? null;
+          figure.scrollIntoView({ block: 'nearest' });
+        });
+      },
       focus() {
         rootRef.current?.focus();
       },
@@ -694,6 +753,17 @@ export function NoteEditor({
 
   function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     const element = event.currentTarget;
+    if (picked !== null) {
+      if (event.key === 'Backspace' || event.key === 'Delete') {
+        event.preventDefault();
+        const figure = picked;
+        setPicked(null);
+        run(() => figure.remove());
+        return;
+      }
+      picked.classList.remove('is-selected');
+      setPicked(null);
+    }
     const mod = event.metaKey || event.ctrlKey;
     const key = event.key.toLowerCase();
 
@@ -810,6 +880,15 @@ export function NoteEditor({
 
   function onPointerDown(event: React.PointerEvent<HTMLDivElement>) {
     const target = event.target as Element;
+    // Tapping an image picks it, so Backspace or Delete removes it whole.
+    const figure = target.closest('figure[data-image]');
+    picked?.classList.remove('is-selected');
+    if (figure instanceof HTMLElement) {
+      figure.classList.add('is-selected');
+      setPicked(figure);
+    } else if (picked !== null) {
+      setPicked(null);
+    }
     const item = target.closest('li');
     if (item === null || item.parentElement?.getAttribute('data-type') !== 'check') return;
     const box = item.getBoundingClientRect();
@@ -828,6 +907,12 @@ export function NoteEditor({
 
   function onPaste(event: React.ClipboardEvent<HTMLDivElement>) {
     event.preventDefault();
+    const images = imageFiles(event.clipboardData.files);
+    if (images.length > 0 && onImageFiles !== undefined) {
+      refreshTools();
+      onImageFiles(images);
+      return;
+    }
     const html = event.clipboardData.getData('text/html');
     const text = event.clipboardData.getData('text/plain');
     flushTyping();
@@ -849,8 +934,16 @@ export function NoteEditor({
   }
 
   function onDrop(event: React.DragEvent<HTMLDivElement>) {
-    // Notes hold text. A dropped image or file would only be lost on save.
-    if (event.dataTransfer.files.length > 0) event.preventDefault();
+    if (event.dataTransfer.files.length === 0) return;
+    // A file never goes in as markup. Images go to the upload; anything else is refused.
+    event.preventDefault();
+    const images = imageFiles(event.dataTransfer.files);
+    if (images.length === 0 || onImageFiles === undefined) return;
+    const element = event.currentTarget;
+    // Put the image where it was dropped, when the browser can say where that is.
+    const point = document.caretRangeFromPoint?.(event.clientX, event.clientY) ?? null;
+    if (point !== null && element.contains(point.startContainer)) savedRange.current = point;
+    onImageFiles(images);
   }
 
   /* ---------------------------------------------------------------- */
@@ -938,6 +1031,9 @@ export function NoteEditor({
       },
       { icon: 'clear', label: 'Clear formatting' },
     ],
+    ...(onImageFiles === undefined
+      ? []
+      : [[{ icon: 'image', label: 'Add an image' } satisfies Tool]]),
   ];
 
   function perform(id: ToolIconName) {
@@ -987,6 +1083,10 @@ export function NoteEditor({
       case 'clear':
         clearFormat();
         return;
+      case 'image':
+        refreshTools();
+        fileInput.current?.click();
+        return;
       default:
         return;
     }
@@ -996,6 +1096,22 @@ export function NoteEditor({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      {onImageFiles !== undefined && (
+        <input
+          ref={fileInput}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          multiple
+          hidden
+          aria-hidden="true"
+          tabIndex={-1}
+          onChange={(event) => {
+            const files = imageFiles(event.target.files);
+            event.target.value = '';
+            if (files.length > 0) onImageFiles(files);
+          }}
+        />
+      )}
       <div
         role="toolbar"
         aria-label="Formatting"

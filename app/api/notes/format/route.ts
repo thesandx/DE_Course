@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
+import { contextForPath } from '@/lib/assistant/context';
 import { MODEL_FAILURES } from '@/lib/assistant/failures';
 import { RateLimiter } from '@/lib/assistant/rate-limit';
 import { mapHttpError } from '@/lib/http-errors';
@@ -12,8 +13,10 @@ import { requireUser } from '@/services/auth.service';
 import { AssistantError, streamAnswer } from '@/services/openrouter.service';
 
 /**
- * `POST /api/notes/format` asks Pip to format a note, and streams the
- * formatted note back as plain UTF-8 text.
+ * `POST /api/notes/format` asks Pip to format a note, or to write revision
+ * notes from the chapter (mode `summary`), and streams the answer back as
+ * plain UTF-8 text. The chapter's text comes from the catalogue on the
+ * server, never from the request.
  *
  * The body carries the note itself, not a key to read it by: the browser's
  * copy can be newer than the stored one while the learner is offline or
@@ -65,7 +68,14 @@ export async function POST(request: Request): Promise<Response> {
 
     const stream = await streamAnswer(
       input.model,
-      buildFormatMessages(target, input.markdown, input.mode, input.instruction),
+      buildFormatMessages(
+        target,
+        input.markdown,
+        input.mode,
+        input.instruction,
+        // Revision notes are written from the chapter, read here from the catalogue.
+        input.mode === 'summary' ? contextForPath(target.href).text : '',
+      ),
       request.signal,
       false,
       { maxTokens: FORMAT_MAX_TOKENS, timeoutMs: FORMAT_TIMEOUT_MS },

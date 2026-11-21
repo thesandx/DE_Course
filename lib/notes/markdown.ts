@@ -20,6 +20,11 @@
  * `++underline++` and `==highlight==` (with `=={green}colour==`). Checklists
  * are GitHub style: `- [ ] item` and `- [x] item`.
  *
+ * Images are one line each: `![caption](/api/notes/images/<id>)`. Only that
+ * URL shape is an image. Any other image link stays plain text, so a note
+ * never loads a picture from another site. The id names an object in the
+ * learner's own folder of the bucket (see `services/note-image.service.ts`).
+ *
  * Pure: no DOM, no I/O. The editor's DOM reader lives in `lib/notes/dom.ts`.
  */
 
@@ -55,7 +60,30 @@ export type Block =
   | ListBlock
   | { type: 'quote'; content: Inline[] }
   | { type: 'code'; language: string; text: string }
-  | { type: 'rule' };
+  | { type: 'rule' }
+  | { type: 'image'; id: string; alt: string };
+
+/** The id of an uploaded note image: random, URL safe. */
+export const NOTE_IMAGE_ID = /^[A-Za-z0-9_-]{16,40}$/;
+
+/** The path the browser loads a note image from. The server checks the session. */
+export function noteImageSrc(id: string): string {
+  return `/api/notes/images/${id}`;
+}
+
+/** The ids of the images in a note, in order. */
+export function noteImageIds(markdown: string): string[] {
+  return parseNote(markdown).flatMap((block) => (block.type === 'image' ? [block.id] : []));
+}
+
+/** Makes a caption safe for `![caption](...)`: one line, no brackets. */
+export function cleanImageAlt(alt: string): string {
+  return alt
+    .replace(/[\[\]\r\n]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120);
+}
 
 export function isHighlightColor(value: string): value is HighlightColor {
   return (HIGHLIGHT_COLORS as readonly string[]).includes(value);
@@ -190,6 +218,7 @@ const FENCE = /^\s*(```+|~~~+)\s*([\w+#.-]*)\s*$/;
 const HEADING = /^(#{1,6})\s+(.*?)\s*#*\s*$/;
 const RULE = /^\s*([-*_])(\s*\1){2,}\s*$/;
 const QUOTE = /^\s*>\s?(.*)$/;
+const IMAGE = /^\s*!\[([^\]\n]*)\]\(\/api\/notes\/images\/([A-Za-z0-9_-]{16,40})\)\s*$/;
 const LIST_ITEM = /^(\s*)([-*+]|\d{1,9}[.)])\s+(?:\[([ xX])\](?:\s+|$))?(.*)$/;
 
 function indentOf(spaces: string): number {
@@ -201,6 +230,7 @@ function startsBlock(line: string): boolean {
     FENCE.test(line) ||
     HEADING.test(line) ||
     RULE.test(line) ||
+    IMAGE.test(line) ||
     QUOTE.test(line) ||
     LIST_ITEM.test(line)
   );
@@ -278,6 +308,13 @@ export function parseNote(markdown: string): Block[] {
       const hashes = (heading[1] ?? '#').length;
       const level = hashes <= 1 ? 1 : hashes === 2 ? 2 : 3;
       blocks.push({ type: 'heading', level, content: parseInline(heading[2] ?? '') });
+      index += 1;
+      continue;
+    }
+
+    const image = IMAGE.exec(line);
+    if (image !== null) {
+      blocks.push({ type: 'image', id: image[2] ?? '', alt: cleanImageAlt(image[1] ?? '') });
       index += 1;
       continue;
     }
@@ -539,6 +576,8 @@ function serializeBlock(block: Block): string {
     }
     case 'rule':
       return '---';
+    case 'image':
+      return `![${cleanImageAlt(block.alt)}](${noteImageSrc(block.id)})`;
     case 'list':
       return serializeList(block, '');
   }
@@ -618,6 +657,17 @@ function listToHtml(list: ListBlock): string {
   return list.style === 'check' ? `<ul data-type="check">${items}</ul>` : `<ul>${items}</ul>`;
 }
 
+/**
+ * A note image. `contenteditable="false"` makes it one unit in the editor:
+ * the caret moves past it, and Backspace removes it whole. The id is checked
+ * against `NOTE_IMAGE_ID` again here, so no other text reaches the `src`.
+ */
+export function imageToHtml(id: string, alt: string): string {
+  if (!NOTE_IMAGE_ID.test(id)) return '';
+  const caption = escapeHtml(cleanImageAlt(alt));
+  return `<figure contenteditable="false" data-image="${id}"><img src="${noteImageSrc(id)}" alt="${caption}" loading="lazy" decoding="async"></figure>`;
+}
+
 /** The editor's HTML for some blocks. Every text character is escaped. */
 export function blocksToHtml(blocks: readonly Block[]): string {
   return blocks
@@ -633,6 +683,8 @@ export function blocksToHtml(blocks: readonly Block[]): string {
           return `<pre data-lang="${escapeHtml(block.language)}">${escapeHtml(block.text) || '<br>'}</pre>`;
         case 'rule':
           return '<hr>';
+        case 'image':
+          return imageToHtml(block.id, block.alt);
         case 'list':
           return listToHtml(block);
       }
@@ -674,6 +726,8 @@ export function noteToPlainText(blocks: readonly Block[]): string {
           return [block.text];
         case 'rule':
           return [];
+        case 'image':
+          return [block.alt === '' ? '[image]' : `[image: ${block.alt}]`];
         case 'list':
           return listText(block);
       }

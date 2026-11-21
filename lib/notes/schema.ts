@@ -5,7 +5,12 @@
 import { z } from 'zod';
 
 import { isAssistantModel } from '@/lib/assistant/models';
-import { FORMAT_MODES, MAX_FORMAT_INSTRUCTION, MAX_NOTE_CHARS } from '@/lib/notes/limits';
+import {
+  FORMAT_MODES,
+  MAX_FORMAT_INSTRUCTION,
+  MAX_NOTE_CHARS,
+  needsNote,
+} from '@/lib/notes/limits';
 import { NOTE_KEY_PATTERN } from '@/lib/notes/targets';
 
 export const noteKeySchema = z.string().regex(NOTE_KEY_PATTERN, 'Name a chapter that takes notes.');
@@ -29,13 +34,16 @@ export const formatNoteSchema = z
     markdown: z
       .string()
       .trim()
-      .min(1, 'Write a note first, then ask Pip to format it.')
       .max(MAX_NOTE_CHARS, `Keep a note under ${MAX_NOTE_CHARS} characters.`),
     mode: z.enum(FORMAT_MODES),
     instruction: z.string().trim().max(MAX_FORMAT_INSTRUCTION).optional(),
     model: z.string().refine(isAssistantModel, 'Pick a model from the list.'),
   })
   .strict()
+  .refine((input) => !needsNote(input.mode) || input.markdown !== '', {
+    message: 'Write a note first, then ask Pip to format it.',
+    path: ['markdown'],
+  })
   .refine((input) => input.mode !== 'custom' || (input.instruction ?? '') !== '', {
     message: 'Tell Pip how to format the note.',
     path: ['instruction'],

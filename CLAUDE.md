@@ -223,6 +223,7 @@ browser bundle.
 | `openrouter.service.ts`    | The AI doubt helper's model calls. Holds the OpenRouter key; streams text   |
 | `notes.service.ts`         | Chapter notes at `notebooks/{uid}/notes/{key}`. The newer edit wins         |
 | `course-video.service.ts`  | Signed read URLs for the course videos in the bucket. `null` when absent    |
+| `note-image.service.ts`    | Note images at `note-images/{uid}/{id}.jpg`. JPEG only; signed reads        |
 | `lib/storage-paths.ts`     | Path construction and upload rules — pure, so it is tested without a bucket |
 | `lib/document-ids.ts`      | Guards a caller-supplied document id against hotspot shapes — pure          |
 | `lib/session-cookie.ts`    | The cookie's name and attributes — pure                                     |
@@ -470,6 +471,7 @@ Recorded in [`docs/adr/`](./docs/adr/). Read before proposing a change to any of
 | [0012](./docs/adr/0012-track-study-time-with-a-browser-heartbeat.md)                     | Study time counted in the browser, one `studyTime` map in `learners/{uid}` — over a sessions subcollection       |
 | [0013](./docs/adr/0013-make-station-videos-with-simcraft-and-keep-them-in-the-bucket.md) | Station videos made with simcraft and a local voice, MP4 files in the bucket — over files in Git or a video site |
 | [0014](./docs/adr/0014-send-images-to-the-ai-helper-inline.md)                           | Images in the AI helper's chat go inline as small JPEG data URLs and are never stored — over a bucket upload     |
+| [0015](./docs/adr/0015-keep-note-images-in-the-bucket-through-the-server.md)             | Note images go through the server into the bucket, under the learner's uid — over a signed upload, over base64   |
 
 Add an ADR when a decision is expensive to reverse, affects how everyone works, or rejects an obvious alternative. Never edit an accepted ADR to change its decision — write a new one that supersedes it, and link both ways.
 

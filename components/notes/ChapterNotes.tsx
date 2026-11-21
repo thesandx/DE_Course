@@ -7,6 +7,7 @@ import { PipMascot } from '@/components/assistant/PipMascot';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { useFloatingPanel } from '@/hooks/useFloatingPanel';
+import { useNoteImageUpload } from '@/hooks/useNoteImageUpload';
 import { type ServerNote, type SyncStatus, useNoteSync } from '@/hooks/useNoteSync';
 import { MAX_NOTE_CHARS } from '@/lib/notes/limits';
 import { cn } from '@/lib/utils';
@@ -54,8 +55,10 @@ function wordCount(markdown: string): number {
  * and syncs to the learner's account in the background, so a lost connection
  * loses nothing (`hooks/useNoteSync.ts`). The expand button opens a full-screen
  * writing view. "Add selection" clips text the learner selected in the lesson
- * into the note as a quote. "Format with Pip" asks the AI helper to tidy the
- * note, and the learner chooses whether to use the result.
+ * into the note as a quote. The image button, a paste or a drop adds a
+ * picture (`hooks/useNoteImageUpload.ts`). "Notes with Pip" asks the AI helper
+ * to write revision notes from the chapter, which go under the learner's own,
+ * or to tidy the note; the learner chooses whether to use the result.
  *
  * The floating button sits above Pip's. It shows while the box at the end is
  * off screen. Pressing it moves the box itself into a panel at the side (a
@@ -72,6 +75,7 @@ export function ChapterNotes({
   className,
 }: ChapterNotesProps) {
   const sync = useNoteSync(noteKey, initial);
+  const images = useNoteImageUpload();
   const editor = useRef<NoteEditorHandle | null>(null);
   const sectionRef = useRef<HTMLElement | null>(null);
   const markdownRef = useRef(initial?.markdown ?? '');
@@ -345,7 +349,36 @@ export function ChapterNotes({
             label={`My notes for ${title}`}
             placeholder="Write what you want to remember. Type - for a list, [] for a checklist, ## for a heading."
             tall={floating}
+            onImageFiles={(files) => {
+              void images.upload(files, (image) =>
+                editor.current?.insertImage(image.id, image.alt),
+              );
+            }}
           />
+        )}
+
+        {images.busy && (
+          <p role="status" className="text-small text-ink-soft bg-sunken px-4 py-2">
+            Adding your image…
+          </p>
+        )}
+
+        {images.error !== null && (
+          <Alert
+            tone="danger"
+
+            title="The image was not added"
+
+            className="m-3"
+
+            action={
+              <Button size="sm" variant="quiet" onClick={images.dismiss}>
+                Dismiss
+              </Button>
+            }
+          >
+            {images.error}
+          </Alert>
         )}
 
         {notice !== null && (
@@ -359,6 +392,12 @@ export function ChapterNotes({
             noteKey={noteKey}
             enabled={pipEnabled}
             getMarkdown={() => markdownRef.current}
+            empty={words === 0}
+            onAppend={(markdown) => {
+              editor.current?.appendMarkdown(markdown);
+              setFormatting(false);
+              setNotice('Pip’s revision notes are under yours. Edit them like any note.');
+            }}
             onUse={(markdown) => {
               editor.current?.replace(markdown);
               setFormatting(false);
@@ -396,11 +435,10 @@ export function ChapterNotes({
             <button
               type="button"
               onClick={() => setFormatting(true)}
-              disabled={words === 0}
-              className="squish bg-ink text-on-ink disabled:bg-sunken disabled:text-ink-faint rounded-pill text-small inline-flex min-h-11 items-center gap-1.5 py-1 pr-4 pl-1.5 font-semibold md:min-h-9"
+              className="squish bg-ink text-on-ink rounded-pill text-small inline-flex min-h-11 items-center gap-1.5 py-1 pr-4 pl-1.5 font-semibold md:min-h-9"
             >
               <PipMascot size={28} />
-              Format with Pip
+              Notes with Pip
             </button>
           )}
         </footer>

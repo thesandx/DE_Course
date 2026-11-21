@@ -73,3 +73,18 @@ describe('colorFromCss', () => {
     expect(colorFromCss('rgba(255, 0, 0, 0)')).toBeNull();
   });
 });
+
+describe('images in the editor', () => {
+  const ID = 'aB3dE5fG7hJ9kL1mN3pQ5rS7';
+
+  it('reads a note image figure back into its line', () => {
+    const note = `Text\n\n![Diagram](/api/notes/images/${ID})`;
+    expect(fromHtml(blocksToHtml(parseNote(note)))).toBe(note);
+  });
+
+  it('drops a pasted image from anywhere else', () => {
+    expect(
+      fromHtml('<p>Hi</p><img src="https://evil.example/a.png"><figure data-image="no"></figure>'),
+    ).toBe('Hi');
+  });
+});

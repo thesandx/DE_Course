@@ -69,6 +69,16 @@ describe('POST /api/notes/format', () => {
     expect(options).toMatchObject({ maxTokens: expect.any(Number) });
   });
 
+  it('writes revision notes from the chapter, even before the learner wrote anything', async () => {
+    const response = await POST(post({ ...VALID, markdown: '', mode: 'summary' }));
+    expect(response.status).toBe(200);
+    const sent = JSON.stringify(streamAnswer.mock.calls[0]?.[1]);
+    expect(sent).toContain('THE CHAPTER:');
+    expect(sent).toContain('Quick revision');
+    // The chapter text comes from the catalogue, not from the request.
+    expect(sent).toContain('ROW_NUMBER');
+  });
+
   it('refuses a learner with no session', async () => {
     const error = new Error('Sign in to continue.');
     error.name = 'UnauthenticatedError';
