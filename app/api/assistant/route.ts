@@ -1,14 +1,22 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { askSchema, buildModelMessages } from '@/lib/assistant/chat';
+import {
+  asksAboutNotes,
+  askSchema,
+  buildModelMessages,
+  MAX_NOTE_IMAGES_PER_QUESTION,
+} from '@/lib/assistant/chat';
 import { contextForPath } from '@/lib/assistant/context';
 import { MODEL_FAILURES } from '@/lib/assistant/failures';
+import { modelReadsImages } from '@/lib/assistant/models';
 import { ASSISTANT_RATE_LIMIT, RateLimiter } from '@/lib/assistant/rate-limit';
 import { mapHttpError } from '@/lib/http-errors';
 import { logger } from '@/lib/logger';
+import { noteImageIds } from '@/lib/notes/markdown';
 import { noteKeyForPath } from '@/lib/notes/targets';
 import { requireUser } from '@/services/auth.service';
+import { noteImageUrl } from '@/services/note-image.service';
 import { getNoteOrNull } from '@/services/notes.service';
 import { AssistantError, streamAnswer } from '@/services/openrouter.service';
 
@@ -62,9 +70,19 @@ export async function POST(request: Request): Promise<Response> {
       noteKey === undefined
         ? undefined
         : ((await getNoteOrNull(user.uid, noteKey))?.markdown ?? '');
+    // When the learner asks about their notes, Pip also sees the first images
+    // in them, by short-lived URL. A signing failure only leaves them out.
+    const question = input.messages[input.messages.length - 1]?.content ?? '';
+    let noteImages: string[] = [];
+    if (notes !== undefined && modelReadsImages(input.model) && asksAboutNotes(question)) {
+      const ids = noteImageIds(notes).slice(0, MAX_NOTE_IMAGES_PER_QUESTION);
+      noteImages = (
+        await Promise.all(ids.map((id) => noteImageUrl(user.uid, id).catch(() => null)))
+      ).filter((url): url is string => url !== null);
+    }
     const stream = await streamAnswer(
       input.model,
-      buildModelMessages(input, context, notes),
+      buildModelMessages(input, context, notes, noteImages),
       request.signal,
       input.webSearch === true,
     );

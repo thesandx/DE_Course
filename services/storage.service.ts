@@ -254,6 +254,36 @@ export async function createSignedReadUrl(path: string, ttlMs = READ_URL_TTL_MS)
 }
 
 /**
+ * Writes a small object that the server already holds and has checked.
+ *
+ * For files of a few hundred kilobytes that the app itself shrank and
+ * verified, such as a note image. Big files still go through the signed
+ * upload flow above, which keeps their bytes off Cloud Run.
+ */
+export async function saveObject(
+  path: string,
+  bytes: Uint8Array,
+  contentType: string,
+): Promise<void> {
+  if (parseObjectPath(path) === null) {
+    throw new UploadRejectedError(`"${path}" is not a well-formed object path`);
+  }
+  try {
+    await getBucket()
+      .file(path)
+      .save(Buffer.from(bytes), {
+        resumable: false,
+        contentType,
+        metadata: { cacheControl: 'private, max-age=86400' },
+      });
+    logger.info('Object saved', { path, contentType, sizeBytes: bytes.byteLength });
+  } catch (error) {
+    logger.error('Failed to save object', error, { path });
+    throw error;
+  }
+}
+
+/**
  * Deletes an object. Succeeds when the object is already gone, so a retried
  * cleanup does not fail a request that has otherwise finished.
  */

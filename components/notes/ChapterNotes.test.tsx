@@ -3,6 +3,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ChapterNotes } from './ChapterNotes';
 
+const IMAGE_ID = 'aB3dE5fG7hJ9kL1mN3pQ5rS7';
+const upload = vi.fn(
+  async (_files: readonly File[], onEach: (image: { id: string; alt: string }) => void) => {
+    onEach({ id: IMAGE_ID, alt: 'Query plan' });
+  },
+);
+vi.mock('@/hooks/useNoteImageUpload', () => ({
+  useNoteImageUpload: () => ({ busy: false, error: null, upload, dismiss: vi.fn() }),
+}));
+
 let report: ((visible: boolean) => void) | null = null;
 
 class FakeObserver {
@@ -90,5 +100,32 @@ describe('ChapterNotes', () => {
     fireEvent.click(screen.getByRole('button', { name: /Open my notes/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Bring them back here' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('adds a pasted image to the note as a picture', async () => {
+    renderNotes();
+    const box = await screen.findByRole('textbox', { name: /My notes for Window functions/ });
+    const file = new File(['x'], 'plan.png', { type: 'image/png' });
+    fireEvent.paste(box, { clipboardData: { files: [file], getData: () => '' } });
+    await act(async () => {});
+    expect(upload).toHaveBeenCalled();
+    const figure = box.querySelector(`figure[data-image="${IMAGE_ID}"] img`);
+    expect(figure?.getAttribute('src')).toBe(`/api/notes/images/${IMAGE_ID}`);
+    expect(screen.getByRole('button', { name: 'Add an image' })).toBeInTheDocument();
+  });
+
+  it('offers Pip revision notes even when the note is empty', () => {
+    render(
+      <ChapterNotes
+        noteKey="de:lesson:sql:window-functions"
+        title="Window functions"
+        initial={null}
+        pipEnabled
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Notes with Pip/ }));
+    expect(screen.getByRole('radio', { name: /Revision notes/ })).toBeChecked();
+    expect(screen.getByRole('radio', { name: /Tidy up/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Write revision notes' })).toBeEnabled();
   });
 });

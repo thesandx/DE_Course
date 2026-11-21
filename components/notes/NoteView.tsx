@@ -1,6 +1,12 @@
 import { Fragment } from 'react';
 
-import { type Block, type Inline, type ListBlock, parseNote } from '@/lib/notes/markdown';
+import {
+  type Block,
+  type Inline,
+  type ListBlock,
+  noteImageSrc,
+  parseNote,
+} from '@/lib/notes/markdown';
 import { cn } from '@/lib/utils';
 
 export interface NoteViewProps {
@@ -93,6 +99,14 @@ function BlockView({ block }: { block: Block }) {
       return <pre data-lang={block.language}>{block.text}</pre>;
     case 'rule':
       return <hr />;
+    case 'image':
+      return (
+        <figure>
+          {/* A private, per-learner image behind a session check: next/image cannot optimise it. */}
+          {/* eslint-disable-next-line @next/next/no-img-element -- the route answers with a short-lived signed URL */}
+          <img src={noteImageSrc(block.id)} alt={block.alt} loading="lazy" decoding="async" />
+        </figure>
+      );
     case 'list':
       return <List list={block} />;
   }

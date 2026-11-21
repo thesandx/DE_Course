@@ -794,6 +794,36 @@
     margin: 1em 0;
   }
 
+  /* A learner's image: as wide as the note allows, never taller than a phone screen. */
+  .note-doc figure {
+    margin-inline: 0;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-input);
+    background-color: var(--color-sunken);
+    overflow: hidden;
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  .note-doc figure img {
+    display: block;
+    max-width: 100%;
+    max-height: 70vh;
+    height: auto;
+    object-fit: contain;
+  }
+
+  .note-doc figure[data-uploading='true'] img {
+    opacity: 0.5;
+  }
+
+  /* In the editor, a picked image shows a ring, so Backspace has a visible target. */
+  .note-doc figure:focus-within,
+  .note-doc figure.is-selected {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
   /* The placeholder, while the note is empty. */
   .note-doc[data-empty='true'] {
     position: relative;

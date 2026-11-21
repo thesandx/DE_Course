@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   type Block,
   blocksToHtml,
+  noteImageIds,
   noteToPlainText,
   parseInline,
   parseNote,
@@ -223,5 +224,33 @@ describe('noteToPlainText', () => {
     expect(
       noteToPlainText(parseNote('## Joins\n\n- ==broadcast== **small** side\n\n```\nx\n```')),
     ).toBe('Joins\nbroadcast small side\nx');
+  });
+});
+
+describe('note images', () => {
+  const ID = 'aB3dE5fG7hJ9kL1mN3pQ5rS7';
+
+  it('reads an image line and writes it back', () => {
+    const note = `Before\n\n![Query plan](/api/notes/images/${ID})\n\nAfter`;
+    const blocks = parseNote(note);
+    expect(blocks[1]).toEqual({ type: 'image', id: ID, alt: 'Query plan' });
+    expect(serializeNote(blocks)).toBe(note);
+    expect(noteImageIds(note)).toEqual([ID]);
+    expect(noteToPlainText(blocks)).toContain('[image: Query plan]');
+  });
+
+  it('keeps an image from any other place as plain text', () => {
+    const note = '![x](https://evil.example/track.png)';
+    expect(parseNote(note)[0]?.type).toBe('paragraph');
+    expect(noteImageIds(note)).toEqual([]);
+  });
+
+  it('draws an image as a figure the editor treats as one unit, with the caption escaped', () => {
+    const html = blocksToHtml([{ type: 'image', id: ID, alt: '"><script>' }]);
+    expect(html).toContain(`data-image="${ID}"`);
+    expect(html).toContain('contenteditable="false"');
+    expect(html).toContain(`src="/api/notes/images/${ID}"`);
+    expect(html).not.toContain('<script>');
+    expect(blocksToHtml([{ type: 'image', id: 'bad id"', alt: '' }])).toBe('');
   });
 });

@@ -31,7 +31,9 @@ export type ToolIconName =
   | 'download'
   | 'close'
   | 'dock'
-  | 'notes';
+  | 'notes'
+  | 'image'
+  | 'sparkle';
 
 /** The fill for each highlight colour. The same tokens as `mark` in the note text. */
 export const HIGHLIGHT_SWATCH: Readonly<Record<HighlightColor, string>> = {
@@ -117,6 +119,16 @@ const PATHS: Record<Exclude<ToolIconName, 'highlight'>, React.ReactNode> = {
       <rect x="3" y="4" width="18" height="16" rx="2.5" />
       <path d="M14 4v16" />
     </>
+  ),
+  image: (
+    <>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
+      <circle cx="9" cy="10" r="1.8" />
+      <path d="M20.5 15.5l-5-5-8.5 9" />
+    </>
+  ),
+  sparkle: (
+    <path d="M12 3.5l1.9 5.1 5.1 1.9-5.1 1.9L12 17.5l-1.9-5.1L5 10.5l5.1-1.9zM18.5 16l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z" />
   ),
   notes: (
     <>

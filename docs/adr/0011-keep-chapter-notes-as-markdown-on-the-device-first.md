@@ -60,3 +60,10 @@ This addition does not change the decision above.
 A floating "My notes" button opens the notes from anywhere in a chapter. It sits above Pip's button, and it shows only while the notes box at the end is off screen. The button moves the notes box itself into a side panel, or a sheet on a phone. It does not open a second editor. One editor means one undo history and one copy of the note, so nothing has to sync between two views. A card holds the box's place at the end of the chapter while the panel is open.
 
 Pip's panel and the notes panel open in the same corner. `hooks/useFloatingPanel.ts` closes one when the other opens.
+
+## Later addition: images and revision notes from Pip
+
+This addition does not change the decision above.
+
+- A note can hold images. ADR-0015 records how they are stored.
+- "Notes with Pip" has a "Revision notes" mode. Pip reads the chapter from the catalogue and writes short revision notes. They go under the learner's own notes, so nothing the learner wrote changes. Undo takes them out.

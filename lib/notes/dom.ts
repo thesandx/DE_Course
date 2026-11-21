@@ -6,8 +6,11 @@
  * another), and a paste brings markup from anywhere. This reader keeps only
  * what the notes format can say: headings, paragraphs, lists, checklists,
  * quotes, code, and bold, italic, underline, strike, highlight and inline
- * code. Everything else becomes its text. Scripts, styles, images and
- * attributes never survive, because nothing here copies them.
+ * code, and the learner's own uploaded images. Everything else becomes its
+ * text. Scripts, styles, other images and attributes never survive, because
+ * nothing here copies them. An image survives only as a `<figure>` with a
+ * `data-image` id in the shape `NOTE_IMAGE_ID` allows; the server serves that
+ * id only from the signed-in learner's own folder.
  *
  * Pure apart from reading the nodes it is given, so it runs in jsdom tests.
  */
@@ -20,6 +23,7 @@ import {
   type ListBlock,
   type ListItem,
   normalizeInline,
+  NOTE_IMAGE_ID,
   serializeNote,
   trimInline,
 } from '@/lib/notes/markdown';
@@ -266,6 +270,13 @@ export function readBlocks(root: Node): Block[] {
       continue;
     }
     flush();
+
+    const imageId = tag === 'FIGURE' ? node.getAttribute('data-image') : null;
+    if (imageId !== null && NOTE_IMAGE_ID.test(imageId)) {
+      const alt = node.querySelector('img')?.getAttribute('alt') ?? '';
+      blocks.push({ type: 'image', id: imageId, alt });
+      continue;
+    }
 
     if (/^H[1-6]$/.test(tag)) {
       // The editor writes level 1 as <h2> (the page owns <h1>), so h1 and h2 are both level 1.
