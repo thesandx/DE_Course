@@ -52,3 +52,11 @@ Rejected. Hundreds of chapters at up to 20,000 characters each can pass the 1 Mi
 - `document.execCommand` is deprecated, but every browser still implements it. If a browser drops it, the toolbar commands need a replacement; typing, paste, the highlighter and checklists do not use it.
 - The device copy is per browser. Sign-out clears it, so the next person on a shared device cannot read it.
 - A page still needs a connection to load. A service worker for full offline pages is not part of this decision.
+
+## Later addition: the floating notes panel
+
+This addition does not change the decision above.
+
+A floating "My notes" button opens the notes from anywhere in a chapter. It sits above Pip's button, and it shows only while the notes box at the end is off screen. The button moves the notes box itself into a side panel, or a sheet on a phone. It does not open a second editor. One editor means one undo history and one copy of the note, so nothing has to sync between two views. A card holds the box's place at the end of the chapter while the panel is open.
+
+Pip's panel and the notes panel open in the same corner. `hooks/useFloatingPanel.ts` closes one when the other opens.

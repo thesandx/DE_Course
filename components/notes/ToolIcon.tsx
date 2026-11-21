@@ -28,7 +28,10 @@ export type ToolIconName =
   | 'clip'
   | 'cloud'
   | 'device'
-  | 'download';
+  | 'download'
+  | 'close'
+  | 'dock'
+  | 'notes';
 
 /** The fill for each highlight colour. The same tokens as `mark` in the note text. */
 export const HIGHLIGHT_SWATCH: Readonly<Record<HighlightColor, string>> = {
@@ -108,6 +111,19 @@ const PATHS: Record<Exclude<ToolIconName, 'highlight'>, React.ReactNode> = {
     </>
   ),
   download: <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />,
+  close: <path d="M6 6l12 12M18 6L6 18" />,
+  dock: (
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="2.5" />
+      <path d="M14 4v16" />
+    </>
+  ),
+  notes: (
+    <>
+      <path d="M6 3.5h9l4 4V19a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 015 19V5a1.5 1.5 0 011-1.5z" />
+      <path d="M9 11h6M9 15h4" />
+    </>
+  ),
 };
 
 export interface ToolIconProps {

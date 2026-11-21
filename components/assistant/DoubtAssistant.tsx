@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Prose } from '@/components/course/Prose';
 import { Icon } from '@/components/layout/Icon';
 import { Alert } from '@/components/ui/Alert';
+import { useFloatingPanel } from '@/hooks/useFloatingPanel';
 import { IMAGE_ACCEPT, useImageAttachments } from '@/hooks/useImageAttachments';
 import {
   ASSISTANT_NAME,
@@ -175,6 +176,7 @@ function loadChat(path: string): PanelMessage[] {
 export function DoubtAssistant({ enabled, className }: DoubtAssistantProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  useFloatingPanel('assistant', open, () => setOpen(false));
   const [model, setModel] = useState(DEFAULT_MODEL_ID);
   const [webSearch, setWebSearch] = useState(false);
   const [messages, setMessages] = useState<PanelMessage[]>([]);
