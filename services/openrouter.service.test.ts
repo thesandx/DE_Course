@@ -97,7 +97,7 @@ describe('streamAnswer', () => {
       ]),
     );
     const stream = await streamAnswer(
-      'anthropic/claude-haiku-5.5',
+      'deepseek/deepseek-v4.1-flash',
       MESSAGES,
       new AbortController().signal,
     );
@@ -108,7 +108,7 @@ describe('streamAnswer', () => {
     expect(new Headers(init?.headers).get('Authorization')).toBe(`Bearer ${KEY}`);
     expect(String(init?.body)).not.toContain(KEY);
     expect(JSON.parse(String(init?.body))).toMatchObject({
-      model: 'anthropic/claude-haiku-5.5',
+      model: 'deepseek/deepseek-v4.1-flash',
       stream: true,
     });
     expect(init?.signal).toBeInstanceOf(AbortSignal);

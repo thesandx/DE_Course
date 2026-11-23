@@ -29,7 +29,7 @@ describe('DoubtAssistant', () => {
     render(<DoubtAssistant enabled />);
     fireEvent.click(screen.getByRole('button', { name: /Ask Pip/ }));
     expect(screen.getByRole('dialog', { name: /Pip/ })).toBeInTheDocument();
-    expect(screen.getByLabelText('Model')).toHaveValue('anthropic/claude-haiku-5.5');
+    expect(screen.getByLabelText('Model')).toHaveValue('deepseek/deepseek-v4.1-flash');
     expect(screen.getByRole('button', { name: /Explain this page in simple words/ })).toBeVisible();
   });
 
@@ -37,11 +37,9 @@ describe('DoubtAssistant', () => {
     render(<DoubtAssistant enabled />);
     fireEvent.click(screen.getByRole('button', { name: /Ask Pip/ }));
     fireEvent.change(screen.getByLabelText('Model'), {
-      target: { value: 'anthropic/claude-sonnet-5.5' },
+      target: { value: 'google/gemini-4-neon' },
     });
-    expect(window.localStorage.getItem('loop-ready-assistant-model')).toBe(
-      'anthropic/claude-sonnet-5.5',
-    );
+    expect(window.localStorage.getItem('loop-ready-assistant-model')).toBe('google/gemini-4-neon');
   });
 
   it('sends the question with the page path and shows the streamed answer', async () => {
