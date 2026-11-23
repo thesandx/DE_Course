@@ -36,7 +36,8 @@ const MAX_ANSWER_TOKENS = 1_200;
 const WEB_SEARCH_PLUGIN = { id: 'web', engine: 'exa', max_results: 5 } as const;
 
 /** Why the assistant could not answer. The route maps `reason` to a status and a message. */
-export type AssistantFailure = 'not_configured' | 'out_of_credits' | 'busy' | 'upstream';
+export type AssistantFailure =
+  'not_configured' | 'model_blocked' | 'out_of_credits' | 'busy' | 'upstream';
 
 export class AssistantError extends Error {
   readonly reason: AssistantFailure;
@@ -49,7 +50,10 @@ export class AssistantError extends Error {
 }
 
 function failureFor(status: number): AssistantFailure {
-  if (status === 401 || status === 403) return 'not_configured';
+  if (status === 401) return 'not_configured';
+  // A 403 refuses this model, not the key: a guardrail, a moderation block or
+  // a model the account may not use. The learner can still pick another model.
+  if (status === 403) return 'model_blocked';
   if (status === 402) return 'out_of_credits';
   if (status === 429) return 'busy';
   return 'upstream';
