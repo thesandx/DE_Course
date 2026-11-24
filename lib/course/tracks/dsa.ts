@@ -18,41 +18,51 @@ export const track: Track = {
       title: 'How a coding round is scored',
       summary:
         'Run the 45 minutes with a fixed method, and read the input size to find the complexity the interviewer wants.',
-      minutes: 12,
+      minutes: 13,
       body: `
-        A coding round is not a puzzle contest. The interviewer fills a form with four scores:
-        **problem solving**, **coding**, **verification** and **communication**. A candidate who
-        reaches a working medium solution and explains it well beats a candidate who reaches an
-        optimal solution in silence.
+        ## Start with the problem
 
-        ## The method, minute by minute
+        Many strong engineers fail coding rounds for the same reason. They hear the problem, go
+        silent, and race toward the cleverest solution. At minute 40 they have half of a clever
+        answer, and the interviewer has nothing to write on the form.
 
-        | Minutes | Step | What you say |
-        |---|---|---|
-        | 0 to 5 | **Clarify** | Input size, value range, duplicates, empty input, sorted or not |
-        | 5 to 10 | **Brute force** | "The simple way is two loops, O(n²). Let me find better." |
-        | 10 to 15 | **Better idea** | Name the pattern and the data structure, and say the complexity |
-        | 15 to 30 | **Code** | Write top to bottom. Use real names. Speak each block's purpose |
-        | 30 to 38 | **Test** | Trace one normal case and two edge cases by hand |
-        | 38 to 45 | **Follow-up** | Scale, streaming input, or a changed constraint |
+        Here is the secret that changes how you play: a coding round is not a puzzle contest. The
+        interviewer fills a form with four scores: **problem solving**, **coding**, **verification**
+        and **communication**. A candidate who reaches a working medium solution and explains it well
+        beats a candidate who reaches an optimal solution in silence.
 
-        Always state the brute force. It proves you understand the problem, and it is your
-        fallback if the better idea fails.
+        ## Idea 1: a fixed method, minute by minute
 
-        ## Read the input size
+        Treat the 45 minutes like a recipe.
 
-        The constraint tells you the target complexity. A modern machine does about 10⁸ simple
-        steps a second.
+        1. **0 to 5: clarify.** Ask about input size, value range, duplicates, empty input, sorted or
+           not.
+        2. **5 to 10: brute force.** "The simple way is two loops, O(n²). Let me find better."
+        3. **10 to 15: better idea.** Name the pattern and the data structure, and say the complexity.
+        4. **15 to 30: code.** Write top to bottom. Use real names. Say what each block does.
+        5. **30 to 38: test.** Trace one normal case and two edge cases by hand.
+        6. **38 to 45: follow-up.** Scale, streaming input, or a changed constraint.
+
+        Always state the brute force. It proves you understand the problem, and it is your fallback if
+        the better idea fails.
+
+        ## Idea 2: the input size tells you the answer's speed
+
+        A modern machine does about 10⁸ simple steps a second. So the size limit in the question tells
+        you how fast your solution must be. It is a hint hiding in plain sight.
 
         | n up to | Target | Typical tool |
         |---|---|---|
         | 20 | O(2ⁿ) | Backtracking, bitmask |
-        | 2,000 | O(n²) | Two loops, simple dynamic programming |
+        | 2,000 | O(n²) | Two loops, simple DP |
         | 100,000 | O(n log n) | Sort, heap, binary search |
-        | 10,000,000 | O(n) | Hash map, two pointers, one pass |
-        | Larger than memory | O(n) time, O(1) or O(k) space | Streaming, heap of size k |
+        | 10,000,000 | O(n) | Hash map, two pointers |
+        | Bigger than memory | O(n), small space | Streaming, heap of size k |
 
-        ## Pick the pattern from the words
+        Example: n is up to 100,000. Two loops would be 10¹⁰ steps, about 100 seconds. Too slow. So
+        the interviewer expects O(n log n) or better: sort, heap or binary search.
+
+        ## Idea 3: the words in the question name the pattern
 
         - "Pair", "seen before", "count of each": **hash map or set**.
         - "Sorted array", "pair that sums": **two pointers**.
@@ -65,14 +75,21 @@ export const track: Track = {
         - "Dependencies", "order of tasks": **topological sort**.
         - "Number of ways", "best total with choices": **dynamic programming**.
 
-        > [!senior] What a senior answer adds
-        > A senior candidate states the trade-off without being asked: "The hash map gives O(n)
-        > time for O(n) memory. If memory is tight and I may sort the input, two pointers gives
-        > O(n log n) time and O(1) extra memory."
-
         > [!trap] Silence
         > Five silent minutes read as "stuck". Say what you are trying and why it does not work.
         > Interviewers give hints to candidates who think aloud, and a used hint costs little.
+
+        ## Now say it like a senior engineer
+
+        > [!senior] What a senior answer adds
+        > A senior candidate states the trade-off without being asked: "The hash map gives O(n) time
+        > for O(n) memory. If memory is tight and I may sort the input, two pointers gives O(n log n)
+        > time and O(1) extra memory."
+
+        ## In one breath
+
+        The round is scored on solving, coding, testing and talking, so follow a fixed method and think
+        aloud. Read the input size to know the speed you need, and read the words to know the pattern.
       `,
       checks: [
         {
@@ -100,14 +117,25 @@ export const track: Track = {
       title: 'Hash maps, two pointers and sliding windows',
       summary:
         'Solve most array and string questions in one pass with a hash map, two pointers, a window or prefix sums.',
-      minutes: 16,
+      minutes: 17,
       body: `
-        About half of all screening questions use an array or a string, and four techniques
-        cover nearly all of them. Each one replaces an inner loop with remembered state.
+        ## Start with the problem
 
-        ## Hash map: remember what you saw
+        "Is there a pair of numbers in this list that adds up to 10?" The first idea: for each number,
+        check every other number. Two loops. For 100,000 numbers that is 10 billion checks.
 
-        The question "have I seen the value I need?" costs O(1) with a set or a dictionary.
+        About half of all screening questions use an array or a string, and four techniques cover
+        nearly all of them. Each one does the same thing: it **replaces the inner loop with something
+        you remember**.
+
+        ## Idea 1: hash map, remember what you saw
+
+        Walk through the list once. For each number x, the partner you need is 10 - x. Have you seen
+        it already? Keep every number you have seen in a set, and the question "have I seen it?" costs
+        O(1).
+
+        Worked example, target 10, list [3, 8, 2, 7]: see 3 (need 7, not seen). See 8 (need 2, not
+        seen). See 2 (need 8, seen!). Found it, in one pass.
 
         ~~~python
         def has_pair(nums, target):
@@ -119,13 +147,17 @@ export const track: Track = {
             return False
         ~~~
 
-        Use «collections.Counter» for counts and «collections.defaultdict(list)» for groups.
+        Use «collections.Counter» for counts, and «collections.defaultdict(list)» for groups.
 
-        ## Two pointers: use the order
+        ## Idea 2: two pointers, use the order
 
-        On **sorted** input, start one pointer at each end. If the sum is too small, move the
-        left pointer; if too large, move the right one. Each step removes one candidate, so the
-        loop is O(n) with O(1) memory.
+        If the list is **sorted**, you need no extra memory. Put one finger on the smallest number and
+        one on the largest. Add them.
+
+        - Too small? Move the left finger right, to a bigger number.
+        - Too big? Move the right finger left, to a smaller number.
+
+        Each step rules out one number for good, so the loop is O(n) with O(1) memory.
 
         ~~~python
         def pair_in_sorted(nums, target):
@@ -141,14 +173,19 @@ export const track: Track = {
             return None
         ~~~
 
-        The same idea with a slow and a fast pointer removes duplicates in place and finds a
-        cycle in a linked list.
+        The same idea with a slow and a fast pointer removes duplicates in place, and finds a cycle in
+        a linked list.
 
-        ## Sliding window: grow right, shrink left
+        ## Idea 3: sliding window, grow right and shrink left
 
-        For the longest or shortest **contiguous** part that meets a rule, keep a window
-        «[left, right]». Move «right» one step at a time. While the window breaks the rule, move
-        «left». Each index enters and leaves once, so the cost is O(n).
+        "Longest stretch of text with at most 2 different letters." The answer is a **contiguous**
+        piece, so picture a window over the text.
+
+        - Move the right edge one step at a time, to grow the window.
+        - While the window breaks the rule, move the left edge to shrink it.
+        - Track the best size you saw.
+
+        Each index enters the window once and leaves once, so the cost is O(n).
 
         ~~~python
         def longest_with_k_distinct(s, k):
@@ -164,27 +201,38 @@ export const track: Track = {
             return best
         ~~~
 
-        A window works only when shrinking fixes the rule. With negative numbers in a sum
-        problem, it does not; use prefix sums.
+        A window works only when shrinking fixes the rule. With negative numbers in a sum problem,
+        shrinking can make the sum bigger, so the window breaks. Use prefix sums.
 
-        ## Prefix sums: a range in O(1)
+        ## Idea 4: prefix sums, any range in one subtraction
 
-        Let «prefix[i]» be the sum of the first «i» values. The sum of «nums[i:j]» is
-        «prefix[j] - prefix[i]». To count subarrays with sum «k», walk once and ask how many
-        earlier prefixes equal «current - k». A hash map answers that.
+        Keep a running total. Let «prefix[i]» be the sum of the first «i» values. Then the sum of
+        «nums[i:j]» is just «prefix[j] - prefix[i]», like reading two milestones on a highway to get
+        the distance between them.
 
-        ## Which one?
+        To count subarrays that sum to «k», walk once and ask: how many earlier prefixes equal
+        «current - k»? A hash map of prefix counts answers that in O(1).
 
-        | Signal in the question | Technique |
+        ## Idea 5: which one?
+
+        | Signal | Technique |
         |---|---|
-        | Unsorted, "find a pair" or "duplicates" | Hash map or set |
-        | Sorted input, or you may sort | Two pointers |
-        | Contiguous, all values positive, "longest" or "shortest" | Sliding window |
-        | Contiguous with negatives, or "count subarrays" | Prefix sums with a hash map |
+        | Unsorted, pair or duplicates | Hash map or set |
+        | Sorted, or you may sort | Two pointers |
+        | Contiguous, all positive | Sliding window |
+        | Contiguous with negatives | Prefix sums + hash map |
+
+        ## Now say it like a senior engineer
 
         > [!senior] What a senior answer adds
-        > Link it to data work when it is true: "This is a hash join. I build a hash table on
-        > one side and probe with the other, which is what Spark does in a broadcast join."
+        > Link it to data work when it is true: "This is a hash join. I build a hash table on one side
+        > and probe with the other, which is what Spark does in a broadcast join."
+
+        ## In one breath
+
+        Replace the inner loop with memory: a set for "seen before", two pointers on sorted data, a
+        window that grows and shrinks for contiguous runs, and prefix sums when negatives break the
+        window.
       `,
       checks: [
         {
@@ -217,17 +265,30 @@ export const track: Track = {
       title: 'Stacks, queues and heaps',
       summary:
         'Use a stack for the nearest match, a deque for a moving window and a heap for the top k of a stream.',
-      minutes: 14,
+      minutes: 15,
       body: `
-        These three structures answer one question each. A **stack** answers "what is the most
-        recent open item?". A **queue** answers "what arrived first?". A **heap** answers "what
-        is the smallest or largest right now?".
+        ## Start with the problem
 
-        ## Stack: the nearest unmatched item
+        "For each day's temperature, find the next warmer day." The first idea: for each day, scan
+        forward until you find a warmer one. For a long list of cold days, that is O(n²).
+
+        The fix is not a clever loop. It is the right container. Three structures each answer one
+        question very cheaply:
+
+        - A **stack** answers "what is the most recent open item?". A pile of plates: take from the
+          top.
+        - A **queue** answers "what arrived first?". A line at a counter.
+        - A **heap** answers "what is the smallest or largest right now?". A hospital waiting room,
+          where the most urgent patient goes next.
+
+        ## Idea 1: stack, the nearest unmatched item
 
         Brackets, undo, and expression parsing use a plain stack. The stronger form is the
-        **monotonic stack**: keep the stack in decreasing order. When a larger value arrives, it
-        is the "next greater" answer for every smaller value it pops.
+        **monotonic stack**: a stack kept in decreasing order.
+
+        Back to the temperatures. Keep a stack of days that are still waiting for a warmer day. When
+        a warm day arrives, it is the answer for every cooler day on top of the stack: pop them all and
+        fill in their answer. Then push today.
 
         ~~~python
         def next_greater(nums):
@@ -242,24 +303,22 @@ export const track: Track = {
 
         Each index is pushed once and popped once, so the cost is O(n).
 
-        ## Queue and deque
+        ## Idea 2: queue and deque
 
-        «collections.deque» adds and removes at both ends in O(1). A list does not:
-        «list.pop(0)» is O(n). Use a deque for breadth-first search and for the maximum of a
-        moving window, where you keep indexes in decreasing order of value and drop the ones
-        that left the window.
+        «collections.deque» adds and removes at both ends in O(1). A list does not: «list.pop(0)» is
+        O(n), because every other item shifts. Use a deque for breadth-first search, and for the
+        maximum of a moving window: keep indexes in decreasing order of value, and drop the ones that
+        left the window.
 
-        ## Heap: the best item, cheaply
+        ## Idea 3: heap, the best item, cheaply
 
-        «heapq» is a **min-heap**. Push and pop cost O(log n); reading the smallest is O(1).
+        «heapq» is a **min-heap**. Push and pop cost O(log n), and reading the smallest is O(1).
 
-        | Need | How |
-        |---|---|
-        | k largest of a stream | Min-heap of size k. Pop when it grows past k |
-        | k smallest | Push the negated values, or use «heapq.nsmallest» |
-        | Merge k sorted lists | Heap of the head of each list |
-        | Running median | A max-heap for the low half and a min-heap for the high half |
-        | Next event in time | Heap ordered by timestamp |
+        - **k largest of a stream:** a min-heap of size k. Pop when it grows past k.
+        - **k smallest:** push the negated values, or use «heapq.nsmallest».
+        - **Merge k sorted lists:** a heap holding the head of each list.
+        - **Running median:** a max-heap for the low half and a min-heap for the high half.
+        - **Next event in time:** a heap ordered by timestamp.
 
         ~~~python
         import heapq
@@ -273,17 +332,26 @@ export const track: Track = {
             return sorted(heap, reverse=True)
         ~~~
 
-        The heap holds only k items, so this uses O(k) memory on a stream of any length, at
-        O(n log k) time. Sorting everything costs O(n log n) time and O(n) memory.
-
-        > [!senior] What a senior answer adds
-        > Name the memory bound: "The input is a stream, so I cannot sort it. A heap of size k
-        > keeps memory at O(k)." Then name the distributed form: each partition keeps its own
-        > top k, and a final step merges them. That is how «ORDER BY ... LIMIT k» runs in Spark.
+        Why a **min**-heap for the **largest**? Because the heap holds your current top k, and the one
+        you want to throw out is the smallest of them. It sits on top, ready to go. The heap holds
+        only k items, so memory is O(k) on a stream of any length, at O(n log k) time. Sorting
+        everything costs O(n log n) time and O(n) memory.
 
         > [!trap] Python has no max-heap
-        > Push «-x» and negate again when you pop. For objects, push a tuple such as
-        > «(-count, key)».
+        > Push «-x», and negate again when you pop. For objects, push a tuple such as «(-count, key)».
+
+        ## Now say it like a senior engineer
+
+        > [!senior] What a senior answer adds
+        > Name the memory bound: "The input is a stream, so I cannot sort it. A heap of size k keeps
+        > memory at O(k)." Then name the distributed form: each partition keeps its own top k, and a
+        > final step merges them. That is how «ORDER BY ... LIMIT k» runs in Spark.
+
+        ## In one breath
+
+        A stack remembers the most recent open item, a queue the oldest, and a heap the smallest. A
+        monotonic stack finds "next greater" in one pass, and a size-k min-heap keeps the top k of any
+        stream in O(k) memory.
       `,
       checks: [
         {
@@ -316,15 +384,22 @@ export const track: Track = {
       title: 'Binary search, on data and on the answer',
       summary:
         'Write one bug-free binary search template and use it on sorted data and on "smallest value that works" questions.',
-      minutes: 12,
+      minutes: 13,
       body: `
-        Binary search halves the search space at each step, so 1 billion items take about 30
-        steps. Most candidates know the idea and still write an endless loop. Learn one
-        template and use it everywhere.
+        ## Start with the problem
 
-        ## One template: the first true
+        Guess a number between 1 and 1,000. The slow way: "Is it 1? Is it 2? Is it 3?" Up to 1,000
+        guesses. The smart way: "Is it more than 500?" Each answer cuts the range in half, so you need
+        at most 10 guesses. A billion items take about 30.
 
-        Think of a row of answers, false then true: «F F F T T T». Find the first «T».
+        That is **binary search**. Everyone knows the idea. Yet most candidates still write a version
+        that loops forever or misses by one. The fix: learn **one template** and use it everywhere.
+
+        ## Idea 1: one template, "find the first true"
+
+        Picture a row of answers that are all false, then all true: «F F F T T T». Your job is to find
+        the first T. Look at the middle. If it is T, the first T is here or to the left. If it is F,
+        the first T is to the right. Halve, and repeat.
 
         ~~~python
         def first_true(lo, hi, ok):
@@ -338,40 +413,51 @@ export const track: Track = {
             return lo
         ~~~
 
+        Almost every search is this template with a different «ok».
+
         - First index with «nums[i] >= target»: «ok = lambda i: nums[i] >= target».
         - Last index with «nums[i] <= target»: find the first index with a larger value, minus 1.
         - Python has this built in: «bisect.bisect_left» and «bisect.bisect_right».
 
-        ## Search on the answer
+        ## Idea 2: search on the answer, not on the data
 
-        Many "minimum" and "maximum" questions hide a binary search. The signal is a yes or no
-        test that flips once as the value grows.
+        Many "smallest" and "largest" questions hide a binary search, even with no sorted list in
+        sight. The signal: a yes-or-no test that flips **once** as the value grows.
 
-        "What is the smallest batch size that loads all files in 5 runs?" If size 100 works,
-        size 101 works too. So test a size in O(n) and binary search over the sizes.
+        "What is the smallest batch size that loads all files in 5 runs?" If size 100 works, size 101
+        works too. So the answers look like «F F F T T T» again. Test one size in O(n), and binary
+        search over the sizes.
 
-        | Question | Search range | Test |
+        | Question | Range | Test |
         |---|---|---|
-        | Smallest capacity to ship in D days | max item to sum of items | Days needed at this capacity <= D |
-        | Smallest speed to finish in H hours | 1 to max pile | Hours needed at this speed <= H |
-        | Largest minimum gap between k servers | 0 to span | Can I place k with this gap? |
+        | Smallest capacity to ship in D days | max item to total | Days needed ≤ D |
+        | Smallest speed to finish in H hours | 1 to max pile | Hours needed ≤ H |
+        | Largest min gap between k servers | 0 to span | Can I place k? |
 
         The cost is O(n log R), where R is the size of the range.
 
-        ## Rotated and unknown-length input
+        ## Idea 3: rotated and unknown-length input
 
-        A sorted array rotated at an unknown point still has one sorted half at each step.
-        Check which half is sorted, and whether the target lies inside it. For input of unknown
-        length, double the upper bound until you pass the target, then search inside.
-
-        > [!senior] What a senior answer adds
-        > Connect it to storage: "Parquet and ORC keep min and max values for each row group,
-        > and a sorted file lets the reader skip to the right group. An LSM tree and a B-tree
-        > index both find a key by this kind of search."
+        A sorted array rotated at an unknown point (like [5, 6, 7, 1, 2, 3]) still has one sorted half
+        at each step. Check which half is sorted, and whether the target lies inside it. For input of
+        unknown length, double the upper bound until you pass the target, then search inside.
 
         > [!trap] Off-by-one
-        > State the invariant aloud: "Everything left of «lo» is false, everything right of «hi»
-        > is true." Then test on a list of length 1 and length 2 before you say you are done.
+        > State the invariant aloud: "Everything left of «lo» is false, everything right of «hi» is
+        > true." Then test on a list of length 1 and length 2 before you say you are done.
+
+        ## Now say it like a senior engineer
+
+        > [!senior] What a senior answer adds
+        > Connect it to storage: "Parquet and ORC keep min and max values for each row group, and a
+        > sorted file lets the reader skip to the right group. An LSM tree and a B-tree index both find
+        > a key by this kind of search."
+
+        ## In one breath
+
+        Binary search finds the first true in a row of false-then-true by halving, so one template
+        covers sorted data and "smallest value that works" questions alike. Say the invariant, and
+        test lengths 1 and 2.
       `,
       checks: [
         {
@@ -398,15 +484,20 @@ export const track: Track = {
       title: 'Trees, graphs and the order of tasks',
       summary:
         'Traverse with breadth-first and depth-first search, sort a dependency graph, and merge groups with union-find.',
-      minutes: 17,
+      minutes: 18,
       body: `
-        Graph questions look hard and follow a small script. A data engineer has an advantage
-        here: a pipeline is a **directed acyclic graph**, lineage is a graph, and an org chart
-        is a tree. Say so in the interview.
+        ## Start with the problem
 
-        ## Build the graph first
+        "Given these tasks and their dependencies, in what order can they run?" "How many steps from
+        this table to that dashboard?" Graph questions look scary. But they follow a small script, and
+        a data engineer has an advantage here: a pipeline is a **directed acyclic graph (DAG)**,
+        lineage is a graph, and an org chart is a tree. Say so in the interview.
 
-        Most questions give edges. Turn them into an adjacency list before anything else.
+        ## Idea 1: build the graph first
+
+        A **graph** is dots (nodes) and arrows (edges). Most questions give you a list of edges. Turn
+        it into an **adjacency list** first: for each node, the list of nodes it points to. It is a
+        phone book of "who can I reach directly?".
 
         ~~~python
         from collections import defaultdict, deque
@@ -420,10 +511,13 @@ export const track: Track = {
 
         A grid is a graph too: each cell has up to four neighbours.
 
-        ## Breadth-first search: levels and shortest paths
+        ## Idea 2: breadth-first search, ripples in a pond
 
-        BFS visits nodes in order of distance from the start. It gives the **shortest path
-        when every step costs the same**.
+        Drop a stone in a pond. The ripple reaches everything 1 step away, then everything 2 steps
+        away, and so on. **BFS** visits nodes in that order: by distance from the start. So it gives
+        the **shortest path when every step costs the same**.
+
+        It uses a queue: take the oldest node, add its unseen neighbours to the back.
 
         ~~~python
         def shortest_steps(graph, start, goal):
@@ -440,46 +534,55 @@ export const track: Track = {
             return -1
         ~~~
 
-        Mark a node as seen **when you add it to the queue**, not when you pop it. Otherwise
-        the same node enters the queue many times.
+        Mark a node as seen **when you add it to the queue**, not when you pop it. Otherwise the same
+        node enters the queue many times.
 
-        ## Depth-first search: explore and come back
+        ## Idea 3: depth-first search, explore a maze
 
-        DFS goes deep first. Use it to count connected groups, to find a cycle, and for most
-        tree questions. A tree answer is usually "combine the answers of the left and right
-        child". In Python, deep recursion fails at about 1,000 frames, so mention an explicit
-        stack for very deep input.
+        In a maze, you follow one path as deep as it goes, then come back and try the next turn. That
+        is **DFS**. Use it to count connected groups, to find a cycle, and for most tree questions. A
+        tree answer is usually "combine the answers of the left and the right child". In Python, deep
+        recursion fails at about 1,000 frames, so mention an explicit stack for very deep input.
 
-        ## Topological sort: the order of tasks
+        ## Idea 4: topological sort, the order of tasks
 
-        Given tasks and "A before B" rules, **Kahn's algorithm** gives a valid order:
+        You cannot put on shoes before socks. Given tasks and "A before B" rules, **Kahn's algorithm**
+        finds a valid order.
 
-        1. Count the incoming edges of each node.
-        2. Put every node with a count of 0 in a queue.
-        3. Pop a node, add it to the order, and lower the count of each node after it. Queue the
-           ones that reach 0.
-        4. If the order is shorter than the node count, the graph has a **cycle**.
+        1. Count the incoming edges of each node: how many things must happen before it.
+        2. Put every node with a count of 0 in a queue. They are ready now.
+        3. Pop a node, add it to the order, and lower the count of each node after it. Queue the ones
+           that reach 0.
+        4. If the order is shorter than the number of nodes, some nodes never became ready: the graph
+           has a **cycle**.
 
         This is what Airflow does when it decides which tasks can run.
 
-        ## Union-find: merge groups
+        ## Idea 5: union-find, merging groups
 
-        To answer "are these two in the same group?" while groups merge, keep a parent pointer
-        for each item. «find» follows the pointers to the root and shortens the path. «union»
-        joins two roots. Both are nearly O(1). It fits identity resolution: two records with a
-        shared email are one customer.
+        "Are these two records the same customer?" when records join groups over time. Give each item
+        a parent pointer. «find» follows pointers to the group's root, and shortens the path on the
+        way. «union» joins two roots. Both are nearly O(1). It fits identity resolution: two records
+        with a shared email are one customer.
 
-        | Question | Tool |
-        |---|---|
-        | Shortest path, equal step cost | BFS |
-        | Shortest path with weights | Dijkstra: BFS with a heap |
-        | Count groups, detect a cycle | DFS or union-find |
-        | Order with dependencies | Topological sort |
-        | Merge groups as edges arrive | Union-find |
+        ## Idea 6: which tool?
+
+        - **Shortest path, equal step cost:** BFS.
+        - **Shortest path with weights:** Dijkstra, which is BFS with a heap.
+        - **Count groups, detect a cycle:** DFS or union-find.
+        - **Order with dependencies:** topological sort.
+        - **Merge groups as edges arrive:** union-find.
+
+        ## Now say it like a senior engineer
 
         > [!senior] What a senior answer adds
-        > Give the complexity as O(V + E), and name the real system: "This is lineage impact
-        > analysis. A BFS from the changed table finds every downstream dataset."
+        > Give the complexity as O(V + E), and name the real system: "This is lineage impact analysis.
+        > A BFS from the changed table finds every downstream dataset."
+
+        ## In one breath
+
+        Turn edges into an adjacency list, then pick the walk: BFS ripples out for shortest steps, DFS
+        dives deep for groups and cycles, Kahn's algorithm orders tasks, and union-find merges groups.
       `,
       checks: [
         {
@@ -506,24 +609,41 @@ export const track: Track = {
       title: 'Dynamic programming without fear',
       summary:
         'Turn a "best total" or "number of ways" question into a state, a recurrence and a small table.',
-      minutes: 15,
+      minutes: 16,
       body: `
-        Dynamic programming is recursion that remembers. Data engineer loops ask it less than
-        software engineer loops, and mostly in one dimension. Five steps solve these questions.
+        ## Start with the problem
 
-        ## The five steps
+        "How many ways can you climb 40 stairs, taking 1 or 2 steps at a time?" The natural answer is
+        recursion: ways(40) = ways(39) + ways(38). It is correct, and it never finishes. Why? ways(38)
+        is computed again inside ways(39), and again and again. The same small questions are answered
+        millions of times.
 
-        1. **State.** What does one subproblem mean? "«best[i]» is the best total using the
-           first «i» items."
-        2. **Choice.** What are the options at step «i»? Take it or skip it.
-        3. **Recurrence.** Write «best[i]» from smaller states.
+        The fix is to **write each answer down the first time**, and look it up after that. That is
+        all **dynamic programming (DP)** is: recursion that remembers. Data engineer loops ask it less
+        than software engineer loops, and mostly in one dimension. Five steps solve these questions.
+
+        ## Idea 1: the five steps
+
+        1. **State.** What does one small question mean? "«best[i]» is the best total using the first
+           «i» items."
+        2. **Choice.** What can you do at step «i»? Usually: take it or skip it.
+        3. **Recurrence.** Write «best[i]» using smaller states.
         4. **Base case.** The answer for 0 or 1 items.
         5. **Order.** Fill the table so that each state is ready before you need it.
 
-        ## Example: the best sum with no two neighbours
+        ## Idea 2: worked example, the best sum with no two neighbours
 
-        You cannot pick two adjacent values. At each value you either skip it, and keep the best
-        so far, or take it, and add it to the best from two steps back.
+        You may not pick two values that sit next to each other. Walk the list once, and keep two
+        numbers:
+
+        - **take:** the best total if you take the current value.
+        - **skip:** the best total if you skip it.
+
+        If you take x, the previous one must have been skipped: take = skip + x. If you skip x, keep
+        the best of before: skip = max(take, skip).
+
+        Trace [2, 7, 9, 3]: after 2, take 2, skip 0. After 7, take 7, skip 2. After 9, take 11, skip 7.
+        After 3, take 10, skip 11. Answer: 11 (2 + 9).
 
         ~~~python
         def best_non_adjacent(nums):
@@ -533,12 +653,12 @@ export const track: Track = {
             return max(take, skip)
         ~~~
 
-        The table needs only the last two states, so memory is O(1).
+        The table only needs the last two states, so memory is O(1).
 
-        ## Example: the fewest coins
+        ## Idea 3: worked example, the fewest coins
 
-        «fewest[a]» is the fewest coins that make amount «a». For each coin «c»,
-        «fewest[a] = min(fewest[a - c] + 1)».
+        «fewest[a]» is the fewest coins that make amount «a». To make «a», the last coin was some «c»,
+        so «fewest[a] = min(fewest[a - c] + 1)» over every coin «c». Fill the table from 0 up.
 
         ~~~python
         def fewest_coins(coins, amount):
@@ -551,29 +671,38 @@ export const track: Track = {
             return fewest[amount] if fewest[amount] != INF else -1
         ~~~
 
-        A greedy choice of the largest coin fails here: with coins 1, 3 and 4, amount 6 is two
-        coins of 3, and greedy gives 4 + 1 + 1.
+        Why not just grab the biggest coin each time (greedy)? With coins 1, 3 and 4, amount 6 is two
+        coins of 3. Greedy grabs 4, then 1, then 1: three coins. The choice now changes what is
+        possible later, and that is exactly when you need DP.
 
-        ## Top-down is fine
+        ## Idea 4: top-down is fine
 
-        Write the recursion and add «functools.lru_cache». It is the same algorithm, and many
-        people find it easier to get right under pressure.
+        Write the plain recursion and add «functools.lru_cache» to remember answers. It is the same
+        algorithm, and many people find it easier to get right under pressure.
 
-        | Family | State | Examples |
-        |---|---|---|
-        | Linear | index | Climb stairs, non-adjacent sum, decode ways |
-        | Unbounded choice | amount | Fewest coins, number of ways to pay |
-        | Two sequences | (i, j) | Longest common subsequence, edit distance |
-        | Grid | (row, col) | Paths in a grid, minimum path cost |
-        | Subsequence | index, last value | Longest increasing subsequence |
+        ## Idea 5: the families
 
-        > [!senior] What a senior answer adds
-        > Say the state in one sentence before you code, then give time and space: "States
-        > times choices: O(amount × coins) time and O(amount) space."
+        - **Linear** (state: index): climb stairs, non-adjacent sum, decode ways.
+        - **Unbounded choice** (state: amount): fewest coins, number of ways to pay.
+        - **Two sequences** (state: i, j): longest common subsequence, edit distance.
+        - **Grid** (state: row, col): paths in a grid, minimum path cost.
+        - **Subsequence** (state: index, last value): longest increasing subsequence.
 
         > [!trap] DP when greedy or a heap is enough
-        > Try a simpler idea first and test it on a small counter-example. Use dynamic
-        > programming when the choices at one step change the options at later steps.
+        > Try a simpler idea first, and test it on a small counter-example. Use dynamic programming
+        > when the choices at one step change the options at later steps.
+
+        ## Now say it like a senior engineer
+
+        > [!senior] What a senior answer adds
+        > Say the state in one sentence before you code, then give time and space: "States times
+        > choices: O(amount × coins) time and O(amount) space."
+
+        ## In one breath
+
+        Dynamic programming is recursion that writes each small answer down once. Name the state, the
+        choice and the recurrence, fill a table in order, and use it only when today's choice changes
+        tomorrow's options.
       `,
       checks: [
         {
@@ -605,13 +734,24 @@ export const track: Track = {
       title: 'Linked lists and small design questions',
       summary:
         'Handle pointer questions with a dummy node, and build an LRU cache from a hash map and an ordered list.',
-      minutes: 12,
+      minutes: 13,
       body: `
-        The last group of screening questions asks you to **build a small data structure**:
-        a cache, a rate limiter, a hit counter. They test clean code more than algorithms.
-        Linked lists appear here as a building block.
+        ## Start with the problem
 
-        ## Linked list rules
+        The last group of screening questions does not ask for an algorithm. It asks you to **build a
+        small data structure**: a cache, a rate limiter, a hit counter. "Build a cache that holds 1,000
+        items and throws out the one used longest ago, with every operation O(1)."
+
+        No single Python structure does that. The trick is to **combine two**, each covering the
+        other's weak spot. Linked lists appear here as a building block, so start with them.
+
+        ## Idea 1: linked lists, a chain of boxes
+
+        A **linked list** is a chain of boxes. Each box holds a value and an arrow to the next box.
+        Adding or removing a box in the middle is cheap: just redirect two arrows, with nothing to
+        shift. But finding the 500th box means walking 500 arrows.
+
+        Rules that prevent most bugs:
 
         - Draw three boxes and the arrows before you code.
         - Use a **dummy head** node, so the first real node is not a special case.
@@ -633,16 +773,20 @@ export const track: Track = {
             return prev
         ~~~
 
-        ## The LRU cache
+        ## Idea 2: the LRU cache, two structures holding hands
 
-        A cache with a size limit drops the **least recently used** key. Both «get» and «put»
-        must be O(1). The classic answer joins two structures:
+        A cache with a size limit drops the **least recently used (LRU)** key. Both «get» and «put»
+        must be O(1).
 
-        - a **hash map** from key to node, for O(1) lookup;
-        - a **doubly linked list** in order of use, for O(1) move-to-front and remove-from-back.
+        - A **hash map** finds any key in O(1), but has no idea of order.
+        - A **doubly linked list** keeps order (most recent at the front), and moving a box to the
+          front or removing from the back is O(1). But finding a box is slow.
 
-        In Python, «collections.OrderedDict» is exactly this pair. Use it, and say what is
-        inside, so the interviewer knows you could build it.
+        Together: the map points straight at each box in the list. Look up in O(1) through the map,
+        then move or remove in O(1) in the list.
+
+        In Python, «collections.OrderedDict» is exactly this pair. Use it, and say what is inside, so
+        the interviewer knows you could build it.
 
         ~~~python
         from collections import OrderedDict
@@ -665,23 +809,31 @@ export const track: Track = {
                     self.items.popitem(last=False)
         ~~~
 
-        ## Machine coding rounds
+        ## Idea 3: machine coding rounds
 
-        Some Indian product companies run a 90 minute **machine coding** round: build a small
-        working program, such as a parking lot, a rate limiter or an in-memory key-value store.
-        The score is for working code first, then for structure.
+        Some Indian product companies run a 90-minute **machine coding** round: build a small working
+        program, such as a parking lot, a rate limiter or an in-memory key-value store. The score is
+        for working code first, then for structure.
 
         1. Read the whole statement and list the commands it must support. 10 minutes.
-        2. Name the entities and write the classes with empty methods. 10 minutes.
+        2. Name the entities, and write the classes with empty methods. 10 minutes.
         3. Make one path work end to end, then add the others. 50 minutes.
-        4. Handle the bad input cases, then clean the names. 20 minutes.
-
-        > [!senior] What a senior answer adds
-        > Ask the production questions: "Is this cache shared between threads? Then «get» and
-        > «put» need a lock. Does an entry expire? Then each node carries a timestamp."
+        4. Handle the bad input cases, then clean up the names. 20 minutes.
 
         > [!tip] Where you see it at work
         > A database buffer pool, a CDN and the Spark block manager all evict by recent use.
+
+        ## Now say it like a senior engineer
+
+        > [!senior] What a senior answer adds
+        > Ask the production questions: "Is this cache shared between threads? Then «get» and «put»
+        > need a lock. Does an entry expire? Then each node carries a timestamp."
+
+        ## In one breath
+
+        When no single structure is fast at everything, pair two: an LRU cache is a hash map for O(1)
+        lookup holding hands with a linked list for O(1) reordering. In machine coding, make one path
+        work end to end before you polish.
       `,
       checks: [
         {
