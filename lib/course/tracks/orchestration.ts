@@ -12,26 +12,92 @@ export const track: Track = {
       slug: 'what-orchestrators-do',
       title: 'What an orchestrator is for',
       summary: 'Separate scheduling, dependencies, retries and observability from the work itself.',
-      minutes: 10,
+      minutes: 12,
       body: `
-        An orchestrator decides **when** work runs, **in what order**, **what happens on failure**,
-        and **who can see it**. It should not do the heavy work itself. The work runs in Spark, a
-        warehouse or a container, and the orchestrator triggers and watches it.
+        ## Start with the problem
 
-        | Responsibility | What good looks like |
-        |---|---|
-        | Scheduling | Time-based and event-based triggers, with clear data intervals |
-        | Dependencies | A graph of tasks, plus dependencies across pipelines |
-        | Retries | Per-task retries with backoff, and alerts after the last one |
-        | Backfills | Rerun any historical interval safely |
-        | Observability | Run history, logs, durations, SLA misses |
-        | Concurrency control | Pools and limits so a backfill does not starve production |
+        You have three jobs that run every night:
 
-        ## Cron is not enough, and here is why
+        1. Copy yesterday's trips from the app database into the lake.
+        2. Clean them.
+        3. Build the daily revenue table from the clean trips.
 
-        Cron runs a command at a time. It does not know that job B needs job A's output for the
-        same day, that A failed, or that yesterday's run must be redone. You end up rebuilding an
-        orchestrator badly in shell scripts.
+        The easy idea is cron. You put three lines in a crontab: job 1 at 01:00, job 2 at 02:00, job
+        3 at 03:00. You hope each job finishes before the next one starts.
+
+        Then one night job 1 is slow and finishes at 02:20. Job 2 starts at 02:00 and cleans half a
+        day. Job 3 builds revenue from half a day. Nobody notices until the finance team asks why
+        Tuesday's revenue dropped by 40%.
+
+        Another night job 1 fails. Cron does not know. Jobs 2 and 3 run anyway, on old data. And when
+        you fix job 1, you must remember by hand to rerun jobs 2 and 3, for the right day.
+
+        Cron runs a command at a time. That is all it knows. It does not know that job B needs job A's
+        output for the same day, that A failed, or that yesterday's run must be redone. Teams that
+        stay on cron end up writing shell scripts with lock files, retry loops and "did it finish?"
+        checks. They rebuild an orchestrator, badly.
+
+        ## Idea 1: an orchestrator is the shift manager, not the cook
+
+        Think of a restaurant kitchen. The cooks cook. The shift manager decides **when** each dish
+        starts, **in what order**, **what happens when a dish is burned**, and keeps the **board** that
+        shows everyone what is done.
+
+        An orchestrator is the shift manager for data jobs. It decides:
+
+        - **When** work runs.
+        - **In what order** it runs.
+        - **What happens on failure.**
+        - **Who can see** what happened.
+
+        It does not cook. The heavy work runs in Spark, a warehouse or a container. The orchestrator
+        starts it and watches it.
+
+        ## Idea 2: the six jobs of a good orchestrator
+
+        Each one fixes a problem from the story above.
+
+        - **Scheduling.** Time-based and event-based triggers, with clear data intervals. Each run
+          knows which day it is for.
+        - **Dependencies.** A graph of tasks: job 3 starts only when job 2 succeeds. It also handles
+          dependencies across pipelines.
+        - **Retries.** Per-task retries with backoff, and an alert after the last one fails.
+        - **Backfills.** Rerun any historical interval safely: "redo 3 to 7 March".
+        - **Observability.** Run history, logs, durations and SLA misses, in one place.
+        - **Concurrency control.** Pools and limits, so a big backfill does not starve the production
+          runs.
+
+        Tiny example. With an orchestrator, the slow night looks like this: job 1 finishes at 02:20,
+        and job 2 starts at 02:20, not 02:00. The failed night looks like this: job 1 retries 3 times,
+        then you get an alert, and jobs 2 and 3 wait. When you fix job 1, you clear that one run, and
+        jobs 2 and 3 run after it for the same day.
+
+        ## Idea 3: keep the tasks thin
+
+        Back to the kitchen. If the shift manager starts cooking a 40-minute dish, nobody watches the
+        board for 40 minutes.
+
+        Same with an orchestrator. A task that runs a 40-minute pandas transformation inside the
+        Airflow worker ties the scheduler's health to the data size. When data doubles, the workers
+        run out of memory, and every pipeline on the cluster suffers.
+
+        The fix: the task **submits** the work to a system built for it (Spark, the warehouse, a
+        container) and **polls** until it is done. The task stays small. The data can grow.
+
+        ## Idea 4: pass notes, not boxes
+
+        Tasks often need to tell the next task something. The orchestrator gives a way to do that. In
+        Airflow it is called **XCom**, and it is stored in the orchestrator's own metadata database.
+
+        Pass a note: "the clean trips are in «s3://lake/trips/dt=2026-10-31/»". Do not pass the box of
+        trips itself. A DataFrame in XCom fills the metadata database and slows the scheduler for every
+        pipeline.
+
+        ## Now say it like a senior engineer
+
+        An orchestrator owns scheduling, dependencies, retries, backfills, observability and
+        concurrency. It does not own compute. Cron fails because it has no dependency graph, no
+        failure state and no idea of "the run for 31 October".
 
         > [!senior] Keep tasks thin
         > A task that runs a 40-minute pandas transformation inside the Airflow worker ties your
@@ -41,6 +107,12 @@ export const track: Track = {
         > [!trap] Orchestrator as a database
         > Passing large data between tasks through the orchestrator (Airflow XCom, for example)
         > fills its metadata database. Pass references, such as a table name or a storage path.
+
+        ## In one breath
+
+        An orchestrator is the shift manager: it decides when, in what order, what happens on failure,
+        and shows the board. It starts and watches the heavy work in other systems, and passes small
+        notes between tasks, never the data itself.
       `,
       checks: [
         {
@@ -61,25 +133,55 @@ export const track: Track = {
       title: 'Airflow internals and data intervals',
       summary:
         'Scheduler, executors, logical dates and catchup, explained the way interviews probe them.',
-      minutes: 15,
+      minutes: 17,
       body: `
-        ## The moving parts
+        ## Start with the problem
 
-        | Component | Job |
-        |---|---|
-        | Scheduler | Parses DAG files, creates DAG runs and task instances, queues ready tasks |
-        | Executor | Decides where tasks run: Local, Celery workers, Kubernetes pods |
-        | Workers | Run the task code |
-        | Metadata database | State of every DAG run and task instance |
-        | Webserver / API server | The UI and REST API |
-        | Triggerer | Runs deferrable operators' async waits cheaply |
+        You write a daily Airflow DAG to load "yesterday's" trips. On 1 November you open the UI and
+        see a run named **31 October**. It ran at 00:00 on 1 November. You think: "Is that a bug? Did
+        it load 30 October or 31 October?"
 
-        ## Data intervals: the classic confusion
+        Almost everyone gets confused here once. Interviewers know it, so they ask. To answer well,
+        you need two things: what the parts of Airflow do, and what a **data interval** is.
 
-        A daily DAG run for the interval 2026-10-31 00:00 to 2026-11-01 00:00 **starts after the
-        interval ends**, on 1 November. Its «logical_date» (formerly «execution_date») is the start
-        of the interval: 31 October. Use «data_interval_start» and «data_interval_end» in your
-        queries so each run processes exactly its own slice.
+        ## Idea 1: the moving parts, as a small office
+
+        Think of Airflow as a small office that runs errands.
+
+        - **Scheduler:** the planner. It parses the DAG files, creates DAG runs and task instances,
+          and puts tasks that are ready into a queue.
+        - **Executor:** the dispatcher. It decides **where** each task runs: as local processes, on
+          Celery workers, or as Kubernetes pods.
+        - **Workers:** the people who run the errands. They run the task code.
+        - **Metadata database:** the office logbook. It records the state of every DAG run and every
+          task instance.
+        - **Webserver / API server:** the front desk. It serves the UI and the REST API.
+        - **Triggerer:** a receptionist who waits on many phone calls at once. It runs the async waits
+          of deferrable operators cheaply.
+
+        Tiny example. At midnight the scheduler sees that the 31 October interval is over. It writes a
+        new DAG run to the logbook, marks the first task as ready, and queues it. The executor sends it
+        to a worker. The worker runs it and writes "success" to the logbook. The scheduler sees that
+        and queues the next task.
+
+        ## Idea 2: a run is named after the day it covers
+
+        Here is the confusing part, made simple.
+
+        A newspaper is printed on the morning of 1 November, and it reports the news of 31 October.
+        You cannot print the news of a day before the day is over.
+
+        A daily DAG works the same way. The run for the interval **2026-10-31 00:00 to 2026-11-01
+        00:00**:
+
+        - **starts after the interval ends**, on 1 November;
+        - has a «logical_date» (formerly «execution_date») equal to the **start** of the interval:
+          31 October.
+
+        So the run named 31 October, which ran on 1 November, loads 31 October. That is correct.
+
+        In your queries, use «data_interval_start» and «data_interval_end». Then each run processes
+        exactly its own slice, no more and no less.
 
         ~~~sql
         -- In a templated task
@@ -88,26 +190,60 @@ export const track: Track = {
           AND event_ts <  '{{ data_interval_end }}'
         ~~~
 
+        ## Idea 3: never ask the wall clock
+
+        The tempting shortcut is "load yesterday", where yesterday means today minus one day, read from
+        the clock when the task runs.
+
+        That works on a normal night. Now the task fails on 1 November and you retry it on 3 November.
+        "Yesterday" is now 2 November. The run named 31 October loads 2 November. Backfill a whole
+        month and every run loads the same wrong day.
+
+        The run's data interval never changes, whenever the run executes. So always take the window
+        from the interval, never from now().
+
+        ## Idea 4: catchup and backfill
+
+        Say you pause a daily DAG for five days, then unpause it.
+
+        - With «catchup=True», Airflow creates runs for **every missed interval** since «start_date».
+          You get five runs, one per missed day.
+        - With «catchup=False», **only the latest** interval runs. The five missed days are skipped.
+
+        A **backfill** is different: you choose historical intervals on purpose and rerun them, for
+        example after a bug fix.
+
+        ## Idea 5: waiting without wasting a seat
+
+        Some tasks wait: "start when the partner file arrives". A classic **sensor** waits while
+        holding a worker slot, like a person who sits at the desk staring at the door. Ten waiting
+        sensors use ten workers that do nothing.
+
+        A **deferrable** operator hands the wait to the **triggerer**. The triggerer runs thousands of
+        async waits in one process, like one receptionist with many phone lines. When the condition is
+        met, the task resumes on a worker.
+
+        ## Now say it like a senior engineer
+
+        The scheduler creates runs and queues tasks, the executor places them, workers run them, and the
+        metadata database holds all state. A run starts after its data interval closes, and its
+        logical date is the start of that interval. Every query is templated on the interval, so
+        retries and backfills are correct.
+
         > [!trap] Never use now() in a task
         > A task that queries "yesterday" relative to the wall clock processes the wrong day when
         > it is retried or backfilled. Always derive the window from the run's data interval.
-
-        ## Catchup and backfill
-
-        With «catchup=True», a new or paused DAG creates runs for every missed interval since
-        «start_date». With «catchup=False», only the latest interval runs. Backfills rerun chosen
-        historical intervals on purpose.
-
-        ## Sensors and deferrable operators
-
-        A classic sensor occupies a worker slot while it waits. **Deferrable** operators hand the
-        wait to the triggerer, which runs thousands of async waits in one process, and resume
-        when the condition is met.
 
         > [!senior] Airflow 3 changes worth knowing
         > Airflow 3 (2025) introduced DAG versioning, an API server that isolates task execution
         > from the metadata database, and asset-driven (data-aware) scheduling as a first-class
         > idea. Mentioning that you know the direction of the project is a good signal.
+
+        ## In one breath
+
+        Airflow is a planner, a dispatcher, workers and a logbook, and a run is named after the day it
+        covers, like a newspaper printed the next morning. Take every window from the data interval,
+        never from the clock, and hand long waits to the triggerer.
       `,
       checks: [
         {
@@ -129,26 +265,80 @@ export const track: Track = {
       title: 'Idempotent tasks and safe backfills',
       summary:
         'Design tasks so any interval can be rerun any number of times with the same result.',
-      minutes: 13,
+      minutes: 15,
       body: `
+        ## Start with the problem
+
+        A task builds the daily revenue table:
+
+        ~~~sql
+        INSERT INTO daily_revenue
+        SELECT city, SUM(fare) FROM trips
+        WHERE day = '{{ ds }}'
+        GROUP BY city
+        ~~~
+
+        It inserts the rows, then the worker crashes before it tells Airflow "done". Airflow sees a
+        failed task and retries it. The retry inserts the same rows again. Revenue for that day is now
+        **doubled**. The dashboard says the company had its best day ever.
+
+        Retries, reruns and backfills all run a task again. If running again changes the answer, none
+        of them are safe.
+
+        ## Idea 1: idempotent means "pressing it twice is the same as pressing it once"
+
+        Think of a lift button. You press "5" once or ten times, and the lift goes to floor 5 once. The
+        button is **idempotent**.
+
         A task is idempotent when running it twice for the same interval leaves the same result as
-        running it once. It is the property that makes retries, reruns and backfills safe, and it is
-        asked about in almost every pipeline question.
+        running it once. That one property makes retries, reruns and backfills safe. It comes up in
+        almost every pipeline interview question.
 
-        ## Patterns that make tasks idempotent
+        The insert above is not a lift button. It is a coin slot: each push adds more.
 
-        - **Overwrite a partition** for the interval instead of appending: «INSERT OVERWRITE ...
-          PARTITION (ds = '2026-10-31')», or a delete-then-insert in one transaction.
-        - **MERGE on a key** for upserts, so duplicates collapse.
-        - **Deterministic inputs:** read exactly the interval, never "latest" or "now".
-        - **Write then swap:** write to a staging location and atomically rename or swap.
+        ## Idea 2: four ways to make a task idempotent
 
-        ## Backfilling without hurting production
+        Each one turns "add" into "set".
 
-        - Run the backfill in a separate pool with a concurrency limit, so daily runs keep priority.
-        - Process in date order if each day depends on the previous one (running totals, SCD type 2).
-        - Validate a sample of backfilled days against known numbers before running the full range.
-        - Communicate: downstream consumers will see historical numbers change.
+        - **Overwrite a partition.** Replace the whole slice for the interval instead of appending:
+          «INSERT OVERWRITE ... PARTITION (ds = '2026-10-31')», or a delete-then-insert in one
+          transaction. Run it ten times and the slice is the same.
+        - **MERGE on a key.** For upserts, match on the key, so a duplicate row updates the existing
+          one instead of adding a second.
+        - **Deterministic inputs.** Read exactly the interval, never "latest" or "now". The same run
+          must read the same input every time.
+        - **Write then swap.** Write to a staging location, then atomically rename or swap it into
+          place. Readers see the old version or the new one, never half.
+
+        Tiny example, the fix for the story: delete the day, then insert it, in one transaction. First
+        run: delete 0 rows, insert 12. Retry: delete 12, insert 12. The table has 12 rows either way.
+
+        ## Idea 3: backfill without hurting today
+
+        A backfill reruns many past intervals, for example a year of days after a bug fix. It is like
+        repainting every room in a hotel while guests still sleep there. Do it without waking them.
+
+        - Run the backfill in a **separate pool with a concurrency limit**, so the daily runs keep
+          priority.
+        - Process **in date order** if each day depends on the previous one (running totals, SCD type
+          2).
+        - **Validate a sample** of backfilled days against known numbers before you run the full range.
+        - **Communicate.** Downstream consumers will see historical numbers change.
+
+        ## Idea 4: side effects cannot be overwritten
+
+        Some tasks do not write a table. They send an email, call a payment API or publish an event.
+        You cannot "overwrite" an email that is already in someone's inbox.
+
+        The fix is a ticket number. Give each side effect an **idempotency key** made from the interval
+        and the entity, for example «payout/2026-10-31/driver-77». Keep a record of the keys you sent.
+        Before you send, check the record. A retry sees the key and skips.
+
+        ## Now say it like a senior engineer
+
+        Every task overwrites or merges the slice for its own interval and reads only that interval, so
+        any run can be repeated. Backfills run in their own pool, in order when days depend on each
+        other, with a sample check first. Side effects carry idempotency keys and a sent-log.
 
         > [!example] A non-idempotent task, and the fix
         > «INSERT INTO daily_revenue SELECT ... WHERE day = '{{ ds }}'» doubles revenue on a retry.
@@ -159,6 +349,12 @@ export const track: Track = {
         > Sending emails, calling payment APIs or publishing events cannot be "overwritten". Give
         > each side effect an idempotency key derived from the interval and the entity, and keep a
         > record of what was sent.
+
+        ## In one breath
+
+        Make every task a lift button: overwrite or merge its own slice, read only its own interval,
+        and give every side effect a key. Then retries and backfills are boring, which is exactly what
+        you want.
       `,
       checks: [
         {
@@ -179,12 +375,31 @@ export const track: Track = {
       title: 'Prefect 3 for Airflow users',
       summary:
         'Flows, tasks, caching, transactions, deployments and work pools, mapped to Airflow ideas.',
-      minutes: 16,
+      minutes: 18,
       body: `
-        Prefect takes a different approach from Airflow: your pipeline is ordinary Python. A
-        decorated function is a **flow**, and functions it calls can be **tasks**. There is no DAG
-        file parsed on a schedule; the graph is whatever your code does when it runs, including
-        loops and branches decided at runtime.
+        ## Start with the problem
+
+        Each morning you must call a partner API for every active city. The list of cities changes
+        every day. Some days it is 580, some days 612. For each city you fetch data, then load it.
+
+        In classic Airflow, the graph is a DAG file that the scheduler parses again and again, before
+        any run starts. The graph is decided in advance. A loop whose length you only learn at run time
+        does not fit that model well. (Airflow later added dynamic task mapping for exactly this, and
+        you will see it in another lesson.)
+
+        Prefect starts from the other end: what if the pipeline was just ordinary Python, and the graph
+        was whatever the code did when it ran?
+
+        ## Idea 1: a flow is a Python function, a task is a step inside it
+
+        Think of a recipe card versus a cook. Airflow asks you to write the recipe card first, then a
+        cook follows it. Prefect watches the cook and writes down what they did.
+
+        - A function with «@flow» is a **flow**: one pipeline run.
+        - Functions it calls with «@task» are **tasks**: steps that get retries, caching and a row in
+          the UI.
+
+        There is no DAG file parsed on a schedule. Loops and branches decided at run time just work.
 
         ~~~python
         from datetime import timedelta
@@ -208,7 +423,13 @@ export const track: Track = {
             return rows
         ~~~
 
-        ## Mapping the concepts
+        Read it top to bottom. «extract» retries 3 times, waiting 10, 30 and 120 seconds. It returns a
+        path, not the data. «load» takes that path. The flow passes the result of one to the other,
+        exactly as normal Python does.
+
+        ## Idea 2: the same ideas, different names
+
+        If you know Airflow, you already know most of Prefect. Here is the dictionary.
 
         | Airflow | Prefect 3 |
         |---|---|
@@ -220,24 +441,56 @@ export const track: Track = {
         | Pools and concurrency | Global concurrency limits, work pool and work queue limits |
         | Data interval | No built-in concept: pass the date as a flow parameter |
 
-        ## Caching and transactions
+        The last row matters most. Prefect has no data interval. So you pass the day in, as «day» in
+        the code above. Every query uses that parameter. To backfill 3 March, you start a run with
+        «day="2026-03-03"». Never call now() inside a task.
 
-        A task's **cache policy** decides when a previous result can be reused: by inputs, by the
-        task's source code, or a combination. A rerun of a flow then skips tasks whose cached
-        results are still valid, which is a cheap form of idempotency. Prefect 3 also adds
-        **transactions**: tasks inside «with transaction():» commit together, and a task can
-        register an «on_rollback» hook to undo its side effect if a later task fails.
+        ## Idea 3: caching, a cheap way to skip work you already did
 
-        ## Running it: serve or deploy
+        Think of a student who keeps their finished homework. If the teacher asks for the same
+        exercise again, with the same numbers, they hand in the old answer.
 
-        - «daily_trips.serve(name="daily", cron="0 6 * * *")» runs a long-lived process that polls
-          for scheduled runs. Simple, good for one machine.
-        - «flow.from_source(repo, "flows.py:daily_trips").deploy(name="daily",
-          work_pool_name="k8s-pool", cron="0 6 * * *")» registers a **deployment**. **Workers**
-          poll a **work pool** and start each run as a process, container or Kubernetes job.
+        A task's **cache policy** decides when a previous result can be reused:
 
-        Agents and infrastructure blocks from Prefect 2 were removed in Prefect 3; work pools and
+        - by **inputs**: same arguments, same answer;
+        - by the **task's source code**: if you edit the function, the old answer is no longer valid;
+        - or a **combination**, as in «INPUTS + TASK_SOURCE» above.
+
+        Tiny example. The flow for 31 October fails in «load». You rerun it. «extract» was called with
+        the same day and its code did not change, so Prefect reuses the cached path and goes straight
+        to «load». That is a cheap form of idempotency.
+
+        ## Idea 4: transactions, so a half-done run can undo itself
+
+        Say task A writes a file and task B registers it in a catalog. B fails. Now there is a file
+        that nobody knows about.
+
+        Prefect 3 adds **transactions**. Tasks inside «with transaction():» commit together. A task can
+        register an «on_rollback» hook: "if a later task fails, delete my file". Like a shop that
+        refunds your card when the item turns out to be out of stock.
+
+        ## Idea 5: running it, serve or deploy
+
+        You wrote a flow. How does it run every morning at 06:00?
+
+        - **Serve.** «daily_trips.serve(name="daily", cron="0 6 * * *")» runs a long-lived process
+          that polls for scheduled runs. Simple, good for one machine.
+        - **Deploy.** «flow.from_source(repo, "flows.py:daily_trips").deploy(name="daily",
+          work_pool_name="k8s-pool", cron="0 6 * * *")» registers a **deployment**. **Workers** poll a
+          **work pool** and start each run as a process, container or Kubernetes job.
+
+        A work pool is like a taxi rank. Runs wait in the rank. Workers are the taxis that pick them up
+        and take them to the right kind of infrastructure.
+
+        Agents and infrastructure blocks from Prefect 2 were removed in Prefect 3. Work pools and
         workers replaced them.
+
+        ## Now say it like a senior engineer
+
+        Prefect 3 builds the graph from ordinary Python at run time. Tasks get retries, cache policies
+        and transactions with rollback hooks. There is no data interval, so the date is a flow
+        parameter, which keeps runs backfillable. It runs with «serve» on one machine, or as a
+        deployment that workers pick up from a work pool.
 
         > [!trap] Old tutorials
         > Many blog posts show «prefect agent start» and «Deployment.build_from_flow». Both belong to
@@ -249,6 +502,12 @@ export const track: Track = {
         > teams that want local runs to look like production. Airflow's strengths are its huge
         > operator ecosystem, managed offerings (Cloud Composer, MWAA) and strict, schedule-driven
         > data intervals. Say which properties the use case needs.
+
+        ## In one breath
+
+        In Prefect your pipeline is plain Python: flows call tasks, tasks retry and cache, and
+        transactions can roll back. Pass the date as a parameter so any day can be rerun, and run it
+        with serve, or with workers that pick runs from a work pool.
       `,
       checks: [
         {
@@ -282,34 +541,95 @@ export const track: Track = {
       title: 'Choosing an orchestrator',
       summary:
         'Compare Airflow, Prefect, Dagster and durable workflow engines by the properties that matter.',
-      minutes: 11,
+      minutes: 13,
       body: `
-        "Why Airflow and not X?" is a favourite senior question. A good answer compares properties,
-        not popularity.
+        ## Start with the problem
 
-        | Property | Airflow | Prefect | Dagster | Temporal or Cadence |
-        |---|---|---|---|---|
-        | Model | Scheduled task DAGs | Python flows and tasks | Software-defined assets | Durable, long-running workflows |
-        | Dynamic graphs | Dynamic mapping, limited | Native Python control flow | Partitions and dynamic outputs | Native code |
-        | Data awareness | Assets and datasets (growing) | Results and caching | Core idea: assets with lineage | None (not a data tool) |
-        | Ecosystem | Largest | Medium | Medium | Service orchestration |
-        | Managed options | Composer, MWAA, Astronomer | Prefect Cloud | Dagster+ | Temporal Cloud |
+        The interviewer asks: "Your team uses Airflow. Why not Prefect, or Dagster?"
 
-        **Cadence** was created at Uber for durable service workflows (for example multi-step trip
-        and payment processes). Temporal is its successor by the same original authors. They solve
-        a different problem from data orchestration: guaranteeing that a long business process
-        finishes despite crashes.
+        The weak answer is about popularity: "Airflow is the industry standard." The interviewer hears
+        "I have only used one tool." The strong answer compares **properties**: what each tool is built
+        around, and which of those properties this use case needs.
 
-        ## A decision in three questions
+        ## Idea 1: each tool is built around a different picture
 
-        1. Is the workload time-scheduled batch over data intervals, or event-driven and dynamic?
-        2. Does the team want lineage and data assets as first-class objects?
-        3. What does the company already run, and who will operate it on call?
+        Think of four kinds of vehicle. A bus runs a fixed route on a timetable. A taxi goes wherever
+        the passenger says. A delivery van is planned around the parcels. An ambulance is built so the
+        trip always finishes, whatever happens on the way. All four move people or things, but you
+        would not swap them.
+
+        **Airflow, the bus.**
+
+        - Model: scheduled task DAGs.
+        - Dynamic graphs: dynamic mapping, but limited.
+        - Data awareness: assets and datasets, growing.
+        - Ecosystem: the largest.
+        - Managed options: Composer, MWAA, Astronomer.
+
+        **Prefect, the taxi.**
+
+        - Model: Python flows and tasks.
+        - Dynamic graphs: native Python control flow.
+        - Data awareness: results and caching.
+        - Ecosystem: medium.
+        - Managed option: Prefect Cloud.
+
+        **Dagster, the delivery van.**
+
+        - Model: software-defined assets. You declare the tables you want, not the steps.
+        - Dynamic graphs: partitions and dynamic outputs.
+        - Data awareness: the core idea, assets with lineage.
+        - Ecosystem: medium.
+        - Managed option: Dagster+.
+
+        **Temporal or Cadence, the ambulance.**
+
+        - Model: durable, long-running workflows.
+        - Dynamic graphs: native code.
+        - Data awareness: none. It is not a data tool.
+        - Ecosystem: service orchestration.
+        - Managed option: Temporal Cloud.
+
+        ## Idea 2: Cadence and Temporal solve a different problem
+
+        **Cadence** was created at Uber for durable service workflows, for example multi-step trip and
+        payment processes. Temporal is its successor, by the same original authors.
+
+        Their promise: a long business process finishes even if servers crash halfway. Step 3 of a
+        payment will not run twice, and step 4 will not be forgotten. That is not data orchestration.
+        They do not think about daily partitions or backfills. If an interviewer at Uber mentions
+        Cadence, they want to see that you know this difference.
+
+        (Airflow, for the record, came from Airbnb.)
+
+        ## Idea 3: decide with three questions
+
+        1. Is the workload **time-scheduled batch** over data intervals, or **event-driven and
+           dynamic**?
+        2. Does the team want **lineage and data assets** as first-class objects?
+        3. What does the company **already run**, and who will operate it on call?
+
+        Tiny example. A team runs 300 nightly SQL pipelines on Cloud Composer, and the on-call team
+        knows Airflow well. Question 1 says batch, question 3 says Airflow is already paid for. Stay on
+        Airflow. A separate ML team fans out over a different list of models each day and wants local
+        runs to match production. Question 1 says dynamic. Prefect is a fair choice there.
+
+        ## Now say it like a senior engineer
+
+        Airflow is schedule-driven with the biggest ecosystem. Prefect is dynamic Python. Dagster is
+        asset-first with lineage. Temporal and Cadence are durable service workflows, not data tools.
+        Choose by workload shape, need for assets, and what the team can operate.
 
         > [!senior] The migration answer
         > If you would change tools, say how: run both side by side, migrate the least critical
         > pipelines first, keep the same idempotent task code, and compare outputs before cutting
         > over. Interviewers want to see that you respect the cost of change.
+
+        ## In one breath
+
+        Compare orchestrators by what they are built around: schedules, Python, assets or durable
+        workflows. Pick with three questions about workload, lineage and operations, and if you switch,
+        migrate slowly and side by side.
       `,
       checks: [
         {
@@ -330,16 +650,27 @@ export const track: Track = {
       title: 'Airflow hands-on: TaskFlow, mapping and trigger rules',
       summary:
         'Write a modern Airflow DAG with TaskFlow, dynamic task mapping, branching, trigger rules and setup and teardown tasks.',
-      minutes: 17,
+      minutes: 19,
       body: `
-        Interviewers who use Airflow every day ask you to write a DAG on a whiteboard, then ask
-        what happens when one task fails. This lesson is that DAG.
+        ## Start with the problem
 
-        ## TaskFlow
+        An interviewer who uses Airflow every day says: "Write me a DAG that builds trip metrics for
+        each city, every day." You write it on the whiteboard. Then comes the real question: "One city
+        fails. What happens to the others, and to the task at the end?"
 
-        The **TaskFlow API** turns Python functions into tasks with «@task». Return values pass
-        to the next task through **XCom**, and the dependency is inferred from the call. In
-        Airflow 3, DAG authors import from «airflow.sdk».
+        To answer, you need four tools: TaskFlow for writing tasks, mapping for "one task per city",
+        trigger rules for "what runs after a failure", and setup and teardown for cleaning up. This
+        lesson builds that DAG, one idea at a time.
+
+        ## Idea 1: TaskFlow, tasks as plain functions
+
+        The **TaskFlow API** turns a Python function into a task with «@task». When one task's return
+        value is passed into another, two things happen:
+
+        - the value goes to the next task through **XCom**;
+        - Airflow **infers the dependency** from the call, so you do not write «a >> b».
+
+        In Airflow 3, DAG authors import from «airflow.sdk».
 
         ~~~python
         import pendulum
@@ -375,38 +706,50 @@ export const track: Track = {
         city_trip_metrics()
         ~~~
 
-        ## Dynamic task mapping
+        Read the last line from the inside out. «list_cities()» returns 4 cities. «build_city.expand»
+        makes one task per city. «publish» receives the 4 paths. That one line is the whole graph.
 
-        «build_city.expand(city=...)» creates one task instance per element at run time, so the
-        number of cities can change between runs without a code change. «partial()» fixes the
-        arguments that do not vary. The downstream task receives the list of results. Limit the
-        fan-out with «max_active_tis_per_dag» or a **pool**, or a list of 5,000 elements becomes
-        5,000 simultaneous queries against the warehouse.
+        ## Idea 2: dynamic task mapping, one task per item
 
-        > [!trap] XCom is not a data channel
-        > XCom values are stored in the metadata database. Pass paths, ids and counts, never a
-        > DataFrame. A large XCom slows the scheduler for every DAG. If you must pass data, use an
-        > object storage XCom backend, and still prefer passing a path.
+        Think of a teacher with a pile of exam papers. Today there are 4, tomorrow 40. The teacher does
+        not rewrite the lesson plan, they just hand one paper to each helper.
 
-        ## Trigger rules
+        «build_city.expand(city=...)» creates one task instance per element **at run time**, so the
+        number of cities can change between runs without a code change. «partial()» fixes the arguments
+        that do not vary. The downstream task receives the list of results.
 
-        A task runs when its upstream tasks reach the state its **trigger rule** asks for.
+        Each city is its own task, so each city retries on its own, and the UI shows which city failed.
 
-        | Rule | Runs when | Typical use |
-        |---|---|---|
-        | «all_success» | Default. Every upstream succeeded | Normal steps |
-        | «all_done» | Every upstream finished, in any state | Cleanup, notifications |
-        | «one_failed» | At least one upstream failed | Alert or rollback task |
-        | «none_failed» | No upstream failed; skips are fine | Join after a branch |
-        | «none_failed_min_one_success» | As above, and at least one succeeded | The usual join after a branch |
-        | «all_skipped» | Every upstream was skipped | "Nothing to do" path |
-        | «always» | Always, even with no upstream run | Rarely right; prefer all_done |
+        But helpers can overwhelm the photocopier. A list of 5,000 elements becomes 5,000 simultaneous
+        queries against the warehouse. Limit the fan-out with «max_active_tis_per_dag» (it is 2 in the
+        code above) or a **pool**.
 
-        ## Branching
+        ## Idea 3: XCom carries notes, not parcels
 
-        «@task.branch» returns the task id (or ids) to follow; the other direct paths are
-        **skipped**. Skips propagate: a join task with the default «all_success» rule is skipped
-        too, which is the classic bug. Give the join «none_failed_min_one_success».
+        XCom values are stored in the metadata database, the same database the scheduler reads all the
+        time. A small value, such as a path or a count, is a note. A DataFrame is a parcel, and it
+        slows the scheduler for every DAG.
+
+        ## Idea 4: trigger rules, "when may I start?"
+
+        By default a task starts only when **every** task before it succeeded. That default is a
+        **trigger rule**, and you can choose another one. A task runs when its upstream tasks reach the
+        state its trigger rule asks for.
+
+        - «all_success»: the default. Every upstream succeeded. Use it for normal steps.
+        - «all_done»: every upstream finished, in any state. Use it for cleanup and notifications.
+        - «one_failed»: at least one upstream failed. Use it for an alert or a rollback task.
+        - «none_failed»: no upstream failed; skips are fine. Use it for a join after a branch.
+        - «none_failed_min_one_success»: as above, and at least one succeeded. The usual join after a
+          branch.
+        - «all_skipped»: every upstream was skipped. A "nothing to do" path.
+        - «always»: always, even with no upstream run. Rarely right; prefer «all_done».
+
+        ## Idea 5: branching, and the classic bug
+
+        Sometimes the DAG takes one road or the other: a full reload on the first day of the month, an
+        incremental load on other days. «@task.branch» returns the task id (or ids) to follow. The
+        other direct paths are **skipped**.
 
         ~~~python
         @task.branch
@@ -414,19 +757,45 @@ export const track: Track = {
             return "full_reload" if ds.endswith("-01") else "incremental_load"
         ~~~
 
-        ## Setup and teardown
+        Now the bug. After the two paths there is a join task. On 5 March, «full_reload» is skipped.
+        The join has the default «all_success» rule. "Skipped" is not "success", so the join is skipped
+        too. Skips **propagate**, like one closed road that closes every road after it. The run is
+        green, and nothing was published.
 
-        Mark a task that creates a resource with «as_setup()» and the one that removes it with
-        «as_teardown(setups=...)». Airflow runs the teardown even when work in between fails, and
-        the teardown’s own result does not fail the run by default. Use it for a temporary
-        cluster or a scratch schema, instead of a cleanup task with «all_done» that someone forgets
-        to wire.
+        The fix: give the join «none_failed_min_one_success».
+
+        ## Idea 6: setup and teardown, cleanup that always happens
+
+        Say the DAG starts a temporary Spark cluster, runs work on it, then deletes it. If the work
+        fails, a normal "delete cluster" task never runs, and the cluster costs money all weekend.
+
+        Mark the task that creates a resource with «as_setup()» and the one that removes it with
+        «as_teardown(setups=...)». Airflow runs the teardown even when the work in between fails, and
+        the teardown's own result does not fail the run by default. Use it for a temporary cluster or a
+        scratch schema, instead of a cleanup task with «all_done» that someone forgets to wire.
+
+        ## Now say it like a senior engineer
+
+        TaskFlow infers dependencies from function calls. Mapping fans out at run time with a
+        concurrency cap. XCom carries only references. The join after a branch uses
+        «none_failed_min_one_success», and temporary resources use setup and teardown.
+
+        > [!trap] XCom is not a data channel
+        > XCom values are stored in the metadata database. Pass paths, ids and counts, never a
+        > DataFrame. A large XCom slows the scheduler for every DAG. If you must pass data, use an
+        > object storage XCom backend, and still prefer passing a path.
 
         > [!senior] The failure walk-through
         > Be ready to say, for your DAG: which task retries and how often, which tasks are
         > skipped when a branch is not taken, what the join does, what runs on failure (an
         > «on_failure_callback» or a «one_failed» task), and why rerunning the whole run is safe
         > (each task overwrites its partition).
+
+        ## In one breath
+
+        Write tasks as functions, fan out with «expand» and a limit, and pass only small notes through
+        XCom. Know your trigger rules, because a skip after a branch silently skips the join unless you
+        give it «none_failed_min_one_success».
       `,
       checks: [
         {
@@ -460,22 +829,41 @@ export const track: Track = {
       title: 'Sensors, custom operators and hooks',
       summary:
         'Wait on external events without wasting workers, and package reusable integrations as operators and hooks.',
-      minutes: 14,
+      minutes: 16,
       body: `
-        ## Sensors: three ways to wait
+        ## Start with the problem
 
-        A sensor is a task that waits until a condition is true: a file lands, a partition
-        appears, another DAG finishes.
+        A partner sends you a trips file every morning, "sometime between 2 and 8 AM". Your DAG must
+        not start until the file is there. You also call the partner's API from five different DAGs,
+        and each DAG has its own copy of the login and retry code.
 
-        | Mode | How it waits | Cost |
-        |---|---|---|
-        | «poke» | Holds a worker slot and checks every «poke_interval» | One slot per waiting sensor. Fine for short waits only. |
-        | «reschedule» | Checks, then frees the slot and is rescheduled | No slot between checks; each check is a new task start |
-        | **Deferrable** («deferrable=True») | Hands the wait to the **triggerer**, an async process | Thousands of waits in one process. The default choice for long waits. |
+        So two problems: how do you **wait** well, and how do you **reuse** an integration instead of
+        copying it? Sensors answer the first. Hooks and operators answer the second.
 
-        Always set «timeout» (how long to wait in total) and decide what a timeout means: fail
-        and alert, or «soft_fail=True» to skip. A sensor without a timeout waits seven days by
-        default, holding up the run behind it.
+        ## Idea 1: a sensor is a task that waits
+
+        A sensor waits until a condition is true: a file lands, a partition appears, another DAG
+        finishes. The question is **how** it waits. Picture someone waiting for a parcel.
+
+        - «poke», **sit by the door.** The sensor holds a worker slot and checks every
+          «poke_interval». It costs one slot per waiting sensor. Fine for short waits only.
+        - «reschedule», **check, then go back to work.** It checks, frees the slot, and is
+          rescheduled for the next check. No slot between checks, but each check is a new task start.
+        - **Deferrable**, «deferrable=True», **ask the reception desk to call you.** The sensor hands the
+          wait to the **triggerer**, an async process. Thousands of waits fit in one process. This is
+          the default choice for long waits.
+
+        Tiny example. 200 sensors wait up to five hours each. In poke mode they hold 200 worker slots
+        doing nothing, and real tasks queue behind them. Deferrable, they hold zero slots.
+
+        ## Idea 2: always decide how long to wait
+
+        Always set «timeout», the total time to wait. Then decide what a timeout means:
+
+        - fail and alert, or
+        - «soft_fail=True», which marks the sensor skipped.
+
+        A sensor without a timeout waits seven days by default, holding up the run behind it.
 
         ~~~python
         from airflow.providers.amazon.aws.sensors.s3 import S3KeySensor
@@ -489,15 +877,18 @@ export const track: Track = {
         )
         ~~~
 
-        > [!tip] Prefer events over polling
-        > If the producer is your own pipeline, have it update an **asset** and schedule the
-        > consumer on that asset. Polling is for systems you do not control.
+        This waits for the «_SUCCESS» marker of the run's day, checks every 5 minutes, gives up after
+        6 hours, and holds no worker while it waits.
 
-        ## Hooks and operators
+        ## Idea 3: hooks are the plug, operators are the appliance
 
-        A **hook** wraps a connection to an external system: it reads credentials from an Airflow
-        **connection** (or a secrets backend) and exposes methods. An **operator** is a reusable
-        task: it takes parameters, uses hooks, and does its work in «execute».
+        Think of a wall socket and a kettle.
+
+        - A **hook** is the plug. It wraps a connection to an external system. It reads credentials
+          from an Airflow **connection** (or a secrets backend) and exposes methods, such as
+          «fetch_day».
+        - An **operator** is the appliance. It is a reusable task: it takes parameters, uses hooks, and
+          does its work in «execute».
 
         ~~~python
         from airflow.sdk import BaseHook, BaseOperator
@@ -529,18 +920,36 @@ export const track: Track = {
                 return len(rows)
         ~~~
 
-        - «template_fields» lists the arguments Airflow renders with Jinja at run time, so
-          «day="{{ ds }}"» becomes the run’s date.
-        - The constructor runs every time the scheduler parses the file. Do no I/O there; do it in
-          «execute».
-        - Package operators and hooks in an internal provider package with tests, not copied
-          between DAG folders.
+        Three rules hide in that code.
+
+        - «template_fields» lists the arguments Airflow renders with Jinja at run time. So
+          «day="{{ ds }}"» becomes the run's date.
+        - **The constructor runs every time the scheduler parses the file.** Do no I/O there; do it in
+          «execute». An API call in the constructor runs on every parse, for every DAG.
+        - **Share it properly.** Package operators and hooks in an internal provider package with
+          tests. Do not copy them between DAG folders.
+
+        ## Now say it like a senior engineer
+
+        Long waits are deferrable, with a timeout and a clear meaning for that timeout. Integrations are
+        a hook for the connection and an operator for the reusable task, with templated fields and no
+        I/O at parse time.
+
+        > [!tip] Prefer events over polling
+        > If the producer is your own pipeline, have it update an **asset** and schedule the
+        > consumer on that asset. Polling is for systems you do not control.
 
         > [!senior] When not to write an operator
         > A custom operator is worth it when several teams repeat the same integration. For one
         > DAG, a «@task» function is simpler. For heavy or conflicting dependencies, run the work
         > in a container with «KubernetesPodOperator» or «@task.docker», so the Airflow image stays
         > small.
+
+        ## In one breath
+
+        Wait with deferrable sensors that have a timeout, so waiting costs no workers. Wrap each
+        external system in a hook, build reusable tasks as operators that do their work in «execute»,
+        and keep the constructor free of I/O.
       `,
       checks: [
         {
@@ -573,16 +982,30 @@ export const track: Track = {
       title: 'Testing DAGs and running Airflow in production',
       summary:
         'Test DAGs at three levels, ship them through CI, and choose an executor and a managed service.',
-      minutes: 15,
+      minutes: 17,
       body: `
-        ## Three levels of tests
+        ## Start with the problem
 
-        1. **Integrity tests** load every DAG file the way the scheduler does and fail on import
-           errors, cycles, or missing conventions such as owners, tags and retries.
-        2. **Unit tests** call the task logic directly. Keep logic in plain functions in a
-           package, and keep the task a thin wrapper, so tests need no Airflow at all.
-        3. **Run tests** execute a whole DAG for one logical date in a single process with
-           «dag.test()», against a test warehouse or local fakes.
+        On Friday someone merges a DAG change with a typo in an import. In production, nothing fails
+        loudly. The DAG just **disappears from the UI**. No runs, no red task, no alert. On Monday the
+        finance team asks where the weekend numbers are.
+
+        Separately, the Airflow workers keep running out of memory, and one team needs a GPU library
+        that conflicts with everyone else's. This lesson covers how to catch the first problem before
+        deploy, and how to run Airflow so the second one does not happen.
+
+        ## Idea 1: three levels of tests
+
+        Think of checking a car. First, does it start? Then, does each part work on the bench? Then, a
+        short drive round the block.
+
+        1. **Integrity tests: does it start?** Load every DAG file the way the scheduler does. Fail on
+           import errors, cycles, or missing conventions such as owners, tags and retries.
+        2. **Unit tests: each part on the bench.** Call the task logic directly. Keep the logic in
+           plain functions in a package, and keep the task a thin wrapper, so tests need no Airflow at
+           all.
+        3. **Run tests: round the block.** Execute a whole DAG for one logical date in a single process
+           with «dag.test()», against a test warehouse or local fakes.
 
         ~~~python
         import pytest
@@ -606,44 +1029,61 @@ export const track: Track = {
                 assert task.retries >= 1, task.task_id
         ~~~
 
-        Run these in CI on every pull request, then deploy DAG files and the image. A DAG that
-        fails to import in production does not fail loudly: it disappears from the UI.
+        The first test would have caught Friday's typo in seconds. Run these in CI on every pull
+        request, then deploy the DAG files and the image.
 
-        ## Parse time is a budget
+        ## Idea 2: parse time is a budget
 
-        The DAG processor re-parses files continuously. Top-level code (database calls, API
-        calls, reading a big config) runs on every parse and slows scheduling for everyone.
-        Generate DAGs from a small static config, and do the real work inside tasks.
+        The DAG processor re-parses DAG files continuously, many times an hour. Top-level code runs on
+        every parse: database calls, API calls, reading a big config. It slows scheduling for everyone.
 
-        ## Executors
+        Like a shop sign that you repaint every time a customer walks past. Generate DAGs from a small
+        static config, and do the real work inside tasks.
 
-        | Executor | How tasks run | Fits |
-        |---|---|---|
-        | «LocalExecutor» | Processes on the scheduler machine | Small installs, development |
-        | «CeleryExecutor» | A pool of long-running workers fed by a queue | Many short tasks, fast start |
-        | «KubernetesExecutor» | One pod per task | Isolation, per-task resources, uneven load |
+        ## Idea 3: executors, where tasks physically run
+
+        - «LocalExecutor»: processes on the scheduler machine. Fits small installs and development.
+        - «CeleryExecutor»: a pool of long-running workers fed by a queue. Fits many short tasks;
+          tasks start fast.
+        - «KubernetesExecutor»: one pod per task. Fits isolation, per-task resources and uneven
+          load.
 
         Since Airflow 2.10 one deployment can configure several executors and choose per task.
-        Separately, «KubernetesPodOperator» runs any container image as a task, whatever the
-        executor, which keeps heavy dependencies out of the Airflow image.
 
-        ## Managed Airflow
+        Separately, «KubernetesPodOperator» runs any container image as a task, whatever the executor.
+        That is the answer to the GPU team: their task runs in its own image, with its own GPU and
+        libraries, and the shared Airflow image stays small.
 
-        | Service | Notes |
-        |---|---|
-        | Amazon MWAA | DAGs and requirements from S3; Celery workers with autoscaling |
-        | Google Cloud Composer 3 | Runs on GKE managed by Google; DAGs in a Cloud Storage bucket |
-        | Astronomer (Astro) | Image-based deploys with a CLI, multiple executors, hosted on several clouds |
-        | Self-managed on Kubernetes | The official Helm chart; you own upgrades and the metadata database |
+        ## Idea 4: managed Airflow, someone else runs the engine room
 
-        Managed versions trail open source releases. Check that your target service supports
-        the Airflow version and provider versions you test against.
+        - **Amazon MWAA:** DAGs and requirements come from S3. Celery workers with autoscaling.
+        - **Google Cloud Composer 3:** runs on GKE managed by Google. DAGs live in a Cloud Storage
+          bucket.
+        - **Astronomer (Astro):** image-based deploys with a CLI, multiple executors, hosted on several
+          clouds.
+        - **Self-managed on Kubernetes:** the official Helm chart. You own upgrades and the metadata
+          database.
+
+        Managed versions trail open source releases. Check that your target service supports the
+        Airflow version and provider versions you test against.
+
+        ## Now say it like a senior engineer
+
+        CI loads the DagBag and runs unit tests on every pull request, because a broken DAG vanishes
+        instead of failing. Top-level code is cheap, heavy work runs in pods, and the executor matches
+        the load shape.
 
         > [!senior] What a platform owner says
         > "DAG code and the runtime image are versioned and deployed separately; CI runs the
         > integrity and unit tests; heavy work runs in pods; the metadata database is backed up
         > and its old rows are cleaned with «airflow db clean»; and we alert on scheduler
         > heartbeat, DAG processor errors and queued tasks, not only task failures."
+
+        ## In one breath
+
+        Test DAGs at three levels, and above all load the DagBag in CI, because a DAG with an import
+        error silently disappears. Keep parse-time code tiny, run heavy or odd tasks in their own pods,
+        and pick an executor or managed service that matches your load.
       `,
       checks: [
         {
