@@ -13,70 +13,66 @@ export const pandasLessons: readonly Lesson[] = [
     title: 'pandas for interviews: the small part you need',
     summary:
       'Write the six pandas operations that interviews ask for, translate SQL to pandas, and say when pandas is the wrong tool.',
-    minutes: 15,
+    minutes: 16,
     body: `
-      pandas is a small part of a senior data engineer loop. Most coding rounds want plain
-      Python or PySpark. But some rounds let you choose pandas for a data task, and Spark
-      rounds ask about pandas UDFs and «toPandas()». This lesson is the whole of what you
-      need. If you can write one transformation in SQL, PySpark and pandas, you are covered.
+      ## Start with the problem
 
-      ## The mental model
+      pandas is a small part of a senior data engineer loop. Most coding rounds want plain Python
+      or PySpark. But some rounds let you choose pandas for a data task, and Spark rounds ask about
+      pandas UDFs and «toPandas()». So you need a small, solid part of pandas, not all of it.
 
-      A **DataFrame** is a table held in memory on **one machine**. Each column is a
-      **Series**: a typed array with an index. Operations on a whole column run in compiled
-      code and are fast. A Python loop over the rows is slow.
+      Here is the good news: you already know it. If you can write a query in SQL, every clause has
+      one pandas form. This lesson is the whole of what you need. If you can write one
+      transformation in SQL, PySpark and pandas, you are covered.
 
-      ## SQL to pandas
+      ## Idea 1: the mental model
 
-      Each SQL clause has one pandas form. The comment is the SQL.
+      A **DataFrame** is a table held in memory on **one machine**. Each column is a **Series**: a
+      typed array with an index.
+
+      The one rule that decides speed: an operation on a **whole column** runs in compiled code and
+      is fast. A Python loop over the **rows** is slow. Think of it as telling a team "everyone add
+      10" versus walking up to each person one by one.
+
+      ## Idea 2: SQL to pandas, clause by clause
+
+      Each SQL clause has one pandas form. The comment above each line is the SQL.
 
       ~~~python
       # SELECT a, b
       df[["a", "b"]]
-
       # WHERE amount > 100 AND city = 'BLR'
       df[(df["amount"] > 100) & (df["city"] == "BLR")]
-
       # ORDER BY amount DESC
       df.sort_values("amount", ascending=False)
-
       # GROUP BY city, with aggregates
       df.groupby("city", as_index=False).agg(revenue=("amount", "sum"))
-
       # LEFT JOIN other ON key
       df.merge(other, on="key", how="left")
-
       # ROW_NUMBER() OVER (PARTITION BY city ORDER BY ...)
       df.groupby("city").cumcount() + 1
-
       # SUM(amount) OVER (PARTITION BY city ORDER BY ...)
       df.groupby("city")["amount"].cumsum()
-
       # LAG(amount) OVER (PARTITION BY city ORDER BY ...)
       df.groupby("city")["amount"].shift(1)
-
       # COALESCE(amount, 0)
       df["amount"].fillna(0)
-
       # CASE WHEN amount >= 1000 THEN 'large' ELSE 'small' END
       np.where(df["amount"] >= 1000, "large", "small")
-
       # SELECT DISTINCT *
       df.drop_duplicates()
       ~~~
 
-      In a filter, use «&», «|» and «~», and put each condition in brackets. The Python
-      words «and» and «or» raise an error on a Series.
+      In a filter, use «&», «|» and «~», and put each condition in brackets. The Python words «and»
+      and «or» raise an error on a Series, because they expect one True or False, not a whole column.
 
-      ## Read, filter, aggregate
+      ## Idea 3: read, filter, aggregate
 
       ~~~python
       import pandas as pd
 
       orders = pd.read_csv(orders_path, parse_dates=["ordered_at"])
-
       delivered = orders[orders["status"] == "DELIVERED"]
-
       by_city = (delivered
                  .groupby("city", as_index=False)
                  .agg(orders=("order_id", "count"),
@@ -85,10 +81,10 @@ export const pandasLessons: readonly Lesson[] = [
                  .sort_values("revenue", ascending=False))
       ~~~
 
-      The named form of «agg», «new_name=(column, function)», gives flat column names. It is
-      the form to use in an interview. «as_index=False» keeps «city» as a normal column.
+      The named form of «agg», «new_name=(column, function)», gives flat column names. It is the form
+      to use in an interview. «as_index=False» keeps «city» as a normal column.
 
-      ## Join
+      ## Idea 4: join, and guard the join
 
       ~~~python
       enriched = orders.merge(customers, on="customer_id", how="left", validate="many_to_one")
@@ -101,10 +97,10 @@ export const pandasLessons: readonly Lesson[] = [
       ~~~
 
       «validate="many_to_one"» raises an error if «customers» has a duplicate key. It is the
-      cheapest guard against a join that multiplies rows. «indicator=True» adds a «_merge»
-      column, which gives you an anti join.
+      cheapest guard against a join that multiplies rows. «indicator=True» adds a «_merge» column,
+      which gives you an anti join: "customers with no orders".
 
-      ## Nulls and duplicates
+      ## Idea 5: nulls and duplicates
 
       ~~~python
       clean = (orders
@@ -113,11 +109,11 @@ export const pandasLessons: readonly Lesson[] = [
                .dropna(subset=["customer_id"]))
       ~~~
 
-      A missing value is «NaN» or «pd.NA». It never equals anything, itself included, so test
-      with «isna()» and «notna()». «groupby» **drops rows whose key is null** unless you pass
+      A missing value is «NaN» or «pd.NA». It never equals anything, not even itself, so test with
+      «isna()» and «notna()». And «groupby» **drops rows whose key is null** unless you pass
       «dropna=False». That is a common source of a wrong total.
 
-      ## Vectorise; do not loop
+      ## Idea 6: vectorise, do not loop
 
       ~~~python
       import numpy as np
@@ -125,49 +121,56 @@ export const pandasLessons: readonly Lesson[] = [
       orders["size"] = np.where(orders["amount"] >= 1000, "large", "small")
       ~~~
 
-      | Way | Speed on 1 million rows |
-      |---|---|
-      | A column expression, «np.where», «.str» and «.dt» methods | Milliseconds |
-      | «df.apply(func, axis=1)» | Seconds: a Python call for each row |
-      | «for i, row in df.iterrows()» | Slowest: it also builds a Series for each row |
+      Speed on 1 million rows:
 
-      ## Windows inside a group
+      - A column expression, «np.where», or «.str» and «.dt» methods: **milliseconds**.
+      - «df.apply(func, axis=1)»: **seconds**, because it makes a Python call for each row.
+      - «for i, row in df.iterrows()»: **slowest**, because it also builds a Series for each row.
+
+      ## Idea 7: window functions inside a group
 
       ~~~python
       orders = orders.sort_values(["customer_id", "ordered_at"])
       by_customer = orders.groupby("customer_id")
-
       orders["order_number"] = by_customer.cumcount() + 1
       orders["running_total"] = by_customer["amount"].cumsum()
       orders["previous_amount"] = by_customer["amount"].shift(1)
       ~~~
 
-      Sort first. «cumsum», «cumcount» and «shift» work in row order inside each group.
-      «transform» returns a value for each row, such as a share of the group total:
-      «orders["amount"] / by_customer["amount"].transform("sum")».
+      **Sort first.** «cumsum», «cumcount» and «shift» work in row order inside each group, so the
+      order of the rows is your «ORDER BY». «transform» returns one value for each row, such as a
+      share of the group total: «orders["amount"] / by_customer["amount"].transform("sum")».
 
-      ## When pandas is the wrong tool
+      ## Idea 8: when pandas is the wrong tool
 
-      - **Memory.** pandas loads everything. A CSV often needs 2 to 5 times its file size in
-        memory. A 10 GB file does not fit on a 16 GB machine.
+      - **Memory.** pandas loads everything. A CSV often needs 2 to 5 times its file size in memory.
+        A 10 GB file does not fit on a 16 GB machine.
       - **One core.** Most operations use a single core.
-      - **What to say instead.** Read in chunks for a simple aggregate. Use **DuckDB** or
-        **Polars** for tens of gigabytes on one machine. Use **Spark** when the data needs a
-        cluster. Read only the columns you need, from Parquet, in every case.
+      - **What to say instead.** Read in chunks for a simple aggregate. Use **DuckDB** or **Polars**
+        for tens of gigabytes on one machine. Use **Spark** when the data needs a cluster. In every
+        case, read only the columns you need, from Parquet.
 
-      In Spark, «toPandas()» pulls the whole DataFrame into the driver's memory. Aggregate or
-      limit first. A **pandas UDF** is different: Spark sends batches through Arrow to pandas
-      on each executor, so the data stays distributed.
-
-      > [!senior] What a senior answer adds
-      > Check the join and the grain as you write: "I pass «validate» to the merge, and I
-      > compare the row count before and after." Then state the limit: "This is fine for a
-      > few gigabytes. Past that I would move it to DuckDB or Spark, with the same logic."
+      In Spark, «toPandas()» pulls the whole DataFrame into the driver's memory. Aggregate or limit
+      first. A **pandas UDF** is different: Spark sends batches through Arrow to pandas on each
+      executor, so the data stays distributed.
 
       > [!trap] pandas 3 changed two defaults
-      > Text columns now use a real string type, not «object». And an edit of a filtered
-      > copy never changes the original, so write «df.loc[mask, "col"] = value» or use
-      > «assign». Chained assignment such as «df[mask]["col"] = value» does nothing.
+      > Text columns now use a real string type, not «object». And an edit of a filtered copy never
+      > changes the original, so write «df.loc[mask, "col"] = value» or use «assign». Chained
+      > assignment such as «df[mask]["col"] = value» does nothing.
+
+      ## Now say it like a senior engineer
+
+      > [!senior] What a senior answer adds
+      > Check the join and the grain as you write: "I pass «validate» to the merge, and I compare
+      > the row count before and after." Then state the limit: "This is fine for a few gigabytes.
+      > Past that I would move it to DuckDB or Spark, with the same logic."
+
+      ## In one breath
+
+      A DataFrame is a one-machine table where whole-column operations are fast and row loops are
+      slow, and every SQL clause has one pandas form. Guard joins with «validate», sort before window
+      operations, and move to DuckDB or Spark when the data outgrows memory.
     `,
     checks: [
       {

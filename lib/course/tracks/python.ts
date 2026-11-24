@@ -14,19 +14,35 @@ export const track: Track = {
       title: 'The structures you reach for',
       summary:
         'Choose between list, dict, set, deque and heap by the operation you need to be fast.',
-      minutes: 13,
+      minutes: 14,
       body: `
-        Most data coding problems are solved by picking the structure whose fast operation matches
-        the question. Say the complexity as you choose. It is the cheapest senior signal there is.
+        ## Start with the problem
 
-        | Need | Structure | Cost |
-        |---|---|---|
-        | Look up or count by key | «dict», «collections.Counter» | O(1) average |
-        | Membership, dedupe | «set» | O(1) average |
-        | Group values by key | «collections.defaultdict(list)» | O(1) per append |
-        | Add or remove at both ends | «collections.deque» | O(1) |
-        | Always get the smallest | «heapq» on a list | O(log n) push and pop |
-        | Keep items in order, search | sorted list with «bisect» | O(log n) search, O(n) insert |
+        You have 10 million events and you want the count per user. The first idea: keep a list of
+        (user, count) pairs, and for each event, walk the list to find the user. With 1 million users,
+        each event walks up to 1 million entries. That is 10 million times 1 million steps. The job
+        never finishes.
+
+        Swap the list for a dictionary, and each lookup takes one step. Same logic, a million times
+        faster. Most data coding problems are solved like this: **pick the structure whose fast
+        operation matches the question.** Say the cost as you choose. It is the cheapest senior signal
+        there is.
+
+        ## Idea 1: one structure per question
+
+        The "O(...)" notation says how the work grows with the data. O(1) means "the same, no matter
+        how big". O(n) means "grows with the size". O(log n) means "grows very slowly": a million items
+        needs about 20 steps.
+
+        - **Look up or count by key:** «dict» or «collections.Counter». O(1) on average. Like a
+          dictionary: jump straight to the word.
+        - **"Have I seen this?" and dedupe:** «set». O(1) on average.
+        - **Group values by key:** «collections.defaultdict(list)». O(1) per append, and no "if key
+          not in dict" check.
+        - **Add or remove at both ends:** «collections.deque». O(1). A queue at a counter.
+        - **Always get the smallest:** «heapq» on a list. O(log n) push and pop.
+        - **Keep items in order, and search:** a sorted list with «bisect». O(log n) search, but
+          O(n) insert.
 
         ~~~python
         from collections import Counter, defaultdict, deque
@@ -45,13 +61,20 @@ export const track: Track = {
         ~~~
 
         > [!trap] «list.pop(0)» is O(n)
-        > Removing from the front of a list shifts every element. In a sliding window or a BFS, use
-        > «deque.popleft()», which is O(1). Interviewers notice.
+        > Removing from the front of a list shifts every other element one place. In a sliding window
+        > or a BFS, use «deque.popleft()», which is O(1). Interviewers notice.
 
-        ## Heaps for "top k" and "next smallest"
+        ## Idea 2: heaps for "top k" and "next smallest"
 
-        Python's «heapq» is a min-heap. For the k largest items in a stream, keep a min-heap of size
-        k: the smallest of the current top k sits on top, ready to be evicted.
+        You want the 10 biggest values from a stream of a billion. Sorting the billion is slow, and
+        they may not fit in memory.
+
+        The trick: keep only 10 at a time, and always know which of the 10 is the smallest, because
+        that is the one to throw out. A **min-heap** does exactly that: its smallest item is always on
+        top. Python's «heapq» is a min-heap.
+
+        For each new value: if the heap has fewer than k items, push it. Otherwise, if the value is
+        bigger than the smallest on top, replace the top.
 
         ~~~python
         def top_k(stream, k):
@@ -64,9 +87,17 @@ export const track: Track = {
             return sorted(heap, reverse=True)    # O(n log k) time, O(k) memory
         ~~~
 
+        ## Now say it like a senior engineer
+
         > [!senior] Say the memory too
         > "O(n log k) time and O(k) memory, so it works on a stream that does not fit in RAM" is the
         > sentence that turns a correct answer into a data engineering answer.
+
+        ## In one breath
+
+        Choose the structure by the operation you need to be fast: dict and set for lookups, deque for
+        both ends, a heap for "smallest next". For top k, keep a small min-heap of size k and say both
+        the time and the memory.
       `,
       checks: [
         {
@@ -87,10 +118,34 @@ export const track: Track = {
       slug: 'generators-and-files',
       title: 'Generators and data that does not fit',
       summary: 'Process large files and streams lazily, in chunks, with constant memory.',
-      minutes: 12,
+      minutes: 13,
       body: `
-        A data engineer's Python must work on inputs larger than memory. Generators are the tool:
-        they produce one item at a time, so a pipeline of generators holds only what it is working on.
+        ## Start with the problem
+
+        You must process a 50 GB file of events. The first idea: «data = open(path).readlines()»,
+        then loop. Your laptop has 16 GB of memory. The program fills it, the machine starts swapping,
+        and the job dies.
+
+        But look at what you actually need: one line at a time. You never need all 50 GB at once. A
+        data engineer's Python must work on inputs larger than memory, and **generators** are the tool.
+
+        ## Idea 1: a generator hands you one item at a time
+
+        Think of a tap versus a bucket. A list is a bucket: all the water, filled up front, held in
+        memory. A **generator** is a tap: water comes out only when you ask, one glass at a time.
+
+        A function that uses «yield» instead of «return» is a generator. Each «yield» hands out one
+        item, pauses, and resumes when the next item is asked for. So memory holds only the item being
+        worked on.
+
+        ## Idea 2: chain taps into a pipeline
+
+        Each step below takes a generator and returns a generator. Nothing runs until the final «for»
+        loop asks for a batch. Then each line flows through all the steps, one at a time.
+
+        1. «read_events» reads one line, parses it, and yields one event.
+        2. «only» passes through only the events with one name.
+        3. «batched» collects events into lists of 5,000, so the warehouse gets fewer, bigger writes.
 
         ~~~python
         import json
@@ -128,18 +183,27 @@ export const track: Track = {
         Python 3.12 added «itertools.batched», which does the same as the helper above.
 
         > [!trap] A generator runs once
-        > After you iterate it, it is empty. Calling «len()» on it fails, and looping twice gives
-        > nothing the second time. Materialise with «list()» only when you know it fits.
+        > After you iterate it, it is empty, like a tap you already drained into glasses. Calling
+        > «len()» on it fails, and looping twice gives nothing the second time. Materialise with
+        > «list()» only when you know it fits.
 
-        ## Bad rows are data too
+        ## Idea 3: bad rows are data too
 
-        Production readers do not crash on one malformed line. They count it, route it to a
-        dead-letter location with the reason, and alert if the bad-row rate passes a threshold.
-        Mentioning that in a coding round is a strong operational signal.
+        A 50 GB file will have broken lines. Production readers do not crash on one malformed line.
+        They count it, route it to a dead-letter location with the reason, and alert if the bad-row
+        rate passes a threshold. Mentioning that in a coding round is a strong operational signal.
+
+        ## Now say it like a senior engineer
 
         > [!senior] Know when Python is the wrong tool
-        > For hundreds of gigabytes, a generator is still single-threaded. Say when you would move
-        > the job to Spark, Beam or a warehouse «COPY», and why.
+        > For hundreds of gigabytes, a generator is still single-threaded. Say when you would move the
+        > job to Spark, Beam or a warehouse «COPY», and why.
+
+        ## In one breath
+
+        A generator is a tap, not a bucket: it hands out one item at a time, so a chain of generators
+        processes any file size in constant memory. Count bad rows instead of crashing, and know when
+        the job has outgrown one Python process.
       `,
       checks: [
         {
@@ -160,14 +224,26 @@ export const track: Track = {
       title: 'Intervals, sweeps and sliding windows',
       summary:
         'Solve overlap, concurrency and rate questions with sorting, sweep lines and deques.',
-      minutes: 15,
+      minutes: 16,
       body: `
-        Trips, sessions, shifts and ad campaigns are intervals. Rate limits and "events in the last
-        minute" are windows. These patterns cover a large share of practical coding questions.
+        ## Start with the problem
 
-        ## Merge overlapping intervals
+        Trips have a start and an end. So do sessions, shifts and ad campaigns. These are
+        **intervals**. And questions like "how many requests in the last minute?" are **windows**.
+        Together they cover a large share of practical coding questions: "merge these bookings", "how
+        many drivers were busy at the peak?", "has this user hit the rate limit?".
 
-        Sort by start, then extend the current interval while the next one overlaps it.
+        The slow way compares every interval with every other: O(n²). Each idea below replaces that
+        with one sort and one pass.
+
+        ## Idea 1: merge overlapping intervals
+
+        Picture meetings on a calendar. Sort them by start time. Now walk through them. If the next
+        meeting starts before the current one ends, they overlap, so stretch the current one. If not,
+        start a new block.
+
+        Worked example: (1,3), (2,6), (8,10). Sorted already. (2,6) starts at 2, before 3, so merge
+        into (1,6). (8,10) starts after 6, so it is a new block. Result: (1,6), (8,10).
 
         ~~~python
         def merge(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]:
@@ -180,11 +256,16 @@ export const track: Track = {
             return merged
         ~~~
 
-        ## Sweep line: maximum concurrency
+        ## Idea 2: sweep line, for "how many at the same time?"
 
-        Turn each interval into two events, +1 at start and -1 at end, sort them, and keep a running
-        total. Decide whether an interval ending at time t overlaps one starting at t, and sort ends
-        before starts if it does not.
+        Picture a turnstile counter. Each person entering adds 1, each person leaving takes away 1.
+        The highest number the counter ever shows is the peak crowd.
+
+        So turn each trip into two events: +1 at its start, -1 at its end. Sort all the events by
+        time, and keep a running total. The largest total is the maximum concurrency.
+
+        One decision matters: does a trip ending at time t overlap a trip starting at t? If not, sort
+        the ends (-1) before the starts (+1) at the same time.
 
         ~~~python
         def max_concurrent(trips: list[tuple[int, int]]) -> int:
@@ -200,10 +281,13 @@ export const track: Track = {
             return best
         ~~~
 
-        ## Sliding window with a deque
+        ## Idea 3: a sliding window with a deque
 
-        "How many requests did this user make in the last 60 seconds?" Keep the timestamps in a
-        deque and drop old ones from the left.
+        "How many requests did this user make in the last 60 seconds?" Picture a queue at a counter.
+        New requests join at the back. Anyone who has waited more than 60 seconds leaves from the
+        front. The length of the queue is the answer.
+
+        A «deque» is that queue: O(1) to add at the back and to remove from the front.
 
         ~~~python
         from collections import defaultdict, deque
@@ -221,10 +305,17 @@ export const track: Track = {
                 return len(q)
         ~~~
 
+        ## Now say it like a senior engineer
+
         > [!senior] Memory and out-of-order input
         > The deque grows with the request rate. At very high rates, switch to fixed buckets (one
-        > counter per second, sixty buckets) for O(1) memory per user. Also ask whether timestamps
-        > can arrive out of order, because the deque version assumes they do not.
+        > counter per second, sixty buckets) for O(1) memory per user. Also ask whether timestamps can
+        > arrive out of order, because the deque version assumes they do not.
+
+        ## In one breath
+
+        Sort once, then walk once: merge intervals by stretching the current block, count concurrency
+        with +1 and -1 events, and keep a sliding window as a queue that drops old items from the front.
       `,
       checks: [
         {
@@ -245,12 +336,26 @@ export const track: Track = {
       slug: 'production-python',
       title: 'Production habits in a coding round',
       summary: 'Retries, idempotency, typing and tests: the details that make code shippable.',
-      minutes: 12,
+      minutes: 13,
       body: `
-        At senior level, "it works on the example" is the floor. Interviewers look for code they
-        would approve in review: clear names, types, error handling and a test.
+        ## Start with the problem
 
-        ## Retries with exponential backoff and jitter
+        Your solution passes the example. The interviewer asks: "Would you ship this?" Then: "What
+        happens when the API times out? When the job runs twice? When the input is empty?" Silence.
+
+        At senior level, "it works on the example" is the floor. Interviewers look for code they would
+        approve in review: clear names, types, error handling and a test. This lesson is the short list
+        of habits that make code shippable.
+
+        ## Idea 1: try again, politely (retries with backoff and jitter)
+
+        A call to another service fails because that service is briefly overloaded. Retrying at once
+        makes it worse. And if 1,000 workers all retry at the same moment, they knock it over again:
+        a **thundering herd**.
+
+        So retry like a polite person knocking on a door. Wait a bit, then knock. If no answer, wait
+        twice as long (**exponential backoff**). And add a random part to each wait (**jitter**), so
+        the 1,000 workers spread out instead of knocking together.
 
         ~~~python
         import random
@@ -270,18 +375,24 @@ export const track: Track = {
                     time.sleep(random.uniform(0, delay))  # full jitter avoids thundering herds
         ~~~
 
-        Retry only errors that can succeed later (timeouts, 429, 503). Never retry a validation
-        error. And a retried write must be **idempotent**, or a retry creates a duplicate.
+        Retry only errors that can succeed later: timeouts, 429, 503. Never retry a validation error;
+        it will fail the same way forever.
 
-        ## Idempotent writes
+        ## Idea 2: make "twice" the same as "once" (idempotent writes)
 
-        Give every write a deterministic key so doing it twice has the same effect as once:
+        Retries have a side effect. The first attempt may have worked, and only the reply got lost. So
+        a retried write runs twice. If the write is "insert a row", you now have a duplicate.
 
-        - Upsert by a natural or event id instead of blind inserts.
+        A write is **idempotent** when doing it twice has the same effect as doing it once. Give every
+        write a deterministic key:
+
+        - Upsert by a natural or event id, instead of blind inserts.
         - Overwrite a whole partition («date=2026-10-31») instead of appending to it.
         - Record processed offsets or file names in the same transaction as the output.
 
-        ## A test, even a tiny one
+        ## Idea 3: a test, even a tiny one
+
+        One short test shows you think about correctness, not only about the happy path.
 
         ~~~python
         def test_merge_handles_touching_and_nested():
@@ -289,9 +400,16 @@ export const track: Track = {
             assert merge([]) == []
         ~~~
 
+        ## Now say it like a senior engineer
+
         > [!senior] Name the edge cases before you code
         > Empty input, one element, duplicates, unsorted input, very large values and time zones.
         > Listing them first, then testing two of them, shows how you work in real life.
+
+        ## In one breath
+
+        Retry only errors that can succeed later, with growing, randomised waits; make every write
+        idempotent so a retry cannot duplicate; and prove it with a small test that covers an edge case.
       `,
       checks: [
         {
@@ -312,17 +430,32 @@ export const track: Track = {
       title: 'Decorators and context managers',
       summary:
         'Write a retry decorator and an atomic-write context manager, and explain what each line does.',
-      minutes: 15,
+      minutes: 16,
       body: `
-        Two language features show up again and again in pipeline code, and interviewers ask you
-        to write both from memory: a decorator that adds behaviour around a function, and a
-        context manager that guarantees cleanup.
+        ## Start with the problem
 
-        ## Decorators
+        Your pipeline calls an API in twelve places. Each call can fail now and then, so each one needs
+        the same retry loop: try, catch, wait, try again. You copy the loop twelve times. Next month you
+        fix a bug in it, and you fix eleven copies.
 
-        A **decorator** is a function that takes a function and returns a new one. «@retry(...)»
-        above a definition is shorthand for «fetch_page = retry(...)(fetch_page)». A decorator
-        with arguments therefore has three layers: the arguments, the function, the call.
+        The pipeline also writes files. If it crashes halfway through a write, the next job reads half
+        a file. So every write needs the same "clean up if something goes wrong" code, copied again.
+
+        Python has two features made for exactly these two problems, and interviewers ask you to write
+        both from memory: a **decorator** adds behaviour around a function, and a **context manager**
+        guarantees cleanup.
+
+        ## Idea 1: a decorator wraps a function, like gift wrap
+
+        A **decorator** is a function that takes a function and returns a new one: the original,
+        wrapped in extra behaviour. Write the retry loop once, and wrap any function in it.
+
+        «@retry(...)» above a definition is shorthand for «fetch_page = retry(...)(fetch_page)». So a
+        decorator with arguments has three layers, from outside in:
+
+        1. The **arguments** (how many times to retry).
+        2. The **function** being wrapped.
+        3. The **call** that runs each time someone calls the function.
 
         ~~~python
         import functools
@@ -331,7 +464,6 @@ export const track: Track = {
         import time
 
         log = logging.getLogger("pipeline")
-
 
         def retry(times: int = 3, base_delay_s: float = 0.5, retry_on: tuple = (ConnectionError, TimeoutError)):
             def decorator(func):
@@ -349,7 +481,6 @@ export const track: Track = {
                 return wrapper
             return decorator
 
-
         @retry(times=4)
         def fetch_page(cursor: str) -> dict:
             ...
@@ -357,8 +488,8 @@ export const track: Track = {
 
         What the interviewer listens for:
 
-        - «functools.wraps» copies the name, docstring and signature, so logs, stack traces and
-          tools that inspect the function still see «fetch_page», not «wrapper».
+        - «functools.wraps» copies the name, docstring and signature. Logs, stack traces and tools
+          still see «fetch_page», not «wrapper».
         - Retry **only** errors that can succeed on a second try. Retrying a «ValueError» from bad
           data wastes time and hides the bug.
         - **Exponential backoff with jitter** stops a thousand workers from retrying in step and
@@ -366,21 +497,24 @@ export const track: Track = {
         - The last attempt re-raises the original error with its traceback («raise» on its own).
         - Retrying is only safe if the call is idempotent. Say so.
 
-        Other decorators you will write or meet: timing and metrics, caching
-        («functools.lru_cache» for pure functions only), registering functions in a dictionary
-        (how «@task» and «@app.route» work), and input validation.
+        Other decorators you will write or meet: timing and metrics, caching («functools.lru_cache»,
+        for pure functions only), registering functions in a dictionary (how «@task» and
+        «@app.route» work), and input validation.
 
-        ## Context managers
+        ## Idea 2: a context manager always cleans up, like a self-closing door
 
-        A **context manager** runs setup on entry to a «with» block and cleanup on exit, even
-        when the block raises. «__exit__» receives the exception, if any, and returns «True» only
-        to swallow it, which you almost never want.
+        A **context manager** runs setup when a «with» block starts, and cleanup when it ends, even
+        if the block raises an error. «__exit__» receives the exception, if any, and returns «True»
+        only to swallow it, which you almost never want.
+
+        The classic data engineering use: an **atomic write**. Write to a temporary file. Only when the
+        write finishes, rename it over the real file in one step. If anything fails, delete the
+        temporary file.
 
         ~~~python
         import contextlib
         import os
         from pathlib import Path
-
 
         @contextlib.contextmanager
         def atomic_write(path: Path):
@@ -396,24 +530,32 @@ export const track: Track = {
                 raise
         ~~~
 
-        A reader sees either the old file or the complete new one, never half a file. The same
-        idea, write somewhere private then publish in one step, is how idempotent tasks write to
-        object storage and tables.
+        A reader sees either the old file or the complete new one, never half a file. The same idea,
+        write somewhere private and then publish in one step, is how idempotent tasks write to object
+        storage and tables.
 
-        | Use a context manager for | Example |
-        |---|---|
-        | Resources that must be released | Files, database connections, locks |
-        | A unit of work that commits or rolls back | A transaction |
-        | Temporary state | A temporary directory, a changed working directory, an env var in a test |
-        | Measuring a block | A timer that logs the duration |
+        Use a context manager for:
 
-        «contextlib.ExitStack» manages a variable number of resources, such as one open file per
-        input partition.
+        - **Resources that must be released:** files, database connections, locks.
+        - **A unit of work that commits or rolls back:** a transaction.
+        - **Temporary state:** a temporary directory, a changed working directory, an env var in a test.
+        - **Measuring a block:** a timer that logs the duration.
+
+        «contextlib.ExitStack» manages a variable number of resources, such as one open file per input
+        partition.
+
+        ## Now say it like a senior engineer
 
         > [!senior] Connect the feature to the failure
-        > "The decorator makes transient failures invisible to the caller but keeps permanent
-        > ones loud. The context manager means a crash never leaves a partial output." Naming
-        > the failure each one prevents is the senior part.
+        > "The decorator makes transient failures invisible to the caller but keeps permanent ones
+        > loud. The context manager means a crash never leaves a partial output." Naming the failure
+        > each one prevents is the senior part.
+
+        ## In one breath
+
+        A decorator wraps any function in shared behaviour, like retries, written once. A context
+        manager guarantees cleanup on the way out of a «with» block, which is how you write a file that
+        is either complete or not there at all.
       `,
       checks: [
         {
@@ -445,18 +587,30 @@ export const track: Track = {
       title: 'Testing pipelines with pytest',
       summary:
         'Structure pipeline code so it can be tested, and use fixtures, parametrize, tmp_path and monkeypatch well.',
-      minutes: 14,
+      minutes: 15,
       body: `
-        Pipeline code is hard to test when reading, transforming and writing are mixed in one
-        function. The first move is structural: keep **transformations pure** (data in, data
-        out) and push I/O to thin edges. Then most tests need no database, no cloud and no
-        network.
+        ## Start with the problem
 
-        ## A pure transform and its tests
+        You want to test one rule: "test trips are dropped". But the function reads from a database,
+        cleans the rows, and writes to a warehouse, all in one go. To test the rule, you need a
+        database, a warehouse and the network. So nobody writes the test, and the bug ships.
+
+        The fix is not a better testing tool. It is a better shape for the code.
+
+        ## Idea 1: pure middle, thin edges
+
+        Think of a juicer. Fruit goes in, juice comes out. You can test the juicer on your kitchen
+        table, without the farm or the shop.
+
+        Split pipeline code the same way.
+
+        - Keep **transformations pure**: data in, data out, no reading or writing inside.
+        - Push all I/O (database, files, APIs) to thin edges around them.
+
+        Then most tests need no database, no cloud and no network: just plain dictionaries.
 
         ~~~python
         from datetime import datetime, timezone
-
 
         def clean_trip(raw: dict) -> dict | None:
             if raw.get("status") == "test":
@@ -468,27 +622,24 @@ export const track: Track = {
             return {"trip_id": raw["trip_id"], "fare": fare, "started_at": started.isoformat()}
         ~~~
 
+        ## Idea 2: three kinds of test, using pytest
+
         ~~~python
         import pytest
-
         from transforms import clean_trip
-
 
         @pytest.fixture
         def raw_trip():
             return {"trip_id": "t1", "fare": "12.499", "started_ms": 1793318400000, "status": "completed"}
 
-
         def test_rounds_fare_and_converts_time(raw_trip):
             row = clean_trip(raw_trip)
             assert row == {"trip_id": "t1", "fare": 12.5, "started_at": "2026-10-30T00:00:00+00:00"}
-
 
         @pytest.mark.parametrize("status, kept", [("completed", True), ("cancelled", True), ("test", False)])
         def test_drops_only_test_trips(raw_trip, status, kept):
             raw_trip["status"] = status
             assert (clean_trip(raw_trip) is not None) == kept
-
 
         def test_negative_fare_fails_loudly(raw_trip):
             raw_trip["fare"] = "-3"
@@ -496,39 +647,50 @@ export const track: Track = {
                 clean_trip(raw_trip)
         ~~~
 
-        ## The pytest tools that matter
+        1. The first test checks the normal path: rounding and time conversion.
+        2. The second runs one test for three statuses, with «parametrize».
+        3. The third checks that bad input fails loudly, with the right message.
 
-        | Tool | Use it for |
-        |---|---|
-        | **Fixtures** | Shared setup: a sample record, a Spark session («scope="session"»), a test database |
-        | «@pytest.mark.parametrize» | One test, many cases: edge values, every status, every time zone |
-        | «tmp_path» | A fresh directory per test for files the job writes |
-        | «monkeypatch» | Replace an environment variable, a clock or a client for one test |
-        | «pytest.raises» | Assert that bad input fails, and with which message |
-        | Markers | Separate fast unit tests from slow integration tests in CI |
+        ## Idea 3: the pytest tools that matter
 
-        ## What to test in a data pipeline
+        - **Fixtures:** shared setup, such as a sample record, a Spark session
+          («scope="session"»), or a test database.
+        - «@pytest.mark.parametrize»: one test, many cases. Edge values, every status, every time
+          zone.
+        - «tmp_path»: a fresh directory per test, for files the job writes.
+        - «monkeypatch»: replace an environment variable, a clock or a client for one test.
+        - «pytest.raises»: assert that bad input fails, and with which message.
+        - **Markers:** separate fast unit tests from slow integration tests in CI.
+
+        ## Idea 4: what to test in a data pipeline
 
         1. **Transform logic:** nulls, duplicates, time zones and daylight saving changes, empty
            input, a late record, a schema with an extra field.
-        2. **Idempotency:** run the job twice on the same input and assert the output is the
-           same, not doubled.
-        3. **Contracts:** the output schema and types, checked in the test, not only in
-           production.
-        4. **Integration:** against a real but local engine (DuckDB, a Postgres container, a
-           local Spark session) for the SQL and the writes. Mark these as slow.
+        2. **Idempotency:** run the job twice on the same input, and assert the output is the same,
+           not doubled.
+        3. **Contracts:** the output schema and types, checked in the test, not only in production.
+        4. **Integration:** against a real but local engine (DuckDB, a Postgres container, a local
+           Spark session) for the SQL and the writes. Mark these as slow.
 
-        Data tests in production (row counts, uniqueness, freshness) are a different layer.
-        They catch bad data; unit tests catch bad code. A senior engineer wants both.
+        Data tests in production (row counts, uniqueness, freshness) are a different layer. They catch
+        bad data; unit tests catch bad code. A senior engineer wants both.
 
         > [!trap] Mocking everything tests nothing
-        > A test that mocks the database client and asserts it was called with a string only
-        > proves you wrote that string. Test SQL against a real engine, even a small local one.
+        > A test that mocks the database client and asserts it was called with a string only proves
+        > you wrote that string. Test SQL against a real engine, even a small local one.
+
+        ## Now say it like a senior engineer
 
         > [!senior] How you would say it
         > "I keep transforms pure so they are unit-tested with plain dictionaries, I run the SQL
-        > against DuckDB or a container in CI, I test reruns for idempotency, and I let data
-        > tests in the warehouse catch what code tests cannot."
+        > against DuckDB or a container in CI, I test reruns for idempotency, and I let data tests in
+        > the warehouse catch what code tests cannot."
+
+        ## In one breath
+
+        Make the middle of the pipeline pure, so it can be tested with plain data, and keep I/O at
+        thin edges. Test logic, reruns and output schema in code, test SQL on a real local engine, and
+        let warehouse data tests catch bad data.
       `,
       checks: [
         {
@@ -555,41 +717,58 @@ export const track: Track = {
       title: 'Concurrency, the GIL and packaging',
       summary:
         'Pick threads, processes or asyncio for a workload, and ship pipeline code as a versioned package.',
-      minutes: 14,
+      minutes: 15,
       body: `
-        ## The GIL in one paragraph
+        ## Start with the problem
 
-        In the standard CPython build, the **global interpreter lock (GIL)** lets one thread run
-        Python bytecode at a time. Threads still help when they wait on I/O, because a thread
-        releases the GIL while it waits. They do not speed up CPU-bound Python code. Python 3.13
-        added an experimental free-threaded build, and Python 3.14 made it officially supported
-        but not the default, so most production code still runs with the GIL.
+        Your job calls an API 1,000 times. Each call takes 0.2 seconds, so the job takes over 3
+        minutes, and the CPU sits idle almost the whole time, just waiting for replies. Then a second
+        job hashes 8 big files, and uses one CPU core out of 8.
 
-        | Workload | Choose | Why |
-        |---|---|---|
-        | Many network calls (APIs, object storage) | Threads, or asyncio | Waiting releases the GIL |
-        | Thousands of concurrent connections | asyncio | One thread, cheap tasks, needs async libraries |
-        | CPU-bound pure Python (parsing, hashing) | Processes | Each process has its own interpreter and GIL |
-        | NumPy, pandas, Polars, PyArrow work | Usually one process | They run in C and release the GIL themselves |
-        | Data bigger than one machine | Spark, Beam, Dask | Not a threading question |
+        Both jobs would be faster with concurrency. But Python has a rule that decides **which kind**
+        helps which job, and picking the wrong one makes code more complex without making it faster.
+
+        ## Idea 1: one talking stick (the GIL)
+
+        Picture a meeting where only the person holding a talking stick may speak. In the standard
+        CPython build, that stick is the **global interpreter lock (GIL)**: only one thread runs Python
+        bytecode at a time.
+
+        But a thread puts the stick down while it **waits**, for example on a network reply. Then
+        another thread can speak. So:
+
+        - Threads **do** help when the work is mostly waiting on I/O.
+        - Threads **do not** speed up CPU-bound Python code; they just take turns.
+
+        Python 3.13 added an experimental free-threaded build, and Python 3.14 made it officially
+        supported but not the default. So most production code still runs with the GIL.
+
+        ## Idea 2: pick the tool by what the work is waiting for
+
+        - **Many network calls** (APIs, object storage): threads, or asyncio. Waiting releases the
+          GIL.
+        - **Thousands of concurrent connections:** asyncio. One thread, cheap tasks, but it needs
+          async libraries.
+        - **CPU-bound pure Python** (parsing, hashing): processes. Each process has its own
+          interpreter and its own GIL, so 8 processes use 8 cores.
+        - **NumPy, pandas, Polars, PyArrow work:** usually one process. They run in C and release the
+          GIL themselves.
+        - **Data bigger than one machine:** Spark, Beam or Dask. Not a threading question at all.
 
         ~~~python
         import hashlib
         import time
         from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 
-
         def fetch(url: str) -> int:
             time.sleep(0.2)  # stands in for a network call with a timeout
             return len(url)
-
 
         def hash_chunk(lines: list[str]) -> str:
             digest = hashlib.sha256()
             for line in lines:
                 digest.update(line.encode())
             return digest.hexdigest()
-
 
         if __name__ == "__main__":
             urls = [f"https://api.example.com/p/{i}" for i in range(20)]
@@ -603,34 +782,42 @@ export const track: Track = {
                     future.result()  # re-raises a worker’s exception here
         ~~~
 
-        **Process pool costs:** arguments and results are pickled and copied between processes,
-        so send file paths or chunk ids, not large objects. The «if __name__ == "__main__"» guard
-        is required where processes start with spawn (macOS and Windows defaults). Always call
-        «result()», or a worker’s exception disappears.
+        **What processes cost:** arguments and results are pickled and copied between processes, so
+        send file paths or chunk ids, not large objects. The «if __name__ == "__main__"» guard is
+        required where processes start with spawn (the macOS and Windows default). Always call
+        «result()», or a worker's exception disappears silently.
 
         > [!trap] Bound the concurrency
-        > Fifty threads against an API that allows ten requests per second gets you throttled.
-        > Size the pool from the downstream limit, not from your CPU count.
+        > Fifty threads against an API that allows ten requests per second gets you throttled. Size the
+        > pool from the downstream limit, not from your CPU count.
 
-        ## Packaging pipeline code
+        ## Idea 3: share code as a package, not as copied files
 
-        Copying helper files between DAG folders and notebooks is how five teams end up with
-        five versions of one bug. Ship shared code as a package.
+        Copying helper files between DAG folders and notebooks is how five teams end up with five
+        versions of one bug. Ship shared code as a package.
 
-        - **pyproject.toml** declares the name, version, dependencies and build backend. It
-          replaces «setup.py» for new projects.
-        - Use a **src layout** («src/tripkit/»), so tests import the installed package, not the
-          files next to them.
-        - Build a **wheel** and publish it to a private index (Artifact Registry, CodeArtifact),
-          with semantic versions.
-        - **Lock** the exact dependency tree for applications and images («uv lock», pip-tools
-          or Poetry). Keep library dependency ranges loose so they install next to other code.
+        - **pyproject.toml** declares the name, version, dependencies and build backend. It replaces
+          «setup.py» for new projects.
+        - Use a **src layout** («src/tripkit/»), so tests import the installed package, not the files
+          next to them.
+        - Build a **wheel** and publish it to a private index (Artifact Registry, CodeArtifact), with
+          semantic versions.
+        - **Lock** the exact dependency tree for applications and images («uv lock», pip-tools or
+          Poetry). Keep library dependency ranges loose, so they install next to other code.
         - Pin the Python version in the image, and run tests in CI on the version you deploy.
 
+        ## Now say it like a senior engineer
+
         > [!senior] The production answer
-        > "Shared logic is a versioned package with tests and a changelog. Each job image pins
-        > it with a lock file, so a fix is a version bump that teams adopt on purpose, and a bad
-        > release rolls back by pinning the old version."
+        > "Shared logic is a versioned package with tests and a changelog. Each job image pins it with
+        > a lock file, so a fix is a version bump that teams adopt on purpose, and a bad release rolls
+        > back by pinning the old version."
+
+        ## In one breath
+
+        The GIL lets one thread run Python at a time, but a waiting thread lets others run: threads or
+        asyncio for waiting, processes for CPU work, a cluster for data bigger than one machine. Share
+        code as a versioned, locked package.
       `,
       checks: [
         {
@@ -663,43 +850,59 @@ export const track: Track = {
       title: 'API ingestion: pagination, rate limits and retries',
       summary:
         'Pull data from a REST API without gaps, duplicates or bans: pick the pagination style, respect rate limits, retry safely and checkpoint progress.',
-      minutes: 16,
+      minutes: 17,
       body: `
-        Many sources are SaaS APIs: payments, CRM, ads, support tickets. An API extractor looks
-        simple and fails in four ways: it misses pages, duplicates pages, gets rate limited, or
-        restarts from zero after a crash.
+        ## Start with the problem
 
-        ## Pagination styles
+        Many sources are SaaS APIs: payments, CRM, ads, support tickets. The first extractor is ten
+        lines: call the API, get page 1, page 2, page 3, save. It works in testing. In production it
+        fails in four ways.
 
-        | Style | Request | Problem |
-        |---|---|---|
-        | **Offset / page number** | «?offset=1000&limit=100» | Inserts during the run shift pages, so rows are skipped or repeated; deep offsets get slow |
-        | **Cursor (token)** | «?cursor=abc123» from the last response | Stable and fast; the cursor may expire, so finish or checkpoint quickly |
-        | **Keyset** | «?created_after=2026-11-01T10:00:00Z&after_id=981» | Stable if the sort key is unique and immutable |
-        | **Link header** | Follow the «next» URL in the response headers | Same as cursor; do not build URLs yourself |
+        1. It **misses** pages, because records were added while it was paging.
+        2. It **duplicates** pages, for the same reason.
+        3. It gets **rate limited** and banned for an hour.
+        4. It crashes on page 4,000 and **restarts from zero**.
 
-        Prefer cursor or keyset pagination. If only offsets exist, page over a **fixed time window**
-        that has stopped changing (for example, records updated before the run started) and
-        deduplicate by id afterwards.
+        Each idea below fixes one of these.
 
-        ## Incremental pulls
+        ## Idea 1: page with a bookmark, not a page number (pagination)
 
-        Ask only for what changed: «updated_since = last_watermark - overlap». The overlap (a few
-        minutes) covers clock skew and late commits on the provider's side. Duplicates from the
-        overlap are removed later by a «MERGE» on the record id and «updated_at».
+        Imagine reading a list that people keep adding to at the top. You read "page 3" (items 21 to
+        30). Someone adds two items. Now your "page 4" starts at what used to be item 29. You read two
+        items twice. Delete instead of add, and you skip two items.
 
-        ## Rate limits
+        - **Offset / page number** («?offset=1000&limit=100»): has exactly that problem, and deep
+          offsets get slow.
+        - **Cursor (token)** («?cursor=abc123», from the last response): a bookmark the server gives
+          you. Stable and fast. The cursor may expire, so finish or checkpoint quickly.
+        - **Keyset** («?created_after=2026-11-01T10:00:00Z&after_id=981»): "give me what comes after
+          this exact row". Stable if the sort key is unique and never changes.
+        - **Link header:** follow the «next» URL in the response headers. Same as cursor; do not
+          build the URLs yourself.
+
+        Prefer cursor or keyset. If only offsets exist, page over a **fixed time window** that has
+        stopped changing (for example, records updated before the run started), and deduplicate by id
+        afterwards.
+
+        ## Idea 2: ask only for what changed (incremental pulls)
+
+        Ask for «updated_since = last_watermark - overlap». The overlap of a few minutes covers clock
+        differences and late commits on the provider's side. The duplicates the overlap brings are
+        removed later by a «MERGE» on the record id and «updated_at».
+
+        ## Idea 3: stay under the speed limit (rate limits)
 
         - Read the limit from the docs and the headers, such as «X-RateLimit-Remaining» and
           «Retry-After».
         - On **429 Too Many Requests**, wait as long as «Retry-After» says.
-        - Throttle on the client side with a **token bucket**, so parallel workers share one budget
-          and never hit the limit in the first place.
+        - Throttle on your side with a **token bucket**: a bucket refilled with N tokens per second,
+          and each request takes one. Parallel workers share one bucket, so together they never hit
+          the limit.
 
-        ## Retries
+        ## Idea 4: retry the right errors, the right way
 
-        - Retry **only** what can succeed later: timeouts, connection errors, 429 and 5xx. Never retry
-          a 400 or 401 in a loop; fail and alert.
+        - Retry **only** what can succeed later: timeouts, connection errors, 429 and 5xx. Never
+          retry a 400 or 401 in a loop; fail and alert.
         - Use **exponential backoff with full jitter**, so 50 workers do not retry in the same second.
         - Always set a **timeout** on every call. A request without one can hang a job for hours.
 
@@ -711,7 +914,6 @@ export const track: Track = {
         import requests
 
         RETRYABLE = {429, 500, 502, 503, 504}
-
 
         def get_json(session: requests.Session, url: str, params: dict, attempts: int = 6) -> dict:
             for attempt in range(attempts):
@@ -730,7 +932,6 @@ export const track: Track = {
                 time.sleep(delay)
             raise RuntimeError(f"giving up on {url} after {attempts} attempts")
 
-
         def pages(session: requests.Session, url: str, updated_since: str) -> Iterator[dict]:
             params: dict = {"updated_since": updated_since, "limit": 500}
             while True:
@@ -742,30 +943,40 @@ export const track: Track = {
                 params = {"cursor": cursor, "limit": 500}
         ~~~
 
-        ## Land raw, then checkpoint
+        ## Idea 5: save first, then move the bookmark (land raw, then checkpoint)
 
-        1. Write each page **as received** (JSON lines) to the landing zone, named by run id and
-           page number, with request metadata: URL, parameters, time and status.
-        2. After a page is safely written, save the cursor in a small state store. A crash resumes
-           from the last saved cursor, not from zero.
+        This fixes the restart-from-zero problem.
+
+        1. Write each page **as received** (JSON lines) to the landing zone, named by run id and page
+           number, with request metadata: URL, parameters, time and status.
+        2. Only after a page is safely written, save the cursor in a small state store. A crash
+           resumes from the last saved cursor, not from zero.
         3. Parse and type the data in a later step. A schema change then breaks parsing, not
            extraction, and the raw pages can be re-parsed.
 
-        ## Scale out carefully
+        ## Idea 6: scale out carefully
 
-        Split the work by a key the API filters on (date windows, accounts, regions) and run
-        workers in parallel, all drawing from one shared rate budget. Backfills use the same code
-        with an old start date and a lower priority budget.
+        Split the work by a key the API filters on (date windows, accounts, regions), and run workers
+        in parallel, all drawing from one shared rate budget. Backfills use the same code with an old
+        start date and a lower-priority budget.
 
         > [!trap] Retrying a POST
-        > Some APIs need a POST to start an export or a search. Retrying it can create two exports
-        > or two charges. Send an **idempotency key** if the API supports one, or check for the
-        > existing job first.
+        > Some APIs need a POST to start an export or a search. Retrying it can create two exports or
+        > two charges. Send an **idempotency key** if the API supports one, or check for the existing
+        > job first.
+
+        ## Now say it like a senior engineer
 
         > [!senior] Name the failure modes
         > "Cursor pagination, an updated_since window with five minutes of overlap, MERGE by id, a
         > token bucket at 80 percent of the limit, retries with jitter on 429 and 5xx only, raw pages
         > landed before the cursor is saved." Each phrase answers a follow-up before it is asked.
+
+        ## In one breath
+
+        Page with the server's bookmark, ask only for what changed with a small overlap, stay under the
+        rate limit with a shared token bucket, and retry only errors that can succeed. Save each raw
+        page before you move the bookmark, so a crash resumes instead of restarting.
       `,
       checks: [
         {
