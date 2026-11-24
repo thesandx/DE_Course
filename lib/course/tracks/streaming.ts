@@ -12,44 +12,175 @@ export const track: Track = {
       slug: 'kafka-internals',
       title: 'Kafka internals that interviews probe',
       summary: 'Topics, partitions, offsets, replication and keys, and what each one guarantees.',
-      minutes: 15,
+      minutes: 18,
       body: `
-        Kafka is a distributed, append-only log. Producers append records to a **topic**, which is
-        split into **partitions**. Each partition is an ordered sequence; each record in it has an
-        **offset**. Consumers read by offset and can re-read whenever they want, until retention
-        deletes old segments.
+        ## Start with the problem
 
-        ## The guarantees, precisely
+        Every few seconds, every phone in a ride app sends a small message. "Driver 42 is at this
+        corner." "Rider 7 asked for a trip." At Uber's size that is millions of messages a minute.
 
-        - **Ordering is per partition**, not per topic. Records with the same key go to the same
-          partition (by default, a hash of the key), so per-key order holds.
-        - **Durability** comes from replication. Each partition has a leader and followers. The
-          in-sync replicas (ISR) are followers that are caught up.
-        - With «acks=all» and «min.insync.replicas=2» on a replication factor of 3, a write is
-          acknowledged only when at least two replicas have it, so one broker failure loses nothing.
+        Many teams want those messages. Pricing wants them now. Fraud wants them now. The data lake
+        wants all of them, later, in bulk.
 
-        | Producer setting | Effect |
-        |---|---|
-        | «acks=0» | Fire and forget, can lose data |
-        | «acks=1» | Leader has it; lost if the leader dies before followers copy it |
-        | «acks=all» | All in-sync replicas have it; the durable choice |
-        | «enable.idempotence=true» | Retries cannot create duplicates in the partition (default since Kafka 3.0) |
+        Try the simple design first: each phone calls each team's service directly. Three things
+        break at once.
 
-        ## Choosing the key and the partition count
+        1. Pricing is down for five minutes. Every message sent in those five minutes is gone.
+        2. A new team wants the data. Every sender must change its code to call one more service.
+        3. Fraud is slow today. Now the phone waits for fraud, so the app feels slow.
 
-        The key decides both ordering and load balance. Key by «trip_id» to keep a trip's events
-        in order. Key by «city_id» and New York becomes a hot partition. Partition count caps
-        consumer parallelism (one consumer per partition in a group), and changing it later
-        re-maps keys to partitions, which breaks per-key ordering across the change.
+        We need something in the middle. It must **take messages fast, keep them safely, and let
+        any number of readers read at their own speed**. That middle thing is Kafka. The rest of
+        this lesson builds Kafka one idea at a time, and each idea fixes one problem.
+
+        ## Idea 1: a notebook you only add to (the log)
+
+        Picture a notebook. You only ever write on the next empty line. You never erase a line and
+        you never squeeze a line in between. Every line has a line number.
+
+        That is a **log**. Kafka stores messages, which it calls **records**, in logs like this. The
+        line number is called the **offset**.
+
+        Why is "only add at the end" so useful? Because a reader now needs to remember just one
+        number: "I have read up to line 1,204."
+
+        - The reader crashes? It restarts at line 1,205. Nothing is skipped.
+        - The reader had a bug yesterday? It goes back to line 0 and reads everything again.
+        - Ten readers? Each keeps its own number. The writer does not even know they exist.
+
+        ~~~text
+         0    1    2    3    4    5   ← offset
+        [r0] [r1] [r2] [r3] [r4] [r5] ← add here
+                  ▲         ▲
+               pricing    fraud
+        ~~~
+
+        The notebook does not grow forever. After the **retention** period, for example 7 days,
+        Kafka throws away the oldest pages. Until then, any reader can come back and re-read.
+
+        That already fixes problems 1 and 3 from the start: a down or slow reader just falls
+        behind and catches up later. And problem 2: a new team simply starts reading.
+
+        ## Idea 2: one notebook is too slow, so use many (partitions)
+
+        One notebook lives on one machine. One machine has one set of disks and one network card,
+        so it has a speed limit.
+
+        So Kafka splits a **topic** (a named stream, such as «trip-events») into many notebooks.
+        Each one is a **partition**. The partitions live on different machines, which Kafka calls
+        **brokers**. Now the writing and the reading spread across many machines.
+
+        But we paid a price for that speed. Inside one notebook, order is clear: line 5 came after
+        line 4. Across two notebooks there is no order at all. Record 10 in partition 0 and record 3
+        in partition 1: which came first? Kafka does not know, and it does not promise anything.
+
+        That gives the first guarantee you must say precisely in an interview:
+        **ordering is per partition, not per topic.**
+
+        ## Idea 3: the key decides the notebook
+
+        If order only exists inside one partition, how do we keep one trip's events in order?
+        Simple: make sure all of them go into the same partition.
+
+        A record can carry a **key**. The producer turns the key into a number with a hash, then
+        takes the remainder after dividing by the partition count. Same key, same partition, every
+        time. Here is a tiny example with 3 partitions (the hash values are made up):
+
+        ~~~text
+        trip-81 → hash 7  → partition 1
+        trip-81 → hash 7  → partition 1
+        trip-95 → hash 12 → partition 0
+        ~~~
+
+        7 divided by 3 leaves 1, so "trip-81" goes to partition 1, every time, and its events stay
+        in order. 12 divided by 3 leaves 0, so "trip-95" goes to partition 0.
+
+        So key by «trip_id». Each trip stays in order, and different trips spread across all
+        partitions.
+
+        Now notice that the key also decides **balance**. Key by «city_id» instead, and every New
+        York event lands in one partition. That is a **hot partition**: one broker and one consumer
+        work hard while the others sit idle. A good key has many different values, each with a
+        similar amount of traffic, and it matches the thing whose order you care about.
+
+        Look at the formula again. It has the partition count in it. Go from 3 partitions to 4, and
+        "trip-81" now gives 7 mod 4 = 3. Its old events are in partition 1 and its new events are in
+        partition 3. Order across that change is broken. So **changing the partition count later
+        re-maps keys**. Choose the count carefully at the start.
+
+        ## Idea 4: readers share the work (consumer groups)
+
+        A reader is a **consumer**. One team usually runs several copies of its consumer, as a
+        **consumer group**. Kafka gives each partition to exactly one member of the group, so two
+        members never process the same record.
+
+        - 6 partitions, 3 consumers: each consumer reads 2 partitions.
+        - 6 partitions, 6 consumers: each reads 1. This is the maximum speed.
+        - 6 partitions, 8 consumers: 2 consumers sit idle with nothing to read.
+
+        That is the second big fact: **the partition count caps the parallelism of a consumer
+        group.** If you expect to need 30 consumers working at once, you need at least 30 partitions.
+
+        ## Idea 5: do not lose data when a machine dies (replication)
+
+        A partition that lives on one broker dies with that broker. So Kafka keeps copies. With a
+        **replication factor** of 3, each partition lives on 3 brokers.
+
+        - One copy is the **leader**. Producers write to it and consumers read from it.
+        - The other copies are **followers**. They keep copying from the leader.
+        - Followers that are fully caught up are the **in-sync replicas (ISR)**.
+
+        If the leader's broker dies, one of the in-sync followers becomes the new leader. It was
+        caught up, so nothing it had is lost.
+
+        ## Idea 6: when is a write really done? (acks)
+
+        The producer sends a record. When should Kafka answer "got it"? The producer setting
+        «acks» decides. Think of posting an important letter.
+
+        - «acks=0»: you drop the letter in the box and walk away. If it is lost, you never find out.
+        - «acks=1»: the clerk says "received". If the clerk's office burns down before copies are
+          filed, the letter is lost. In Kafka: the leader has it, and the leader dies before a
+          follower copies it.
+        - «acks=all»: the clerk says "received" only after every in-sync copy is filed. It is a bit
+          slower, but it survives a broker loss. This is the **durable choice**.
+
+        There is one gap in «acks=all». If the followers fall behind, the ISR can shrink to just
+        the leader, and then "all" means one copy. So pair it with «min.insync.replicas=2»: the
+        broker refuses the write unless at least two copies will hold it.
+
+        Put it together: replication factor 3, «acks=all» and «min.insync.replicas=2». One broker
+        can die, no acknowledged record is lost, and the topic still accepts writes.
+
+        One last gap. A network blip makes the producer retry, so the same record could land twice.
+        With «enable.idempotence=true», each producer gets an id and each record a sequence
+        number, and the broker drops the repeat. This is the default since Kafka 3.0.
+
+        ## Now say it like a senior engineer
+
+        You have built Kafka from scratch. Here is the same picture in interview words.
+
+        - Kafka is a distributed, append-only, replicated log: topic, then partitions, then offsets.
+        - **Ordering is per partition.** Same key, same partition, so order holds per key.
+        - **Durability:** replication factor 3, «acks=all», «min.insync.replicas=2», idempotent
+          producer.
+        - **Parallelism:** one consumer per partition in a group, so the partition count is the cap.
+        - **Key choice:** many distinct values, even volume, and it matches the ordering you need.
 
         > [!trap] More partitions is not free
-        > Each partition costs broker memory, file handles and leader elections. Size from target
-        > throughput and consumer parallelism, with headroom, not "as many as possible".
+        > Each partition costs broker memory, open files and leader elections when a broker fails.
+        > Size the count from target throughput and consumer parallelism, with headroom. "As many as
+        > possible" is the wrong answer.
 
         > [!senior] Retention is a design choice
         > Retention decides how far back a consumer can replay after a bug. Tiered storage (KIP-405,
-        > production-ready in Kafka 3.6+) keeps old segments in object storage cheaply, which makes
-        > long replay windows affordable.
+        > production-ready in Kafka 3.6+) moves old segments to object storage cheaply, which makes
+        > long replay windows affordable. Say how many days of replay the business needs.
+
+        ## In one breath
+
+        Kafka is a notebook you only add to, split into many notebooks for speed and copied three
+        times for safety. The key picks the notebook, so the key decides both order and balance.
       `,
       checks: [
         {
@@ -126,48 +257,127 @@ export const track: Track = {
       slug: 'event-time-watermarks',
       title: 'Event time, windows and watermarks',
       summary: 'Compute correct windows when data arrives late and out of order.',
-      minutes: 16,
+      minutes: 17,
       body: `
-        Phones go through tunnels. Events created at 10:00 can arrive at 10:07. If you count trips
-        per minute by **processing time** (when the event arrived), your numbers depend on network
-        luck. **Event time** (when it happened) gives the true answer, but raises a question: when
-        is a window complete?
+        ## Start with the problem
 
-        ## Windows
+        You want a live chart: how many trips started in each minute. The easy idea: when an event
+        arrives, look at the server clock and add 1 to that minute's count.
 
-        | Window | Shape | Example |
-        |---|---|---|
-        | Tumbling | Fixed, non-overlapping | Trips per minute |
-        | Sliding (hopping) | Fixed size, overlapping | Trips in the last 5 minutes, every minute |
-        | Session | Gap-based, per key | A rider's app session |
+        Now a rider in a tunnel starts a trip at 10:00:30. The phone has no signal, so it sends the
+        event at 10:07:10, when it gets out. The easy idea counts that trip in the 10:07 minute. Now
+        10:00 is one too low and 10:07 is one too high.
 
-        ## Watermarks
+        One rider is a rounding error. But a whole city loses signal in the rain, or your consumer
+        restarts after a deploy and reads a 20-minute backlog in 30 seconds. Then the chart shows a
+        huge fake spike that never happened.
 
-        A **watermark** is the stream's estimate that "no more events older than time T will
-        arrive". When the watermark passes the end of a window, the window can fire. A common
-        strategy is "maximum event time seen minus a bounded delay", such as 2 minutes.
+        The cause is that there are **two clocks**:
+
+        - **Processing time:** the server clock when the event arrives.
+        - **Event time:** the time written inside the event, when it really happened.
+
+        Counting by processing time measures your network and your deploys, not your business. So
+        count by event time.
+
+        But event time brings a new and harder question. It is 10:01 now. Can you announce "10:00
+        had 412 trips"? Maybe the tunnel rider is still out there. **When is a minute finished?**
+        Everything else in this lesson answers that one question.
+
+        ## Windows: the buckets
+
+        A **window** is a bucket of event time. You put each event in its bucket and aggregate the
+        bucket. There are three common shapes.
+
+        - **Tumbling window:** fixed size, no overlap, like the pages of a day calendar. Example:
+          trips per minute.
+        - **Sliding (hopping) window:** fixed size, but the windows overlap, like "the last 5
+          minutes, updated every minute". Example: trips in the last 5 minutes.
+        - **Session window:** one per key, and it closes after a quiet gap, like a chat that ends
+          after 30 minutes of silence. Example: a rider's app session.
+
+        With a 5-minute sliding window that moves every minute, one event belongs to 5 windows. That
+        is why sliding windows cost more state than tumbling ones.
+
+        ## Watermarks: deciding that a window is done
+
+        Think of a teacher collecting exam papers. The exam ended at 11:00, but students drift in
+        late to hand in their papers. The teacher cannot wait forever, so they say: "I wait until
+        11:05. Then I grade." That deadline is a watermark.
+
+        A **watermark** is a marker that flows through the stream. It says: "I believe no more
+        events with an event time earlier than T will arrive." When the watermark passes the end of
+        a window, the window **fires**: it emits its result.
+
+        The system cannot see the future, so it guesses T from what it has already seen. The common
+        rule is: **watermark = the largest event time seen so far, minus an allowed delay.**
+
+        ## Worked example, one event at a time
+
+        We count the window from 10:00 up to 10:01. The allowed delay is 60 seconds. Five events
+        arrive, one after another. The time shown is each event's event time.
+
+        1. **10:00:10** arrives. Largest seen: 10:00:10. Watermark: 09:59:10. Count: 1.
+        2. **10:00:50** arrives. Largest seen: 10:00:50. Watermark: 09:59:50. Count: 2.
+        3. **10:01:20** arrives. It belongs to the next window, so the count stays 2. But the
+           largest seen moves to 10:01:20, so the watermark moves to 10:00:20.
+        4. **10:00:40** arrives, out of order. It is ahead of the watermark (10:00:20), so it is
+           accepted. Count: 3.
+        5. **10:02:30** arrives. Watermark: 10:01:30. That is past the end of our window, so the
+           window **fires with 3**.
 
         ~~~text
-        events (event time): 10:00:10  10:00:50  10:01:20  10:00:40 (late)  10:02:30
-        watermark = max_seen - 60s
-        window [10:00, 10:01) fires when watermark >= 10:01, i.e. after an event at >= 10:02 arrives
+        watermark = largest - 60s
+        10:02:30 - 60s = 10:01:30
+        10:01:30 is past 10:01
+        → window fires, count 3
         ~~~
 
-        ## Late data
+        Now an event with event time 10:00:55 arrives. The watermark is already 10:01:30, so it is
+        behind the watermark. That event is **late**.
 
-        Events behind the watermark are **late**. Options: drop them (count them in a metric),
-        allow lateness so the window updates and emits a correction, or send them to a side output
-        for a batch fix-up. This is the **Dataflow model's** framing, from Google: what you
-        compute, where in event time, when in processing time you emit, and how refinements relate.
+        Look at step 4. The 60-second delay rescued the out-of-order event. With no delay, the
+        watermark after step 3 would be 10:01:20. The window would fire with 2, and the 10:00:40 event
+        would be late. **The delay is how much disorder you are willing to wait for.**
+
+        ## Late data: what to do with stragglers
+
+        Back to the teacher. A paper arrives after grading. The teacher can refuse it, regrade and
+        publish a corrected list, or send it to the office to deal with later. Streams have the same
+        three choices.
+
+        - **Drop it**, and count drops in a metric so you know how often it happens.
+        - **Allowed lateness:** keep the window's state a while longer. A late event updates the
+          window, and the window emits a **correction**.
+        - **Side output:** send late events to a separate stream, and fix the numbers in a batch job.
+
+        ## The big picture: the Dataflow model
+
+        Google's **Dataflow model** names four questions. Every streaming design answers all four,
+        and you have now seen each one.
+
+        1. **What** do you compute? Trips counted per minute.
+        2. **Where** in event time? The windows.
+        3. **When** in processing time do you emit? Watermarks and triggers.
+        4. **How** do later results relate to earlier ones? A correction replaces the old number
+           (accumulating) or adds a delta (discarding).
 
         > [!senior] The trade-off is latency versus completeness
-        > A longer watermark delay means more complete windows but later results. Say what the
-        > consumer needs: a surge pricing signal wants seconds and tolerates small errors; a
-        > billing report wants completeness and can wait for a batch correction.
+        > A longer watermark delay gives more complete windows but later results. Say what the
+        > consumer needs. A surge pricing signal wants seconds and tolerates small errors. A billing
+        > report wants completeness, and can wait for a batch correction.
 
         > [!trap] Idle partitions stall watermarks
-        > If one source partition has no data, its watermark does not advance, and windows never
-        > fire. Flink's «withIdleness» marks such sources idle so they stop holding back progress.
+        > A job reads many partitions and its watermark is the **minimum** across them, like a convoy
+        > that moves at the speed of its slowest truck. If one partition gets no data, its watermark
+        > never moves, so no window fires anywhere. Flink's «withIdleness» marks such a source idle so
+        > it stops holding back progress.
+
+        ## In one breath
+
+        Count by when things happened, not when they arrived. A watermark is the deadline that says
+        "this bucket is done", set as the newest time seen minus the disorder you will wait for.
+        Anything after the deadline is late, and you choose to drop it, correct it or fix it in batch.
       `,
       checks: [
         {
@@ -180,6 +390,18 @@ export const track: Track = {
           ],
           answer: 1,
           why: 'Processing time shifts with delays, backlogs and replays. Event time reflects when trips actually happened.',
+        },
+        {
+          question:
+            'The watermark is "largest event time seen minus 60 seconds". The largest event time seen is 10:02:30. An event with event time 10:01:45 arrives. What happens?',
+          options: [
+            'It is late, because it is older than 10:02:30',
+            'It is accepted, because it is ahead of the watermark at 10:01:30',
+            'It is dropped, because events must arrive in order',
+            'The watermark moves back to 10:01:45',
+          ],
+          answer: 1,
+          why: 'The watermark is 10:02:30 minus 60 seconds, which is 10:01:30. The event at 10:01:45 is after that, so it still counts in its window. Watermarks never move back.',
         },
       ],
     },
