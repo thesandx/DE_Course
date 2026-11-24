@@ -200,33 +200,86 @@ export const track: Track = {
       slug: 'delivery-guarantees',
       title: 'Consumers and delivery guarantees',
       summary: 'At-most-once, at-least-once and exactly-once, and what each costs in practice.',
-      minutes: 14,
+      minutes: 15,
       body: `
-        ## Consumer groups
+        ## Start with the problem
 
-        Consumers in the same **group** split the partitions between them; each partition is read
-        by exactly one member. Adding members (up to the partition count) adds parallelism. When a
-        member joins or dies, the group **rebalances**. Cooperative rebalancing (incremental) moves
-        only the partitions that need to move, instead of stopping everyone.
+        A consumer reads a record from Kafka, does some work with it, and writes the result to a
+        database. Then the machine crashes. When it comes back, one question decides everything:
+        **which record does it read next?**
 
-        ## When you commit decides the guarantee
+        If it reads the next one, maybe the crashed record was never saved: data lost. If it reads
+        the same one again, maybe it was already saved: data written twice. There is no third choice
+        for free. This lesson is about choosing, on purpose.
 
-        | Commit the offset | Crash between processing and commit | Guarantee |
+        ## Idea 1: the bookmark (committing the offset)
+
+        From the Kafka lesson: a consumer remembers "I have read up to offset 1,204". Saving that
+        number back to Kafka is called **committing the offset**. Think of it as moving a bookmark.
+
+        After a crash, the consumer opens the book at the bookmark. So the only thing that matters is
+        **when you move the bookmark**: before you do the work, or after.
+
+        ## Idea 2: three choices, three guarantees
+
+        Picture yourself paying a pile of bills, one at a time, with a bookmark in the pile.
+
+        - **Move the bookmark first, then pay.** You crash after moving it but before paying. When
+          you come back, you skip that bill. It is never paid. That is **at most once**: nothing
+          twice, but you can lose some.
+        - **Pay first, then move the bookmark.** You crash after paying but before moving it. When
+          you come back, you pay that bill again. That is **at least once**: nothing lost, but some
+          things twice.
+        - **Pay and move the bookmark as one action**, so either both happen or neither does. That
+          is **exactly once** (effectively).
+
+        ## Idea 3: make "twice" harmless (idempotent writes)
+
+        At least once is easy to build. The only problem is the duplicates. So remove the harm of a
+        duplicate instead of the duplicate itself.
+
+        An operation is **idempotent** if doing it twice gives the same result as doing it once.
+        "Add 10 to the balance" is not idempotent. "Set the row for payment p-77 to 10" is.
+
+        So the most common production design is **at least once plus idempotent writes**:
+
+        1. Read the record.
+        2. Write with an upsert keyed by the event id: "insert or replace the row for event e-91".
+        3. Then commit the offset.
+
+        A crash between 2 and 3 replays the record, and the upsert just writes the same row again.
+        The effect is exactly once, with no special machinery.
+
+        ## Idea 4: real exactly-once inside the system
+
+        Sometimes the output is another Kafka topic, not a database. Then Kafka itself can do the
+        "one action" from Idea 2. **Kafka transactions** let a consume, process, produce app write
+        its output records and its consumed offsets in one atomic transaction. Readers set
+        «isolation.level=read_committed» and never see output from an aborted transaction.
+
+        Flink does the same end to end with **checkpoints** and **two-phase-commit sinks**: the sink
+        writes, but only makes the writes visible when the checkpoint that covers them completes.
+
+        Both give **exactly-once effects inside the system**. Neither can promise that an external
+        API, such as an email sender, is called only once.
+
+        ## Idea 5: who reads which partition (consumer groups and rebalancing)
+
+        Consumers in the same **group** split the partitions; each partition is read by exactly one
+        member. Add members, up to the partition count, and you add parallelism.
+
+        When a member joins or dies, the group must re-deal the partitions. That is a
+        **rebalance**. The old style stopped every consumer, took all partitions back and dealt them
+        again. **Cooperative (incremental) rebalancing** only moves the partitions that need to move,
+        so most consumers never stop.
+
+        ## Now say it like a senior engineer
+
+        | Commit the offset | Crash between work and commit | Guarantee |
         |---|---|---|
-        | Before processing | Records are skipped | At most once |
-        | After processing | Records are processed again | At least once |
-        | Atomically with the output | Neither | Exactly once (effectively) |
-
-        **At least once plus idempotent writes** is the most common production design: process,
-        write with an upsert keyed by event id, then commit. A replay overwrites the same rows.
-
-        ## Exactly-once, honestly
-
-        Kafka transactions let a consume-process-produce application write output records and the
-        consumed offsets in one atomic transaction, and readers with «isolation.level=read_committed»
-        never see aborted output. Flink achieves end-to-end exactly-once with checkpoints and
-        two-phase-commit sinks. Both guarantee **exactly-once effects inside the system**, not
-        that an external API is called once.
+        | Before processing | Records skipped | At most once |
+        | After processing | Records processed again | At least once |
+        | Atomically with output | Neither | Exactly once |
 
         > [!senior] Say "effectively once"
         > "The pipeline is at-least-once; the sink is idempotent on «event_id», so the effect is
@@ -234,9 +287,15 @@ export const track: Track = {
         > could still leak, such as an email sender.
 
         > [!trap] Long processing triggers rebalances
-        > If handling a batch takes longer than «max.poll.interval.ms», the consumer is considered
-        > dead, its partitions move, and the batch is processed twice. Keep batches small or move
+        > If handling a batch takes longer than «max.poll.interval.ms», Kafka decides the consumer is
+        > dead. Its partitions move, and the batch is processed twice. Keep batches small, or move
         > slow work off the poll loop.
+
+        ## In one breath
+
+        The guarantee is decided by when you move the bookmark. Commit after the work and make the
+        write idempotent, and a replay becomes harmless: that is how most real systems get
+        "exactly once".
       `,
       checks: [
         {
@@ -409,43 +468,92 @@ export const track: Track = {
       slug: 'stateful-processing',
       title: 'State, checkpoints and backpressure',
       summary: 'How Flink keeps state correct across failures, and what to watch in production.',
-      minutes: 14,
+      minutes: 15,
       body: `
-        Most useful streaming jobs keep **state**: counts per key, open sessions, the last known
-        driver location, a join buffer. Flink stores keyed state locally (on heap or in RocksDB) and
-        makes it fault tolerant with **checkpoints**.
+        ## Start with the problem
 
-        ## Checkpoints and savepoints
+        A useful streaming job must remember things. Count trips per city: it must remember the
+        count so far. Spot a rider's session: it must remember when they last tapped. Drop duplicate
+        events: it must remember which ids it has seen. That memory is called **state**.
 
-        - A **checkpoint** is a periodic, consistent snapshot of all operator state plus the source
-          offsets, taken with barriers that flow through the job. After a failure, Flink restores
-          the last checkpoint and replays sources from the stored offsets.
-        - A **savepoint** is a checkpoint you trigger yourself, used to upgrade code, change
-          parallelism or migrate clusters without losing state.
+        Now the machine running the job dies. If the state lived only in memory, every count starts
+        from zero. Your dashboard says New York had 3 trips today. We need state that is fast to use
+        **and** survives a crash.
 
-        ## State growth
+        ## Idea 1: keep state next to the work
 
-        State that never expires grows forever: a dedup set of every event id ever seen, or
-        sessions for users who never come back. Use **state TTL** or timers to evict, and bound
-        dedup to a time window ("ignore duplicates within 24 hours").
+        Flink keeps **keyed state** on the same machine that processes those keys: the count for
+        "city 5" lives where city 5's events go. Small state stays on the heap. Big state goes into
+        **RocksDB**, a small database on the local disk. No network call per event, so it is fast.
 
-        ## Backpressure
+        But local means it dies with the machine. So we need copies.
 
-        When a sink or operator is slower than the input, buffers fill and upstream operators slow
-        down. Kafka consumer lag grows. Find the bottleneck operator in the UI (busy or
-        backpressured percentages), then scale it, fix skew, or batch the sink writes.
+        ## Idea 2: a photo of everything, at the same moment (checkpoints)
 
-        ## Stream joins
+        Think of a video game save. Every few minutes the game saves your position, your items and
+        your score together. If the game crashes, you reload the last save and play from there.
 
-        | Join | Needs | Example |
-        |---|---|---|
-        | Window join | Both streams buffered for a window | Requests and acceptances within 2 minutes |
-        | Interval join | Buffer within a time bound per key | Click within 30 minutes of impression |
-        | Lookup (temporal) join | Versioned table or external lookup | Enrich trips with the city table as of event time |
+        A **checkpoint** is that save. Every so often, Flink takes a consistent snapshot of all
+        operator state **plus the Kafka offsets** it had reached, and writes it to durable storage.
+        After a crash, Flink loads the last checkpoint and tells Kafka "replay from these offsets".
+        State and input line up again, as if the crash never happened.
+
+        How does it get "the same moment" across many machines without stopping the job? It puts
+        markers, called **barriers**, into the stream. When an operator sees the barrier, it saves
+        its state. Everything before the barrier is in the snapshot; everything after is not.
+
+        A **savepoint** is a checkpoint you trigger by hand. You use it to upgrade code, change
+        parallelism or move to another cluster without losing state.
+
+        ## Idea 3: memory that only grows will hurt you (state TTL)
+
+        Remember the dedup job: "remember every event id I have seen". After six months, that is
+        billions of ids. Checkpoints take hours, and restore takes longer.
+
+        The fix: decide how long memory needs to last. Duplicates usually arrive within minutes, so
+        "ignore duplicates within 24 hours" is enough. **State TTL** (time to live) and timers evict
+        old entries, so state stays the size of recent traffic, not all of history.
+
+        ## Idea 4: when the output is slower than the input (backpressure)
+
+        Picture a kitchen. The waiter brings orders faster than the cook can cook. Orders pile up on
+        the counter, and the waiter must slow down. That is **backpressure**.
+
+        In Flink, when a sink or an operator is slow, its input buffers fill, and the operators
+        before it slow down too. From the outside you see **consumer lag** grow in Kafka.
+
+        To fix it, find the slow operator. The Flink UI shows each operator as busy or
+        backpressured. The busy one right after the backpressured ones is the bottleneck. Then scale
+        it, fix skew (one hot key), or batch the sink writes.
+
+        ## Idea 5: joining two streams needs state too
+
+        To join two streams, you must hold one side in memory while you wait for the other.
+
+        - **Window join:** buffer both streams for a window. Example: ride requests and acceptances
+          in the same 2 minutes.
+        - **Interval join:** buffer per key within a time bound. Example: a click within 30 minutes
+          of its impression.
+        - **Lookup (temporal) join:** look up a versioned table as of the event's time. Example:
+          enrich each trip with the city table as it was when the trip happened.
+
+        The longer the wait, the bigger the state. That is why every stream join needs a time bound.
+
+        ## Now say it like a senior engineer
+
+        - State is local (heap or RocksDB) and made durable by checkpoints of state plus offsets.
+        - Savepoints are manual checkpoints for upgrades and rescaling.
+        - Unbounded state is a bug: bound it with TTL or timers.
+        - Backpressure shows up as lag; find the bottleneck operator, then scale, de-skew or batch.
 
         > [!senior] Size the state
         > "200 million active keys at 100 bytes is 20 GB of state, so RocksDB with incremental
         > checkpoints, and TTL of 24 hours" is the kind of sentence that shows you have run this.
+
+        ## In one breath
+
+        A streaming job's memory lives next to the work and is saved, with the input offsets, like
+        a game save. Keep that memory bounded, and when it backs up, find the slowest step.
       `,
       checks: [
         {
@@ -466,37 +574,76 @@ export const track: Track = {
       slug: 'architectures-and-serving',
       title: 'Lambda, kappa and real-time serving',
       summary: 'Choose a batch, streaming or hybrid architecture and serve fresh results to users.',
-      minutes: 12,
+      minutes: 13,
       body: `
-        ## Lambda versus kappa
+        ## Start with the problem
+
+        The business wants two things from the same trip data. A dashboard that is fresh to the
+        second. And numbers that are exactly right, for finance. Streaming is fast but late data
+        makes it a little wrong. Batch is right but hours old. How do you get both?
+
+        ## Idea 1: run both (lambda)
+
+        The first answer was to build two pipelines side by side.
+
+        - A **speed layer** (streaming) gives a fast, approximate answer.
+        - A **batch layer** recomputes the exact answer every night and overwrites it.
+
+        That is the **lambda architecture**. It works, but you write the same logic twice, in two
+        different tools. One day someone changes the batch code and forgets the stream code. Now the
+        dashboard and the finance report disagree, and nobody knows which one is right.
+
+        ## Idea 2: run only the stream, and replay it (kappa)
+
+        The second answer: keep one streaming pipeline, and keep the input log long. To recompute,
+        start a new version of the job that reads the log from the beginning. When it catches up,
+        switch traffic to it. That is the **kappa architecture**.
+
+        Logic is written once. The price: you need long retention (tiered storage helps) and a job
+        that can replay fast.
 
         | | Lambda | Kappa |
         |---|---|---|
-        | Paths | Batch for correctness plus streaming for speed | One streaming path; replay the log to recompute |
-        | Code | Logic often written twice | Logic written once |
-        | Recompute | Batch rerun | Replay from Kafka (or tiered storage) into a new job version |
-        | Risk | Two answers that disagree | Needs long retention and fast replay |
+        | Paths | Batch plus stream | Stream only |
+        | Logic | Written twice | Written once |
+        | Recompute | Batch rerun | Replay the log |
+        | Risk | Two answers disagree | Needs long retention, fast replay |
 
-        Modern practice often blends them: one streaming pipeline writes to a lakehouse table
-        (Hudi, Iceberg, Delta), and batch jobs read the same table for heavy analytics and
-        corrections. Apache Beam lets one pipeline definition run in batch or streaming mode.
+        ## Idea 3: what teams actually do now
 
-        ## Serving fresh analytics
+        Most modern platforms blend the two. One streaming pipeline writes to a **lakehouse table**
+        (Hudi, Iceberg or Delta). Batch jobs read that same table for heavy analytics and for
+        corrections. One copy of the data, two ways to use it. **Apache Beam** goes further: one
+        pipeline definition can run in batch or streaming mode.
 
-        Dashboards that need second-level freshness at high query rates use real-time OLAP stores
-        such as **Apache Pinot** (used heavily at Uber) or Druid. They ingest directly from Kafka,
-        index columns, and pre-aggregate with star-tree indexes. A warehouse such as BigQuery serves
-        the deep, ad-hoc analysis.
+        ## Idea 4: serving fresh numbers to many people
 
-        ## Change data capture
+        A dashboard used by thousands of city managers, refreshing every few seconds, sends a lot of
+        queries. A normal warehouse is built for few, heavy queries, not many small ones.
 
-        CDC tools (Debezium, Datastream) read a database's transaction log and publish row changes
-        to Kafka. That turns an operational database into a stream without polling queries, and
-        feeds upserts into a lakehouse table.
+        **Real-time OLAP stores**, such as **Apache Pinot** (used heavily at Uber) or Druid, fill
+        that gap. They ingest straight from Kafka, index every column, and pre-aggregate with
+        star-tree indexes, so each query takes milliseconds. A warehouse such as BigQuery still
+        serves the deep, ad hoc analysis.
+
+        ## Idea 5: turning a database into a stream (CDC)
+
+        Much of the data starts in an app database. Polling it with "select rows changed since 10
+        minutes ago" is slow and misses deletes. **Change data capture (CDC)** tools such as
+        Debezium or Datastream read the database's own transaction log and publish each row change
+        to Kafka. The database becomes a stream, and the changes feed upserts into a lakehouse table.
+
+        ## Now say it like a senior engineer
 
         > [!senior] Do not stream by default
-        > Streaming costs more to build and operate. Ask what decision the freshness enables. A
-        > dashboard looked at once a morning does not need a Flink job.
+        > Streaming costs more to build and to run. Ask what decision the freshness enables. A
+        > dashboard that someone opens once a morning does not need a Flink job.
+
+        ## In one breath
+
+        Lambda runs batch and stream side by side and pays by writing logic twice; kappa keeps one
+        stream and replays the log. Today most teams stream into a lakehouse table and let batch read
+        the same table.
       `,
       checks: [
         {
@@ -517,59 +664,108 @@ export const track: Track = {
       title: 'Kafka Connect and change data capture',
       summary:
         'Run source and sink connectors, capture database changes with Debezium, and handle bad records without stopping.',
-      minutes: 15,
+      minutes: 16,
       body: `
-        Most data does not enter Kafka from code a team wrote. It enters through **Kafka Connect**,
-        a framework that runs reusable connectors: a source connector reads a system and writes
-        to topics, a sink connector reads topics and writes to a system.
+        ## Start with the problem
 
-        ## How Connect runs
+        You want orders from the app's Postgres database in Kafka, and from Kafka into the lake.
+        The first idea is to write a small program: every minute, run «select * from orders where
+        updated_at > last_run», and send the rows to Kafka.
 
-        - A **worker** is a JVM process. In distributed mode, workers with the same group id form
-          a cluster and share the work.
-        - A **connector** is a configuration (JSON over a REST API). It splits itself into
-          **tasks**, the units of parallelism. A JDBC source might run one task per table; a sink
-          runs up to one task per partition.
-        - The cluster stores connector configs, source offsets and status in three internal
-          topics. Kill a worker and its tasks restart on the others from the stored offsets.
+        It looks fine for a week. Then the problems show up.
+
+        1. Deleted orders never appear, because a deleted row is not there to select.
+        2. An order that changes twice inside one minute shows only its last state.
+        3. Every team writes its own version of this program, with its own bugs, for every database.
+        4. When the program crashes, nobody is sure where it stopped.
+
+        We need two things: a standard way to move data in and out of Kafka, and a way to read
+        **every change** from a database, including deletes.
+
+        ## Idea 1: plugs instead of programs (Kafka Connect)
+
+        **Kafka Connect** is a framework that runs ready-made connectors. You do not write code;
+        you write a configuration.
+
+        - A **source connector** reads a system and writes to topics.
+        - A **sink connector** reads topics and writes to a system.
+
+        Think of a wall socket with standard plugs. The socket (Connect) handles power, safety and
+        restarts. Each plug (connector) only knows its own device.
+
+        ## Idea 2: how Connect runs the work
+
+        - A **worker** is a JVM process. In distributed mode, workers with the same group id form a
+          cluster and share the work.
+        - A **connector** is a configuration, sent as JSON to a REST API. It splits itself into
+          **tasks**, the units of parallelism. A JDBC source might run one task per table. A sink runs
+          up to one task per partition.
+        - The cluster stores connector configs, source offsets and status in three internal topics.
+          Kill a worker, and its tasks restart on the other workers from the stored offsets. That
+          fixes problem 4: the bookmark lives in Kafka.
         - **Converters** turn records into bytes: Avro, Protobuf or JSON Schema with a schema
-          registry, or plain JSON. **Single message transforms (SMTs)** make small per-record
-          changes: rename a field, mask a column, route by a value.
+          registry, or plain JSON.
+        - **Single message transforms (SMTs)** make small per-record changes: rename a field, mask a
+          column, route by a value.
 
-        ## CDC with Debezium
+        ## Idea 3: read the database's diary, not its tables (CDC with Debezium)
 
-        Debezium source connectors read the database’s own change log: the MySQL binlog, the
-        Postgres write-ahead log through a replication slot, the SQL Server change tables. A new
-        connector first takes a **snapshot** of the existing rows, then streams changes. Each
-        event carries the row «before» and «after», the operation (create, update, delete), and
-        the log position. A delete is followed by a **tombstone** (a record with the key and a
-        null value), so a compacted topic drops the key.
+        Every database already keeps a diary of every change, for its own crash recovery. MySQL calls
+        it the binlog. Postgres calls it the write-ahead log (WAL). The diary has every insert,
+        every update and every delete, in order.
+
+        **Debezium** source connectors read that diary. That is **change data capture (CDC)**. It
+        fixes problems 1 and 2: deletes are in the diary, and so is every intermediate change.
+
+        - MySQL: the binlog. Postgres: the WAL, through a **replication slot**. SQL Server: its
+          change tables.
+        - A new connector first takes a **snapshot** of the existing rows, then streams changes.
+        - Each event carries the row «before» and «after», the operation (create, update or
+          delete), and the log position.
+        - A delete is followed by a **tombstone**: a record with the key and a null value, so a
+          compacted topic drops that key.
 
         > [!trap] A stopped Postgres connector can fill the database disk
-        > A replication slot keeps WAL until its consumer confirms it. If the connector is down
-        > for a day, the primary keeps a day of WAL. Alert on slot lag, and set
-        > «max_slot_wal_keep_size» so the database protects itself.
+        > A replication slot keeps WAL until its consumer confirms it. If the connector is down for
+        > a day, the primary keeps a day of WAL. Alert on slot lag, and set «max_slot_wal_keep_size»
+        > so the database protects itself.
 
-        ## The outbox pattern
+        ## Idea 4: publish a letter, not your private diary (the outbox pattern)
 
-        Capturing raw tables couples consumers to a service’s private schema. With the
-        **outbox pattern**, the service writes its business event to an «outbox» table in the
-        same transaction as the state change, and Debezium publishes only that table. The event
-        is a public contract, and it cannot be lost or sent for a rolled-back transaction.
+        Raw CDC has a catch. Other teams now read your service's private tables. Rename a column, and
+        you break them.
 
-        ## Errors without stopping the pipeline
+        With the **outbox pattern**, the service writes a clean business event into an «outbox»
+        table, **in the same transaction** as the real change. Debezium publishes only that table.
 
-        | Setting | Effect |
-        |---|---|
-        | «errors.tolerance=none» | Default. The first bad record fails the task. |
-        | «errors.tolerance=all» | Skip records that fail conversion or transforms |
-        | «errors.deadletterqueue.topic.name» | Sink only: send failed records to a DLQ topic with headers that say why |
+        - The event is a public contract, separate from the private tables.
+        - Same transaction means the event cannot be lost, and it is never sent for a rolled-back
+          change.
+
+        ## Idea 5: one bad record should not stop everything
+
+        By default, the first record that cannot be converted fails the task. One malformed row stops
+        the whole pipeline.
+
+        - «errors.tolerance=none»: the default. The first bad record fails the task.
+        - «errors.tolerance=all»: skip records that fail conversion or transforms.
+        - «errors.deadletterqueue.topic.name»: sink only. Send failed records to a DLQ topic.
+
+        The **dead letter queue (DLQ)** keeps the bad records, with headers that say why they failed.
+
+        ## Now say it like a senior engineer
 
         > [!senior] What a senior answer adds
         > Say how the pipeline restarts (offsets in Kafka, so a worker loss is a rebalance), how
         > schema changes are governed (registry compatibility mode, usually backward), how deletes
         > flow (tombstones), and that someone owns the dead letter queue. A DLQ nobody reads is
         > silent data loss.
+
+        ## In one breath
+
+        Kafka Connect runs standard plugs instead of custom programs, and Debezium reads the
+        database's own change diary, so you get every change, including deletes. Publish an outbox
+        event as the contract, and give bad records somewhere to go.
       `,
       checks: [
         {
@@ -602,61 +798,91 @@ export const track: Track = {
       title: 'Kafka Streams and ksqlDB',
       summary:
         'Explain streams and tables, state stores, co-partitioning and when a library beats a cluster like Flink.',
-      minutes: 15,
+      minutes: 16,
       body: `
-        **Kafka Streams** is a Java library, not a cluster. You embed it in an ordinary service,
-        run several copies, and Kafka’s consumer group protocol shares the input partitions
-        between them. There is no job manager to operate, which is its main appeal.
+        ## Start with the problem
 
-        ## Streams and tables
+        You want a small piece of logic: for each trip event, attach the driver's current status,
+        and write the result to a new topic. Input is Kafka, output is Kafka.
 
-        | Abstraction | Meaning | Example |
-        |---|---|---|
-        | «KStream» | Every record is an event | Each trip request |
-        | «KTable» | The latest value per key; a record is an update | Each driver’s current status |
-        | «GlobalKTable» | A KTable copied in full to every instance | A small list of cities |
+        You could run a Flink cluster for that. But a cluster is a whole system to operate: a job
+        manager, deployments, upgrades. For a small piece of logic that is a lot of weight.
 
-        A stream aggregated by key becomes a table. A table’s change log is a stream. This
-        **stream-table duality** is the core idea, and it is also how state survives a crash.
+        ## Idea 1: a library, not a cluster (Kafka Streams)
 
-        ## State stores and changelogs
+        **Kafka Streams** is a Java library. You put it inside an ordinary service and run several
+        copies. Kafka's own consumer group protocol shares the input partitions between the copies.
+        There is no job manager to run. That is its main appeal.
 
-        Aggregations and joins keep state in a local store (RocksDB by default). Every write to
-        the store is also written to a compacted **changelog topic**. When an instance dies, the
-        partition moves and the new owner rebuilds the store from the changelog. Restoring a
-        large store can take minutes, so production apps set **standby replicas**, which keep a
-        warm copy on another instance.
+        ## Idea 2: two ways to read the same records (streams and tables)
 
-        ## Co-partitioning
+        Look at a bank account. The list of transactions is a **stream**: each line is something
+        that happened. The current balance is a **table**: one latest value per account.
 
-        A stream-table join is local: each instance joins the partitions it owns. That works only
-        if both topics have the **same number of partitions and the same key**. If not, Kafka
-        Streams writes a **repartition topic** first, which doubles the traffic for that step. A
-        GlobalKTable avoids the requirement because every instance has all of it.
+        Kafka Streams has both.
 
-        ## Exactly once
+        - «KStream»: every record is an event. Example: each trip request.
+        - «KTable»: the latest value per key; each record is an update. Example: each driver's
+          current status.
+        - «GlobalKTable»: a KTable copied in full to every instance. Example: a small list of cities.
 
-        «processing.guarantee=exactly_once_v2» wraps the input offsets, state store changelog
-        writes and output records in one Kafka transaction. It holds inside Kafka. A call to an
-        external API is still at least once.
+        Now the key insight. Add up a stream by key, and you get a table (transactions become a
+        balance). Write down every change to a table, and you get a stream (balance changes become
+        transactions). This **stream-table duality** is the core idea. It is also how state
+        survives a crash, as the next idea shows.
 
-        ## ksqlDB
+        ## Idea 3: local state, backed up as a stream (state stores and changelogs)
 
-        ksqlDB puts SQL on top of Kafka Streams: «CREATE STREAM», «CREATE TABLE AS SELECT» and
-        windowed aggregations run as persistent queries on a ksqlDB cluster. It is quick for
-        simple transformations and filters. For new work, many teams now pick Flink SQL, which
-        Confluent Cloud also leads with; know both names and the trade-off.
+        Aggregations and joins keep state in a local store, RocksDB by default. Every write to that
+        store is also written to a compacted **changelog topic** in Kafka. That is the duality in
+        action: the table is backed up as a stream.
 
-        | Choose | When |
-        |---|---|
-        | Kafka Streams | Input and output are Kafka, logic lives in a service your team runs, state fits per instance |
-        | Flink | Many sources and sinks, very large state, event-time windows over long periods, SQL for analysts |
-        | ksqlDB or Flink SQL | Simple filters, projections and aggregations owned by people who prefer SQL |
+        When an instance dies, its partitions move. The new owner rebuilds the store by replaying the
+        changelog. A large store can take minutes to restore, so production apps set **standby
+        replicas**: a warm copy kept on another instance, ready to take over.
+
+        ## Idea 4: a join only works if matching keys meet (co-partitioning)
+
+        Each instance joins only the partitions it owns. So "trip for driver 7" and "status of driver
+        7" must land on the same instance. That only happens if both topics have **the same number of
+        partitions and the same key**. This is **co-partitioning**.
+
+        If they do not match, Kafka Streams first re-keys one side into a **repartition topic**. That
+        works, but it doubles the traffic for that step. A GlobalKTable avoids the rule, because every
+        instance has all of it.
+
+        ## Idea 5: exactly once, inside Kafka
+
+        «processing.guarantee=exactly_once_v2» wraps three things in one Kafka transaction: the input
+        offsets, the changelog writes and the output records. Either all happen or none. This holds
+        inside Kafka. A call to an external API is still at least once.
+
+        ## Idea 6: SQL on top (ksqlDB)
+
+        **ksqlDB** puts SQL on top of Kafka Streams. «CREATE STREAM», «CREATE TABLE AS SELECT» and
+        windowed aggregations run as persistent queries on a ksqlDB cluster. It is quick for simple
+        filters and transformations. For new work, many teams now choose Flink SQL, which Confluent
+        Cloud also leads with. Know both names and the trade-off.
+
+        ## Now say it like a senior engineer
+
+        - **Kafka Streams:** input and output are Kafka, the logic lives in a service your team
+          runs, and the state fits per instance.
+        - **Flink:** many sources and sinks, very large state, event-time windows over long periods,
+          SQL for analysts.
+        - **ksqlDB or Flink SQL:** simple filters, projections and aggregations, owned by people who
+          prefer SQL.
 
         > [!senior] Say what the library costs
-        > No cluster to run, but scaling is capped by the input partition count, a rebalance
-        > pauses processing while stores restore, and large state means long restores. Standby
-        > replicas and static membership are the usual fixes.
+        > No cluster to run, but scaling is capped by the input partition count, a rebalance pauses
+        > processing while stores restore, and large state means long restores. Standby replicas and
+        > static membership are the usual fixes.
+
+        ## In one breath
+
+        Kafka Streams is stream processing as a library: tables are streams added up, and streams
+        are tables written down, which is also how state is backed up. Joins need co-partitioned
+        topics, or the library repartitions for you.
       `,
       checks: [
         {
@@ -678,55 +904,89 @@ export const track: Track = {
       title: 'KRaft, rebalancing and running Kafka',
       summary:
         'Know how Kafka manages metadata without ZooKeeper and how consumer groups rebalance without stalling.',
-      minutes: 13,
+      minutes: 14,
       body: `
-        ## KRaft replaced ZooKeeper
+        ## Start with the problem
 
-        Kafka used to keep cluster metadata (topics, partitions, leaders, configs) in ZooKeeper.
-        In **KRaft** mode, a small quorum of **controllers** stores metadata in an internal Raft
-        log, and brokers follow that log. Kafka 4.0 (2025) removed ZooKeeper entirely. A
-        ZooKeeper cluster must migrate on a 3.x bridge release before it can move to 4.x.
+        A Kafka cluster must always know some facts about itself. Which topics exist? How many
+        partitions does each one have? Which broker leads each partition right now? This is the
+        cluster's **metadata**. If two brokers disagree about who leads partition 7, both accept
+        writes, and data splits in two.
+
+        So the metadata needs one trusted home that survives a machine dying. For years, that home
+        was a separate system. This lesson is about where it lives now, and about the other thing that
+        makes Kafka feel slow in production: consumer groups that keep stopping.
+
+        ## Idea 1: the old way (ZooKeeper)
+
+        Kafka used to keep its metadata in **ZooKeeper**, a separate cluster built for exactly this
+        kind of agreement. It worked, but you had to run and upgrade two different systems. And when
+        the active controller failed, the new one had to reload all metadata from ZooKeeper, which
+        was slow on big clusters.
+
+        ## Idea 2: keep the metadata in a Kafka-style log (KRaft)
+
+        Kafka is already very good at one thing: a replicated log. So why not store the metadata as a
+        log too?
+
+        In **KRaft** mode, a small group of **controllers** stores metadata in an internal log, and
+        they use the Raft protocol to agree on each entry. Brokers simply follow that log. A standby
+        controller already has the whole log, so failover is fast.
+
+        - Kafka 4.0 (2025) removed ZooKeeper entirely.
+        - A ZooKeeper cluster must first migrate on a 3.x bridge release before it can move to 4.x.
+        - Run three or five controllers, on separate machines or zones. Raft needs a majority alive,
+          so an odd number gives the best safety for the cost.
 
         | | ZooKeeper era | KRaft |
         |---|---|---|
         | Systems to run | Kafka plus ZooKeeper | Kafka only |
-        | Controller failover | Reloads all metadata, slow on big clusters | A standby controller already has the log |
-        | Partitions per cluster | Limited by metadata load | Far higher |
+        | Controller failover | Slow reload | Instant, log already there |
+        | Partitions per cluster | Limited | Far higher |
 
-        Run three or five controllers, on separate machines or zones, for the same reason you
-        ran an odd ZooKeeper ensemble: a majority must survive.
+        ## Idea 3: why consumer groups stop (rebalancing)
 
-        ## Consumer group rebalancing
+        A **rebalance** re-deals the partitions when a consumer joins, leaves or misses heartbeats.
+        How it re-deals matters a lot. Picture a card game where one new player sits down.
 
-        A rebalance reassigns partitions when a consumer joins, leaves or misses heartbeats.
-
-        | Protocol | Behaviour |
-        |---|---|
-        | Eager (old default) | Every member gives up every partition, then gets a new set. Everyone stops. |
-        | Cooperative sticky | Members keep what they can and give up only partitions that move |
-        | **Static membership** («group.instance.id») | A restarted pod with the same id gets its partitions back without a rebalance, within the session timeout |
-        | **Next-gen protocol (KIP-848)** | Generally available in Kafka 4.0 with «group.protocol=consumer». The broker computes assignments and changes them incrementally, with no group-wide barrier. |
+        - **Eager (the old default):** everyone throws all cards back, and the dealer deals again.
+          Everyone stops playing while that happens.
+        - **Cooperative sticky:** everyone keeps their cards, and only the few cards that must move
+          are passed over.
+        - **Static membership** («group.instance.id»): a player who steps out and comes back within
+          the session timeout gets the same cards back, with no re-deal at all.
+        - **Next-gen protocol (KIP-848):** generally available in Kafka 4.0 with
+          «group.protocol=consumer». The broker computes the assignment and changes it step by step,
+          with no group-wide pause.
 
         > [!trap] Rolling deploys cause rebalance storms
-        > Restart 50 consumers one by one with the eager protocol and the group rebalances about
-        > 50 times, each time stopping everyone. Use cooperative or the new protocol, add static
+        > Restart 50 consumers one by one with the eager protocol, and the group rebalances about 50
+        > times, each time stopping everyone. Use cooperative or the new protocol, add static
         > membership, and keep processing per poll well below «max.poll.interval.ms».
 
-        ## Running Kafka well
+        ## Idea 4: running Kafka well
 
-        - **Replication:** factor 3, «min.insync.replicas=2», racks set so replicas spread across
-          zones («broker.rack»).
-        - **Retention:** by time and size per topic; compaction for changelog and «latest value»
+        - **Replication:** factor 3, «min.insync.replicas=2», and racks set with «broker.rack» so
+          the copies spread across zones.
+        - **Retention:** by time and size per topic; **compaction** for changelog and "latest value"
           topics; tiered storage for long replay windows.
         - **Watch:** consumer lag per group, under-replicated partitions, offline partitions,
-          request latency, disk usage per broker.
-        - **Managed options:** Amazon MSK, Confluent Cloud, Google Cloud Managed Service for
-          Apache Kafka, Aiven. They remove broker operations, not partition design.
+          request latency and disk use per broker.
+        - **Managed options:** Amazon MSK, Confluent Cloud, Google Cloud Managed Service for Apache
+          Kafka, Aiven. They remove broker operations. They do not design your partitions for you.
+
+        ## Now say it like a senior engineer
 
         > [!senior] Mention the new primitives
-        > Kafka 4.0 also brought **share groups** (KIP-932, early access), which let several
-        > consumers read one partition like a queue, with per-record acknowledgement. Knowing
-        > where the project is going is a cheap senior signal.
+        > Kafka 4.0 also brought **share groups** (KIP-932, early access). They let several consumers
+        > read one partition like a queue, with per-record acknowledgement. Knowing where the project
+        > is going is a cheap senior signal.
+
+        ## In one breath
+
+        KRaft stores Kafka's metadata in Kafka's own kind of log, so there is one system and fast
+        failover. Rebalances hurt when everyone throws their cards back; cooperative protocols and
+        static membership move only what must move.
       `,
       checks: [
         {
@@ -759,49 +1019,65 @@ export const track: Track = {
       title: 'Flink versus Spark Structured Streaming',
       summary:
         'Compare the two main stream processors on execution model, latency, state, event time, delivery guarantees and operations, and choose one for a workload.',
-      minutes: 15,
+      minutes: 16,
       body: `
-        "Why Flink and not Spark?" follows almost every streaming design. Both are good. They come
-        from different ideas, and that difference decides the fit.
+        ## Start with the problem
 
-        ## Execution model
+        You design a streaming pipeline. The interviewer asks: "Why Flink and not Spark?" Both are
+        good. Both are used at huge scale. If you answer with a slogan, you lose the point. The
+        right answer comes from one difference in how each engine thinks about a stream.
 
-        - **Flink** is a true stream processor. Operators run all the time and records flow through
-          them one by one. Batch is a special case of a bounded stream.
-        - **Spark Structured Streaming** treats a stream as a table that grows. By default it runs
-          **micro-batches**: every trigger it plans and runs a small batch job over the new data.
+        ## Idea 1: a conveyor belt or a delivery van
 
-        ## Side by side
+        **Flink** is a conveyor belt. Its operators run all the time, and records move through them
+        one by one, as they arrive. Batch is just a special case: a stream that happens to end.
 
-        | | **Flink** | **Spark Structured Streaming** |
-        |---|---|---|
-        | Latency | Milliseconds | Usually seconds (micro-batch); depends on the trigger |
-        | State | Keyed state in memory or RocksDB; very large state is normal; Flink 2.0 added disaggregated state storage | State store per micro-batch, RocksDB provider for large state |
-        | Event time | Watermarks plus **timers**: code can fire at any event or processing time | Watermarks for windows, aggregations and joins; arbitrary state with timers through «transformWithState» in Spark 4 |
-        | Exactly-once | Checkpoint barriers plus transactional or idempotent sinks | Checkpointed offsets plus idempotent or transactional sinks |
-        | Upgrades | **Savepoints**: stop, change the job, restore state | Restart from the checkpoint; some query changes are not allowed with existing state |
-        | APIs | Java, SQL, Python (PyFlink) | Python, SQL, Scala, Java with the same DataFrame API as batch |
-        | Runs on | Kubernetes, YARN, managed services (Amazon Managed Service for Apache Flink, Confluent) | Any Spark cluster, Databricks, EMR, Dataproc |
+        **Spark Structured Streaming** is a delivery van that leaves every few seconds. It treats a
+        stream as a table that keeps growing. By default it runs **micro-batches**: at every trigger
+        it plans and runs a small batch job over the data that arrived since the last trip.
 
-        ## Choose Flink when
+        Almost every difference below follows from that picture.
+
+        ## Idea 2: what follows from it
+
+        - **Latency.** Flink: milliseconds. Spark: usually seconds, set by the trigger.
+        - **State.** Flink keeps keyed state in memory or RocksDB, and very large state is normal;
+          Flink 2.0 added disaggregated state storage. Spark keeps a state store per micro-batch,
+          with a RocksDB provider for large state.
+        - **Event time.** Both use **watermarks**. Flink adds **timers**: code can fire at any event
+          time or processing time, per key. Spark 4 offers arbitrary state with timers through
+          «transformWithState».
+        - **Exactly once.** Flink: checkpoint barriers plus transactional or idempotent sinks.
+          Spark: checkpointed offsets plus idempotent or transactional sinks.
+        - **Upgrades.** Flink has **savepoints**: stop, change the job, restore the state. Spark
+          restarts from the checkpoint, and some query changes are not allowed with existing state.
+        - **APIs.** Flink: Java, SQL, Python (PyFlink). Spark: Python, SQL, Scala and Java, with the
+          same DataFrame API as batch.
+        - **Where it runs.** Flink: Kubernetes, YARN, managed services such as Amazon Managed Service
+          for Apache Flink and Confluent. Spark: any Spark cluster, Databricks, EMR, Dataproc.
+
+        ## Idea 3: when the conveyor belt wins (choose Flink)
 
         - Latency must be under a second: fraud scoring, alerting, real-time pricing.
         - The logic is **event-driven and stateful**: per-key timers, complex event patterns,
           session logic with custom rules.
-        - State is very large and long-lived, and you must upgrade jobs without losing it.
+        - State is very large and lives long, and you must upgrade jobs without losing it.
 
-        ## Choose Spark Structured Streaming when
+        ## Idea 4: when the van wins (choose Spark)
 
         - Seconds to minutes are fine, and the team already runs Spark and writes PySpark.
-        - The same code should run as batch and as a stream (backfill with the same DataFrame logic).
-        - The sink is a lakehouse table (Delta or Iceberg) and the platform is Databricks or similar.
+        - The same code should run as batch and as a stream, for example a backfill with the same
+          DataFrame logic.
+        - The sink is a lakehouse table (Delta or Iceberg), on Databricks or a similar platform.
 
-        ## Same concepts, different words
+        ## Idea 5: same concepts, different words
 
-        Both need: a **watermark** to bound lateness, **checkpoints** for recovery, **keys** to
-        partition state, and an **idempotent or transactional sink** for exactly-once results. Kafka
-        Streams is a third option when the job is a Kafka-to-Kafka service inside an application,
-        with no separate cluster.
+        Both need a **watermark** to bound lateness, **checkpoints** for recovery, **keys** to
+        partition state, and an **idempotent or transactional sink** for exactly-once results.
+        **Kafka Streams** is a third option, when the job is a Kafka-to-Kafka service inside an
+        application, with no separate cluster.
+
+        ## Now say it like a senior engineer
 
         > [!trap] "Spark streaming is not real streaming"
         > This is an outdated jab. Micro-batch latency is fine for most analytics, and the shared
@@ -812,6 +1088,12 @@ export const track: Track = {
         > "We need p99 under 500 ms, 2 TB of keyed state and per-user timers: Flink. The hourly
         > aggregates into the lakehouse can be Spark, which the team already runs." Mixing engines by
         > need is a staff-level answer.
+
+        ## In one breath
+
+        Flink is a conveyor belt that handles each record as it comes; Spark is a van that leaves
+        every few seconds with a small batch. Pick the belt for sub-second, timer-heavy, huge-state
+        work, and the van when seconds are fine and the team already speaks Spark.
       `,
       checks: [
         {

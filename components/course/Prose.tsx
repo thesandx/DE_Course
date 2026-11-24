@@ -51,7 +51,8 @@ function toSections(blocks: readonly Block[]): Section[] {
  * the parsing runs at build or request time and ships no script.
  *
  * Code blocks and tables scroll inside their own box, so a long line never
- * makes the page scroll sideways on a phone.
+ * makes the page scroll sideways on a phone. Table cells wrap their text, so
+ * a table fits a phone and scrolls only when one word is too wide.
  */
 export function Prose({ source, sectioned = false, className }: ProseProps) {
   const blocks = parseMarkdown(source);
@@ -191,7 +192,7 @@ function BlockView({ block }: { block: Block }) {
     case 'table':
       return (
         <div className="border-line rounded-input overflow-x-auto border">
-          <table className="text-small w-full min-w-max border-collapse text-left">
+          <table className="text-small w-full border-collapse text-left">
             <thead className="bg-sunken text-ink-faint">
               <tr>
                 {block.head.map((cell, index) => (

@@ -12,45 +12,77 @@ export const track: Track = {
       slug: 'grain-facts-dimensions',
       title: 'Grain first, then facts and dimensions',
       summary: 'Declare the grain of every fact table and let it decide the keys and measures.',
-      minutes: 13,
+      minutes: 14,
       body: `
-        Dimensional modeling has one rule that prevents most mistakes: **state the grain of the
-        fact table in one sentence before you add a column.** The grain is what one row means.
+        ## Start with the problem
+
+        An analyst sums the «fare» column and gets a number twice as big as finance's. After a day of
+        digging, the cause: the table has one row per trip **and** one row per trip status change,
+        mixed together. Every completed trip appears several times. Nobody ever wrote down what one
+        row means.
+
+        Dimensional modeling has one rule that prevents most mistakes like this: **state the grain of
+        the fact table in one sentence before you add a column.** The **grain** is what one row
+        means.
 
         > [!example] Good grain sentences
         > "One row per completed trip." "One row per ad impression." "One row per driver per hour
         > online." If you cannot finish the sentence, you are not ready to add columns.
 
-        ## Facts and dimensions
+        ## Idea 1: things that happened, and words that describe them
 
-        | | Fact table | Dimension table |
-        |---|---|---|
-        | Holds | Measurements of an event or a state | Descriptive context |
-        | Examples | fare, distance, duration, clicks | rider, driver, city, product, date |
-        | Size | Very large, append-heavy | Small to medium, updated |
-        | Keys | Foreign keys to dimensions plus a degenerate id | One surrogate key per version |
+        Look at a shop receipt. Some parts are **numbers you can add up**: price, quantity, total.
+        Other parts **describe** the purchase: which shop, which cashier, which day, which product.
 
-        ## Three kinds of fact tables
+        A data model splits the same way.
 
-        - **Transaction facts:** one row per event (a trip, a payment). Most common.
-        - **Periodic snapshots:** one row per entity per period (driver balance per day). Good for
-          "state at a point in time" questions.
-        - **Accumulating snapshots:** one row per process instance, updated as it moves through
-          milestones (an order: placed, picked, delivered). Good for lag between steps.
+        - A **fact table** holds measurements of an event or a state. Examples: fare, distance,
+          duration, clicks. It is very large and mostly appended to. Its keys point at dimensions,
+          plus a **degenerate id** like the trip id that has no table of its own.
+        - A **dimension table** holds descriptive context. Examples: rider, driver, city, product,
+          date. It is small to medium and gets updated. It has one **surrogate key** per version.
 
-        ## Additivity
+        Facts answer "how much?". Dimensions answer "by what?". "Revenue by city by week" is a
+        fact, sliced by two dimensions.
 
-        Measures are additive (sum across every dimension: fare), semi-additive (sum across some
-        dimensions but not time: account balance) or non-additive (never sum: a ratio such as
-        surge multiplier). Store the parts of a ratio (numerator and denominator), not the ratio.
+        ## Idea 2: three kinds of fact tables
+
+        Different questions need different kinds of rows.
+
+        - **Transaction facts:** one row per event, such as a trip or a payment. The most common
+          kind.
+        - **Periodic snapshots:** one row per entity per period, such as a driver's balance per day.
+          Good for "what was the state at a point in time?" questions. Think of a daily photo.
+        - **Accumulating snapshots:** one row per process, updated as it passes milestones. An order
+          is placed, picked, then delivered, and the same row fills in each timestamp. Good for "how
+          long between steps?" questions.
+
+        ## Idea 3: not every number can be added up (additivity)
+
+        - **Additive:** sum across every dimension. Fare: total fare per city, per day, per anything.
+        - **Semi-additive:** sum across some dimensions but not time. An account balance: add
+          balances across accounts on one day, yes. Add Monday's and Tuesday's balance, no; that number
+          means nothing.
+        - **Non-additive:** never sum. A ratio such as a surge multiplier. Two trips at 2x surge do
+          not make 4x.
+
+        So for a ratio, store its parts (numerator and denominator), not the ratio. Then any level can
+        compute the right ratio by summing the parts first.
 
         > [!trap] Mixed grain in one table
-        > Putting trip-level rows and daily totals in the same table means every «SUM» double
-        > counts. One grain per fact table, always.
+        > Putting trip-level rows and daily totals in the same table means every «SUM» double counts.
+        > One grain per fact table, always.
+
+        ## Now say it like a senior engineer
 
         > [!senior] Grain follows the questions
         > Ask what the business will query. If nearly every question is per trip, the trip grain is
         > right. If GPS pings matter, they are a separate, finer fact table, not columns on trips.
+
+        ## In one breath
+
+        First say what one row means; then put the numbers you add up in facts and the words you slice
+        by in dimensions. Store the parts of a ratio, and never mix two grains in one table.
       `,
       checks: [
         {
@@ -71,19 +103,48 @@ export const track: Track = {
       slug: 'slowly-changing-dimensions',
       title: 'Slowly changing dimensions',
       summary: 'Keep history where it matters with SCD type 2, and load it correctly with MERGE.',
-      minutes: 15,
+      minutes: 16,
       body: `
-        Dimensions change: a driver moves city, a restaurant changes its cuisine, a product changes
-        category. The question is whether facts should see the old value or the new one.
+        ## Start with the problem
 
-        | Type | What happens on change | Use when |
-        |---|---|---|
-        | 0 | Never changes | Original signup date |
-        | 1 | Overwrite | Typo fixes, values where history does not matter |
-        | 2 | New row per version, with validity dates | History matters for reporting |
-        | 3 | Previous value in an extra column | Only one prior value matters |
+        Driver 7 drove in Pune all of last year. In March she moved to Mumbai. Now you run "trips by
+        city, last year". If the driver table simply says "city: Mumbai", all of her Pune trips from
+        last year move to Mumbai in the report. Last year's numbers changed, and nobody touched last
+        year's data.
 
-        ## Type 2 in practice
+        Dimensions change: a driver moves city, a restaurant changes cuisine, a product changes
+        category. For each attribute, you must choose: should old facts see **the old value** or **the
+        new value**? The standard answers are called **slowly changing dimension (SCD) types**.
+
+        ## Idea 1: four choices
+
+        - **Type 0: never changes.** The original signup date.
+        - **Type 1: overwrite.** Typo fixes, and values whose history does not matter. Simple, but
+          history is gone.
+        - **Type 2: add a new row per version**, with validity dates. Use it when history matters for
+          reporting. This is the one interviews probe.
+        - **Type 3: keep the previous value in an extra column.** Use it when only one prior value
+          matters.
+
+        ## Idea 2: type 2, versions like passport stamps
+
+        Think of a passport. A new visa does not erase the old one. Each stamp has a "valid from" and
+        a "valid to" date. To know where you were allowed to be on a date, find the stamp that covers
+        that date.
+
+        Type 2 does that for a driver.
+
+        Driver 7 now has two rows:
+
+        | Key | City | Valid from | Valid to |
+        |---|---|---|---|
+        | 101 | Pune | Jan 2025 | Mar 2026 |
+        | 245 | Mumbai | Mar 2026 | open |
+
+        Two ids appear here, and the difference is the whole trick.
+
+        - «driver_id» (7) is the **natural key** from the source. It is the same for every version.
+        - «driver_sk» (101, 245) is the **surrogate key**. There is one per version.
 
         ~~~sql
         CREATE TABLE dim_driver (
@@ -97,13 +158,19 @@ export const track: Track = {
         );
         ~~~
 
-        Facts store «driver_sk» captured at event time, so a trip from last year joins to the
-        driver's city as it was then. To get current attributes instead, join on «driver_id» with
+        Each trip fact stores the «driver_sk» that was current **at event time**. So a trip from last
+        year carries 101 and joins to Pune. A trip from April carries 245 and joins to Mumbai.
+        Last year's report never changes. To see current attributes instead, join on «driver_id» with
         «is_current».
 
-        ## Loading type 2 with MERGE
+        ## Idea 3: loading type 2 in two steps
 
-        Two steps: close the current row when a tracked attribute changed, then insert new versions.
+        Each day, new driver data arrives in staging. You need two steps.
+
+        1. **Close** the current row of every driver whose tracked attributes changed: set its
+           «valid_to» and make «is_current» false.
+        2. **Insert** a new current row for every driver that now has none. That covers both changed
+           drivers (just closed in step 1) and brand-new drivers.
 
         ~~~sql
         -- 1. Close changed rows
@@ -122,17 +189,24 @@ export const track: Track = {
         WHERE d.driver_id IS NULL;
         ~~~
 
-        After step 1, changed drivers have no current row, so step 2 inserts them alongside brand
-        new drivers. «next_sk()» stands for your key generator.
+        «next_sk()» stands for your key generator.
 
         > [!trap] NULLs hide changes
         > «d.city_id <> s.city_id» is unknown when either side is NULL, so a change from NULL to a
-        > value is missed. Use «IS DISTINCT FROM» or compare hashes of the tracked columns.
+        > value is missed. Use «IS DISTINCT FROM», or compare hashes of the tracked columns.
+
+        ## Now say it like a senior engineer
 
         > [!senior] Late changes and reruns
         > Ask what happens if the job reruns, or if a change arrives with an older «changed_at» than
         > the current row. A senior answer makes the load idempotent and either rejects or
         > re-sequences out-of-order changes.
+
+        ## In one breath
+
+        Type 2 keeps every version of a dimension row, like stamps in a passport, and each fact points
+        at the version that was true when it happened. Load it by closing changed rows, then
+        inserting new current ones.
       `,
       checks: [
         {
@@ -148,26 +222,38 @@ export const track: Track = {
       slug: 'layouts-star-to-obt',
       title: 'Star, snowflake, wide tables and nested data',
       summary: 'Choose a physical layout for a columnar warehouse and defend it.',
-      minutes: 12,
+      minutes: 13,
       body: `
-        A logical model can be stored in several physical layouts. Modern columnar warehouses
-        changed which one is usually best, and interviewers like to hear that you know why.
+        ## Start with the problem
 
-        | Layout | Shape | Strength | Weakness |
-        |---|---|---|---|
-        | Star schema | Fact plus denormalised dimensions | Simple joins, clear semantics | Joins at query time |
-        | Snowflake | Dimensions normalised into sub-dimensions | Less duplication | More joins, harder for analysts |
-        | One big table (OBT) | Fact with dimension columns copied in | No joins, fast scans | History and updates are harder, wide rows |
-        | Nested (BigQuery «STRUCT» and «ARRAY») | Child rows stored inside the parent row | Keeps one-to-many together, no join | Needs «UNNEST», tooling support varies |
+        You have a clean model: trips, riders, drivers, cities. Now you must decide how to **store**
+        it. One logical model can be laid out in several physical ways. Analysts want no joins.
+        Engineers want no duplicated data. Finance wants history to stay correct. Each layout favours
+        someone. Modern columnar warehouses changed which one is usually best, and interviewers like to
+        hear that you know why.
 
-        ## Why wide tables became popular
+        ## Idea 1: four layouts
 
-        Columnar engines read only the columns a query names, so a 300-column table costs nothing
-        for a query that uses five columns. Storage is cheap; joins at petabyte scale are not.
-        Many teams keep a star schema as the governed core and publish wide, query-friendly tables
-        on top of it for dashboards.
+        - **Star schema.** A fact table in the middle, with denormalised dimensions around it, like
+          a star. Simple joins and clear meaning. The cost: joins at query time.
+        - **Snowflake schema.** Dimensions split into sub-dimensions (city into state into country).
+          Less duplication. The cost: more joins, harder for analysts.
+        - **One big table (OBT).** The fact table with the dimension columns copied in. No joins,
+          fast scans. The cost: wide rows, and history and updates are harder.
+        - **Nested data** (BigQuery «STRUCT» and «ARRAY»). Child rows stored inside the parent row,
+          like a trip that holds its list of stops. Keeps a one-to-many together with no join. The
+          cost: you need «UNNEST», and tool support varies.
 
-        ## Nested data in BigQuery
+        ## Idea 2: why wide tables became popular
+
+        In a row store, a 300-column table is expensive, because reading a row reads every column. In
+        a **columnar** engine, each column is stored separately, and a query reads only the columns it
+        names. So a 300-column table costs nothing extra for a query that uses five.
+
+        Storage is cheap; joins at petabyte scale are not. So many teams keep a star schema as the
+        governed core, and publish wide, query-friendly tables on top of it for dashboards.
+
+        ## Idea 3: nested data, reading the list inside a row
 
         ~~~sql
         -- One row per trip, with its stops as a repeated field
@@ -180,16 +266,26 @@ export const track: Track = {
         WHERE trip_date = '2026-10-31';
         ~~~
 
+        «UNNEST» unpacks the list, so a trip with 3 stops becomes 3 rows in the result.
+
+        ## Idea 4: partitioning and clustering
+
+        **Partition** big fact tables by event date, so queries skip whole days. **Cluster** or sort
+        by the columns most used in filters, such as «city_id» or «advertiser_id». Avoid partitioning
+        on high-cardinality columns: millions of tiny partitions hurt more than they help.
+
+        ## Now say it like a senior engineer
+
         > [!senior] Layout depends on update patterns
         > Wide tables are easy when data is append-only. When dimension attributes change (type 2),
         > copying them into a wide table means rewriting history. Say which attributes are stable
-        > enough to denormalise and which stay in a joined dimension.
+        > enough to denormalise, and which stay in a joined dimension.
 
-        ## Partitioning and clustering
+        ## In one breath
 
-        Partition big fact tables by event date so queries prune whole days. Cluster or sort by
-        the columns most used in filters, such as «city_id» or «advertiser_id». Avoid partitioning
-        on high-cardinality columns: millions of tiny partitions hurt more than they help.
+        A star keeps facts and dimensions apart and joins at query time; a wide table copies
+        dimensions in, which a columnar engine makes cheap to read. Copy in only what does not change,
+        and partition by date.
       `,
       checks: [
         {
@@ -213,44 +309,70 @@ export const track: Track = {
         'Walk through a full model for trips, drivers, pricing and payments the way a round expects.',
       minutes: 16,
       body: `
-        A modeling round usually sounds like "Design the data model for a ride-hailing app's
-        analytics." Here is a structure that works, with the reasoning out loud.
+        ## Start with the problem
 
-        ## 1. Ask what questions the model must answer
+        The interviewer says: "Design the data model for a ride-hailing app's analytics." Then they
+        stop talking. Most candidates start drawing tables at once, and twenty minutes later they have
+        a pile of tables and no idea if it answers anything.
 
-        Trips and revenue by city and hour, cancellation rates and who cancelled, driver
-        utilisation, surge effectiveness, and rider retention. These decide the facts.
+        The fix is an order of work. Go step by step, say your reasons out loud, and let each step
+        decide the next one. Here is a structure that works.
 
-        ## 2. Declare facts with their grain
+        ## Step 1: ask what questions the model must answer
 
-        | Fact table | Grain | Key measures |
-        |---|---|---|
-        | «fact_trip» | One row per trip request | fare, distance, duration, surge parts, status |
-        | «fact_trip_event» | One row per trip state change | event time, status |
-        | «fact_driver_hour» | One row per driver per hour | minutes online, minutes on trip |
-        | «fact_payment» | One row per payment attempt | amount, currency, result |
+        Models exist to answer questions. So list them first.
 
-        ## 3. Conformed dimensions
+        - Trips and revenue by city and hour.
+        - Cancellation rates, and who cancelled.
+        - Driver utilisation.
+        - Surge effectiveness.
+        - Rider retention.
+
+        These decide the facts.
+
+        ## Step 2: declare each fact with its grain
+
+        Each question points at an event or a state. Write one sentence per fact table.
+
+        - «fact_trip»: one row per trip request. Measures: fare, distance, duration, surge parts,
+          status.
+        - «fact_trip_event»: one row per trip state change. Measures: event time, status.
+        - «fact_driver_hour»: one row per driver per hour. Measures: minutes online, minutes on trip.
+        - «fact_payment»: one row per payment attempt. Measures: amount, currency, result.
+
+        ## Step 3: share the dimensions (conformed dimensions)
 
         «dim_rider», «dim_driver» (type 2 for city and vehicle), «dim_city» (with time zone),
-        «dim_date» and «dim_time», «dim_product» (UberX, Comfort, Black). Conformed means every fact
-        uses the same dimension, so "trips by city" and "payments by city" agree.
+        «dim_date» and «dim_time», «dim_product» (UberX, Comfort, Black).
 
-        ## 4. Hard parts to raise yourself
+        **Conformed** means every fact uses the same dimension. Then "trips by city" and "payments by
+        city" agree, because "city" means one thing everywhere. Two teams with two city tables will
+        eventually show two different numbers in the same meeting.
 
-        - **Status changes:** a trip moves through requested, accepted, picked up, completed or
-          cancelled. Keep the event fact for timing questions, and an accumulating snapshot style
-          set of timestamp columns on «fact_trip» for fast funnel queries.
-        - **Money:** fares can be adjusted after the trip (tips, refunds). Store adjustments as
-          their own fact rows rather than updating the original fare, so history is auditable.
-        - **Currency and time:** store amounts in the local currency plus a converted reporting
-          currency with the rate used, and timestamps in UTC plus the city's local date.
-        - **Geography:** pickup and dropoff as a cell id (for example an H3 index) as well as raw
-          coordinates, so aggregation by area is a join, not a geometry computation.
+        ## Step 4: raise the hard parts yourself
+
+        Interviewers wait to see if you find these without being asked.
+
+        - **Status changes.** A trip moves through requested, accepted, picked up, then completed or
+          cancelled. Keep the event fact for timing questions, and an accumulating-snapshot style set
+          of timestamp columns on «fact_trip» for fast funnel queries.
+        - **Money.** Fares can change after the trip: tips, refunds. Store adjustments as their own
+          fact rows instead of updating the original fare, so history stays auditable.
+        - **Currency and time.** Store amounts in the local currency plus a converted reporting
+          currency with the rate used. Store timestamps in UTC plus the city's local date.
+        - **Geography.** Store pickup and dropoff as a cell id (for example an H3 index) as well as
+          raw coordinates. Then aggregation by area is a join, not a geometry computation.
+
+        ## Now say it like a senior engineer
 
         > [!senior] Finish with a query
-        > Close the round by writing one query the model makes easy, such as cancellation rate by
-        > city and hour last week. It proves the model works, and interviewers often ask for it.
+        > Close the round by writing one query the model makes easy, such as cancellation rate by city
+        > and hour last week. It proves the model works, and interviewers often ask for it.
+
+        ## In one breath
+
+        Questions first, then one grain sentence per fact, then shared dimensions, then the hard parts
+        (status, money, currency, geography) raised by you. End with a query that proves it works.
       `,
       checks: [
         {
@@ -271,25 +393,43 @@ export const track: Track = {
       title: 'Data Vault: hubs, links and satellites',
       summary:
         'Model an integration layer that absorbs many changing sources, keeps full history and stays insert-only.',
-      minutes: 16,
+      minutes: 17,
       body: `
+        ## Start with the problem
+
+        A bank has twenty source systems: the app, payments, the call centre CRM, a company it bought
+        last year, and more. Each has its own keys, changes its schema a few times a year, and
+        releases on its own calendar. Auditors want every number traced back to the source row and
+        the load that brought it in.
+
+        Try to load all of that straight into a star schema. Every source change means changing shared
+        tables. Every load waits for the others, because they all touch the same dimension. And
+        updates overwrite the old values the auditors want to see.
+
         A star schema is built for people who ask questions. **Data Vault** is built for the layer
-        under it: the place where twenty source systems land, each with its own keys, its own
-        schema changes and its own release calendar. It trades query comfort for three things:
-        every source loads in parallel, history is never overwritten, and a new source adds
-        tables instead of changing old ones.
+        **under** it, where the sources land. It trades query comfort for three things: every source
+        loads in parallel, history is never overwritten, and a new source **adds** tables instead of
+        changing old ones.
 
-        ## The three table types
+        ## Idea 1: split every source into three kinds of table
 
-        | Table | Holds | Example |
-        |---|---|---|
-        | **Hub** | One row per business key, ever. Nothing else. | «hub_rider»: rider key, hash key, first load time, source |
-        | **Link** | One row per relationship between hubs | «link_trip»: rider, driver and vehicle hash keys |
-        | **Satellite** | Descriptive attributes of one hub or link, with history | «sat_rider_profile»: name, rating, city, load time, hash diff |
+        Think of a contacts app. There is the person (just their identity). There are relationships
+        (Priya is married to Arjun). And there are details that change over time (Priya's address,
+        her phone number). Data Vault keeps those three apart.
 
-        Hubs and links never change after insert. Satellites add a row when the attributes change,
-        which a **hash diff** (a hash of all descriptive columns) detects cheaply. The result is
-        an insert-only model: a load is a set of appends, so you can rerun it and replay it.
+        - **Hub:** one row per business key, ever, and nothing else. Example: «hub_rider» with the
+          rider key, a hash key, the first load time and the source.
+        - **Link:** one row per relationship between hubs. Example: «link_trip» with the rider,
+          driver and vehicle hash keys.
+        - **Satellite:** the descriptive attributes of one hub or link, with history. Example:
+          «sat_rider_profile» with name, rating, city, load time and hash diff.
+
+        Hubs and links never change after insert. A satellite adds a new row only when the attributes
+        change. To spot a change cheaply, it compares a **hash diff**: one hash of all the descriptive
+        columns. Same hash, nothing changed; skip it.
+
+        The result is an **insert-only** model. A load is a set of appends, so you can rerun it and
+        replay it safely.
 
         ~~~sql
         CREATE TABLE hub_rider (
@@ -310,37 +450,48 @@ export const track: Track = {
         );
         ~~~
 
-        ## Why hash keys
+        ## Idea 2: keys that every loader can compute alone (hash keys)
 
-        Data Vault 2.0 replaces sequence surrogate keys with a hash of the business key. Every
-        loader can compute the key on its own, so the hub, the link and the satellite load in
-        parallel without a lookup. The cost: 16 to 32 bytes per key instead of 8, and a
-        collision risk that is real only at absurd volumes. Normalise the business key first
-        (trim, upper case, a fixed separator for composite keys), or the same rider gets two
-        hashes.
+        With normal sequence keys (1, 2, 3), a satellite loader must first look up the hub to find
+        rider 7's key. So the hub must load first, then the satellite. Loads wait for each other.
 
-        ## Raw vault, business vault, marts
+        Data Vault 2.0 uses a **hash of the business key** instead. Every loader can compute
+        md5("R-7") by itself, so the hub, the link and the satellite all load **in parallel**, with no
+        lookup.
+
+        The cost: 16 to 32 bytes per key instead of 8, and a collision risk that is real only at
+        absurd volumes. And normalise the business key first (trim, upper case, a fixed separator
+        for composite keys), or "r-7 " and "R-7" become two riders.
+
+        ## Idea 3: three layers on top of each other
 
         1. **Raw vault:** the sources as they are, split into hubs, links and satellites. No
            business rules, so it is auditable.
-        2. **Business vault:** derived satellites with rules applied, such as a resolved
-           customer, and helper tables. A **point-in-time (PIT)** table lists, for each key and
-           snapshot date, the satellite row that was current. A **bridge** table pre-joins hubs
-           and links along a common path.
-        3. **Marts:** star schemas on top, built from PIT and bridge tables. Analysts never query
-           the vault directly.
-
-        > [!senior] When to choose it, and when not
-        > Choose Data Vault when there are many sources that change often, when auditors must
-        > trace every value to its source and load, and when several teams load in parallel. Banks
-        > and insurers fit. For one product database feeding dashboards, it is three times the
-        > tables for no gain: build staging and a star schema. Say that the vault is an
-        > integration layer and that you still build dimensional marts on top.
+        2. **Business vault:** derived satellites with rules applied, such as a resolved customer,
+           plus helper tables. A **point-in-time (PIT)** table lists, for each key and snapshot date,
+           the satellite row that was current. A **bridge** table pre-joins hubs and links along a
+           common path.
+        3. **Marts:** star schemas on top, built from PIT and bridge tables. Analysts never query the
+           vault directly.
 
         > [!trap] Satellites split by rate of change
-        > Put a rider's name and their live rating in one satellite and the rating's daily change
-        > copies the name every day. Split satellites by source and by how often the columns
-        > change.
+        > Put a rider's name and their live rating in one satellite, and the rating's daily change
+        > copies the name every day. Split satellites by source and by how often the columns change.
+
+        ## Now say it like a senior engineer
+
+        > [!senior] When to choose it, and when not
+        > Choose Data Vault when there are many sources that change often, when auditors must trace
+        > every value to its source and load, and when several teams load in parallel. Banks and
+        > insurers fit. For one product database feeding dashboards, it is three times the tables for
+        > no gain: build staging and a star schema. Say that the vault is an integration layer, and
+        > that you still build dimensional marts on top.
+
+        ## In one breath
+
+        Data Vault splits every source into identities (hubs), relationships (links) and changing
+        details (satellites), all insert-only and keyed by hashes so everything loads in parallel.
+        It is the landing layer; you still build stars on top for people.
       `,
       checks: [
         {
@@ -373,32 +524,44 @@ export const track: Track = {
       title: 'Activity schema and graph models',
       summary:
         'Model customer journeys as one activity stream, and relationships as nodes and edges, and know when each fits.',
-      minutes: 15,
+      minutes: 16,
       body: `
-        Two shapes answer questions that a star schema answers badly: "what did this customer do
-        before and after X" and "who is connected to whom, in several hops".
+        ## Start with the problem
 
-        ## Activity schema: one stream per entity
+        Two questions that a star schema answers badly.
 
-        An **activity schema** stores everything a customer does in one narrow table, with a
-        fixed set of columns, instead of one fact table per process.
+        1. "For each rider, how many days from signup to their first completed trip?" Signup is in
+           one fact table, trips in another. You join across processes, filter to "first", and the
+           query grows every time a product manager adds a condition.
+        2. "Which accounts share a device or a card with this banned account, within three hops?"
+           That is "who is connected to whom", and a star schema has no idea what "connected" means.
 
-        | Column | Meaning |
-        |---|---|
-        | «activity_id» | Unique id of the event |
-        | «ts» | When it happened |
-        | «customer» | The entity the stream is about |
-        | «activity» | A short name: «signed_up», «requested_trip», «completed_trip» |
-        | «feature_json» | A few attributes specific to that activity |
-        | «revenue_impact» | Money, if any |
-        | «activity_occurrence» | 1 for the customer’s first time, 2 for the second |
-        | «activity_repeated_at» | When the customer next did the same activity |
+        Two other shapes fit these questions: an **activity stream** for journeys, and a **graph**
+        for connections.
 
-        Each new activity is a new value of «activity», not a new table. Questions become
-        **temporal joins** between two activities of the same customer: "first completed trip
-        after signing up", "last support ticket before cancelling". The two precomputed columns
-        make the common ones cheap: «activity_occurrence = 1» is a first-ever filter, and
-        «activity_repeated_at» bounds "in between" joins.
+        ## Idea 1: a diary per customer (activity schema)
+
+        Picture each customer keeping a diary: one line per thing they did, with the time. "Signed up
+        at 10:02. Requested a trip at 10:15. Completed the trip at 10:40."
+
+        An **activity schema** is that diary, for everyone, in **one narrow table** with a fixed set of
+        columns, instead of one fact table per process.
+
+        - «activity_id»: the unique id of the event.
+        - «ts»: when it happened.
+        - «customer»: the entity the stream is about.
+        - «activity»: a short name, such as «signed_up», «requested_trip» or «completed_trip».
+        - «feature_json»: a few attributes specific to that activity.
+        - «revenue_impact»: money, if any.
+        - «activity_occurrence»: 1 for the customer's first time, 2 for the second, and so on.
+        - «activity_repeated_at»: when the customer next did the same activity.
+
+        A new kind of activity is a new value of «activity», not a new table. Questions become
+        **temporal joins** between two activities of the same customer: "first completed trip after
+        signing up", "last support ticket before cancelling".
+
+        The two precomputed columns make the common ones cheap. «activity_occurrence = 1» is a
+        "first ever" filter. «activity_repeated_at» bounds "in between" joins.
 
         ~~~sql
         -- Days from signup to first completed trip
@@ -417,30 +580,44 @@ export const track: Track = {
         inventory badly: those need typed columns, constraints and a clear grain, so keep a star
         schema for them.
 
-        ## Graph models: when relationships are the data
+        ## Idea 2: when the connections are the data (graph models)
 
-        A **property graph** has nodes (rider, device, card, address) and edges (USED, PAID_WITH,
-        LIVES_AT), and both carry properties. In a warehouse the same graph is two tables: a node
-        table and an edge table with «src», «dst», «type» and validity times.
+        Draw dots for riders, devices, cards and addresses. Draw lines when a rider USED a device or
+        PAID_WITH a card. Now "who is connected to the banned account" is just "follow the lines".
 
-        | Store it as | Good at | Weak at |
-        |---|---|---|
-        | Edge table in the warehouse | Batch analytics, one or two hops, recursive CTEs | Deep traversals at request time |
-        | Graph database (Neo4j, Amazon Neptune, Spanner Graph) | Many hops with low latency, path queries | Wide aggregations, scans |
-        | Adjacency lists in a key-value store | One-hop lookups at huge scale | Anything multi-hop |
+        That drawing is a **property graph**: **nodes** (rider, device, card, address) and **edges**
+        (USED, PAID_WITH, LIVES_AT), and both carry properties. In a warehouse the same graph is two
+        tables: a node table, and an edge table with «src», «dst», «type» and validity times.
 
-        A fraud team asking "which accounts share a device or a card with this banned account,
-        within three hops" is a graph question. A dashboard counting accounts per city is not.
+        Where to store it depends on the question.
 
-        > [!senior] Model edges with time
-        > A rider shared a device with a fraudster last year, not today. Give each edge
-        > «valid_from» and «valid_to», like an SCD type 2 row. Without it, old links pull innocent
-        > accounts into every ring, and a model trained on the graph leaks the future.
+        - **Edge table in the warehouse:** good for batch analytics, one or two hops, and recursive
+          CTEs. Weak at deep traversals at request time.
+        - **Graph database** (Neo4j, Amazon Neptune, Spanner Graph): good for many hops with low
+          latency and path queries. Weak at wide aggregations and scans.
+        - **Adjacency lists in a key-value store:** good for one-hop lookups at huge scale. Weak at
+          anything multi-hop.
+
+        A fraud team asking "which accounts share a device or a card with this banned account, within
+        three hops" is a graph question. A dashboard counting accounts per city is not.
 
         > [!trap] Super nodes
-        > A shared office Wi-Fi address or a default device id connects thousands of accounts.
-        > One traversal through it touches everything. Cap the degree, or drop edges to nodes
-        > above a threshold, before you run multi-hop queries.
+        > A shared office Wi-Fi address or a default device id connects thousands of accounts. One
+        > traversal through it touches everything. Cap the degree, or drop edges to nodes above a
+        > threshold, before you run multi-hop queries.
+
+        ## Now say it like a senior engineer
+
+        > [!senior] Model edges with time
+        > A rider shared a device with a fraudster last year, not today. Give each edge «valid_from»
+        > and «valid_to», like an SCD type 2 row. Without it, old links pull innocent accounts into
+        > every ring, and a model trained on the graph leaks the future.
+
+        ## In one breath
+
+        An activity schema is one diary table of everything each customer did, so journeys become
+        joins between two lines of the same diary. A graph stores dots and lines, so "connected
+        within three hops" becomes following lines, with time on every line.
       `,
       checks: [
         {
@@ -472,36 +649,53 @@ export const track: Track = {
       title: 'Normal forms and the special dimensions',
       summary:
         'Explain why sources normalize and warehouses do not, and use junk, role-playing, mini and bridge dimensions correctly.',
-      minutes: 14,
+      minutes: 15,
       body: `
-        ## Normal forms in one minute
+        ## Start with the problem
 
-        Operational databases normalize so each fact is stored once and an update touches one row.
+        An app database stores a trip with a «city_id», and the city name lives once, in a cities
+        table. A warehouse often copies the city name onto every trip row. One looks careful, the other
+        looks sloppy. Both are right, for their own job. Interviewers want to hear that you know which
+        rule you are breaking, and why.
 
-        - **1NF:** every column holds one value; no repeating groups such as «phone1», «phone2».
+        Then there are the awkward cases that no basic star schema handles cleanly: twelve yes/no
+        flags, a date used three ways, a trip with two promotions. Each has a named pattern.
+
+        ## Idea 1: normal forms, in one minute
+
+        Operational databases **normalize** so each fact is stored once, and an update touches one row.
+        Change a city's name, and you change one row, not ten million trips.
+
+        - **1NF:** every column holds one value. No repeating groups such as «phone1», «phone2».
         - **2NF:** every non-key column depends on the whole key, not part of a composite key.
-        - **3NF:** no non-key column depends on another non-key column. A city name stored next
-          to a city id on every trip breaks it.
+        - **3NF:** no non-key column depends on another non-key column. A city name stored next to
+          a city id on every trip breaks it, because the name depends on the id, not on the trip.
 
-        A warehouse denormalizes on purpose. It is read far more than it is written, columns
-        compress repeated values well, and a join avoided is a shuffle avoided. The interview
-        point is that you know which rule you are breaking and why. An ER diagram of the source
-        is still where modeling starts, because it shows the real keys and cardinalities.
+        ## Idea 2: why the warehouse breaks the rules on purpose
 
-        ## The special dimensions
+        A warehouse is read far more than it is written. Columnar storage compresses repeated values
+        well, so copying "Mumbai" ten million times costs little. And a join avoided is a shuffle
+        avoided. So it **denormalizes** on purpose.
 
-        | Pattern | Problem it solves | Example |
-        |---|---|---|
-        | **Junk dimension** | Many low-cardinality flags clutter the fact | «dim_trip_flags»: one row per combination of is_pool, is_scheduled, payment_type |
-        | **Role-playing dimension** | One dimension used several times by one fact | «dim_date» as request date, pickup date and payout date, through views |
-        | **Degenerate dimension** | An id with no attributes of its own | «order_id» kept on the fact, no table |
-        | **Mini-dimension** | A few attributes change too often for SCD 2 | Rider rating band and tenure band split out of «dim_rider» |
-        | **Bridge table** | A many-to-many between a fact and a dimension | A trip with several promotions: «bridge_trip_promo» with a weight per row |
-        | **Outrigger** | A dimension that references another dimension | «dim_driver» pointing at «dim_vehicle» |
+        An ER diagram of the source is still where modeling starts, because it shows the real keys and
+        cardinalities.
 
-        A junk dimension with five flags of two to four values each has at most a few hundred
-        rows. The fact carries one small key instead of five columns, and the flag
-        combinations get readable labels.
+        ## Idea 3: the special dimensions, one problem each
+
+        - **Junk dimension.** Problem: many low-cardinality flags clutter the fact. Fix:
+          «dim_trip_flags», one row per combination of is_pool, is_scheduled, payment_type. Five flags
+          of two to four values each make at most a few hundred rows. The fact carries one small key
+          instead of five columns, and the combinations get readable labels.
+        - **Role-playing dimension.** Problem: one dimension used several times by one fact. Fix:
+          «dim_date» plays request date, pickup date and payout date, through views.
+        - **Degenerate dimension.** Problem: an id with no attributes of its own. Fix: keep
+          «order_id» on the fact, with no table.
+        - **Mini-dimension.** Problem: a few attributes change too often for SCD 2, so the dimension
+          explodes. Fix: split the rider rating band and tenure band out of «dim_rider».
+        - **Bridge table.** Problem: a many-to-many between a fact and a dimension, such as a trip
+          with several promotions. Fix: «bridge_trip_promo», with a weight per row.
+        - **Outrigger.** Problem: a dimension that references another dimension. Example:
+          «dim_driver» pointing at «dim_vehicle».
 
         ~~~sql
         -- Role-playing: one physical table, three views with clear names
@@ -510,14 +704,22 @@ export const track: Track = {
         ~~~
 
         > [!trap] Bridge tables double count
-        > Join a trip to its two promotions and the fare appears twice. Either allocate with a
-        > weight column that sums to 1 per trip, or tell users that the bridge answers "trips
-        > touched by promo X", not "revenue from promo X".
+        > Join a trip to its two promotions, and the fare appears twice. Either allocate with a weight
+        > column that sums to 1 per trip, or tell users that the bridge answers "trips touched by promo
+        > X", not "revenue from promo X".
+
+        ## Now say it like a senior engineer
 
         > [!senior] Name the pattern, then the cost
-        > "That is a mini-dimension: the rating band changes weekly, so in SCD 2 it would create a
-        > new rider row each week. I split it out and put its key on the fact." Naming the
-        > pattern and the reason is what interviewers listen for.
+        > "That is a mini-dimension: the rating band changes weekly, so in SCD 2 it would create a new
+        > rider row each week. I split it out and put its key on the fact." Naming the pattern and the
+        > reason is what interviewers listen for.
+
+        ## In one breath
+
+        Sources normalize so each fact lives once; warehouses copy on purpose because reads dominate
+        and columns compress. When a star gets awkward, reach for the named fix: junk, role-playing,
+        degenerate, mini, bridge or outrigger.
       `,
       checks: [
         {
