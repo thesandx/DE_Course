@@ -13,59 +13,82 @@ export const track: Track = {
       title: 'Snowflake architecture and warehouses',
       summary:
         'Explain the three layers, micro-partitions and virtual warehouses, and size a warehouse from the symptoms.',
-      minutes: 14,
+      minutes: 17,
       body: `
-        Snowflake separates **storage**, **compute** and **services**. Each layer scales and bills
-        on its own, and that separation is the answer to most "why" questions about it.
+        ## Start with the problem
+
+        In an old database, storage and compute live in the same machines. At 09:00 the analysts open
+        their dashboards, and at 09:00 the nightly ETL is still running late. Both fight for the same
+        CPU. Dashboards time out. To fix it you buy a bigger machine, and pay for it all night when
+        nobody uses it.
+
+        Snowflake separates **storage**, **compute** and **services**. Each layer scales and bills on
+        its own, and that separation is the answer to most "why" questions about it.
+
+        ## Idea 1: three layers, like a shared kitchen
+
+        Think of a big shared kitchen. The pantry (storage) holds all the food. Each team rents its own
+        cooking station (compute) by the minute. A front office (services) takes orders, knows what is
+        in the pantry, and remembers recent dishes.
 
         ~~~text
-        ┌──────────────── Cloud services ────────────────┐
-        │ auth · metadata · optimizer · result cache     │
-        └────────────────────────────────────────────────┘
-          ┌── WH_ETL (L) ──┐   ┌── WH_BI (M, 1-4) ──┐
-          │ local SSD cache│   │ local SSD cache    │      compute
-          └────────────────┘   └────────────────────┘
-        ┌──────── Storage: micro-partitions in S3, GCS or Azure ────────┐
-        └───────────────────────────────────────────────────────────────┘
+        ┌─ Cloud services ─────┐
+        │ auth · metadata      │
+        │ optimizer · cache    │
+        └──────────────────────┘
+        ┌─ WH_ETL ─┐ ┌─ WH_BI ─┐
+        │ Large    │ │ Medium  │
+        │ SSD cache│ │ 1 to 4  │
+        └──────────┘ └─────────┘
+        ┌─ Storage ────────────┐
+        │ micro-partitions     │
+        │ in S3, GCS or Azure  │
+        └──────────────────────┘
         ~~~
 
-        ## Storage: micro-partitions
+        The ETL warehouse and the dashboard warehouse read the same storage, but they never fight for
+        CPU. That fixes the 09:00 problem.
 
-        Every table is split into **micro-partitions**: immutable columnar files of about 50 to
-        500 MB of uncompressed data. Snowflake creates them as data arrives; you do not declare
-        partitions. For each micro-partition the services layer keeps the **min and max of every
-        column**, the distinct count and the null count.
+        ## Idea 2: storage is micro-partitions with labels
+
+        Every table is split into **micro-partitions**: immutable columnar files of about 50 to 500 MB of
+        uncompressed data. Snowflake creates them as data arrives; you do not declare partitions. For
+        each micro-partition the services layer keeps the **min and max of every column**, the distinct
+        count and the null count.
 
         Two things follow:
 
         - A filter such as «WHERE event_date = '2026-11-01'» lets the optimizer skip every
-          micro-partition whose range cannot match. This is **pruning**, and it is the main lever
-          for speed.
-        - An «UPDATE» or «DELETE» never edits a file. It writes new micro-partitions and retires
-          the old ones. That is what makes time travel and cloning cheap, and frequent small
-          updates expensive.
+          micro-partition whose range cannot match. This is **pruning**, and it is the main lever for
+          speed.
+        - An «UPDATE» or «DELETE» never edits a file. It writes new micro-partitions and retires the old
+          ones. That is what makes time travel and cloning cheap, and frequent small updates expensive.
 
-        ## Compute: virtual warehouses
+        ## Idea 3: compute is virtual warehouses, rented by the second
 
-        A **virtual warehouse** is a cluster of compute that runs queries. Warehouses share the
-        same storage, so the ETL warehouse and the dashboard warehouse never fight for CPU.
+        A **virtual warehouse** is a cluster of compute that runs queries. Sizes and credits per hour:
 
-        | Size | Credits per hour | Use for |
-        |---|---|---|
-        | X-Small | 1 | Small transforms, dev |
-        | Small | 2 | Light BI |
-        | Medium | 4 | Typical ETL |
-        | Large | 8 | Heavy joins and sorts |
-        | X-Large and up | 16, 32, 64 … | Large backfills |
+        - X-Small: 1 credit. Small transforms, dev.
+        - Small: 2. Light BI.
+        - Medium: 4. Typical ETL.
+        - Large: 8. Heavy joins and sorts.
+        - X-Large and up: 16, 32, 64 and so on. Large backfills.
 
         Each size doubles the compute and the credits. Billing is per second, with a **60-second
-        minimum** each time a warehouse starts or resumes. A credit costs about 2 to 4 US dollars,
-        by edition and region.
+        minimum** each time a warehouse starts or resumes. A credit costs about 2 to 4 US dollars, by
+        edition and region.
 
-        - **Scale up** (a bigger size) when one query is slow: big joins, sorts, spilling.
-        - **Scale out** (a multi-cluster warehouse, Enterprise edition) when many queries queue.
-          Snowflake adds clusters up to «MAX_CLUSTER_COUNT» and removes them when the queue
-          drains. The «STANDARD» policy starts clusters quickly; «ECONOMY» waits to fill them.
+        Tiny example. A Medium warehouse runs for 15 minutes: 4 credits × 0.25 hours = 1 credit, about
+        2 to 4 dollars.
+
+        Two ways to grow, for two different problems:
+
+        - **Scale up** (a bigger size) when **one query is slow**: big joins, sorts, spilling. A bigger
+          station for a bigger dish.
+        - **Scale out** (a multi-cluster warehouse, Enterprise edition) when **many queries queue**.
+          Snowflake adds clusters up to «MAX_CLUSTER_COUNT» and removes them when the queue drains. More
+          stations for more cooks. The «STANDARD» policy starts clusters quickly; «ECONOMY» waits to fill
+          them.
 
         ~~~sql
         CREATE WAREHOUSE wh_bi
@@ -77,18 +100,29 @@ export const track: Track = {
           AUTO_RESUME = TRUE;
         ~~~
 
-        ## Cloud services
+        ## Idea 4: cloud services, the front office
 
-        The services layer handles login, metadata, query compilation and the result cache. It
-        runs without a warehouse. Its credits are billed only above 10% of the day's warehouse
-        credits, so a flood of tiny metadata queries can still show up on the bill.
+        The services layer handles login, metadata, query compilation and the result cache. It runs
+        without a warehouse. Its credits are billed only above 10% of the day's warehouse credits, so a
+        flood of tiny metadata queries can still show up on the bill.
 
-        ## Access control in one paragraph
+        ## Idea 5: access control in one paragraph
 
-        Snowflake grants privileges to **roles**, and roles to users. «ACCOUNTADMIN» sits on top;
-        «SECURITYADMIN» manages grants; «SYSADMIN» owns databases and warehouses. Build
-        **functional roles** («ANALYST», «ETL») on top of **access roles** («SALES_READ»), and
-        use «GRANT ... ON FUTURE TABLES» so new tables are not invisible by accident.
+        Snowflake grants privileges to **roles**, and roles to users.
+
+        - «ACCOUNTADMIN» sits on top.
+        - «SECURITYADMIN» manages grants.
+        - «SYSADMIN» owns databases and warehouses.
+
+        Build **functional roles** («ANALYST», «ETL») on top of **access roles** («SALES_READ»). Use
+        «GRANT ... ON FUTURE TABLES» so new tables are not invisible by accident.
+
+        ## Now say it like a senior engineer
+
+        Storage is immutable micro-partitions with per-column min/max metadata, so pruning is the main
+        speed lever and updates rewrite partitions. Compute is independent virtual warehouses billed per
+        second: scale up for a slow query, scale out for queuing. Services run compilation, metadata and
+        the result cache.
 
         > [!senior] Size from the query profile, not from a feeling
         > "The query is slow, so use a bigger warehouse" is a mid-level answer. A senior answer
@@ -100,6 +134,12 @@ export const track: Track = {
         > minutes every hour. A very short auto-suspend on a BI warehouse throws away its local
         > cache between queries. Set it from the query pattern: about 60 seconds for bursty ETL,
         > longer for interactive BI.
+
+        ## In one breath
+
+        Snowflake is one shared pantry of labelled micro-partitions, many rented cooking stations, and
+        a front office. Prune with the labels, scale up for a slow query, scale out for a queue, and set
+        auto-suspend from the query pattern.
       `,
       checks: [
         {
@@ -131,23 +171,38 @@ export const track: Track = {
       title: 'Loading: stages, COPY and Snowpipe',
       summary:
         'Load files with stages and COPY INTO, connect a bucket without keys, and run Snowpipe and Snowpipe Streaming safely.',
-      minutes: 16,
+      minutes: 18,
       body: `
-        Snowflake loads data from a **stage**: a named place that holds files.
+        ## Start with the problem
 
-        | Stage | Name in SQL | Holds |
-        |---|---|---|
-        | User stage | «@~» | Files for one user |
-        | Table stage | «@%trips» | Files for one table |
-        | Named internal | «@raw_stage» | Files that Snowflake stores |
-        | Named external | «@s3_trips» | A path in your S3, GCS or Azure bucket |
+        Trip files land in an S3 bucket all day, a few every minute. You need them in Snowflake. Three
+        things can go wrong:
 
-        ## A storage integration: no keys
+        - Someone pastes an AWS access key into a SQL statement, and it ends up in the query history.
+        - A job retries, and the same file is loaded twice. Trips are doubled.
+        - Loading waits for an hourly batch, but the business wants minutes, or even seconds.
+
+        This lesson walks from "where do files sit" to "rows in seconds", and at each step shows how
+        duplicates are avoided.
+
+        ## Idea 1: a stage is a loading dock
+
+        Snowflake loads data from a **stage**: a named place that holds files. Like a loading dock
+        behind a shop, where parcels wait before they go on the shelves. Four kinds:
+
+        - **User stage**, «@~»: files for one user.
+        - **Table stage**, «@%trips»: files for one table.
+        - **Named internal**, «@raw_stage»: files that Snowflake stores.
+        - **Named external**, «@s3_trips»: a path in your S3, GCS or Azure bucket.
+
+        ## Idea 2: a storage integration, so no keys
 
         An external stage needs access to your bucket. Do not paste an access key into the stage.
-        Create a **storage integration** instead. Snowflake gives you an identity (an AWS IAM user
-        ARN and an external id, or a GCP service account), and you trust that identity in your
-        cloud account. Nothing secret is stored in SQL.
+        Create a **storage integration** instead.
+
+        Snowflake gives you an identity (an AWS IAM user ARN and an external id, or a GCP service
+        account). You trust that identity in your cloud account. Like giving a delivery company a
+        named badge at your gate, instead of copying your house key. Nothing secret is stored in SQL.
 
         ~~~sql
         CREATE STORAGE INTEGRATION s3_raw
@@ -169,7 +224,7 @@ export const track: Track = {
           FILE_FORMAT = ff_json;
         ~~~
 
-        ## COPY INTO
+        ## Idea 3: COPY INTO, and how it avoids loading twice
 
         ~~~sql
         COPY INTO raw.trips (payload, file_name, loaded_at)
@@ -182,23 +237,25 @@ export const track: Track = {
 
         The facts interviewers check:
 
-        - **Load metadata.** Snowflake remembers which files it loaded into each table for **64
-          days**, by name and checksum. Running the same COPY again skips them. «FORCE = TRUE»
-          reloads, and creates duplicates.
-        - **Errors.** The default for COPY is «ON_ERROR = ABORT_STATEMENT». «SKIP_FILE» and
-          «CONTINUE» trade completeness for progress. Dry-run with «VALIDATION_MODE =
-          RETURN_ERRORS».
-        - **File size.** Aim for about 100 to 250 MB compressed per file. Thousands of tiny files
-          waste per-file overhead; one huge file cannot load in parallel.
+        - **Load metadata.** Snowflake remembers which files it loaded into each table for **64 days**,
+          by name and checksum. Running the same COPY again skips them, like a guest list at a door.
+          «FORCE = TRUE» reloads, and creates duplicates.
+        - **Errors.** The default for COPY is «ON_ERROR = ABORT_STATEMENT». «SKIP_FILE» and «CONTINUE»
+          trade completeness for progress. Dry-run with «VALIDATION_MODE = RETURN_ERRORS».
+        - **File size.** Aim for about 100 to 250 MB compressed per file. Thousands of tiny files waste
+          per-file overhead; one huge file cannot load in parallel.
         - **Parquet.** «MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE» maps columns by name instead of
           position.
 
-        ## Snowpipe: continuous file loading
+        ## Idea 4: Snowpipe, continuous file loading
 
-        **Snowpipe** runs a COPY statement for you when new files land. With auto-ingest, the
-        bucket sends an event notification (S3 to an SQS queue that Snowflake owns, or GCS
-        Pub/Sub) and Snowpipe loads the file within about a minute. It uses serverless compute,
-        not your warehouse.
+        Running COPY every hour means data up to an hour old. **Snowpipe** runs a COPY statement for you
+        when new files land.
+
+        With auto-ingest, the bucket sends an event notification (S3 to an SQS queue that Snowflake
+        owns, or GCS Pub/Sub). Snowpipe loads the file within about a minute. It uses serverless
+        compute, not your warehouse. Like a doorbell: the parcel arrives, the bell rings, someone
+        carries it in.
 
         ~~~sql
         CREATE PIPE raw.trips_pipe AUTO_INGEST = TRUE AS
@@ -212,12 +269,20 @@ export const track: Track = {
         - A file that is rewritten under the same name with new content is loaded again.
         - Check health with «SYSTEM$PIPE_STATUS» and the «COPY_HISTORY» table function.
 
-        ## Snowpipe Streaming: rows, not files
+        ## Idea 5: Snowpipe Streaming, rows instead of files
 
-        **Snowpipe Streaming** writes rows straight into tables through an SDK or the Kafka
-        connector. There are no files to stage, and latency drops to seconds. Each channel tracks
-        an **offset token**, so a client that restarts asks Snowflake for the last committed
-        offset and resumes from there. That is how you get exactly-once delivery from Kafka.
+        **Snowpipe Streaming** writes rows straight into tables through an SDK or the Kafka connector.
+        There are no files to stage, and latency drops to seconds.
+
+        Each channel tracks an **offset token**. A client that restarts asks Snowflake for the last
+        committed offset and resumes from there. Like a bookmark: after a crash, you open the book at
+        the bookmark, not at page 1. That is how you get exactly-once delivery from Kafka.
+
+        ## Now say it like a senior engineer
+
+        Files load from stages; external stages use a storage integration, never keys. COPY skips files
+        it loaded in the last 64 days, Snowpipe loads on bucket events within a minute with 14 days of
+        history, and Snowpipe Streaming writes rows in seconds with offset tokens for exactly-once.
 
         > [!senior] Pick the loader by latency and by who owns the files
         > Batch COPY from an orchestrator for hourly or daily loads. Snowpipe when files arrive
@@ -228,6 +293,12 @@ export const track: Track = {
         > A backfill that re-runs COPY over a folder of files older than 64 days cannot use load
         > metadata, so Snowflake may load them twice. Load into a table keyed by «file_name» and
         > deduplicate, or move processed files to an archive path.
+
+        ## In one breath
+
+        Files wait on a stage, reached through a keyless storage integration. COPY loads them and
+        remembers what it loaded for 64 days, Snowpipe does it automatically when files land, and
+        Snowpipe Streaming skips files entirely and resumes from an offset after a crash.
       `,
       checks: [
         {
@@ -260,10 +331,21 @@ export const track: Track = {
       title: 'JSON and semi-structured data in Snowflake',
       summary:
         'Query VARIANT columns, flatten nested arrays, and decide what to keep as JSON and what to promote to columns.',
-      minutes: 13,
+      minutes: 16,
       body: `
-        Snowflake stores JSON, Avro, Parquet and XML in a **VARIANT** column. You load the raw
-        document and query it with a path syntax, with no schema up front.
+        ## Start with the problem
+
+        The trips app sends JSON. Each trip has a rider object and a list of stops, and every few weeks
+        the app team adds a new field. If you design a strict table up front, the load fails the day a
+        new field appears. If you keep the JSON as a plain string, every query must parse text.
+
+        Snowflake's answer: store the document as it is, and query inside it with a path. That is fast
+        and flexible, but it has traps that quietly give wrong answers.
+
+        ## Idea 1: VARIANT, a box that holds any document
+
+        Snowflake stores JSON, Avro, Parquet and XML in a **VARIANT** column. You load the raw document
+        and query it with a path syntax, with no schema up front.
 
         ~~~sql
         -- payload is VARIANT:
@@ -277,14 +359,18 @@ export const track: Track = {
         FROM raw.trips;
         ~~~
 
-        - A colon starts the path; dots and brackets go deeper.
+        - A colon starts the path; dots and brackets go deeper. «payload:stops[0].city» means "in
+          payload, the stops list, the first item, its city".
         - The result of a path is still VARIANT. **Cast it** with «::STRING», «::NUMBER» or
           «::TIMESTAMP_NTZ», or comparisons and joins behave in surprising ways.
-        - A missing key returns SQL «NULL». A JSON «null» value is a VARIANT null, which is not
-          the same thing; «IS_NULL_VALUE» tells them apart.
+        - A missing key returns SQL «NULL». A JSON «null» value is a VARIANT null, which is not the same
+          thing; «IS_NULL_VALUE» tells them apart.
         - Key names are case sensitive: «payload:Trip_ID» is not «payload:trip_id».
 
-        ## FLATTEN: one row per array element
+        ## Idea 2: FLATTEN, one row per list item
+
+        A trip has two stops. You want one row per stop. **FLATTEN** unpacks a list into rows, like
+        taking each item out of a lunch box and laying it on the table.
 
         ~~~sql
         SELECT
@@ -295,29 +381,40 @@ export const track: Track = {
           LATERAL FLATTEN(input => t.payload:stops, OUTER => TRUE) AS s;
         ~~~
 
-        FLATTEN returns the columns «SEQ», «KEY», «PATH», «INDEX», «VALUE» and «THIS». Without
-        «OUTER => TRUE», a trip with an empty or missing «stops» array disappears from the
-        result, just like an inner join.
+        FLATTEN returns the columns «SEQ», «KEY», «PATH», «INDEX», «VALUE» and «THIS».
+
+        Tiny example. Trip t1 has 2 stops, trip t2 has an empty «stops» list. Without «OUTER => TRUE»
+        you get 2 rows, both for t1. Trip t2 **disappears**, just like an inner join. With
+        «OUTER => TRUE» you get 3 rows, and t2's row has a NULL city.
 
         To build JSON, use «OBJECT_CONSTRUCT», «ARRAY_AGG» and «TO_JSON». To parse a string, use
         «TRY_PARSE_JSON», which returns NULL for bad input instead of failing the whole query.
 
-        ## How fast is VARIANT?
+        ## Idea 3: how fast is VARIANT?
 
-        When it loads a VARIANT, Snowflake extracts common paths into hidden columns with their
-        own min and max metadata. So «WHERE payload:city::STRING = 'SF'» can still prune. The
-        extraction stops working well when a path holds mixed types, or when documents vary a lot.
+        When it loads a VARIANT, Snowflake extracts common paths into hidden columns with their own min
+        and max metadata. So «WHERE payload:city::STRING = 'SF'» can still prune. The extraction stops
+        working well when a path holds mixed types, or when documents vary a lot.
 
-        One VARIANT value has a size cap: 16 MB for many years, raised to 128 MB in 2025. Check
-        the limit on your account before you design around big documents.
+        One VARIANT value has a size cap: 16 MB for many years, raised to 128 MB in 2025. Check the
+        limit on your account before you design around big documents.
 
-        ## Keep it raw, then promote
+        ## Idea 4: keep it raw, then promote
 
         The pattern most teams use:
 
         1. Land the raw document in a VARIANT column, with the file name and load time.
         2. In staging, cast the fields that queries filter and join on into typed columns.
-        3. Keep the VARIANT for rare fields and for replay when the parser changes.
+        3. Keep the VARIANT for rare fields, and for replay when the parser changes.
+
+        Like keeping the original receipt in a folder, and copying the totals you need into your
+        spreadsheet. If you made a mistake in the spreadsheet, the receipt is still there.
+
+        ## Now say it like a senior engineer
+
+        Land documents in VARIANT, query by path, always cast, and use FLATTEN with OUTER when lists can
+        be empty. Promote the filter and join fields to typed staging columns, keep the raw VARIANT for
+        replay, and test the promoted columns for drift.
 
         > [!senior] Schema on read is a choice with a cost
         > VARIANT absorbs new fields without a failed load. It also lets a producer rename a
@@ -327,6 +424,12 @@ export const track: Track = {
         > [!trap] Comparing VARIANT without a cast
         > «payload:fare > 10» compares VARIANT values, and «payload:id = 123» against a string
         > id never matches. Cast both sides to the type you mean.
+
+        ## In one breath
+
+        VARIANT lets you load any document and query inside it with a path, but always cast what you
+        read and use OUTER with FLATTEN. Keep the raw document, promote the important fields to typed
+        columns, and test them so a renamed field does not turn silently into NULLs.
       `,
       checks: [
         {
@@ -355,21 +458,37 @@ export const track: Track = {
         'Read a query profile, decide when a clustering key pays off, and use the three caches on purpose.',
       minutes: 16,
       body: `
-        A slow Snowflake query almost always has one of four causes. The **query profile** shows
-        which one.
+        ## Start with the problem
 
-        | In the profile | Cause | Fix |
-        |---|---|---|
-        | Partitions scanned close to partitions total | No pruning | Filter on a well-clustered column, or add a clustering key |
-        | Bytes spilled to local or remote storage | Not enough memory | A bigger warehouse, or less data per step |
-        | A join outputs far more rows than it reads | An exploding join | Fix the join keys; deduplicate first |
-        | Long queued time | Concurrency | Multi-cluster warehouse, or a separate warehouse |
+        A dashboard query on «trips» takes 4 minutes. The first reaction is "make the warehouse
+        bigger". It costs twice as much and the query still takes 3 minutes 50 seconds.
 
-        ## Natural clustering and clustering keys
+        A bigger warehouse fixes only one kind of slowness. A slow Snowflake query almost always has one
+        of **four** causes, and each has a different fix. The **query profile** shows which one.
 
-        Micro-partitions follow **insert order**. A table loaded by day is already well clustered
-        on the load date, so date filters prune well for free. Filters on another column, such as
-        «city_id», scan everything, because every micro-partition holds every city.
+        ## Idea 1: read the profile like a doctor reads symptoms
+
+        - **Symptom: partitions scanned is close to partitions total.** Cause: no pruning. Fix: filter
+          on a well-clustered column, or add a clustering key.
+        - **Symptom: bytes spilled to local or remote storage.** Cause: not enough memory. Fix: a bigger
+          warehouse, or less data per step.
+        - **Symptom: a join outputs far more rows than it reads.** Cause: an exploding join. Fix: the
+          join keys; deduplicate first.
+        - **Symptom: long queued time.** Cause: concurrency. Fix: a multi-cluster warehouse, or a
+          separate warehouse.
+
+        Only the second one is fixed by a bigger warehouse. The 4-minute query from the story scanned
+        9,800 of 10,000 partitions: a pruning problem.
+
+        ## Idea 2: natural clustering comes free, for one column
+
+        Micro-partitions follow **insert order**. A table loaded by day is already well clustered on the
+        load date, so date filters prune well for free.
+
+        Filters on another column, such as «city_id», scan everything, because every micro-partition
+        holds every city. Like a diary: easy to find 3 March, hard to find every entry about Mumbai.
+
+        ## Idea 3: a clustering key, when one column is not enough
 
         A **clustering key** asks Snowflake to keep rows with nearby key values together:
 
@@ -379,40 +498,57 @@ export const track: Track = {
         SELECT SYSTEM$CLUSTERING_INFORMATION('analytics.trips', '(TO_DATE(started_at), city_id)');
         ~~~
 
-        The function reports the **average depth**: how many micro-partitions overlap for a given
-        value. Close to 1 is good. **Automatic Clustering** then reclusters in the background, on
-        serverless compute that you pay for.
+        The function reports the **average depth**: how many micro-partitions overlap for a given value.
+        Close to 1 is good. **Automatic Clustering** then reclusters in the background, on serverless
+        compute that you pay for.
 
-        A clustering key pays off when all of these hold:
+        A clustering key pays off when **all** of these hold:
 
         - The table is large: multiple terabytes, thousands of micro-partitions.
         - Queries filter or join on the key most of the time.
         - The table is queried far more often than it changes.
 
-        Put the lowest-cardinality column first, and wrap high-cardinality timestamps in
-        «TO_DATE». Two or three columns at most.
+        Put the lowest-cardinality column first, and wrap high-cardinality timestamps in «TO_DATE». Two
+        or three columns at most.
 
-        ## Other accelerators
+        ## Idea 4: other accelerators
 
-        - **Search Optimization Service**: point lookups on high-cardinality columns, such as
-          «WHERE trip_id = 't-81'» or a substring search. It maintains a search access path, at a
-          storage and compute cost. Enterprise edition.
-        - **Query Acceleration Service**: offloads parts of large scans to shared compute when a
-          few outlier queries scan far more than the rest.
-        - **Materialized views**: precompute an aggregate on one table. Snowflake keeps them
-          current. Enterprise edition.
+        - **Search Optimization Service**: point lookups on high-cardinality columns, such as «WHERE
+          trip_id = 't-81'», or a substring search. It maintains a search access path, at a storage and
+          compute cost. Enterprise edition.
+        - **Query Acceleration Service**: offloads parts of large scans to shared compute, when a few
+          outlier queries scan far more than the rest.
+        - **Materialized views**: precompute an aggregate on one table. Snowflake keeps them current.
+          Enterprise edition.
 
-        ## The three caches
+        ## Idea 5: three caches, three memories
 
-        | Cache | Lives in | Lasts | Helps |
-        |---|---|---|---|
-        | Result cache | Cloud services | 24 hours, renewed on reuse, up to 31 days | The exact same query: no warehouse runs |
-        | Local disk cache | Warehouse SSD | Until the warehouse suspends or resizes | Queries that read the same micro-partitions |
-        | Metadata | Cloud services | Always | «COUNT(*)», «MIN», «MAX» with no warehouse |
+        **Result cache.**
 
-        The result cache works only if the query text matches, the data has not changed, the
-        query has no non-deterministic function such as «CURRENT_TIMESTAMP()», and the role can
-        read the tables.
+        - Lives in cloud services.
+        - Lasts 24 hours, renewed on reuse, up to 31 days.
+        - Helps the exact same query: no warehouse runs at all.
+
+        **Local disk cache.**
+
+        - Lives on the warehouse SSD.
+        - Lasts until the warehouse suspends or resizes.
+        - Helps queries that read the same micro-partitions.
+
+        **Metadata.**
+
+        - Lives in cloud services.
+        - Always there.
+        - Answers «COUNT(*)», «MIN» and «MAX» with no warehouse.
+
+        The result cache works only if the query text matches, the data has not changed, the query has
+        no non-deterministic function such as «CURRENT_TIMESTAMP()», and the role can read the tables.
+
+        ## Now say it like a senior engineer
+
+        Read the query profile before resizing: poor pruning needs clustering, spilling needs a bigger
+        size, exploding joins need key fixes, and queuing needs scale-out. Clustering keys fit large,
+        read-heavy tables filtered on the key. Benchmark with the result cache off.
 
         > [!senior] Benchmark with the cache off
         > A query that ran in 200 ms the second time hit the result cache. Run
@@ -423,6 +559,12 @@ export const track: Track = {
         > Automatic Clustering on a table that gets a big merge every 15 minutes reclusters all
         > day, and its serverless credits can cost more than the queries it speeds up. Check
         > «AUTOMATIC_CLUSTERING_HISTORY» a week after you add a key.
+
+        ## In one breath
+
+        A slow query is poor pruning, spilling, an exploding join or queuing, and the profile tells you
+        which, so do not just buy a bigger warehouse. Cluster big read-heavy tables on their filter
+        columns, and turn the result cache off when you benchmark.
       `,
       checks: [
         {
@@ -455,10 +597,24 @@ export const track: Track = {
       title: 'Time travel, cloning and table types',
       summary:
         'Recover data with time travel, explain fail-safe, clone without copying, and pick the right table type.',
-      minutes: 14,
+      minutes: 16,
       body: `
-        Because micro-partitions are immutable, Snowflake can keep the old ones for a while. That
-        gives you **time travel**: query or restore a table as it was in the past.
+        ## Start with the problem
+
+        At 06:58 someone runs an «UPDATE» on «analytics.trips» without a «WHERE». Every fare is now 0.
+        In most databases you now restore last night's backup and lose a day of data, after hours of
+        waiting.
+
+        In Snowflake you can ask: "show me the table as it was at 06:55". That is **time travel**. This
+        lesson shows how it works, what it costs, and the table types and cloning that build on it.
+
+        ## Idea 1: old pages are kept for a while
+
+        Because micro-partitions are immutable, an «UPDATE» never edits them. It writes new ones and
+        retires the old ones. Snowflake can keep the retired ones for a while, like a notebook where you
+        never erase, you only cross out and write on a new page.
+
+        That gives you time travel: query or restore a table as it was in the past.
 
         ~~~sql
         -- The table five minutes ago
@@ -476,42 +632,55 @@ export const track: Track = {
         UNDROP TABLE analytics.drivers;
         ~~~
 
-        ## Retention and fail-safe
+        Read the restore in three steps: clone the table as it was at 06:55, check it, then swap the
+        two tables in one statement. The broken version stays, for the postmortem.
 
-        «DATA_RETENTION_TIME_IN_DAYS» sets the time travel window. The default is 1 day. On
-        Enterprise edition and above, a permanent table can keep up to **90 days**.
+        ## Idea 2: two windows, and the second is not yours
 
-        After time travel ends, a permanent table's old data enters **fail-safe** for **7
-        days**. Only Snowflake support can recover from fail-safe, on a best-effort basis. It is
-        disaster recovery for Snowflake, not a feature you can query.
+        - **Time travel.** «DATA_RETENTION_TIME_IN_DAYS» sets the window. The default is 1 day. On
+          Enterprise edition and above, a permanent table can keep up to **90 days**. You can query it.
+        - **Fail-safe.** After time travel ends, a permanent table's old data enters fail-safe for **7
+          days**. Only Snowflake support can recover from fail-safe, on a best-effort basis. It is
+          disaster recovery for Snowflake, not a feature you can query.
 
-        Both windows cost storage. A table that is rewritten every hour keeps every old version
-        for the whole window. High-churn staging tables with 90-day retention are a classic
-        surprise on the bill.
+        Both windows cost storage. A table that is rewritten every hour keeps every old version for the
+        whole window. Tiny example: a 1 TB staging table rewritten every hour, with 90-day retention,
+        can hold up to 2,160 old versions of itself. High-churn staging tables with 90-day retention
+        are a classic surprise on the bill.
 
-        ## Table types
+        ## Idea 3: seven table types, chosen by "can I rebuild it?"
 
-        | Type | Time travel | Fail-safe | Use for |
-        |---|---|---|---|
-        | Permanent | 0 to 90 days (1 on Standard) | 7 days | Facts, dimensions, anything you cannot rebuild |
-        | Transient | 0 or 1 day | None | Staging and intermediate tables you can rebuild |
-        | Temporary | 0 or 1 day, ends with the session | None | Scratch work in one session |
-        | External | None | None | Query files in a bucket that Snowflake does not manage |
-        | Iceberg | Through the Iceberg snapshots | None | Open tables that Spark and Trino also read |
-        | Dynamic | Like permanent | Like permanent | A table defined by a query, kept fresh to a target lag |
-        | Hybrid | Limited | Limited | Row-level reads and writes for small apps |
+        - **Permanent.** Time travel 0 to 90 days (1 on Standard), plus 7 days fail-safe. For facts,
+          dimensions, anything you cannot rebuild.
+        - **Transient.** Time travel 0 or 1 day, no fail-safe. For staging and intermediate tables you
+          can rebuild.
+        - **Temporary.** Time travel 0 or 1 day, ends with the session, no fail-safe. For scratch work
+          in one session.
+        - **External.** No time travel, no fail-safe. To query files in a bucket that Snowflake does not
+          manage.
+        - **Iceberg.** Time travel through the Iceberg snapshots, no fail-safe. For open tables that
+          Spark and Trino also read.
+        - **Dynamic.** Like permanent. A table defined by a query, kept fresh to a target lag.
+        - **Hybrid.** Limited time travel and fail-safe. Row-level reads and writes for small apps.
 
-        ## Zero-copy cloning
+        ## Idea 4: zero-copy cloning
 
-        «CLONE» copies metadata, not data. The clone points at the same micro-partitions, and only
-        the rows that later change in either table take new storage. You can clone a table, a
-        schema or a whole database, and combine it with «AT» to clone the past.
+        «CLONE» copies **metadata, not data**. The clone points at the same micro-partitions, and only
+        the rows that later change in either table take new storage. Like a photocopy that only uses
+        paper for the pages you write on.
 
+        You can clone a table, a schema or a whole database, and combine it with «AT» to clone the past.
         Teams use it for:
 
         - A full-size dev or test database in seconds.
         - A safe restore point before a risky backfill.
         - Debugging a bad deploy against the exact data it saw.
+
+        ## Now say it like a senior engineer
+
+        Immutable micro-partitions make time travel and zero-copy cloning cheap. Retention is up to 90
+        days on permanent tables plus 7 days of support-only fail-safe, and both cost storage on churny
+        tables. Pick table types by whether the data can be rebuilt, and restore by clone and swap.
 
         > [!senior] Restore by clone and swap, not by overwrite
         > When an UPDATE corrupts a table, a senior answer does not run another UPDATE. It clones
@@ -522,6 +691,12 @@ export const track: Track = {
         > dbt creates Snowflake tables as transient unless you set «transient: false». That is fine
         > for marts you can rebuild. It is wrong for a snapshot table that holds history you
         > cannot recreate.
+
+        ## In one breath
+
+        Snowflake never erases a page, so you can read or clone a table as it was, within the retention
+        window. Use permanent tables for what you cannot rebuild, transient for what you can, and fix a
+        bad write by cloning the past and swapping it in.
       `,
       checks: [
         {
@@ -548,15 +723,25 @@ export const track: Track = {
       title: 'Pipelines in Snowflake: streams, tasks and dynamic tables',
       summary:
         'Build incremental pipelines inside Snowflake with streams and tasks, and know when a dynamic table replaces them.',
-      minutes: 15,
+      minutes: 18,
       body: `
-        Snowflake can run incremental pipelines without an outside engine. There are two ways:
-        the imperative pair **streams and tasks**, and the declarative **dynamic tables**.
+        ## Start with the problem
 
-        ## Streams: change tracking
+        Raw trips land in «raw.trips» all day. You want «analytics.trips» to stay within 10 minutes of
+        it: new trips added, status changes updated, deleted trips removed.
 
-        A **stream** records the changes to a table since the stream was last consumed. It stores
-        an offset, not a copy of the data.
+        The naive way is to rebuild «analytics.trips» from scratch every 10 minutes. On a billion rows
+        that is expensive, and it gets worse every day. You want to process **only what changed**. And
+        you would rather not run Airflow or Spark just for that.
+
+        Snowflake can run incremental pipelines without an outside engine. There are two ways: the
+        imperative pair **streams and tasks**, and the declarative **dynamic tables**.
+
+        ## Idea 1: a stream is a bookmark on a table
+
+        A **stream** records the changes to a table since the stream was last consumed. It stores an
+        **offset**, not a copy of the data. Like a bookmark in a book that someone keeps adding pages to:
+        "you have read up to here; these pages are new".
 
         ~~~sql
         CREATE STREAM raw.trips_changes ON TABLE raw.trips;
@@ -568,11 +753,14 @@ export const track: Track = {
         - «METADATA$ISUPDATE»: TRUE when the row is half of an update (a delete plus an insert).
         - «METADATA$ROW_ID»: a stable id for the row.
 
-        The offset moves only when a **DML statement** reads the stream and its transaction
-        commits. A plain SELECT does not consume it. An «APPEND_ONLY» stream ignores updates and
-        deletes, which is cheaper for insert-only sources.
+        The bookmark moves only when a **DML statement** reads the stream and its transaction commits. A
+        plain SELECT does not consume it. An «APPEND_ONLY» stream ignores updates and deletes, which is
+        cheaper for insert-only sources.
 
-        ## Tasks: scheduling
+        ## Idea 2: a task is an alarm clock
+
+        A **task** runs SQL on a schedule. Put the two together: every 5 minutes, if the stream has new
+        pages, merge them into the target.
 
         ~~~sql
         CREATE TASK analytics.merge_trips
@@ -602,14 +790,24 @@ export const track: Track = {
         - Omit «WAREHOUSE» to make the task serverless; Snowflake sizes the compute.
         - Chain tasks with «AFTER» to build a task graph. Only the root task has a schedule.
 
-        A stream goes **stale** if nobody consumes it within the table's retention period.
-        Snowflake extends retention for an unconsumed stream up to «MAX_DATA_EXTENSION_TIME_IN_DAYS»,
-        14 days by default. After that, the changes are gone and you must rebuild the target.
+        Because the MERGE reads the stream and commits in one transaction, a failed MERGE does not move
+        the bookmark. The next run sees the same changes again.
 
-        ## Dynamic tables: say what, not how
+        ## Idea 3: a stream can go stale
 
-        A **dynamic table** is defined by a query and a **target lag**. Snowflake works out the
+        A stream goes **stale** if nobody consumes it within the table's retention period. Snowflake
+        extends retention for an unconsumed stream up to «MAX_DATA_EXTENSION_TIME_IN_DAYS», 14 days by
+        default. After that, the changes are gone and you must rebuild the target. Like a bookmark in a
+        library book that was returned and pulped.
+
+        ## Idea 4: dynamic tables, say what, not how
+
+        Streams and tasks make you write the "how": the merge, the deletes, the schedule. A **dynamic
+        table** asks only for the "what": a query, and a **target lag**. Snowflake works out the
         refresh, incrementally when it can.
+
+        Like telling a taxi driver the address and "be there in 10 minutes", instead of giving every
+        turn.
 
         ~~~sql
         CREATE DYNAMIC TABLE analytics.city_hourly_revenue
@@ -623,18 +821,21 @@ export const track: Track = {
           GROUP BY 1, 2;
         ~~~
 
-        - «TARGET_LAG = DOWNSTREAM» refreshes a table only when a table that reads it needs fresh
-          data.
+        - «TARGET_LAG = DOWNSTREAM» refreshes a table only when a table that reads it needs fresh data.
         - Some query shapes cannot refresh incrementally and fall back to full refresh. Check
           «refresh_mode» in «SHOW DYNAMIC TABLES» to see what Snowflake chose.
 
-        ## Which one?
+        ## Idea 5: which one?
 
-        | Need | Choose |
-        |---|---|
-        | A chain of SQL transforms with a freshness goal | Dynamic tables |
-        | Custom logic: calls to procedures, external functions, notifications | Streams and tasks |
-        | Hard ordering, retries and cross-system steps | An orchestrator such as Airflow |
+        - **A chain of SQL transforms with a freshness goal:** dynamic tables.
+        - **Custom logic** (calls to procedures, external functions, notifications): streams and tasks.
+        - **Hard ordering, retries and cross-system steps:** an orchestrator such as Airflow.
+
+        ## Now say it like a senior engineer
+
+        A stream is an offset on a table's changes, consumed only by committed DML. Tasks schedule SQL,
+        skip cheaply when the stream is empty, and chain with AFTER. Dynamic tables declare a query and
+        a target lag and refresh incrementally when the shape allows.
 
         > [!senior] Name the delivery guarantee
         > Streams plus a MERGE in one transaction give exactly-once processing inside Snowflake:
@@ -644,6 +845,12 @@ export const track: Track = {
         > [!trap] Two consumers on one stream
         > A stream has one offset. If two tasks read the same stream, the first one to commit
         > consumes the changes and the second sees nothing. Create one stream per consumer.
+
+        ## In one breath
+
+        A stream is a bookmark on a table's changes, and a task is an alarm clock that merges the new
+        pages; the bookmark moves only when the merge commits. For plain SQL chains, a dynamic table
+        does the same from just a query and a target lag.
       `,
       checks: [
         {
@@ -675,53 +882,66 @@ export const track: Track = {
       title: 'The Databricks platform',
       summary:
         'Explain the control and compute planes, pick the right compute, and build ingestion with Auto Loader and declarative pipelines.',
-      minutes: 16,
+      minutes: 18,
       body: `
-        Databricks runs Apache Spark, Delta Lake and SQL on your cloud storage. The lakehouse
-        track covers Delta itself. This lesson covers the platform around it.
+        ## Start with the problem
 
-        ## Control plane and compute plane
+        A team moves to Databricks. In the first month the bill is three times the estimate. The
+        reasons are easy to miss:
+
+        - The nightly jobs run on the team's shared notebook cluster, at the highest rate, and the
+          cluster never shuts down.
+        - One analyst's notebook eats the cluster's memory at 02:00 and the nightly job fails.
+        - The ingestion job lists 4 million files in S3 every run, to find the 300 new ones.
+
+        Databricks runs Apache Spark, Delta Lake and SQL on your cloud storage. The lakehouse track
+        covers Delta itself. This lesson covers the platform around it, and how to avoid each of those
+        problems.
+
+        ## Idea 1: two planes, an office and a factory
 
         - The **control plane** lives in the Databricks account: the web app, notebooks, the job
-          scheduler, cluster management and Unity Catalog metadata.
-        - The **compute plane** is where data is processed. **Classic** compute runs as VMs in
-          your own cloud account and network. **Serverless** compute runs in Databricks' account,
-          starts in seconds and is billed only while it runs.
+          scheduler, cluster management and Unity Catalog metadata. The office.
+        - The **compute plane** is where data is processed. The factory floor.
+          - **Classic** compute runs as VMs in your own cloud account and network.
+          - **Serverless** compute runs in Databricks' account, starts in seconds and is billed only
+            while it runs.
 
-        Your data stays in your bucket either way. Interviewers ask this to see if you know where
-        data and credentials flow.
+        Your data stays in your bucket either way. Interviewers ask this to see if you know where data
+        and credentials flow.
 
-        ## Compute types
+        ## Idea 2: four kinds of compute, four jobs
 
-        | Compute | For | Note |
-        |---|---|---|
-        | All-purpose cluster | Notebooks, exploration | The highest DBU rate; easy to leave running |
-        | Jobs compute | Scheduled jobs | Created for one run, then removed; cheaper per DBU |
-        | SQL warehouse | BI and SQL | Classic, pro or serverless; uses Photon |
-        | Serverless jobs and notebooks | Jobs without cluster tuning | No VM to size; pay per use |
+        - **All-purpose cluster:** for notebooks and exploration. The highest DBU rate, and easy to leave
+          running.
+        - **Jobs compute:** for scheduled jobs. Created for one run, then removed. Cheaper per DBU.
+        - **SQL warehouse:** for BI and SQL. Classic, pro or serverless; uses Photon.
+        - **Serverless jobs and notebooks:** for jobs without cluster tuning. No VM to size; pay per use.
 
-        Billing is in **DBUs** (Databricks units) per hour, plus the cloud VM cost for classic
-        compute. **Photon** is a vectorized engine written in C++ that runs Spark SQL and
-        DataFrame work faster, at a higher DBU rate. It helps scans, joins and aggregations, and
-        does nothing for Python UDFs.
+        Billing is in **DBUs** (Databricks units) per hour, plus the cloud VM cost for classic compute.
 
-        > [!trap] Production jobs on an all-purpose cluster
-        > Pointing a nightly job at the team's shared interactive cluster costs more per DBU, keeps
-        > the cluster alive, and lets one user's notebook starve the job. Run jobs on jobs compute
-        > or serverless.
+        **Photon** is a vectorized engine written in C++. It runs Spark SQL and DataFrame work faster,
+        at a higher DBU rate. It helps scans, joins and aggregations, and does nothing for Python UDFs.
 
-        ## Jobs
+        The first two problems in the story have one fix: move the nightly jobs to jobs compute or
+        serverless.
 
-        **Lakeflow Jobs** (formerly Workflows) is the built-in scheduler. A job is a graph of
-        tasks: notebooks, Python wheels, SQL, dbt, or a pipeline. It supports retries, task
-        values passed between tasks, triggers on a schedule, on file arrival or on a table update,
-        and **repair run**, which reruns only the failed tasks. Define jobs as code with
-        **Databricks Asset Bundles**, YAML files deployed from CI.
+        ## Idea 3: jobs, the built-in scheduler
 
-        ## Auto Loader
+        **Lakeflow Jobs** (formerly Workflows) is the built-in scheduler. A job is a graph of tasks:
+        notebooks, Python wheels, SQL, dbt, or a pipeline. It supports:
 
-        **Auto Loader** ingests new files from cloud storage incrementally, with exactly-once
-        tracking of which files it has seen.
+        - retries;
+        - task values passed between tasks;
+        - triggers on a schedule, on file arrival or on a table update;
+        - **repair run**, which reruns only the failed tasks.
+
+        Define jobs as code with **Databricks Asset Bundles**: YAML files deployed from CI.
+
+        ## Idea 4: Auto Loader, "which files are new?"
+
+        **Auto Loader** ingests new files from cloud storage incrementally, with exactly-once tracking of
+        which files it has seen. Like a mail room that stamps every letter it has opened.
 
         ~~~python
         (spark.readStream.format("cloudFiles")
@@ -737,17 +957,18 @@ export const track: Track = {
 
         - The **checkpoint** records every file processed, so a restart never loads a file twice.
         - **Directory listing** mode finds files by listing the path. **File notification** mode
-          subscribes to bucket events, which scales to millions of files.
-        - Schema inference stores the schema at «schemaLocation». A new column stops the stream
-          once, then the restart picks up the evolved schema. Values that do not fit the schema
-          go to the «_rescued_data» column instead of being lost.
-        - «trigger(availableNow=True)» processes everything new and stops, so a streaming reader
-          runs as a cheap scheduled batch.
+          subscribes to bucket events, which scales to millions of files. That fixes the third problem
+          in the story.
+        - Schema inference stores the schema at «schemaLocation». A new column stops the stream once,
+          then the restart picks up the evolved schema. Values that do not fit the schema go to the
+          «_rescued_data» column instead of being lost.
+        - «trigger(availableNow=True)» processes everything new and stops, so a streaming reader runs as
+          a cheap scheduled batch.
 
-        ## Lakeflow Declarative Pipelines
+        ## Idea 5: declarative pipelines, describe the tables
 
-        **Lakeflow Declarative Pipelines** (formerly Delta Live Tables) let you declare tables and
-        their quality rules; Databricks runs the graph, retries and scaling.
+        **Lakeflow Declarative Pipelines** (formerly Delta Live Tables) let you declare tables and their
+        quality rules. Databricks runs the graph, retries and scaling.
 
         ~~~sql
         CREATE OR REFRESH STREAMING TABLE trips_bronze
@@ -761,17 +982,35 @@ export const track: Track = {
         FROM STREAM(trips_bronze);
         ~~~
 
-        - A **streaming table** processes each input row once. A **materialized view** recomputes
-          its result, incrementally when it can.
-        - **Expectations** keep the row, drop it or fail the update, and the pipeline records how
-          many rows broke each rule.
-        - «AUTO CDC» (formerly «APPLY CHANGES INTO») turns a change feed into an SCD type 1 or
-          type 2 table, and handles out-of-order events with a sequence column.
+        - A **streaming table** processes each input row once. A **materialized view** recomputes its
+          result, incrementally when it can.
+        - **Expectations** keep the row, drop it or fail the update, and the pipeline records how many
+          rows broke each rule. Above, a negative fare drops the row, and a missing id stops the update.
+        - «AUTO CDC» (formerly «APPLY CHANGES INTO») turns a change feed into an SCD type 1 or type 2
+          table, and handles out-of-order events with a sequence column.
+
+        ## Now say it like a senior engineer
+
+        The control plane holds the UI, scheduler and metadata; the compute plane runs classic VMs in
+        your account or serverless in Databricks'. Jobs run on jobs compute or serverless, never on
+        all-purpose clusters. Auto Loader ingests files once through a checkpoint, and declarative
+        pipelines add expectations and AUTO CDC.
+
+        > [!trap] Production jobs on an all-purpose cluster
+        > Pointing a nightly job at the team's shared interactive cluster costs more per DBU, keeps
+        > the cluster alive, and lets one user's notebook starve the job. Run jobs on jobs compute
+        > or serverless.
 
         > [!senior] Classic or serverless is a cost and control trade-off
         > Serverless removes cluster tuning and idle time, which wins for spiky and small jobs.
         > Classic compute gives you control of instance types, spot capacity and network
         > placement, which can win for large, steady jobs. Say which workload goes where.
+
+        ## In one breath
+
+        Databricks is an office (control plane) and a factory (compute plane), and your data stays in
+        your bucket. Run jobs on jobs or serverless compute, ingest files with Auto Loader and its
+        checkpoint, and declare pipelines with quality rules instead of hand-writing every step.
       `,
       checks: [
         {
@@ -803,48 +1042,71 @@ export const track: Track = {
       title: 'Unity Catalog and governance',
       summary:
         'Explain the three-level namespace, managed and external tables, grants, row filters and column masks, lineage and system tables.',
-      minutes: 15,
+      minutes: 18,
       body: `
-        **Unity Catalog** is the governance layer of Databricks. It holds the metadata, the
-        permissions, the lineage and the audit log for tables, views, volumes, functions and ML
-        models, across every workspace that is attached to it.
+        ## Start with the problem
 
-        ## The object model
+        A company has five Databricks workspaces. Each has its own table list and its own permissions.
+        An analyst is removed from the PII group in one workspace and can still read emails in another.
+        Nobody can answer "who read the riders table last week?" or "which dashboards use this column?".
+
+        **Unity Catalog** is the governance layer of Databricks. It holds the metadata, the permissions,
+        the lineage and the audit log for tables, views, volumes, functions and ML models, across every
+        workspace that is attached to it. One set of rules, everywhere.
+
+        ## Idea 1: the object model, like a building
 
         ~~~text
-        metastore (one per cloud region)
-        └── catalog            prod, dev, raw
-            └── schema         trips
-                ├── table      prod.trips.fct_trips
-                ├── view
-                ├── volume     /Volumes/prod/trips/landing/   (files)
-                ├── function   (also row filters and masks)
-                └── model
+        metastore
+        (one per cloud region)
+        └─ catalog
+           e.g. prod, dev, raw
+           └─ schema
+              e.g. trips
+              ├─ table
+              ├─ view
+              ├─ volume (files)
+              ├─ function
+              └─ model
         ~~~
 
-        Every object has a three-part name: «catalog.schema.object». Workspaces attach to the
-        regional metastore, and a catalog can be bound to only some workspaces, for example to
-        keep «prod» out of the dev workspace.
+        Think of a building (the metastore), its floors (catalogs), the rooms on each floor (schemas),
+        and the things in each room (tables, views, volumes, functions and models).
 
-        The old per-workspace Hive metastore still shows up as the «hive_metastore» catalog until
-        you migrate.
+        - Every object has a three-part name: «catalog.schema.object», such as
+          «prod.trips.fct_trips».
+        - A **volume** holds files, at a path such as «/Volumes/prod/trips/landing/».
+        - **Functions** also serve as row filters and masks.
+        - Workspaces attach to the regional metastore. A catalog can be bound to only some workspaces,
+          for example to keep «prod» out of the dev workspace.
 
-        ## Managed and external tables
+        The old per-workspace Hive metastore still shows up as the «hive_metastore» catalog until you
+        migrate.
 
-        | | Managed table | External table |
-        |---|---|---|
-        | Files live in | Storage that Unity Catalog manages | A path you choose |
-        | DROP TABLE | Deletes the data (UNDROP works for 7 days) | Deletes only the metadata |
-        | Maintenance | Predictive optimization runs OPTIMIZE and VACUUM for you | You schedule it |
-        | Use for | The default for new tables | Data that other systems also write to |
+        ## Idea 2: managed or external tables
+
+        **Managed table.**
+
+        - Files live in storage that Unity Catalog manages.
+        - «DROP TABLE» deletes the data (UNDROP works for 7 days).
+        - Predictive optimization runs OPTIMIZE and VACUUM for you.
+        - Use it as the default for new tables.
+
+        **External table.**
+
+        - Files live at a path you choose.
+        - «DROP TABLE» deletes only the metadata.
+        - You schedule the maintenance.
+        - Use it for data that other systems also write to.
 
         To reach your own bucket, an admin creates a **storage credential** (a cloud IAM role or a
-        managed identity) and an **external location** (a path plus that credential). Users get
-        grants on the external location, never the cloud keys.
+        managed identity) and an **external location** (a path plus that credential). Users get grants
+        on the external location, never the cloud keys.
 
-        ## Grants
+        ## Idea 3: grants, a key for every door
 
-        Privileges inherit downward, and a user needs a privilege at every level to reach a table.
+        Privileges inherit downward, and a user needs a privilege at **every level** to reach a table.
+        To reach a room, you need the key to the building floor, the room, and the cupboard.
 
         ~~~sql
         GRANT USE CATALOG ON CATALOG prod TO analysts;
@@ -852,13 +1114,13 @@ export const track: Track = {
         GRANT SELECT ON SCHEMA prod.trips TO analysts;
         ~~~
 
-        «SELECT» on the schema covers every current and future table in it. Grant to **groups**,
-        never to people, and give each catalog an owner group.
+        «SELECT» on the schema covers every current and future table in it. Grant to **groups**, never
+        to people, and give each catalog an owner group.
 
-        ## Row filters and column masks
+        ## Idea 4: row filters and column masks
 
-        A row filter or a mask is a SQL function that Unity Catalog applies on every read, for
-        every engine.
+        A row filter or a mask is a SQL function that Unity Catalog applies on **every read, for every
+        engine**.
 
         ~~~sql
         CREATE FUNCTION prod.gov.mask_email(email STRING)
@@ -873,22 +1135,32 @@ export const track: Track = {
         ALTER TABLE prod.trips.fct_trips SET ROW FILTER prod.gov.city_filter ON (city_id);
         ~~~
 
-        At scale, attach policies to **tags** instead of to each table, so a new column tagged
-        «pii» is masked the day it lands. Databricks calls this attribute-based access control.
+        - The mask shows real emails only to «pii_readers». Everyone else sees «***».
+        - The row filter shows all cities to «global_ops», and only their assigned cities to everyone
+          else.
 
-        ## Lineage, audit and system tables
+        At scale, attach policies to **tags** instead of to each table, so a new column tagged «pii» is
+        masked the day it lands. Databricks calls this attribute-based access control.
 
-        Unity Catalog captures **column-level lineage** for queries that run on Databricks
-        compute, without extra code. The **system tables** in the «system» catalog expose the rest
-        as data you can query:
+        ## Idea 5: lineage, audit and system tables
+
+        Unity Catalog captures **column-level lineage** for queries that run on Databricks compute,
+        without extra code. The **system tables** in the «system» catalog expose the rest as data you
+        can query:
 
         - «system.access.audit»: who read or changed what.
         - «system.billing.usage»: DBUs per job, warehouse and tag.
         - «system.query.history»: SQL warehouse queries and their run time.
 
-        **Delta Sharing** shares live tables with another account or company without copying
-        them, through an open protocol. Unity Catalog itself was open-sourced in 2024, and it
-        serves Delta and Iceberg tables to outside engines.
+        **Delta Sharing** shares live tables with another account or company without copying them,
+        through an open protocol. Unity Catalog itself was open-sourced in 2024, and it serves Delta and
+        Iceberg tables to outside engines.
+
+        ## Now say it like a senior engineer
+
+        Unity Catalog is one regional metastore of catalogs, schemas and objects shared by all attached
+        workspaces. Grants inherit and are given to groups; row filters and masks are functions applied
+        on every read, ideally through tags; lineage and audit come as system tables.
 
         > [!senior] Migrating from the Hive metastore is a project, not a command
         > Inventory tables and jobs first; Databricks provides the UCX tool for this. Map old
@@ -899,6 +1171,12 @@ export const track: Track = {
         > [!trap] Granting on the bucket instead of in the catalog
         > If analysts still have direct read access to the S3 bucket, they can bypass every row
         > filter and mask. Remove direct bucket access once tables are governed by Unity Catalog.
+
+        ## In one breath
+
+        Unity Catalog is one building of catalogs, schemas and tables shared by every workspace, with
+        keys given to groups at every level. Masks and row filters apply on every read, lineage and audit
+        are queryable tables, and none of it helps if people can still read the bucket directly.
       `,
       checks: [
         {
@@ -931,25 +1209,56 @@ export const track: Track = {
       title: 'Snowflake, Databricks or BigQuery?',
       summary:
         'Compare the platforms on the axes interviewers care about, and give a recommendation with its trade-offs.',
-      minutes: 12,
+      minutes: 14,
       body: `
-        "Why Snowflake and not Databricks?" is a common senior question. There is no right
-        platform. There is a right **reason**, tied to the workload and the team.
+        ## Start with the problem
 
-        ## The axes that matter
+        The interviewer asks: "Why Snowflake and not Databricks?" Many candidates answer with a feeling:
+        "Snowflake is easier" or "Databricks is more powerful". The interviewer hears that you have used
+        one of them.
 
-        | Axis | Snowflake | Databricks | BigQuery |
-        |---|---|---|---|
-        | Core strength | Managed SQL warehouse | Spark, ML and streaming on open tables | Serverless SQL warehouse |
-        | Compute model | Warehouses you size; per-second credits | Clusters or serverless; DBUs plus VMs | Slots, or pay per TB scanned |
-        | Storage | Managed micro-partitions, or Iceberg | Delta or Iceberg in your bucket | Managed Capacitor, or BigLake Iceberg |
-        | Tuning effort | Low | Medium to high | Low |
-        | Languages | SQL first; Python through Snowpark | Python, Scala, SQL | SQL first; Python through BigFrames |
-        | Streaming | Snowpipe Streaming, dynamic tables | Structured Streaming | Storage Write API, continuous queries |
-        | Governance | RBAC, masking and row policies, Horizon | Unity Catalog | IAM, policy tags, Dataplex |
-        | Sharing | Secure data sharing, Marketplace | Delta Sharing | Analytics Hub |
+        There is no right platform. There is a right **reason**, tied to the workload and the team. A
+        good answer compares the platforms on the same axes, then chooses.
 
-        ## The gap is closing
+        ## Idea 1: three platforms on the same axes
+
+        Think of three cars: an automatic family car, a manual sports car with a big boot for tools, and
+        a taxi you pay per trip. All get you there; they suit different drivers.
+
+        **Snowflake.**
+
+        - Core strength: a managed SQL warehouse.
+        - Compute: warehouses you size, per-second credits.
+        - Storage: managed micro-partitions, or Iceberg.
+        - Tuning effort: low.
+        - Languages: SQL first; Python through Snowpark.
+        - Streaming: Snowpipe Streaming, dynamic tables.
+        - Governance: RBAC, masking and row policies, Horizon.
+        - Sharing: secure data sharing, Marketplace.
+
+        **Databricks.**
+
+        - Core strength: Spark, ML and streaming on open tables.
+        - Compute: clusters or serverless; DBUs plus VMs.
+        - Storage: Delta or Iceberg in your bucket.
+        - Tuning effort: medium to high.
+        - Languages: Python, Scala, SQL.
+        - Streaming: Structured Streaming.
+        - Governance: Unity Catalog.
+        - Sharing: Delta Sharing.
+
+        **BigQuery.**
+
+        - Core strength: a serverless SQL warehouse.
+        - Compute: slots, or pay per TB scanned.
+        - Storage: managed Capacitor, or BigLake Iceberg.
+        - Tuning effort: low.
+        - Languages: SQL first; Python through BigFrames.
+        - Streaming: Storage Write API, continuous queries.
+        - Governance: IAM, policy tags, Dataplex.
+        - Sharing: Analytics Hub.
+
+        ## Idea 2: the gap is closing
 
         Each platform now copies the others' strengths:
 
@@ -961,16 +1270,22 @@ export const track: Track = {
 
         So the decision rests less on features and more on cost model, skills and lock-in.
 
-        ## A structure for the answer
+        ## Idea 3: six questions that structure the answer
 
         1. **Workloads.** BI and SQL only, or heavy Spark, ML and streaming too?
         2. **Team.** Do the people write SQL or Python? Who will tune clusters?
         3. **Cloud and data gravity.** Where does the data already live? Egress is real money.
-        4. **Cost model.** Can finance predict it? Per-second credits, DBUs plus VMs, and per-TB
-           scans fail in different ways.
-        5. **Openness.** Do other engines need the same tables? Then store them as Iceberg or
-           Delta in your own bucket.
+        4. **Cost model.** Can finance predict it? Per-second credits, DBUs plus VMs, and per-TB scans
+           fail in different ways.
+        5. **Openness.** Do other engines need the same tables? Then store them as Iceberg or Delta in
+           your own bucket.
         6. **Governance.** One catalog for every engine, or one per platform?
+
+        ## Now say it like a senior engineer
+
+        Compare on workload, team skills, data gravity, cost model, openness and governance. Since the
+        feature gap is closing, the choice is mostly cost predictability, skills and lock-in, and open
+        table formats keep the option of several engines on one copy.
 
         > [!example] A sample recommendation
         > "A 40-person analytics team that writes SQL, loads data from SaaS tools and runs
@@ -987,6 +1302,12 @@ export const track: Track = {
         > [!trap] Comparing a benchmark instead of your workload
         > Vendor benchmarks run tuned queries on clean data. Run your ten most expensive real
         > queries on each platform for a week before you decide.
+
+        ## In one breath
+
+        No platform is right in general; compare them on the same six questions and choose for this
+        team and workload. Keep shared data in open table formats, and name the cost controls you would
+        set on day one.
       `,
       checks: [
         {
@@ -1007,11 +1328,20 @@ export const track: Track = {
       title: 'Hands-on: build a medallion pipeline on Databricks',
       summary:
         'Build bronze, silver and gold tables on Databricks Free Edition with Auto Loader, a MERGE and a scheduled job, then break it with duplicate files and prove it holds.',
-      minutes: 18,
+      minutes: 19,
       body: `
-        This lab builds a small but real pipeline: raw JSON files land in a volume, Auto Loader
-        ingests them into bronze, a «MERGE» builds a deduplicated silver table, and a gold table
-        serves a dashboard. A job runs the three steps in order. It takes about 45 minutes.
+        Reading about bronze, silver and gold is one thing. Seeing a re-sent file double one table
+        and leave the next one untouched is what makes it stick. That is the goal of this lab.
+
+        You build a small but real pipeline, like a water plant with three tanks:
+
+        - **Bronze** is the intake tank. Raw JSON files land in a volume, and Auto Loader copies every
+          new file in, exactly as received.
+        - **Silver** is the filter tank. A «MERGE» keeps one clean row per trip, so duplicates stop
+          here.
+        - **Gold** is the tap. A small table that a dashboard reads.
+
+        A job runs the three steps in order. It takes about 45 minutes.
 
         ## Before you start
 
@@ -1178,6 +1508,11 @@ export const track: Track = {
         > "Auto Loader with availableNow gives incremental, exactly-once file ingestion into bronze.
         > Silver is an idempotent MERGE on a business key, so replays and re-sent files are safe.
         > Gold is rebuilt from silver. A job orders the steps, and each step can be rerun alone."
+
+        ## In one breath
+
+        Bronze keeps everything it receives, silver keeps one row per business key, and gold is rebuilt
+        from silver. That is why a re-sent file grows bronze but changes nothing a dashboard sees.
       `,
       checks: [
         {
@@ -1210,10 +1545,11 @@ export const track: Track = {
       title: 'Hands-on: the same pipeline as a declarative pipeline',
       summary:
         'Rebuild the medallion lab with Lakeflow Declarative Pipelines: streaming tables, expectations, AUTO CDC and a materialized view, and read the data quality metrics.',
-      minutes: 15,
+      minutes: 16,
       body: `
-        The first lab wired every step by hand: checkpoints, «MERGE» logic and task order. A
-        **declarative pipeline** lets you state the tables you want. The platform works out the
+        The first lab wired every step by hand: checkpoints, «MERGE» logic and task order. That is
+        like giving a taxi driver every turn. A **declarative pipeline** is like giving only the
+        address: you state the tables you want. The platform works out the
         order, the checkpoints, retries and incremental refresh. On Databricks this is **Lakeflow
         Declarative Pipelines**, formerly called Delta Live Tables (DLT). The same model is now part
         of open source Spark as Spark Declarative Pipelines.
@@ -1306,12 +1642,19 @@ export const track: Track = {
 
         ## Hand-built or declarative?
 
-        | | Hand-built (lab 1) | Declarative (this lab) |
-        |---|---|---|
-        | Control | Full: any Spark code | Within the framework's model |
-        | Boilerplate | Checkpoints, MERGE, task order | Little |
-        | Data quality | Your own checks | Expectations with metrics built in |
-        | Portability | Plain Spark and Delta | Tied to the platform (with a growing open source core) |
+        **Hand-built (lab 1).**
+
+        - Control: full. Any Spark code.
+        - Boilerplate: checkpoints, MERGE and task order, all yours.
+        - Data quality: your own checks.
+        - Portability: plain Spark and Delta.
+
+        **Declarative (this lab).**
+
+        - Control: within the framework's model.
+        - Boilerplate: little.
+        - Data quality: expectations, with metrics built in.
+        - Portability: tied to the platform, with a growing open source core.
 
         ## Clean up
 
@@ -1322,6 +1665,12 @@ export const track: Track = {
         > of the plumbing and give quality metrics for free. For unusual logic, cross-system
         > coordination or engine portability, I keep hand-built jobs." Interviewers want the trade-off,
         > not loyalty to a feature.
+
+        ## In one breath
+
+        A declarative pipeline lets you describe bronze, silver and gold, and the platform handles
+        order, checkpoints, deduplication and quality metrics. Use it for standard flows, and keep
+        hand-built jobs for unusual logic or when you must stay portable.
       `,
       checks: [
         {

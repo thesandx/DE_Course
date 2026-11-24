@@ -13,24 +13,36 @@ export const track: Track = {
       slug: 'design-framework',
       title: 'A framework for the 45-minute design round',
       summary: 'Run a data design interview from vague prompt to defended architecture.',
-      minutes: 15,
+      minutes: 16,
       body: `
-        A design prompt is deliberately vague: "Design analytics for trips." The interviewer wants
-        to see how you turn ambiguity into a system and defend its trade-offs. A steady structure
-        keeps you from drawing boxes too early or running out of time before the deep dive.
+        ## Start with the problem
 
-        ## The six steps
+        The interviewer says: "Design analytics for trips." Then silence.
 
-        | Step | Minutes | What you produce |
-        |---|---|---|
-        | 1. Clarify | 5 to 7 | Consumers, the questions they ask, freshness, correctness, scale |
-        | 2. Estimate | 3 to 5 | Events per second, bytes per day, storage per year, query load |
-        | 3. Data model | 5 | Events and the core tables at their grain |
-        | 4. Architecture | 10 | Ingest, process, store, serve, with the reason for each box |
-        | 5. Deep dive | 10 to 15 | The hardest part: late data, dedup, skew, exactly-once, backfill |
-        | 6. Operate and evolve | 5 | Monitoring, SLOs, failure modes, cost, what changes at 10x |
+        Two common ways to fail. One candidate starts drawing Kafka, Flink and Pinot at minute one, and at
+        minute 30 learns that the main user is finance, who needs exact daily numbers. Another candidate
+        asks good questions for 25 minutes and never reaches the hard part.
 
-        ## Questions that change the design
+        A design prompt is deliberately vague. The interviewer wants to see how you turn ambiguity into a
+        system and defend its trade-offs. A steady structure keeps you from drawing boxes too early, or
+        running out of time before the deep dive.
+
+        ## Idea 1: six steps, like building a house
+
+        You ask the family what they need, estimate the size, draw the floor plan, build, inspect the
+        tricky parts, and plan the maintenance.
+
+        1. **Clarify** (5 to 7 minutes): consumers, the questions they ask, freshness, correctness,
+           scale.
+        2. **Estimate** (3 to 5 minutes): events per second, bytes per day, storage per year, query load.
+        3. **Data model** (5 minutes): events and the core tables at their grain.
+        4. **Architecture** (10 minutes): ingest, process, store, serve, with the reason for each box.
+        5. **Deep dive** (10 to 15 minutes): the hardest part. Late data, dedup, skew, exactly-once,
+           backfill.
+        6. **Operate and evolve** (5 minutes): monitoring, SLOs, failure modes, cost, what changes at
+           10x.
+
+        ## Idea 2: five questions that change the design
 
         - **Who consumes it?** A city ops dashboard, a pricing model and finance want different things.
         - **How fresh?** Seconds, minutes, hours or daily. Each step down halves the complexity.
@@ -38,16 +50,26 @@ export const track: Track = {
         - **How much?** Events per second at peak, not average. Peak is often 3x to 5x average.
         - **How far back?** Retention and backfill needs decide storage and replay design.
 
+        Tiny estimate example. 20 million trips a day, 10 events per trip, 1 KB each. That is 200 million
+        events a day, about 2,300 per second on average, and maybe 10,000 per second at peak. 200 GB of raw
+        events a day, about 73 TB a year before compression.
+
+        ## Idea 3: drawing the architecture
+
+        Draw left to right: sources, ingestion, processing, storage, serving, consumers. Label each arrow
+        with what flows and how fast. Name a technology only after you name the need it fills.
+
+        ## Now say it like a senior engineer
+
+        Clarify consumers, freshness, correctness, peak scale and history; estimate; model the grain; draw
+        left to right with a reason per box; then lead a deep dive on the riskiest part, and close with
+        operations and 10x growth.
+
         > [!example] Turning a prompt into requirements
         > "Design trip analytics" becomes: city ops need trips, cancellations and wait times per
         > city per minute with under 1 minute of delay; finance needs daily revenue that matches
         > payments exactly; analysts need 3 years of history in SQL. Now you have three paths with
         > different freshness and correctness, which is the real design.
-
-        ## Drawing the architecture
-
-        Draw left to right: sources, ingestion, processing, storage, serving, consumers. Label each
-        arrow with what flows and how fast. Name a technology only after you name the need it fills.
 
         > [!trap] The tour of every tool
         > Listing Kafka, Flink, Spark, Airflow, Pinot and dbt in the first two minutes sounds
@@ -57,6 +79,12 @@ export const track: Track = {
         > After the high-level design, say "The hardest part here is late and duplicate events
         > from phones. Let me go deep on that unless you'd prefer another area." Seniors pick the
         > risk; mid-level candidates wait to be asked.
+
+        ## In one breath
+
+        Turn the vague prompt into requirements first: who, how fresh, how correct, how much, how far back.
+        Then estimate, model, draw with a reason for each box, and choose the hardest part for the deep dive
+        yourself.
       `,
       checks: [
         {
@@ -87,50 +115,75 @@ export const track: Track = {
       slug: 'building-blocks',
       title: 'Building blocks and serving stores',
       summary: 'Match each layer of a data system to the right kind of store or engine.',
-      minutes: 15,
+      minutes: 16,
       body: `
-        Most data designs use the same layers. The skill is picking the right component per layer
-        from the access pattern, and saying why.
+        ## Start with the problem
 
-        ## Ingestion
+        A candidate puts everything in one store: "events go into BigQuery, and the ops dashboard, the app
+        and the pricing model all read BigQuery." Then the interviewer asks: "The app needs a driver's
+        rating in 5 ms, 50,000 times a second. And 300 city managers refresh the dashboard every 10
+        seconds." BigQuery is built for neither.
 
-        - **Event bus** (Kafka, Pub/Sub): decouples producers from consumers, buffers spikes, allows replay.
-        - **Change data capture** (Debezium, Datastream): streams database changes without load on the primary.
+        Most data designs use the same layers. The skill is picking the right component per layer **from
+        the access pattern**, and saying why.
+
+        ## Idea 1: ingestion, how data gets in
+
+        - **Event bus** (Kafka, Pub/Sub): decouples producers from consumers, buffers spikes, allows
+          replay. Like a post office sorting room between senders and receivers.
+        - **Change data capture** (Debezium, Datastream): streams database changes without load on the
+          primary.
         - **Batch extract**: fine for daily third-party files or small reference tables.
 
-        ## Processing
+        ## Idea 2: processing, how data is shaped
 
-        - **Stream processors** (Flink, Dataflow, Spark Structured Streaming): windows, joins, state, seconds of latency.
+        - **Stream processors** (Flink, Dataflow, Spark Structured Streaming): windows, joins, state,
+          seconds of latency.
         - **Batch engines** (Spark, BigQuery, Trino): large scans, backfills, complex joins.
         - **Orchestrators** (Airflow, Prefect, Dagster): schedule and order batch work.
 
-        ## Storage and serving
+        ## Idea 3: storage and serving, chosen by the question asked
 
-        Choose the serving store from the query pattern.
+        A library, a phone book and a scoreboard all hold information, but you use them for different
+        questions. Choose the serving store from the query pattern.
 
-        | Query pattern | Good fit | Why |
-        |---|---|---|
-        | Ad hoc SQL over years of data | BigQuery, Trino on Iceberg | Columnar scans, separate compute |
-        | Sub-second aggregates over fresh events, many concurrent users | Apache Pinot, Apache Druid, ClickHouse | Pre-indexed segments, real-time ingestion |
-        | Point lookups by key at high QPS | Bigtable, Cassandra, Redis | Key-value access in milliseconds |
-        | Features for online models | A feature store with an online KV and offline lake | Same feature definitions for training and serving |
-        | Search over text or logs | Elasticsearch, OpenSearch | Inverted indexes |
+        - **Ad hoc SQL over years of data:** BigQuery, or Trino on Iceberg. Columnar scans, separate
+          compute.
+        - **Sub-second aggregates over fresh events, with many concurrent users:** Apache Pinot, Apache
+          Druid, ClickHouse. Pre-indexed segments and real-time ingestion. That is the ops dashboard.
+        - **Point lookups by key at high QPS:** Bigtable, Cassandra, Redis. Key-value access in
+          milliseconds. That is the driver rating in the app.
+        - **Features for online models:** a feature store, with an online KV and an offline lake. The same
+          feature definitions for training and serving.
+        - **Search over text or logs:** Elasticsearch, OpenSearch. Inverted indexes.
+
+        ## Idea 4: common shapes
+
+        - **Streaming plus lake:** stream processing for fresh aggregates into an OLAP store; the same
+          events land raw in the lake for batch correctness and history.
+        - **Kappa:** one streaming codebase; reprocess history by replaying the log.
+        - **Batch only:** perfectly fine when the freshness need is hours. Say so when it is.
+
+        ## Now say it like a senior engineer
+
+        Ingest through an event bus or CDC, process with a stream engine for seconds and a batch engine for
+        history, and pick each serving store from its query pattern: a warehouse for ad hoc SQL, real-time
+        OLAP for fresh dashboards, a key-value store for lookups, a feature store for models.
 
         > [!example] Uber's public stack as a reference
         > Kafka for events, Flink for streaming, Hudi on HDFS and cloud storage for the lake, Spark
         > and Presto for batch and SQL, Pinot for real-time OLAP behind ops dashboards. Each has a
         > clear job.
 
-        ## Common shapes
-
-        - **Streaming plus lake:** stream processing for fresh aggregates into an OLAP store; the
-          same events land raw in the lake for batch correctness and history.
-        - **Kappa:** one streaming codebase; reprocess history by replaying the log.
-        - **Batch only:** perfectly fine when the freshness need is hours. Say so when it is.
-
         > [!senior] Know when not to stream
         > If the consumer is a daily report, a streaming design adds cost and on-call load for no
         > benefit. Choosing the simpler design, with a reason, is a strong senior signal.
+
+        ## In one breath
+
+        Every design has the same layers: get data in, shape it, store it, serve it. Pick each serving
+        store from the question it must answer and how fast, and do not stream when the reader only looks
+        once a day.
       `,
       checks: [
         {
@@ -162,42 +215,67 @@ export const track: Track = {
       slug: 'correctness-at-scale',
       title: 'Correctness at scale',
       summary: 'Handle duplicates, late data, replays and reconciliation end to end.',
-      minutes: 16,
+      minutes: 17,
       body: `
-        At scale, every unlikely event happens every day. Phones retry, consumers restart,
-        networks partition, and clocks drift. A senior design states how the numbers stay right.
+        ## Start with the problem
 
-        ## Duplicates
+        A one-in-a-million event sounds rare. At 2 billion events a day it happens 2,000 times a day. At
+        scale, every unlikely event happens every day: phones retry, consumers restart, networks
+        partition, and clocks drift.
 
-        Assume at-least-once delivery everywhere. Give every event a stable **event id** created at
-        the source (not at ingestion), and dedupe on it:
+        So "the numbers look right in the demo" is not enough. A senior design states **how the numbers
+        stay right**, one source of error at a time.
+
+        ## Idea 1: duplicates, assume they will come
+
+        Assume at-least-once delivery everywhere. A phone sends a "trip completed" event, the network
+        drops the reply, and the phone sends it again. Now there are two.
+
+        Give every event a stable **event id** created at the source (not at ingestion), like a serial
+        number printed on a banknote. Then dedupe on it:
 
         - In the stream, keep seen ids in keyed state with a TTL longer than the maximum retry delay.
         - In the lake, dedupe with «ROW_NUMBER() OVER (PARTITION BY event_id ...)» or a MERGE on the id.
 
-        ## Late and out-of-order events
+        If the id were created at ingestion, the two copies would get two different ids, and you could
+        never tell they are the same.
 
-        Use **event time** for business metrics. Pick a watermark from the measured lateness
-        distribution, and decide what happens to events after it: drop, send to a side output, or
-        apply as a correction to an already-emitted result.
+        ## Idea 2: late and out-of-order events
 
-        ## Idempotent sinks
+        Use **event time** for business metrics. Pick a watermark from the measured lateness distribution,
+        and decide what happens to events after it:
 
-        Exactly-once inside a processor means nothing if the sink duplicates writes. Make sinks
-        idempotent: upsert by key, overwrite whole partitions, or commit output and offsets in one
-        transaction.
+        - drop them;
+        - send them to a side output;
+        - or apply them as a correction to an already-emitted result.
 
-        ## Replays and backfills
+        ## Idea 3: idempotent sinks
+
+        Exactly-once inside a processor means nothing if the sink duplicates writes. Like a careful
+        cashier who then double-posts the receipt to the accounts.
+
+        Make sinks idempotent:
+
+        - upsert by key;
+        - overwrite whole partitions;
+        - or commit output and offsets in one transaction.
+
+        ## Idea 4: replays and backfills
 
         - Keep raw events long enough to replay (log retention or the raw lake layer).
         - Make every job a function of its input range, so re-running a range gives the same output.
-        - Version outputs during a large backfill and switch readers when the new version is verified.
+        - Version outputs during a large backfill, and switch readers when the new version is verified.
 
-        ## Reconciliation
+        ## Idea 5: reconciliation
 
-        For money and other critical numbers, compare the fast path with a source of truth on a
-        schedule. Streaming gives a quick estimate; the daily batch from the ledger is the number
-        finance signs.
+        For money and other critical numbers, compare the fast path with a source of truth on a schedule.
+        Streaming gives a quick estimate; the daily batch from the ledger is the number finance signs.
+
+        ## Now say it like a senior engineer
+
+        Assume at-least-once and dedupe on source-generated event ids. Use event time with a measured
+        watermark and a policy for late data. Make sinks idempotent, keep raw data for replay, make jobs
+        pure functions of their input range, and reconcile critical numbers against the source of truth.
 
         > [!trap] "Exactly-once" in one sentence
         > Saying "Kafka has exactly-once, so we're fine" will get a follow-up that breaks it. Say
@@ -207,6 +285,12 @@ export const track: Track = {
         > [!senior] Two paths, one definition
         > When you have a streaming and a batch path, define each metric once (shared code or a
         > semantic layer). Different logic in two paths guarantees the numbers disagree.
+
+        ## In one breath
+
+        At scale, rare failures happen daily, so plan for them: dedupe on ids made at the source, handle
+        late events on purpose, write idempotently, keep raw data to replay, and reconcile money against
+        the ledger.
       `,
       checks: [
         {
@@ -237,68 +321,106 @@ export const track: Track = {
       slug: 'worked-trip-analytics',
       title: 'Worked design: Uber trip analytics',
       summary: 'Follow a complete design for trip analytics, from requirements to failure modes.',
-      minutes: 18,
+      minutes: 19,
       body: `
-        This walk-through shows the framework on a real-sized prompt: "Design the data system
-        behind trip analytics for a ride-hailing company."
+        ## Start with the problem
 
-        ## 1. Requirements
+        The prompt: "Design the data system behind trip analytics for a ride-hailing company."
 
-        - City ops: trips, cancellations, wait times and active drivers per city every minute, under 1 minute delay.
-        - Finance: daily gross bookings and revenue per city that reconcile with payments exactly.
-        - Analysts: 3 years of trip history in SQL.
-        - Scale assumption: 30 million trips a day, about 25 events per trip, peaks at 4x average.
+        The other lessons gave you the framework and the building blocks. This lesson puts them together
+        on one real-sized prompt, step by step, so you can see how each requirement turns into a box, and
+        each box earns its place.
 
-        ## 2. Estimates
+        ## Step 1: requirements, three users with three needs
 
-        - Events: 30M x 25 = 750M a day, about 8,700 per second on average, about 35,000 per second at peak.
-        - At 1 KB per event: 750 GB a day raw, about 270 TB a year before compression; Parquet
-          brings that down several times.
+        - **City ops:** trips, cancellations, wait times and active drivers per city every minute, with
+          under 1 minute of delay.
+        - **Finance:** daily gross bookings and revenue per city that reconcile with payments exactly.
+        - **Analysts:** 3 years of trip history in SQL.
+        - **Scale assumption:** 30 million trips a day, about 25 events per trip, peaks at 4x average.
 
-        ## 3. Data model
+        Notice the shape already: one fast and approximate need, one slow and exact need, one big history
+        need. That is the real design.
 
-        - «trip_events»: one row per state change (requested, accepted, arrived, started, completed, cancelled).
+        ## Step 2: estimates, numbers that pick the tools
+
+        - Events: 30M × 25 = 750M a day. That is about 8,700 per second on average, and about 35,000 per
+          second at peak.
+        - At 1 KB per event: 750 GB a day raw, about 270 TB a year before compression. Parquet brings that
+          down several times.
+
+        35,000 events a second rules out "write each event to a database". 270 TB a year rules out "keep
+        everything in the serving store".
+
+        ## Step 3: data model, decide the grain
+
+        - «trip_events»: one row per state change (requested, accepted, arrived, started, completed,
+          cancelled).
         - «fct_trips»: one row per trip, an accumulating snapshot with a timestamp per milestone.
         - Dimensions: city, driver (SCD Type 2 for city and vehicle), rider, product.
 
-        ## 4. Architecture
+        ## Step 4: architecture, two paths from one log
 
         ~~~text
         rider and driver apps
-              |  events: event_id, event_ts
-              v
-        Kafka trip-events (key: trip_id)
-              |------------------------|
-              v                        v
-        Flink: 1-min city windows   Raw sink to lake
-              |                        |
-              v                        v
-        Pinot (real-time OLAP)      Spark: fct_trips
-              |                        |
-              v                        v
-        ops dashboards              BigQuery or Trino
+         (event_id, event_ts)
+                ↓
+        Kafka: trip-events
+         (key: trip_id)
+                ↓
+          ┌─────┴──────┐
+          ↓            ↓
+        FAST PATH    SLOW PATH
+
+        Fast path:
+        Flink 1-min city windows
+          → Pinot (real-time OLAP)
+          → ops dashboards
+
+        Slow path:
+        raw sink to the lake
+          → Spark builds fct_trips
+          → BigQuery or Trino
+          → finance and analysts
         ~~~
 
-        ## 5. Deep dive: late and duplicate events
+        Each box answers a requirement: Kafka absorbs 35,000 events a second and allows replay; Flink
+        gives minute windows; Pinot serves many fast dashboard queries; the lake holds 3 years cheaply;
+        the batch path gives finance exact numbers.
 
-        - Phones go offline and send events minutes later. Flink uses event time with a watermark
-          from measured lateness (say 2 minutes), and late updates upsert corrected counts into Pinot.
-        - Duplicates from retries are removed by «event_id» in Flink state (TTL 1 day) and again
-          in the batch layer.
-        - «fct_trips» is built incrementally: changed trips are merged by «trip_id», with a version
-          guard on the latest event time.
+        ## Step 5: deep dive on the real risk, late and duplicate events
 
-        ## 6. Operate
+        - Phones go offline and send events minutes later. Flink uses event time with a watermark from
+          measured lateness (say 2 minutes), and late updates upsert corrected counts into Pinot.
+        - Duplicates from retries are removed by «event_id» in Flink state (TTL 1 day), and again in the
+          batch layer.
+        - «fct_trips» is built incrementally: changed trips are merged by «trip_id», with a version guard
+          on the latest event time.
 
-        - SLOs: dashboard delay under 1 minute 99% of the time; finance table by 06:00 UTC.
-        - Reconciliation: daily revenue from «fct_trips» against the payments ledger, alert above 0.1%.
-        - Failure modes: Kafka consumer lag (alert, autoscale Flink), a bad deploy (replay from
-          Kafka retention), hot partitions on big cities (keyed by trip, not city).
-        - At 10x: more partitions, tiered storage on Kafka, pre-aggregated Pinot star-tree indexes.
+        ## Step 6: operate
+
+        - **SLOs:** dashboard delay under 1 minute 99% of the time; finance table by 06:00 UTC.
+        - **Reconciliation:** daily revenue from «fct_trips» against the payments ledger, with an alert
+          above 0.1%.
+        - **Failure modes:** Kafka consumer lag (alert, autoscale Flink); a bad deploy (replay from Kafka
+          retention); hot partitions on big cities (keyed by trip, not city).
+        - **At 10x:** more partitions, tiered storage on Kafka, pre-aggregated Pinot star-tree indexes.
+
+        ## Now say it like a senior engineer
+
+        Three consumers set three freshness and correctness levels. Estimates of 35,000 events a second
+        and 270 TB a year justify Kafka, a streaming path into Pinot and a lake with a batch path. The deep
+        dive covers late and duplicate events, and operations close with SLOs and money reconciliation.
 
         > [!senior] What made this answer senior
         > Three consumers, three freshness levels; numbers that justify the components; a deep
         > dive on the real risk; and a reconciliation path for money.
+
+        ## In one breath
+
+        Start from three users with different needs, let the numbers pick the tools, and split one Kafka
+        log into a fast path for dashboards and a slow, exact path for finance and history. Go deep on late
+        and duplicate events, and finish with SLOs and a reconciliation against payments.
       `,
       checks: [
         {
@@ -329,41 +451,65 @@ export const track: Track = {
       slug: 'staff-level-design',
       title: 'Thinking at staff level',
       summary: 'Add platform thinking, migration plans and cost to your designs.',
-      minutes: 13,
+      minutes: 14,
       body: `
-        A senior design solves the problem well. A staff design also considers the organization:
-        many teams, years of change, money, and the path from today's system to the new one.
+        ## Start with the problem
 
-        ## Platform, not pipeline
+        Two candidates give the same clean design for trip analytics. The senior candidate stops there.
+        The staff candidate adds: "Ten other teams will want this. Today's system has to keep running while
+        we move. Here is what it costs. And here is what I would not build yet."
 
-        If ten teams need the same thing, build a paved road: a self-serve way to publish a
-        dataset with a contract, tests, lineage and SLOs by default. Measure adoption, not only
-        uptime.
+        A senior design solves the problem well. A staff design also considers the **organization**: many
+        teams, years of change, money, and the path from today's system to the new one.
 
-        ## Migrations
+        ## Idea 1: platform, not pipeline
 
-        Large designs usually replace something. A credible plan has:
+        If ten teams need the same thing, build a paved road: a self-serve way to publish a dataset with a
+        contract, tests, lineage and SLOs by default.
 
-        - **Dual running:** old and new produce the same outputs; compare automatically.
+        Think of a city that builds proper roads instead of letting every household cut its own path
+        through the fields. Measure **adoption**, not only uptime. A road nobody uses is not a success.
+
+        ## Idea 2: migrations
+
+        Large designs usually replace something. Like moving house while still living in it. A credible
+        plan has:
+
+        - **Dual running:** old and new produce the same outputs; compare them automatically.
         - **Incremental cut-over:** one consumer or one domain at a time, with a rollback path.
         - **A finish line:** a date the old system is switched off, and someone who owns it.
 
-        ## Cost as a design dimension
+        Without a finish line, you end up paying for two houses forever.
 
-        Estimate the bill. Storage at petabyte scale, streaming compute running all day, and
-        warehouse scans by hundreds of analysts all add up. Show the lever that cuts cost the most
-        (tiered storage, pre-aggregation, partition pruning, retention) and its trade-off.
+        ## Idea 3: cost as a design dimension
 
-        ## Multi-tenancy and isolation
+        Estimate the bill. Storage at petabyte scale, streaming compute running all day, and warehouse
+        scans by hundreds of analysts all add up. Show the lever that cuts cost the most (tiered storage,
+        pre-aggregation, partition pruning, retention), and its trade-off.
 
-        Shared clusters need quotas, priorities and isolation, so one team's backfill cannot
-        delay another team's SLO. Mention workload isolation when a design serves many teams.
+        ## Idea 4: multi-tenancy and isolation
 
-        ## Build or buy
+        Shared clusters need quotas, priorities and isolation, so one team's backfill cannot delay another
+        team's SLO. Like lanes on a motorway, with one lane kept for ambulances. Mention workload isolation
+        when a design serves many teams.
 
-        Compare a managed service with building: the team you need to run it, how core it is to
-        the business, lock-in, and cost at your scale. Uber built Hudi and contributes to open
-        source because its scale and needs were unusual; most companies should buy.
+        ## Idea 5: build or buy
+
+        Compare a managed service with building it:
+
+        - the team you need to run it;
+        - how core it is to the business;
+        - lock-in;
+        - cost at your scale.
+
+        Uber built Hudi and contributes to open source because its scale and needs were unusual. Most
+        companies should buy.
+
+        ## Now say it like a senior engineer
+
+        At staff level, the design includes a self-serve platform measured by adoption, a migration with
+        dual running, incremental cut-over and a switch-off date, a cost estimate with the biggest lever,
+        isolation between tenants, a build-or-buy case, and explicit scope cuts with triggers to revisit.
 
         > [!senior] Say what you would not build
         > "We don't need a feature store yet; two models share three features. Revisit at five
@@ -371,6 +517,12 @@ export const track: Track = {
 
         The **Staff-level judgement** track goes further: ambiguity, strategy, design reviews,
         influence and the business case, with problems that practise each one.
+
+        ## In one breath
+
+        A staff design solves the problem for the whole organization: a paved road for many teams, a
+        migration with a finish line, a known cost, isolation between teams, and a clear build-or-buy call.
+        It also says what not to build yet, and when to revisit.
       `,
       checks: [
         {

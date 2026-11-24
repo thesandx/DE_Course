@@ -13,55 +13,91 @@ export const track: Track = {
       title: 'Database families and their trade-offs',
       summary:
         'Place relational, key-value, document, wide-column, graph, search, time-series and OLAP stores by the access pattern each one serves.',
-      minutes: 15,
+      minutes: 16,
       body: `
-        A data engineer reads from every kind of database and must say why a team picked it. The
-        question is never "which is best". The question is **which access pattern does this store
-        make cheap, and what does it make expensive**.
+        ## Start with the problem
 
-        ## The families
+        Ask "which database is best?" and you get a fight. The question has no answer, because every
+        database makes some things cheap by making other things expensive. A dictionary is perfect for
+        "what does this word mean?" and useless for "which words appear in this book?". A database is
+        the same.
 
-        | Family | Examples | Cheap | Expensive |
-        |---|---|---|---|
-        | **Relational (OLTP)** | Postgres, MySQL, SQL Server, Oracle | Point reads and writes by key, joins, transactions across rows | Scans over billions of rows, horizontal scale of writes |
-        | **Distributed SQL (NewSQL)** | Spanner, CockroachDB, YugabyteDB, TiDB | SQL and transactions with writes spread over many nodes | Latency of cross-region commits, cost |
-        | **Key-value** | DynamoDB, Redis, RocksDB | Get and put by key at any scale, predictable latency | Any query that is not by key |
-        | **Document** | MongoDB, Firestore, Couchbase | Read a whole nested object in one call, flexible schema | Joins, many-to-many relations, cross-document constraints |
-        | **Wide-column** | Cassandra, ScyllaDB, Bigtable, HBase | Very high write rates, range reads inside one partition key | Ad hoc filters, secondary indexes, read-modify-write |
-        | **Graph** | Neo4j, Neptune, Spanner Graph | Multi-hop traversals (friends of friends, fraud rings) | Wide aggregations |
-        | **Search** | Elasticsearch, OpenSearch, Solr | Full-text relevance, faceted filters | Strong consistency, joins, being a source of truth |
-        | **Time-series** | TimescaleDB, InfluxDB, Prometheus | Append by time, downsampling, recent-window queries | Updates of old points, high-cardinality labels |
-        | **OLAP (columnar)** | BigQuery, Snowflake, ClickHouse, Pinot, Druid | Aggregates over billions of rows and few columns | Single-row updates, high-rate point lookups |
+        A data engineer reads from every kind of database and must explain why a team picked it. So
+        the real question is: **which access pattern does this store make cheap, and what does it make
+        expensive?**
 
-        ## SQL versus NoSQL is the wrong axis
+        ## Idea 1: one shelf per job (the families)
 
-        "NoSQL" grouped stores that dropped joins and multi-row transactions to scale writes across
-        machines. That trade has moved. Spanner and CockroachDB scale SQL with transactions, and
-        DynamoDB and MongoDB now offer multi-item transactions. Compare stores on these axes instead:
+        Read each family as "good at" and "bad at".
 
-        - **Data model:** tables with a fixed schema, nested documents, or opaque values.
-        - **Query flexibility:** ad hoc SQL, or access only by the key you designed for.
-        - **Consistency:** strong by default, tunable, or eventual.
-        - **Scale model:** one primary with replicas, or writes partitioned over many nodes.
-        - **Storage engine:** B-tree (read-optimised) or LSM-tree (write-optimised). See the next lessons.
+        - **Relational (OLTP):** Postgres, MySQL, SQL Server, Oracle. Good at point reads and writes
+          by key, joins, and transactions across rows. Bad at scans over billions of rows, and at
+          spreading writes over many machines.
+        - **Distributed SQL (NewSQL):** Spanner, CockroachDB, YugabyteDB, TiDB. Good at SQL and
+          transactions with writes spread over many nodes. Bad at cross-region commit latency, and
+          cost.
+        - **Key-value:** DynamoDB, Redis, RocksDB. Good at get and put by key, at any scale, with
+          predictable latency. Bad at any query that is not by key.
+        - **Document:** MongoDB, Firestore, Couchbase. Good at reading a whole nested object in one
+          call, with a flexible schema. Bad at joins, many-to-many relations and cross-document rules.
+        - **Wide-column:** Cassandra, ScyllaDB, Bigtable, HBase. Good at very high write rates and
+          range reads inside one partition key. Bad at ad hoc filters, secondary indexes and
+          read-modify-write.
+        - **Graph:** Neo4j, Neptune, Spanner Graph. Good at multi-hop traversals (friends of friends,
+          fraud rings). Bad at wide aggregations.
+        - **Search:** Elasticsearch, OpenSearch, Solr. Good at full-text relevance and faceted
+          filters. Bad at strong consistency, joins, and being a source of truth.
+        - **Time-series:** TimescaleDB, InfluxDB, Prometheus. Good at appending by time,
+          downsampling and recent-window queries. Bad at updating old points, and high-cardinality
+          labels.
+        - **OLAP (columnar):** BigQuery, Snowflake, ClickHouse, Pinot, Druid. Good at aggregates over
+          billions of rows and a few columns. Bad at single-row updates and high-rate point lookups.
 
-        ## Row stores versus column stores
+        ## Idea 2: "SQL versus NoSQL" is the wrong question
 
-        An OLTP row store keeps all columns of a row together in a page, so "fetch order 42" is one
-        page read. A column store keeps each column together, so "sum revenue for 3 billion rows"
-        reads one compressed column and skips the rest. This is why a pipeline copies data **out**
-        of Postgres into BigQuery instead of running dashboards on the primary.
+        "NoSQL" grouped stores that dropped joins and multi-row transactions so they could spread
+        writes across machines. That trade has moved. Spanner and CockroachDB scale SQL with
+        transactions, and DynamoDB and MongoDB now offer multi-item transactions. So compare stores on
+        these five questions instead:
+
+        1. **Data model:** tables with a fixed schema, nested documents, or opaque values?
+        2. **Query flexibility:** ad hoc SQL, or only by the key you designed for?
+        3. **Consistency:** strong by default, tunable, or eventual?
+        4. **Scale model:** one primary with replicas, or writes partitioned over many nodes?
+        5. **Storage engine:** B-tree (read-optimised) or LSM-tree (write-optimised)? The next
+           lessons explain both.
+
+        ## Idea 3: rows together, or columns together
+
+        Picture a spreadsheet printed two ways. In one, each card holds **one whole row**. In the
+        other, each card holds **one whole column**.
+
+        - To fetch "order 42", the row cards win: one card has everything. That is an OLTP **row
+          store**: one page read.
+        - To "sum revenue for 3 billion rows", the column cards win: read only the revenue card,
+          compressed, and skip the rest. That is a **column store**.
+
+        This is why a pipeline copies data **out** of Postgres into BigQuery, instead of running
+        dashboards on the app's primary database.
 
         > [!example] Uber-shaped stack
-        > Trips are written to a sharded OLTP store, driver locations to a key-value store with a
-        > short TTL, events to Kafka, history to a lakehouse, and city dashboards to a real-time
-        > OLAP store such as Pinot. Each store has one job. The data engineer owns the copies.
+        > Trips are written to a sharded OLTP store, driver locations to a key-value store with a short
+        > TTL, events to Kafka, history to a lakehouse, and city dashboards to a real-time OLAP store
+        > such as Pinot. Each store has one job. The data engineer owns the copies.
+
+        ## Now say it like a senior engineer
 
         > [!senior] Say the access pattern first
-        > A strong answer: "Writes are 50,000 a second by device id and reads are the last hour for
-        > one device, so I want a wide-column or key-value store with device id as the partition key.
+        > A strong answer: "Writes are 50,000 a second by device id and reads are the last hour for one
+        > device, so I want a wide-column or key-value store with device id as the partition key.
         > Analysts get a copy in the warehouse." Naming a product before the access pattern is the
         > mid-level answer.
+
+        ## In one breath
+
+        Every database makes some access patterns cheap and others expensive, so start from the access
+        pattern, not the product name. Row stores fetch one record fast; column stores add up billions;
+        real systems use several and copy between them.
       `,
       checks: [
         {
@@ -94,43 +130,68 @@ export const track: Track = {
       title: 'How a database executes a query',
       summary:
         'Follow a query through parse, plan, optimise and execute, and read a Postgres EXPLAIN ANALYZE to find the slow node.',
-      minutes: 16,
+      minutes: 17,
       body: `
-        Every engine, from Postgres to Spark to BigQuery, runs the same pipeline. Know it once and
-        you can reason about any slow query.
+        ## Start with the problem
+
+        A query that took 2 seconds yesterday takes an hour today. Nobody changed the SQL. What
+        changed is how the database **decided to run it**. To fix it, you need to know how a database
+        turns your SQL text into work, and where that decision can go wrong.
+
+        The good news: every engine, from Postgres to Spark to BigQuery, runs the same pipeline. Learn
+        it once, and you can reason about any slow query.
+
+        ## Idea 1: from text to work, in five steps
+
+        Think of a kitchen getting an order slip.
+
+        1. **Parse:** read the slip and check it is written correctly. The result is a syntax tree.
+        2. **Analyse:** check that every dish exists on the menu. Names are resolved against the
+           catalog, and types are checked.
+        3. **Rewrite:** expand "the usual" into its real dishes. Views are expanded, and rules applied.
+        4. **Plan:** the head chef thinks of several ways to cook it and estimates the cost of each,
+           using table statistics.
+        5. **Execute:** the cheapest plan runs, as a tree of operators.
 
         ~~~text
         SQL text
-          └─ parse        → syntax tree
-          └─ analyse      → names resolved against the catalog, types checked
-          └─ rewrite      → views expanded, rules applied
-          └─ plan         → many candidate plans, each costed with table statistics
-          └─ execute      → the cheapest plan runs as a tree of operators
+         → parse
+         → analyse
+         → rewrite
+         → plan (pick cheapest)
+         → execute
         ~~~
 
-        ## Access paths
+        ## Idea 2: how to read a table (access paths)
 
-        | Operator | When the planner picks it |
-        |---|---|
-        | **Seq Scan** | Reading a large share of the table, or no useful index |
-        | **Index Scan** | A selective filter on an indexed column; reads index, then each heap row |
-        | **Index Only Scan** | Every needed column is in the index, and the visibility map is current |
-        | **Bitmap Heap Scan** | Medium selectivity: collect matching row ids, then read pages in order |
+        - **Seq Scan:** read the whole table. Picked when you need a large share of it, or when no
+          index helps.
+        - **Index Scan:** a selective filter on an indexed column. Read the index, then fetch each
+          matching row from the table (the heap).
+        - **Index Only Scan:** every needed column is in the index, and the visibility map is
+          current, so the table is never touched.
+        - **Bitmap Heap Scan:** medium selectivity. Collect all matching row ids first, then read the
+          pages in order, so each page is read once.
 
-        ## Join algorithms
+        ## Idea 3: how to join two tables (join algorithms)
 
-        | Algorithm | Good for | Cost |
-        |---|---|---|
-        | **Nested loop** | A small outer side and an index on the inner side | Outer rows × index lookup |
-        | **Hash join** | Two large inputs, equality condition, the build side fits in memory | Build a hash table once, probe once |
-        | **Merge join** | Both inputs already sorted on the key | Sort (if needed) plus one linear pass |
+        - **Nested loop:** for each row on the small outer side, look up matches through an index on
+          the inner side. Cost: outer rows times one index lookup. Great when the outer side is tiny;
+          terrible when it is not.
+        - **Hash join:** build a hash table from one input, then probe it with the other. Good for two
+          large inputs with an equality condition, when the build side fits in memory.
+        - **Merge join:** both inputs sorted on the key, then one linear pass, like merging two sorted
+          piles of cards. Good when the inputs are already sorted.
 
-        ## The cost model and statistics
+        ## Idea 4: the plan is only as good as the guess
 
-        The optimiser does not run plans to compare them. It **estimates** rows at each step from
-        statistics: row counts, distinct values, most common values and histograms. «ANALYZE»
-        refreshes them. When an estimate is wrong by 100 times, the planner picks a nested loop
-        that runs a million index lookups, and the query takes an hour.
+        The optimiser does not run the plans to compare them. It **estimates** how many rows leave
+        each step, from statistics: row counts, distinct values, most common values and histograms.
+        «ANALYZE» refreshes them.
+
+        Now the failure. If the estimate says 2,000 rows, a nested loop looks cheap: 2,000 index
+        lookups. If the truth is 2 million, that same plan does a million lookups, and the query takes
+        an hour.
 
         ~~~sql
         EXPLAIN (ANALYZE, BUFFERS)
@@ -152,26 +213,34 @@ export const track: Track = {
         ~~~
 
         Read it from the inside out. The scan on «trips» expected 2,100 rows and got 1.85 million.
-        That 880-times error is the bug. Stale statistics after a bulk load are the usual cause, so
-        run «ANALYZE trips» first.
+        That 880-times error is the bug. Stale statistics after a bulk load are the usual cause, so run
+        «ANALYZE trips» first.
 
-        ## Execution models
+        > [!tip] Correlated columns fool the planner
+        > «city = 'SF' AND state = 'CA'» looks twice as selective as it is, because the planner assumes
+        > the columns are independent. In Postgres, «CREATE STATISTICS» on both columns fixes the
+        > estimate.
+
+        ## Idea 5: how operators pass rows (execution models)
 
         - **Iterator (Volcano):** each operator pulls one row at a time from its child. Simple, but
           the per-row function calls cost a lot on analytical work.
         - **Vectorised:** operators pass batches of about 1,000 to 2,000 values, which suits CPU
           caches and SIMD. DuckDB, ClickHouse, Snowflake and Databricks Photon work this way.
-        - **Code generation:** the plan compiles into one tight loop. Spark whole-stage codegen
-          and HyPer-style engines do this.
+        - **Code generation:** the plan compiles into one tight loop. Spark whole-stage codegen and
+          HyPer-style engines do this.
 
-        > [!tip] Correlated columns fool the planner
-        > «city = 'SF' AND state = 'CA'» looks twice as selective as it is, because the planner
-        > assumes the columns are independent. In Postgres, «CREATE STATISTICS» on both columns
-        > fixes the estimate.
+        ## Now say it like a senior engineer
 
         > [!senior] Estimates versus actuals
-        > The senior habit is to compare estimated and actual rows on every node and find the first
+        > The senior habit is to compare estimated and actual rows on every node, and find the first
         > large gap from the bottom. Adding an index before you find that gap is guessing.
+
+        ## In one breath
+
+        Every engine parses, plans from row-count guesses, then executes the cheapest plan. When a
+        query suddenly slows down, find the first node where the guessed rows and the actual rows
+        differ, and fix the guess.
       `,
       checks: [
         {
@@ -204,39 +273,55 @@ export const track: Track = {
       title: 'Transactions: ACID, isolation, MVCC and the WAL',
       summary:
         'Explain what each ACID letter costs, which anomalies each isolation level allows, how MVCC gives readers a snapshot and why the WAL makes CDC possible.',
-      minutes: 17,
+      minutes: 18,
       body: `
-        Transactions are where source-system bugs come from: double-charged payments, negative
-        balances and rows that a CDC stream misses. A senior data engineer can name the anomaly.
+        ## Start with the problem
 
-        ## ACID in one line each
+        Two phones try to pay from the same wallet at the same moment. Both read the balance: 100.
+        Both subtract 30. Both write 70. The rider paid twice, and the wallet only went down once.
 
-        - **Atomicity:** all writes of a transaction happen, or none. The undo or log makes it so.
-        - **Consistency:** the database moves from one valid state to another. Constraints help,
-          but this letter is mostly the application's job.
-        - **Isolation:** concurrent transactions do not see each other's half-done work, to the
-          level you choose.
+        Bugs like this happen inside the source systems a data engineer reads from: double-charged
+        payments, negative balances, and rows a CDC stream misses. A senior data engineer can **name
+        the anomaly** and the fix. This lesson builds the words you need.
+
+        ## Idea 1: what a transaction promises (ACID)
+
+        A **transaction** is a group of writes the database treats as one unit. ACID names its four
+        promises.
+
+        - **Atomicity:** all the writes happen, or none. A bank transfer never takes money out
+          without putting it in. The undo or log makes it so.
+        - **Consistency:** the database moves from one valid state to another. Constraints help, but
+          this letter is mostly the application's job.
+        - **Isolation:** concurrent transactions do not see each other's half-done work, to the level
+          you choose.
         - **Durability:** after commit, a crash does not lose the write. The WAL plus «fsync» do this.
 
-        ## Isolation levels and anomalies
+        ## Idea 2: the five ways concurrency goes wrong (anomalies)
 
-        | Anomaly | What happens |
-        |---|---|
-        | **Dirty read** | You read another transaction's uncommitted write |
-        | **Non-repeatable read** | You read a row twice and get two values |
-        | **Phantom** | You run a range query twice and get new rows |
-        | **Lost update** | Two read-modify-write cycles race and one overwrite is lost |
-        | **Write skew** | Two transactions read the same data, then each writes a different row, and together they break a rule |
+        - **Dirty read:** you read another transaction's write that is not committed yet. It may roll
+          back, and you used a value that never existed.
+        - **Non-repeatable read:** you read the same row twice and get two values.
+        - **Phantom:** you run a range query twice and new rows appear.
+        - **Lost update:** two read-modify-write cycles race, and one overwrite is lost. The wallet
+          story above.
+        - **Write skew:** two transactions read the same data, then each writes a **different** row,
+          and together they break a rule. Example: two doctors each see "another doctor is on call"
+          and both go off call.
+
+        ## Idea 3: isolation levels, from loose to strict
+
+        Stricter isolation prevents more anomalies, but costs more waiting or more aborted
+        transactions.
 
         | Level | Prevents | Default in |
         |---|---|---|
         | Read committed | Dirty reads | Postgres, Oracle, SQL Server |
-        | Repeatable read / snapshot | Also non-repeatable reads; most phantoms | MySQL InnoDB |
-        | Serializable | Every anomaly above | CockroachDB, Spanner |
+        | Repeatable read / snapshot | Non-repeatable reads, most phantoms | MySQL InnoDB |
+        | Serializable | All of the above | CockroachDB, Spanner |
 
-        Postgres "repeatable read" is snapshot isolation. It aborts a lost update with a
-        serialization error, but it still allows write skew. Only «SERIALIZABLE» (SSI in Postgres)
-        stops write skew.
+        Postgres "repeatable read" is snapshot isolation. It aborts a lost update with a serialization
+        error, but it still allows write skew. Only «SERIALIZABLE» (SSI in Postgres) stops write skew.
 
         ~~~sql
         -- Lost update under read committed: both sessions read 100, both write 100 - 30.
@@ -246,41 +331,60 @@ export const track: Track = {
         SELECT balance FROM wallets WHERE wallet_id = 7 FOR UPDATE;
         ~~~
 
-        ## MVCC: readers do not block writers
+        ## Idea 4: readers do not wait for writers (MVCC)
 
-        Multi-version concurrency control keeps several versions of a row. Each transaction reads
-        the versions that were committed when its snapshot began.
+        If every reader had to wait for every writer, a busy database would crawl. So databases keep
+        **several versions** of a row. Each transaction gets a snapshot, like a photo taken when it
+        started, and reads the versions that were committed at that moment. A writer can create a new
+        version while a reader still looks at the old one. That is **multi-version concurrency control
+        (MVCC)**.
 
-        - **Postgres** writes a new row version on every update. Hidden columns «xmin» and «xmax»
-          say which transactions see it. «VACUUM» removes dead versions later. A transaction left
-          open for hours stops vacuum and the table bloats.
-        - **MySQL InnoDB** updates in place and keeps old versions in the undo log. A long
+        - **Postgres** writes a new row version on every update. Hidden columns «xmin» and «xmax» say
+          which transactions can see it. «VACUUM» removes dead versions later. A transaction left open
+          for hours stops vacuum, and the table bloats.
+        - **MySQL InnoDB** updates in place, and keeps old versions in the undo log. A long
           transaction makes the undo history grow instead.
 
-        ## The write-ahead log
+        ## Idea 5: write the diary first (the write-ahead log)
 
-        Before a change reaches a data page, the database appends it to the **write-ahead log**
-        (WAL in Postgres, redo log plus binlog in MySQL). Commit means "the log record is on disk".
-        After a crash, the database replays the log. Data pages flush later, at checkpoints.
+        Writing a change into the right place in a data file is slow, because it is random disk access.
+        Appending a line to the end of a log is fast. So the database does the fast thing first.
+
+        Before a change reaches a data page, the database appends it to the **write-ahead log** (WAL
+        in Postgres, redo log plus binlog in MySQL). "Committed" means "the log record is safely on
+        disk". After a crash, the database replays the log. The data pages are written later, at
+        checkpoints.
 
         ~~~text
-        client COMMIT → append WAL record → fsync WAL → reply "committed"
-                                          ↘ later: checkpoint writes dirty pages to data files
+        COMMIT
+         → append to WAL
+         → fsync WAL
+         → reply "committed"
+        later: checkpoint writes
+               pages to data files
         ~~~
 
-        The log is an ordered list of every committed change, so it also feeds **replicas** and
-        **CDC**. Debezium reads Postgres logical decoding («wal_level = logical», a replication slot)
-        or the MySQL binlog in row format.
+        And here is the link to data engineering. The log is an **ordered list of every committed
+        change**, so it also feeds **replicas** and **CDC**. Debezium reads Postgres logical decoding
+        («wal_level = logical», with a replication slot) or the MySQL binlog in row format.
 
         > [!trap] A replication slot can fill the disk
         > A Postgres slot keeps WAL until its consumer confirms it. If the CDC connector stops for a
-        > weekend, WAL piles up on the primary until the disk is full. Alert on slot lag in bytes and
+        > weekend, WAL piles up on the primary until the disk is full. Alert on slot lag in bytes, and
         > set «max_slot_wal_keep_size».
 
+        ## Now say it like a senior engineer
+
         > [!senior] Connect it to the pipeline
-        > "A long analytical query on the primary holds a snapshot, blocks vacuum and bloats hot
-        > tables, so we extract from a replica or from the WAL." That sentence joins MVCC, WAL and
-        > extraction design, which is the staff-level link interviewers want.
+        > "A long analytical query on the primary holds a snapshot, blocks vacuum and bloats hot tables,
+        > so we extract from a replica or from the WAL." That sentence joins MVCC, WAL and extraction
+        > design, which is the staff-level link interviewers want.
+
+        ## In one breath
+
+        A transaction is all or nothing; isolation levels decide which concurrency anomalies you allow.
+        MVCC lets readers use a snapshot instead of waiting, and the write-ahead log makes commits
+        durable and doubles as the change feed for replicas and CDC.
       `,
       checks: [
         {
@@ -308,62 +412,96 @@ export const track: Track = {
       title: 'B-trees versus LSM-trees',
       summary:
         'Compare the two storage engines by read, write and space amplification, and match each to a workload.',
-      minutes: 14,
+      minutes: 15,
       body: `
-        Almost every database stores data in one of two structures. The choice explains why
-        Postgres is good at reads and Cassandra absorbs a million writes a second.
+        ## Start with the problem
 
-        ## B-tree (B+tree)
+        Postgres is great at reading by key, but struggles to take a million writes a second.
+        Cassandra takes a million writes a second, but a read can be slow. Why? Almost every database
+        stores its data in one of two structures, and each structure is fast at a different thing.
+        Know both, and you can predict how a database behaves before you use it.
 
-        Data lives in fixed-size pages (8 KB in Postgres, 16 KB in InnoDB). Inner pages hold keys
-        and child pointers. Leaf pages hold rows or row pointers and link to their neighbours for
-        range scans. A fan-out of a few hundred means **3 or 4 levels cover billions of rows**, so a
-        lookup reads about 4 pages, and the top levels are usually in memory.
+        ## Idea 1: the B-tree is a well-organised filing cabinet
 
-        - Writes **update pages in place**. One small row change rewrites an 8 KB page (plus the WAL
-          record), so random writes cost a lot of I/O.
-        - Reads are predictable: one path from root to leaf.
+        Picture a filing cabinet with drawers labelled by name range, folders inside the drawers, and
+        papers inside the folders. To find "Sharma", you open one drawer, one folder, one paper.
 
-        ## LSM-tree (log-structured merge)
+        A **B-tree** (strictly, a B+tree) is that cabinet.
+
+        - Data lives in fixed-size **pages**: 8 KB in Postgres, 16 KB in InnoDB.
+        - Inner pages hold keys and pointers to child pages. Leaf pages hold rows (or row pointers),
+          and link to their neighbours for range scans.
+        - Each page points to a few hundred children, so **3 or 4 levels cover billions of rows**. A
+          lookup reads about 4 pages, and the top levels are usually in memory.
+
+        The catch is writes. A B-tree **updates pages in place**. Change one small row, and the whole
+        8 KB page is rewritten (plus the WAL record). Many small random writes mean a lot of disk I/O.
+        Reads stay predictable: always one path from root to leaf.
+
+        ## Idea 2: the LSM-tree is an inbox that gets sorted later
+
+        Now picture a busy office. New papers go straight into an inbox tray: very fast. When the tray
+        is full, someone sorts it and files it as a bundle. At night, bundles are merged into bigger
+        sorted bundles.
+
+        A **log-structured merge (LSM) tree** works the same way.
 
         ~~~text
-        write → WAL (for durability) + memtable (sorted, in memory)
-        memtable full → flush as an immutable sorted file (SSTable), level 0
-        background compaction → merge SSTables into larger, non-overlapping levels
-        read → memtable, then each level newest first; bloom filters skip files
+        write → WAL + memtable
+        memtable full
+         → flush sorted file
+           (SSTable, level 0)
+        background compaction
+         → merge into bigger,
+           non-overlapping levels
+        read → memtable, then
+           each level, newest first
         ~~~
 
         - Writes are **sequential appends**, so write throughput is very high.
-        - A read may check several files. **Bloom filters** answer "the key is surely not here"
-          for most files, and the block cache keeps hot data in memory.
-        - Deletes write a **tombstone**. Space returns only after compaction merges it.
+        - A read may have to check several files. **Bloom filters** answer "this key is surely not in
+          this file" for most files, and the block cache keeps hot data in memory.
+        - A delete writes a **tombstone** (a "this is deleted" marker). The space comes back only
+          after compaction merges it away.
 
-        Used by RocksDB, Cassandra, ScyllaDB, HBase, Bigtable and the storage layer of CockroachDB
-        and TiDB.
+        RocksDB, Cassandra, ScyllaDB, HBase, Bigtable, and the storage layer of CockroachDB and TiDB
+        all use LSM-trees.
 
-        ## The three amplifications
+        ## Idea 3: the three costs (amplifications)
 
-        | | B-tree | LSM-tree |
-        |---|---|---|
-        | **Write amplification** | High for small random writes (whole pages) | Data is rewritten at each compaction level |
-        | **Read amplification** | Low: one root-to-leaf path | Higher: several files, helped by bloom filters |
-        | **Space amplification** | Pages are partly empty after splits | Old versions and tombstones wait for compaction |
+        Every engine pays three kinds of overhead. "Amplification" means "how much more work than the
+        data itself".
 
-        ## Compaction strategies
+        - **Write amplification.** B-tree: high for small random writes, because whole pages are
+          rewritten. LSM: data is rewritten again at each compaction level.
+        - **Read amplification.** B-tree: low, one root-to-leaf path. LSM: higher, several files,
+          helped by bloom filters.
+        - **Space amplification.** B-tree: pages are partly empty after splits. LSM: old versions and
+          tombstones wait for compaction.
 
-        - **Leveled** (RocksDB default): each level is about 10 times the previous one, files in a
-          level do not overlap. Lower read and space cost, more write cost.
-        - **Size-tiered** (classic Cassandra default): merge files of similar size. Cheaper writes,
-          but reads touch more files and a compaction can need twice the space for a moment.
+        ## Idea 4: how LSM stores merge (compaction strategies)
+
+        - **Leveled** (the RocksDB default): each level is about 10 times the previous one, and files
+          in a level do not overlap. Lower read and space cost, higher write cost.
+        - **Size-tiered** (the classic Cassandra default): merge files of similar size. Cheaper
+          writes, but reads touch more files, and a compaction can briefly need twice the space.
 
         > [!trap] Tombstones in a queue-like table
         > Using Cassandra as a queue (insert, read, delete) builds up tombstones. A read then scans
         > thousands of them and times out. Model time buckets with a TTL, or use a real queue.
 
+        ## Now say it like a senior engineer
+
         > [!senior] Match the engine to the ratio
-        > "Device telemetry is 95 percent writes and reads the recent window by device, so an LSM
-        > store fits. The order service reads by key ten times more than it writes and needs
-        > transactions, so a B-tree database fits." Tie the engine to the read and write ratio.
+        > "Device telemetry is 95 percent writes and reads the recent window by device, so an LSM store
+        > fits. The order service reads by key ten times more than it writes and needs transactions, so
+        > a B-tree database fits." Tie the engine to the read and write ratio.
+
+        ## In one breath
+
+        A B-tree is a filing cabinet: fast, predictable reads, but each small write rewrites a page. An
+        LSM-tree is an inbox sorted later: very fast writes, reads that check several files, and space
+        that returns only after compaction.
       `,
       checks: [
         {
@@ -390,60 +528,85 @@ export const track: Track = {
       title: 'Replication and consistency models',
       summary:
         'Compare single-leader, multi-leader and leaderless replication, and name the guarantee a reader gets: linearizable, read-your-writes, monotonic or eventual.',
-      minutes: 16,
+      minutes: 17,
       body: `
-        Replication copies data to more machines for availability, read scale and locality. It
-        also creates the stale reads that confuse pipelines and dashboards.
+        ## Start with the problem
 
-        ## Three topologies
+        A rider changes their home address and taps Save. The app reloads, and the old address is
+        still there. They tap Save again. Still old. Then, a second later, the new one appears.
 
-        | Topology | How writes flow | Examples | Main risk |
-        |---|---|---|---|
-        | **Single leader** | All writes to one primary; followers apply its log | Postgres, MySQL, MongoDB replica sets, Kafka partitions | Failover; replica lag |
-        | **Multi-leader** | Each region accepts writes; leaders exchange changes | Multi-region MySQL setups, CouchDB | Write conflicts need a resolution rule |
-        | **Leaderless** | The client writes to several replicas, reads from several | Cassandra, ScyllaDB, DynamoDB internals | Tunable but subtle consistency |
+        Nothing was lost. The write went to one copy of the database, and the read came from another
+        copy that had not caught up yet. That is **replication**: copying data to more machines for
+        availability, read scale and closeness to users. It is also where stale reads come from, and
+        they confuse pipelines and dashboards as much as riders.
 
-        ## Synchronous or asynchronous
+        ## Idea 1: who accepts writes (three topologies)
 
-        - **Synchronous:** commit waits for a follower. No data loss on failover, but a slow
-          follower slows every write.
-        - **Asynchronous:** commit returns at once. Fast, but a failover can lose the last seconds,
-          and followers lag.
-        - **Semi-synchronous:** wait for one follower of several. A common middle ground.
+        - **Single leader.** All writes go to one primary; the followers apply its log. Examples:
+          Postgres, MySQL, MongoDB replica sets, Kafka partitions. Main risk: failover, and replica
+          lag.
+        - **Multi-leader.** Each region accepts writes, and the leaders exchange changes. Examples:
+          multi-region MySQL setups, CouchDB. Main risk: two regions change the same row, and you
+          need a rule to resolve the conflict.
+        - **Leaderless.** The client writes to several replicas and reads from several. Examples:
+          Cassandra, ScyllaDB, DynamoDB internals. Main risk: consistency is tunable, but subtle.
 
-        ## Consistency models, strongest first
+        ## Idea 2: wait for the copy, or not
 
-        | Model | What a reader is promised |
-        |---|---|
-        | **Linearizable** | Every read sees the latest committed write, as if there were one copy |
-        | **Sequential / causal** | Everyone sees causally related writes in the same order |
-        | **Read-your-writes** | You always see your own writes |
-        | **Monotonic reads** | You never see time go backwards across reads |
-        | **Eventual** | Replicas converge if writes stop; no promise on any single read |
+        When the leader commits, does it wait for a follower to have the change?
 
-        ## Quorums in leaderless stores
+        - **Synchronous:** wait. No data loss on failover, but one slow follower slows every write.
+        - **Asynchronous:** do not wait. Fast, but a failover can lose the last few seconds, and
+          followers lag.
+        - **Semi-synchronous:** wait for one follower out of several. A common middle ground.
 
-        With N replicas, a write waits for W acknowledgements and a read asks R replicas. If
-        **R + W > N**, every read set overlaps the latest write set. With N = 3, «QUORUM» writes and
-        reads (W = 2, R = 2) overlap. «ONE» and «ONE» are fast but can return stale values.
-        Read repair and anti-entropy fix replicas in the background.
+        ## Idea 3: what a reader is promised (consistency models)
 
-        ## Failover
+        From strongest to weakest:
 
-        When a leader dies, a follower is promoted. Two leaders at once (**split brain**) corrupt
-        data, so systems use fencing tokens, leases or consensus (Raft in etcd, CockroachDB and
-        Kafka KRaft; Paxos in Spanner) to make sure only one leader writes.
+        - **Linearizable:** every read sees the latest committed write, as if there were only one
+          copy.
+        - **Sequential / causal:** everyone sees causally related writes in the same order. A reply
+          never appears before the question.
+        - **Read-your-writes:** you always see your own writes. This is the one the address story
+          broke.
+        - **Monotonic reads:** you never see time go backwards across your reads.
+        - **Eventual:** if writes stop, the replicas converge. No promise about any single read.
+
+        ## Idea 4: overlapping votes (quorums in leaderless stores)
+
+        With N copies, a write waits for W of them to confirm, and a read asks R of them. If
+        **R + W > N**, the set you read from always overlaps the set that has the latest write. So at
+        least one answer is fresh.
+
+        Example with N = 3: «QUORUM» writes and reads mean W = 2 and R = 2. 2 + 2 = 4, which is more
+        than 3, so they overlap. «ONE» and «ONE» means 1 + 1 = 2: fast, but a read can miss the
+        latest write. Read repair and anti-entropy fix stale replicas in the background.
+
+        ## Idea 5: changing leaders safely (failover)
+
+        When a leader dies, a follower is promoted. If the old leader comes back and still thinks it
+        leads, you have two leaders writing: **split brain**, and the data diverges. Systems prevent
+        it with fencing tokens, leases or consensus (Raft in etcd, CockroachDB and Kafka KRaft; Paxos
+        in Spanner), so only one leader can write.
 
         > [!example] The stale profile
-        > A rider changes their home address, the app reloads, and the old address shows. The write
-        > went to the primary and the read went to a lagging replica. Fixes: read from the primary
-        > for a few seconds after a user's own write, or pin the session to a replica that has
-        > reached the write's log position.
+        > The address write went to the primary and the read went to a lagging replica. Fixes: read
+        > from the primary for a few seconds after a user's own write, or pin the session to a replica
+        > that has reached the write's log position.
+
+        ## Now say it like a senior engineer
 
         > [!senior] Pipelines read replicas too
-        > An extraction job on an async replica sees a slightly old snapshot. That is fine if the
-        > job records the replica's log position as its watermark. It is a bug if the job uses
-        > "now" from the primary as the watermark and skips rows the replica has not received yet.
+        > An extraction job on an async replica sees a slightly old snapshot. That is fine if the job
+        > records the replica's log position as its watermark. It is a bug if the job uses "now" from
+        > the primary as the watermark, and skips rows the replica has not received yet.
+
+        ## In one breath
+
+        Replication keeps copies, and copies lag, so every read has a promise: from "always the
+        latest" down to "eventually". Quorums overlap reads and writes (R + W > N), and failover needs
+        a way to make sure only one leader writes.
       `,
       checks: [
         {
@@ -467,70 +630,97 @@ export const track: Track = {
       title: 'Partitioning, sharding and rebalancing',
       summary:
         'Choose range or hash partitioning, use consistent hashing, avoid hot keys and move data when the cluster grows.',
-      minutes: 15,
+      minutes: 16,
       body: `
-        When one machine cannot hold the data or take the writes, you split the data into
-        **partitions** (shards) and spread them over nodes. The partition key is the most important
-        decision in the design, because it is the hardest to change.
+        ## Start with the problem
 
-        ## Range or hash
+        Your trips table no longer fits on one machine, and one machine cannot take all the writes.
+        So you split the data into pieces, called **partitions** or **shards**, and spread them over
+        many machines.
 
-        | Scheme | How | Good | Bad |
-        |---|---|---|---|
-        | **Range** | Keys in sorted ranges: A–F, G–M … | Range scans, ordered reads | Hot spots on sequential keys such as timestamps |
-        | **Hash** | «hash(key) mod partitions» or a hash ring | Even spread of writes | Range scans must ask every partition |
-        | **Compound** | Hash on the first part, sort on the second | Even writes and ordered reads inside one key | Queries without the first part fan out |
+        Easy to say. But now every row needs a home, and every query must know where to look. The
+        rule that picks the home is the **partition key**. It is the most important decision in the
+        design, because it is the hardest one to change later.
+
+        ## Idea 1: two ways to pick a home (range or hash)
+
+        Think of a library deciding which shelf a book goes on.
+
+        - **Range:** shelve by title, A to F on shelf 1, G to M on shelf 2. Great for "all books
+          starting with K" (range scans, ordered reads). Bad when keys arrive in order, such as
+          timestamps: every new book lands on the last shelf. That is a **hot spot**.
+        - **Hash:** run the title through a hash, and the number picks the shelf. Writes spread
+          evenly. But "all books starting with K" now means visiting every shelf.
+        - **Compound:** hash on the first part of the key, sort on the second part. Even writes, and
+          ordered reads inside one key. Queries without the first part must ask every shelf.
 
         Cassandra's primary key «((device_id), event_ts)» is compound: the device id picks the
-        partition, and rows inside it are sorted by time.
+        partition, and inside it rows are sorted by time.
 
-        ## Consistent hashing
+        ## Idea 2: adding a machine without moving everything (consistent hashing)
 
-        Plain «hash mod N» moves almost every key when N changes. **Consistent hashing** places
-        nodes and keys on a ring, and each key belongs to the next node clockwise. Adding a node
-        moves only about 1/N of the keys. **Virtual nodes** give each machine many points on the
-        ring, so load evens out and a new machine takes a little from everyone.
+        Plain «hash mod N» has a nasty surprise. Go from 10 machines to 11, and «hash mod 11» sends
+        almost every key somewhere new. Nearly all the data moves.
+
+        **Consistent hashing** fixes this. Put the machines on a clock face (a ring). Hash each key to
+        a point on the ring, and walk clockwise to the first machine. Add a machine, and it only takes
+        the keys between itself and its neighbour: about 1/N of the keys move.
+
+        **Virtual nodes** give each machine many points on the ring, so the load evens out, and a new
+        machine takes a little from everyone.
 
         ~~~text
-                0
-          vnode B1     vnode A1
-        vnode C2   ring   vnode B2
-          vnode A2     vnode C1
-               2^64
-        key k → hash(k) → walk clockwise → first vnode → its machine
+        key k
+         → hash(k)
+         → point on the ring
+         → walk clockwise
+         → first vnode
+         → its machine
         ~~~
 
-        ## Hot keys
+        ## Idea 3: one key that is too popular (hot keys)
 
-        Even hashing fails when one key is hot: a celebrity account, a default value, «NULL». Fixes:
+        Even hashing fails when one key is hot: a celebrity account, a default value, «NULL». All its
+        traffic goes to one machine, no matter how good the hash is.
 
-        - **Salt the key:** write to «key#0» … «key#9» and read all ten.
+        - **Salt the key:** write to «key#0» … «key#9», and read all ten.
         - **Split the hot partition:** DynamoDB and Bigtable split busy ranges automatically.
         - **Cache reads** in front of the store.
 
-        ## Secondary indexes on sharded data
+        ## Idea 4: looking up by another column (secondary indexes)
 
-        - **Local index:** each shard indexes its own rows. Writes stay cheap; a query by the indexed
-          column asks every shard (scatter and gather).
-        - **Global index:** the index is partitioned by the indexed value. Reads go to one place;
-          a write touches the row's shard and the index shard, usually asynchronously.
+        Data is sharded by rider. Now you want "all trips in Pune".
 
-        ## Rebalancing
+        - **Local index:** each shard indexes its own rows. Writes stay cheap, but a query by city
+          asks every shard and merges the answers (scatter and gather).
+        - **Global index:** the index itself is partitioned by city. A read goes to one place, but a
+          write touches the row's shard and the index shard, usually asynchronously.
 
-        - **Fixed number of partitions** (many more than nodes, for example 1,000 for 10 nodes):
-          rebalancing moves whole partitions. Kafka, Elasticsearch and Cassandra vnodes use this idea.
+        ## Idea 5: moving data when the cluster grows (rebalancing)
+
+        - **Fixed number of partitions**, many more than the nodes (for example 1,000 partitions for
+          10 nodes). Rebalancing moves whole partitions. Kafka, Elasticsearch and Cassandra vnodes
+          use this idea.
         - **Dynamic splitting:** a partition splits when it grows past a size. HBase, Bigtable,
           MongoDB chunks and Spanner splits work this way.
-        - Throttle data movement, because rebalancing competes with live traffic.
+        - Either way, throttle the data movement, because rebalancing competes with live traffic.
 
         > [!trap] Time as the leading key
-        > A range-partitioned table keyed by «created_at» sends every new write to the last
-        > partition. Lead with a hashed or high-cardinality column, and keep time as a sort key.
+        > A range-partitioned table keyed by «created_at» sends every new write to the last partition.
+        > Lead with a hashed or high-cardinality column, and keep time as a sort key.
+
+        ## Now say it like a senior engineer
 
         > [!senior] Name the queries that fan out
         > A strong answer names which queries hit one shard and which hit all of them: "Trips are
-        > sharded by city, so city dashboards are single-shard, but a rider's history fans out. I
-        > will keep a rider-keyed copy in a second store fed by CDC."
+        > sharded by city, so city dashboards are single-shard, but a rider's history fans out. I will
+        > keep a rider-keyed copy in a second store fed by CDC."
+
+        ## In one breath
+
+        The partition key decides which machine each row lives on: range keeps order but makes hot
+        spots, hash spreads load but scatters range queries. Consistent hashing moves only a slice of
+        the keys when you add a machine, and hot keys need salting or caching.
       `,
       checks: [
         {
@@ -558,43 +748,64 @@ export const track: Track = {
       title: 'CAP theorem and PACELC',
       summary:
         'State CAP precisely, extend it with PACELC, and use both to justify a store in a design round without hand-waving.',
-      minutes: 12,
+      minutes: 13,
       body: `
-        CAP is the most quoted and most misquoted idea in distributed systems. Interviewers use it
-        to test whether you understand trade-offs or only repeat a slogan.
+        ## Start with the problem
 
-        ## CAP, precisely
+        You have two copies of a bank balance, one in Mumbai and one in Delhi. The cable between them
+        is cut. A customer in Delhi asks for their balance. A customer in Mumbai withdraws money at the
+        same moment.
+
+        The Delhi copy has two choices. Answer with the balance it has, which may now be wrong. Or
+        refuse to answer until the cable is fixed. There is no third option. That choice is the whole
+        of the **CAP theorem**, the most quoted and most misquoted idea in distributed systems.
+        Interviewers use it to test whether you understand trade-offs or only repeat a slogan.
+
+        ## Idea 1: CAP, said precisely
 
         In a replicated system, a **network partition** can stop nodes from talking. During that
         partition, the system must choose:
 
-        - **Consistency (C):** linearizable reads; every read sees the latest write. Some requests
-          are refused.
-        - **Availability (A):** every request to a working node gets a non-error answer, which may
-          be stale.
+        - **Consistency (C):** linearizable reads, so every read sees the latest write. Some requests
+          are refused. Delhi says "try again later".
+        - **Availability (A):** every request to a working node gets a non-error answer, which may be
+          stale. Delhi shows the old balance.
 
-        Partitions are not optional in a real network, so "pick two of three" is misleading. The
-        real statement is: **when a partition happens, choose C or A**.
+        You will hear "pick two of three". That is misleading, because partitions are not optional in a
+        real network; you cannot "pick" not to have them. The real statement is: **when a partition
+        happens, choose C or A.**
 
-        ## PACELC
+        ## Idea 2: the choice you make every normal day (PACELC)
 
-        Daniel Abadi extended CAP with the normal case: **if Partition, choose A or C; Else, choose
-        Latency or Consistency**. Most of the time there is no partition, and the trade-off you live
-        with daily is latency.
+        Cables are rarely cut. So what does CAP say about a normal Tuesday? Nothing. Daniel Abadi
+        added the missing half.
 
-        | System | During a partition | Normally | Notes |
-        |---|---|---|---|
-        | Spanner | C | C | Pays commit latency for global consistency |
-        | CockroachDB | C | C | Raft per range |
-        | DynamoDB | A by default | L | Strongly consistent reads are an option, at higher cost |
-        | Cassandra | A | L | Tunable per query: «QUORUM» moves it toward C |
-        | MongoDB | C (majority writes) | C or L | Depends on read and write concerns |
-        | Postgres + async replicas | C on the primary | L on replicas | Replica reads trade freshness for latency |
+        **PACELC:** if **P**artition, choose **A** or **C**; **E**lse, choose **L**atency or
+        **C**onsistency.
 
-        Read this table as defaults. Many stores are tunable per request, and that is the point to
-        make.
+        On a normal day, keeping Mumbai and Delhi in agreement means waiting for the other city before
+        you answer. That wait is latency. Most of the time there is no partition, so the trade-off you
+        live with daily is latency against consistency.
 
-        ## Using it in a round
+        | System | Partition | Normally |
+        |---|---|---|
+        | Spanner | C | C |
+        | CockroachDB | C | C |
+        | DynamoDB | A (default) | L |
+        | Cassandra | A | L |
+        | MongoDB | C (majority) | C or L |
+        | Postgres + async replicas | C on primary | L on replicas |
+
+        Notes on the table:
+        - Spanner pays commit latency for global consistency. CockroachDB uses Raft per range.
+        - DynamoDB offers strongly consistent reads as an option, at a higher cost.
+        - Cassandra is tunable per query: «QUORUM» moves it toward C.
+        - MongoDB depends on its read and write concerns.
+        - Postgres replica reads trade freshness for latency.
+
+        Read the table as defaults. Many stores are tunable per request, and that is the point to make.
+
+        ## Idea 3: using it in a design round
 
         1. Name what goes wrong if the data is stale: a wrong balance, or a like count that is off by 3.
         2. Choose per data set, not per company. A ledger needs C. A feed can be A and L.
@@ -604,10 +815,18 @@ export const track: Track = {
         > Eventual consistency still converges, and many AP stores give read-your-writes with session
         > settings. Say which guarantee you keep, not only which letter you dropped.
 
+        ## Now say it like a senior engineer
+
         > [!senior] Per-operation choices
         > "Balance reads and debits go to the strongly consistent path. The activity feed reads from
         > the nearest replica. One product, two choices." This shows you treat CAP as a per-operation
         > decision.
+
+        ## In one breath
+
+        When the network splits, each copy must either refuse (consistency) or answer with what it
+        has (availability). On normal days the same trade-off shows up as latency, and you choose it
+        per operation, not per company.
       `,
       checks: [
         {
@@ -628,58 +847,73 @@ export const track: Track = {
       title: 'Read replicas, snapshots and safe extraction',
       summary:
         'Extract from an OLTP database without hurting it: full dumps, updated_at increments, replicas and log-based CDC, with the trap of each.',
-      minutes: 16,
+      minutes: 17,
       body: `
-        Most pipelines start by copying rows out of a production database. The senior concern is
-        twofold: **do not hurt production**, and **do not miss or duplicate rows**.
+        ## Start with the problem
 
-        ## Four ways to extract
+        Most pipelines start by copying rows out of a production database. The first attempt is
+        usually «SELECT * FROM orders» every night. Then the table grows to 2 billion rows, the copy
+        takes nine hours, and the app slows down every night while it runs. Someone switches to "only
+        rows changed since last time", and three weeks later finance finds orders missing.
 
-        | Method | How | Catches deletes | Load on source | Main trap |
-        |---|---|---|---|---|
-        | **Full snapshot** | «SELECT *» or a dump on a schedule | Yes, by diff | High, grows with the table | Cost and time grow forever |
-        | **Query-based incremental** | «WHERE updated_at > :watermark» | No | Medium; needs an index | Missed rows, see below |
-        | **Log-based CDC** | Read the WAL or binlog (Debezium, Datastream, DMS) | Yes | Low | Slots, schema changes, initial snapshot |
-        | **Trigger or outbox** | The app or a trigger writes changes to a table | Yes | Adds write cost | Must be in the same transaction |
+        So a senior engineer has two worries, always together: **do not hurt production**, and **do
+        not miss or duplicate rows**.
 
-        ## Why updated_at increments miss rows
+        ## Idea 1: four ways to copy
 
-        ~~~text
-        10:00:00.000  txn A starts, sets updated_at = 10:00:00.000, still open
-        10:00:05.000  extractor runs: WHERE updated_at > 09:55 → A not visible yet
-                      new watermark = 10:00:05
-        10:00:06.000  txn A commits with updated_at = 10:00:00.000 → never extracted
-        ~~~
+        - **Full snapshot:** «SELECT *» or a dump on a schedule. Catches deletes (by comparing with
+          the last copy). Load on the source is high and grows with the table, forever.
+        - **Query-based incremental:** «WHERE updated_at > :watermark». Load is medium, and needs an
+          index. Does **not** catch deletes, and can miss rows (Idea 2).
+        - **Log-based CDC:** read the WAL or binlog (Debezium, Datastream, DMS). Catches deletes, and
+          load on the source is low. Traps: replication slots, schema changes, the initial snapshot.
+        - **Trigger or outbox:** the app or a trigger writes changes to a table. Catches deletes, but
+          adds write cost, and must be in the same transaction.
 
-        The timestamp is set when the row changes, but the row becomes visible at **commit**. Fixes:
+        ## Idea 2: why "changed since last time" misses rows
 
-        - Use an **overlap**: read from watermark minus a safety window (longer than your longest
-          transaction) and deduplicate by key and version downstream.
+        Here is the bug, step by step.
+
+        1. At 10:00:00, transaction A starts and sets «updated_at» to 10:00:00. It has not committed.
+        2. At 10:00:05, the extractor runs «WHERE updated_at > 09:55». A is not visible yet, so it is
+           skipped. The new watermark becomes 10:00:05.
+        3. At 10:00:06, A commits, with «updated_at» still 10:00:00.
+        4. The next run asks for rows after 10:00:05. A is older than that. **It is never copied.**
+
+        The timestamp is set when the row changes, but the row becomes visible only at **commit**.
+        Fixes:
+
+        - Read with an **overlap**: from the watermark minus a safety window (longer than your longest
+          transaction), and deduplicate by key and version downstream.
         - Use a commit-ordered column, or move to log-based CDC, which reads in commit order.
-        - Also: a column that the app forgets to update, and hard deletes, are both invisible.
 
-        ## Use a replica, carefully
+        Two more rows this method never sees: rows where the app forgot to update «updated_at», and
+        hard deletes.
 
-        Point extraction at a **read replica**, not the primary. Then:
+        ## Idea 3: read from a copy, not the original (replicas)
 
-        - **Replica lag:** read the replica's replay position and use it as the high watermark, not
-          the primary's clock.
-        - **Query conflicts:** on a Postgres hot standby, a long query can be cancelled when the
-          replica must apply a vacuum change. «hot_standby_feedback = on» stops the cancels but bloats
-          the primary. A dedicated replica for extraction keeps the trade-off away from the app's
-          replicas.
+        Point extraction at a **read replica**, not the primary. Then watch two things.
 
-        ## Consistent snapshots
+        - **Replica lag.** Use the replica's replay position as the high watermark, not the primary's
+          clock.
+        - **Query conflicts.** On a Postgres hot standby, a long query can be cancelled when the
+          replica must apply a vacuum change. «hot_standby_feedback = on» stops the cancels, but
+          bloats the primary. A dedicated replica for extraction keeps that trade-off away from the
+          app's replicas.
 
-        A full copy must be one point in time, or a join between two tables is wrong. «pg_dump»
-        takes one snapshot for all tables. «mysqldump --single-transaction» does the same for
-        InnoDB. Debezium's initial snapshot records the log position, then streams from exactly
+        ## Idea 4: one moment in time (consistent snapshots)
+
+        If you copy «orders» at 1:00 and «order_items» at 1:20, a join between them is wrong: items
+        for orders you do not have. A full copy must be one point in time.
+
+        «pg_dump» takes one snapshot for all tables. «mysqldump --single-transaction» does the same
+        for InnoDB. Debezium's initial snapshot records the log position, then streams from exactly
         there, so nothing is lost between snapshot and stream.
 
-        ## Chunk and throttle
+        ## Idea 5: small bites, gently (chunk and throttle)
 
-        - Read in **primary-key ranges** («WHERE id > :last_id ORDER BY id LIMIT 50000»), never with
-          «OFFSET».
+        - Read in **primary-key ranges** («WHERE id > :last_id ORDER BY id LIMIT 50000»), never
+          with «OFFSET», which re-reads everything it skips.
         - Limit concurrency, run off-peak, and set a «statement_timeout».
         - Land the raw rows unchanged first, so a bug downstream never needs a second extract.
 
@@ -687,10 +921,18 @@ export const track: Track = {
         > A two-year backfill of «orders» split into 2,000 key ranges, run 4 at a time on the
         > extraction replica, with a lag alarm that pauses the job if replica lag passes 30 seconds.
 
+        ## Now say it like a senior engineer
+
         > [!senior] Pick by deletes and freshness
-        > "We need deletes and five-minute freshness on 300 tables, so log-based CDC from the
-        > replica with an initial snapshot. For the two small reference tables a nightly full
-        > snapshot is simpler and self-healing." Mixing methods by table is the mature answer.
+        > "We need deletes and five-minute freshness on 300 tables, so log-based CDC from the replica
+        > with an initial snapshot. For the two small reference tables, a nightly full snapshot is
+        > simpler and self-healing." Mixing methods by table is the mature answer.
+
+        ## In one breath
+
+        Copy from a replica, in small key-range bites, at one consistent moment. "Changed since last
+        time" misses rows that commit late and never sees deletes, so use an overlap window or read the
+        database's own change log.
       `,
       checks: [
         {

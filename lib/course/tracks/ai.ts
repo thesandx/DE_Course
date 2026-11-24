@@ -13,49 +13,74 @@ export const track: Track = {
       title: 'The data engineer in an AI system',
       summary:
         'Place the data engineer in an AI system, and use AI assistants in your own work without shipping their mistakes.',
-      minutes: 12,
+      minutes: 14,
       body: `
-        A model is only as good as the data it learns from and the context it reads at answer
-        time. Most of an AI system is data work: collect it, clean it, keep it fresh, control who
-        sees it, and measure whether it helped. That work belongs to data engineers.
+        ## Start with the problem
 
-        ## Three kinds of AI system
+        A company launches a support assistant. In the demo it is brilliant. In production it answers
+        with last month's refund policy, shows one customer a document from another customer, and the
+        first monthly bill for model calls is larger than the warehouse bill.
 
-        | System | What the model needs | What the data engineer builds |
-        |---|---|---|
-        | **Predictive ML** (fraud, ETA, ranking) | Features for training and for each live request | Feature pipelines, a feature store, training sets, label joins |
-        | **Retrieval and RAG** (assistants, search) | The right passages of text at question time | Document ingestion, chunking, embeddings, a vector index, access control |
-        | **LLM in the pipeline** (classify, extract, summarize) | Clean input and a place to write output | Batch inference jobs, prompt versions, evaluation tables, cost controls |
+        None of those are model problems. They are **data** problems: stale data, access control, and
+        cost. A model is only as good as the data it learns from and the context it reads at answer time.
+        Most of an AI system is data work: collect it, clean it, keep it fresh, control who sees it, and
+        measure whether it helped. That work belongs to data engineers.
 
-        The same skills apply to all three: idempotent loads, incremental processing, backfills,
-        data contracts, lineage and monitoring. The new parts are embeddings, vector indexes,
-        evaluation of model output, and the cost of model calls.
+        ## Idea 1: three kinds of AI system
 
-        ## What is new for a data engineer
+        **Predictive ML** (fraud, ETA, ranking).
 
-        - **Unstructured data is a first-class source.** PDFs, tickets, chat logs and images now
-          flow through pipelines with the same SLAs as tables.
-        - **Quality has a second meaning.** A row can be valid and still make the model wrong.
-          You test retrieval and answers, not only schemas.
-        - **Freshness is visible to users.** A stale index makes an assistant answer with last
-          month's policy, in a confident voice.
-        - **Cost moves to inference.** A careless backfill that calls a model per row can cost more
-          than a year of warehouse compute.
+        - The model needs: features, for training and for each live request.
+        - The data engineer builds: feature pipelines, a feature store, training sets, label joins.
 
-        ## Using AI assistants in your own work
+        **Retrieval and RAG** (assistants, search).
 
-        Assistants write SQL, PySpark, dbt models and DAGs quickly. They also invent column names,
-        miss edge cases and write code that runs but is wrong. Treat the output like a pull request
-        from a fast new hire.
+        - The model needs: the right passages of text at question time.
+        - The data engineer builds: document ingestion, chunking, embeddings, a vector index, access
+          control.
+
+        **LLM in the pipeline** (classify, extract, summarize).
+
+        - The model needs: clean input, and a place to write output.
+        - The data engineer builds: batch inference jobs, prompt versions, evaluation tables, cost
+          controls.
+
+        The same skills apply to all three: idempotent loads, incremental processing, backfills, data
+        contracts, lineage and monitoring. The new parts are embeddings, vector indexes, evaluation of
+        model output, and the cost of model calls.
+
+        ## Idea 2: what is new for a data engineer
+
+        - **Unstructured data is a first-class source.** PDFs, tickets, chat logs and images now flow
+          through pipelines with the same SLAs as tables.
+        - **Quality has a second meaning.** A row can be valid and still make the model wrong. You test
+          retrieval and answers, not only schemas.
+        - **Freshness is visible to users.** A stale index makes an assistant answer with last month's
+          policy, in a confident voice. That is the story above.
+        - **Cost moves to inference.** A careless backfill that calls a model per row can cost more than a
+          year of warehouse compute.
+
+        ## Idea 3: using AI assistants in your own work
+
+        Assistants write SQL, PySpark, dbt models and DAGs quickly. They also invent column names, miss
+        edge cases, and write code that runs but is wrong. Treat the output like a pull request from a fast
+        new hire.
 
         1. **Give context.** Paste the schema, the grain, a few sample rows and the engine. A prompt
            without the grain gets a query with a fan-out join.
-        2. **Ask for tests first.** Edge cases (nulls, duplicates, late rows, time zones) as test
-           data, then the code.
-        3. **Verify.** Run it on a sample, compare row counts and totals with a known answer, and
-           read the query plan for full scans.
-        4. **Own it.** You sign the merge. "The assistant wrote it" is not an answer in a review or
-           an incident.
+        2. **Ask for tests first.** Edge cases (nulls, duplicates, late rows, time zones) as test data,
+           then the code.
+        3. **Verify.** Run it on a sample, compare row counts and totals with a known answer, and read the
+           query plan for full scans.
+        4. **Own it.** You sign the merge. "The assistant wrote it" is not an answer in a review or an
+           incident.
+
+        ## Now say it like a senior engineer
+
+        AI systems are mostly data systems: features for predictive ML, ingestion and indexes for RAG, and
+        batch inference for LLM transforms. The new duties are unstructured sources, quality measured by
+        model outcomes, user-visible freshness and inference cost. AI-written code gets context, tests,
+        verification and a human owner.
 
         > [!trap] Data that must not leave
         > Pasting production rows with emails or card numbers into an outside chat tool can break
@@ -67,6 +92,12 @@ export const track: Track = {
         > example: "I let the assistant draft dbt tests and docs, and I review every generated
         > metric definition against finance, because a wrong revenue number is worse than a slow
         > one."
+
+        ## In one breath
+
+        Most of an AI system is data work: fresh, permitted, measured data at the right moment, and a
+        watch on the cost of model calls. Use AI assistants to go faster, but give them context, demand
+        tests, verify the output, and own what you merge.
       `,
       checks: [
         {
@@ -98,61 +129,93 @@ export const track: Track = {
       title: 'Embeddings and vector indexes',
       summary:
         'Explain what an embedding is, size a vector index, and choose between HNSW, IVF and quantization.',
-      minutes: 15,
+      minutes: 17,
       body: `
-        An **embedding** is a list of numbers, often 384 to 3,072 of them, that a model computes
-        for a piece of text, an image or a user. Items with similar meaning get vectors that point
-        in similar directions. Search then becomes geometry: find the stored vectors closest to
-        the query vector.
+        ## Start with the problem
 
-        ## Distance metrics
+        A rider types "my driver took a weird route". Your help articles say "unexpected detour" and
+        "longer path than shown". Keyword search finds nothing: no word matches. You need search by
+        **meaning**, not by words.
 
-        | Metric | What it measures | Note |
-        |---|---|---|
-        | Cosine similarity | The angle between two vectors | The usual choice for text |
-        | Dot product | Angle and length together | Same ranking as cosine when vectors are normalized |
-        | Euclidean (L2) | Straight-line distance | Same ranking as cosine on normalized vectors |
+        Then, once it works, you have 100 million passages, and comparing a question with every one of
+        them takes far too long.
 
-        Use the metric the embedding model was trained with. Many models return normalized
-        vectors, so the three give the same order and dot product is the cheapest.
+        This lesson answers both: how to turn meaning into numbers, and how to search those numbers fast.
 
-        ## Why exact search does not scale
+        ## Idea 1: an embedding is an address on a map of meaning
 
-        Exact search compares the query with every vector. For 100 million vectors of 768
-        dimensions, that is 76.8 billion multiplications per query. An **approximate nearest
-        neighbour** (ANN) index trades a little recall for a large speed-up.
+        An **embedding** is a list of numbers, often 384 to 3,072 of them, that a model computes for a
+        piece of text, an image or a user. Items with similar meaning get vectors that point in similar
+        directions.
 
-        | Index | How it works | Strengths | Costs |
-        |---|---|---|---|
-        | **HNSW** | A layered graph; search walks from far hops to near neighbours | High recall, fast, updates in place | Memory-heavy; slow to build |
-        | **IVF** | Clusters vectors; searches only the nearest clusters | Smaller, fast to build | Recall drops if clusters drift; retrain needed |
-        | **PQ** (product quantization) | Compresses each vector into a few bytes | 10x to 60x less memory | Lower precision; rerank with full vectors |
-        | **DiskANN-style** | Graph on SSD, compressed vectors in RAM | Billions of vectors per node | More complex to run |
+        Think of a huge map where every sentence gets a location. "Weird route" and "unexpected detour"
+        land in the same neighbourhood; "refund for a cancelled trip" lands across town. Search becomes
+        geometry: find the stored vectors closest to the query vector.
 
-        The tuning knobs to name: for HNSW, «M» (links per node) and «ef_search» (how wide a
-        query searches); for IVF, «nlist» (clusters) and «nprobe» (clusters searched). Higher
-        values raise recall and latency together.
+        ## Idea 2: how "close" is measured
 
-        ## Size it before you choose
+        - **Cosine similarity:** the angle between two vectors. The usual choice for text.
+        - **Dot product:** angle and length together. The same ranking as cosine when vectors are
+          normalized.
+        - **Euclidean (L2):** straight-line distance. The same ranking as cosine on normalized vectors.
+
+        Use the metric the embedding model was trained with. Many models return normalized vectors, so the
+        three give the same order, and dot product is the cheapest.
+
+        ## Idea 3: why exact search does not scale
+
+        Exact search compares the query with every vector. For 100 million vectors of 768 dimensions,
+        that is 76.8 billion multiplications per query.
+
+        An **approximate nearest neighbour** (ANN) index trades a little recall for a large speed-up. Like
+        asking for directions to the right neighbourhood first, then searching only its streets.
+
+        - **HNSW.** A layered graph; search walks from far hops to near neighbours. High recall, fast, and
+          updates in place. But memory-heavy, and slow to build.
+        - **IVF.** Clusters the vectors, and searches only the nearest clusters. Smaller and fast to
+          build. But recall drops if clusters drift, and it needs retraining.
+        - **PQ (product quantization).** Compresses each vector into a few bytes: 10x to 60x less memory.
+          Lower precision, so rerank with the full vectors.
+        - **DiskANN-style.** A graph on SSD, compressed vectors in RAM. Billions of vectors per node, but
+          more complex to run.
+
+        The tuning knobs to name:
+
+        - for HNSW, «M» (links per node) and «ef_search» (how wide a query searches);
+        - for IVF, «nlist» (clusters) and «nprobe» (clusters searched).
+
+        Higher values raise recall and latency together.
+
+        ## Idea 4: size it before you choose
 
         ~~~text
-        100M vectors x 768 dims x 4 bytes (float32) = 307 GB of raw vectors
-        + HNSW graph links                          = roughly 10% more
-        half precision (float16)                    = about 154 GB
-        PQ to 96 bytes per vector                   = about 9.6 GB
+        100M vectors × 768 dims
+        × 4 bytes (float32)
+        = 307 GB of raw vectors
+
+        + HNSW graph links:
+          roughly 10% more
+
+        Half precision (float16):
+          about 154 GB
+
+        PQ, 96 bytes per vector:
+          about 9.6 GB
         ~~~
 
-        That arithmetic decides the design: 307 GB means sharding across nodes or compressing;
-        9.6 GB fits one machine.
+        That arithmetic decides the design. 307 GB means sharding across nodes, or compressing. 9.6 GB
+        fits one machine.
 
-        ## Where vectors live
+        ## Idea 5: where vectors live
 
-        | Option | Fits when |
-        |---|---|
-        | **pgvector** in Postgres | Up to tens of millions of vectors, and you want SQL joins and transactions |
-        | A dedicated vector database (Milvus, Qdrant, Weaviate, Pinecone) | Hundreds of millions or more, heavy filtering, many tenants |
-        | Warehouse vector search (BigQuery «VECTOR_SEARCH», Snowflake, Databricks) | Batch and analytical similarity next to the data |
-        | Elasticsearch or OpenSearch | You already run them and need keyword and vector search together |
+        - **pgvector in Postgres:** up to tens of millions of vectors, when you want SQL joins and
+          transactions.
+        - **A dedicated vector database** (Milvus, Qdrant, Weaviate, Pinecone): hundreds of millions or
+          more, heavy filtering, many tenants.
+        - **Warehouse vector search** (BigQuery «VECTOR_SEARCH», Snowflake, Databricks): batch and
+          analytical similarity next to the data.
+        - **Elasticsearch or OpenSearch:** you already run them and need keyword and vector search
+          together.
 
         ~~~sql
         -- pgvector: store, index and query
@@ -176,6 +239,12 @@ export const track: Track = {
         «<=>» is cosine distance in pgvector. An HNSW index on the «vector» type takes up to 2,000
         dimensions; the «halfvec» type goes higher.
 
+        ## Now say it like a senior engineer
+
+        Embeddings map meaning to vectors compared by the model's metric. Exact search is too slow at
+        scale, so use ANN indexes (HNSW, IVF, PQ, DiskANN) tuned for recall against latency. Size memory
+        first, pick the store by scale and filtering needs, and filter during the search, not after.
+
         > [!trap] Filters after the index
         > An ANN index returns the 10 nearest vectors, then the «tenant_id» filter removes 9 of
         > them. The query returns 1 row, or none. Use an engine that filters during the search,
@@ -185,6 +254,12 @@ export const track: Track = {
         > Say you will build a ground-truth set with exact search on a sample, then tune
         > «ef_search» or «nprobe» until recall at 10 is, for example, above 0.95 within the
         > latency budget.
+
+        ## In one breath
+
+        An embedding gives every piece of text an address on a map of meaning, and search finds the
+        nearest addresses. At scale an approximate index does that fast; size its memory first, measure its
+        recall, and filter during the search.
       `,
       checks: [
         {
@@ -220,63 +295,96 @@ export const track: Track = {
       title: 'Embedding pipelines and hybrid search',
       summary:
         'Build an embedding pipeline that is incremental, versioned and safe to rerun, and combine vector and keyword search.',
-      minutes: 15,
+      minutes: 17,
       body: `
-        An embedding pipeline is an ordinary incremental pipeline with an expensive transform in
-        the middle. The same rules apply: process only what changed, make reruns safe, and keep
-        the output traceable to its input.
+        ## Start with the problem
+
+        The first version of the support assistant re-embeds all 5 million help documents every night. It
+        costs a lot, takes 9 hours, and on the night the job fails halfway, half the index is new and half
+        is old. A deleted HR document is still in the index a week later. And when a customer searches for
+        the error code «ORA-01555», vector search returns passages about "database errors" in general, not
+        the one page that names the code.
+
+        An embedding pipeline is an ordinary incremental pipeline, with an expensive transform in the
+        middle. The same rules apply: process only what changed, make reruns safe, and keep the output
+        traceable to its input.
+
+        ## Idea 1: the pipeline, step by step
 
         ~~~text
-        source change (CDC, file drop) -> parse and clean -> chunk -> hash
-            -> skip if (hash, model_version) already embedded
-            -> embed in batches -> upsert vectors + metadata -> delete stale chunks
+        source change
+         (CDC, file drop)
+          → parse and clean
+          → chunk
+          → hash
+          → skip if
+            (hash, model_version)
+            already embedded
+          → embed in batches
+          → upsert vectors
+            + metadata
+          → delete stale chunks
         ~~~
 
-        ## The rules that make it production-grade
+        ## Idea 2: six rules that make it production-grade
 
-        - **Content hash per chunk.** Store «sha256(model_version + chunk_text)». A rerun skips
-          chunks it has already embedded, so a retry costs nothing.
-        - **Deterministic chunk ids.** Derive the id from the document id and the chunk position
-          or hash, so an upsert replaces the old row instead of adding a duplicate.
-        - **Model version on every vector.** Vectors from two models are not comparable. Never
-          mix them in one index.
-        - **Deletes propagate.** When a document is deleted or a user loses access, its chunks
-          leave the index within the SLA. A stale vector of a deleted HR file is a data leak.
-        - **Batch the model calls.** Send hundreds of chunks per request, run several requests at
-          once within the rate limit, and retry with backoff on 429 responses.
-        - **Metadata travels with the vector.** Source, owner, tenant, ACL groups, language,
-          updated time. Retrieval filters on it.
+        - **Content hash per chunk.** Store «sha256(model_version + chunk_text)». A rerun skips chunks it
+          has already embedded, so a retry costs nothing. Like a librarian who checks the barcode before
+          cataloguing a book again.
+        - **Deterministic chunk ids.** Derive the id from the document id and the chunk position or hash,
+          so an upsert replaces the old row instead of adding a duplicate.
+        - **Model version on every vector.** Vectors from two models are not comparable. Never mix them in
+          one index.
+        - **Deletes propagate.** When a document is deleted or a user loses access, its chunks leave the
+          index within the SLA. A stale vector of a deleted HR file is a data leak.
+        - **Batch the model calls.** Send hundreds of chunks per request, run several requests at once
+          within the rate limit, and retry with backoff on 429 responses.
+        - **Metadata travels with the vector.** Source, owner, tenant, ACL groups, language, updated time.
+          Retrieval filters on it.
 
-        ## Changing the embedding model
+        ## Idea 3: changing the embedding model
 
-        A new model means every vector must be recomputed. Treat it like a schema migration:
+        A new model means every vector must be recomputed. Two maps drawn by different people cannot share
+        addresses. Treat it like a schema migration:
 
         1. Build a second index with the new model, filled by a backfill job.
         2. Dual-write new and changed documents to both indexes during the backfill.
         3. Compare retrieval quality on your evaluation set.
         4. Switch the read alias to the new index. Keep the old one for rollback, then drop it.
 
-        Estimate the cost first: 200M chunks of 300 tokens is 60 billion tokens. At a price of
-        a few cents per million tokens, that is a few thousand dollars, but self-hosted GPUs may
-        be cheaper and faster at that size.
+        Estimate the cost first: 200M chunks of 300 tokens is 60 billion tokens. At a price of a few cents
+        per million tokens, that is a few thousand dollars, but self-hosted GPUs may be cheaper and faster
+        at that size.
 
-        ## Hybrid search
+        ## Idea 4: hybrid search, meaning plus exact words
 
-        Vector search finds meaning: "car is making noise" matches "vehicle rattle". It misses
-        exact tokens: error codes, SKUs, names, «ORA-01555». Keyword search (BM25) finds exact
-        tokens and misses paraphrases. **Hybrid search** runs both and merges the results.
+        - **Vector search** finds meaning: "car is making noise" matches "vehicle rattle". It misses exact
+          tokens: error codes, SKUs, names, «ORA-01555».
+        - **Keyword search (BM25)** finds exact tokens and misses paraphrases.
+        - **Hybrid search** runs both and merges the results.
 
-        **Reciprocal rank fusion** (RRF) merges two ranked lists without comparing their raw
-        scores, which have different scales:
+        How do you merge two lists whose scores are on different scales? **Reciprocal rank fusion** (RRF)
+        uses only the rank in each list:
 
         ~~~text
-        rrf_score(doc) = sum over lists of 1 / (k + rank_in_list), with k = 60 by convention
+        rrf_score(doc) =
+          sum over lists of
+          1 / (k + rank_in_list)
+
+        k = 60 by convention
         ~~~
 
-        A document ranked 1st by keywords and 3rd by vectors scores 1/61 + 1/63. A document that
-        only one list returns still gets its single term. After fusion, a **cross-encoder
-        reranker** scores the top 50 to 100 pairs of query and passage more precisely, and the
-        best 5 to 10 go to the model.
+        Tiny example. A document ranked 1st by keywords and 3rd by vectors scores 1/61 + 1/63. A document
+        that only one list returns still gets its single term.
+
+        After fusion, a **cross-encoder reranker** scores the top 50 to 100 pairs of query and passage more
+        precisely, and the best 5 to 10 go to the model.
+
+        ## Now say it like a senior engineer
+
+        Embedding pipelines are incremental: hash per chunk with the model version, deterministic ids,
+        batched calls, propagated deletes and metadata for filtering. A model change is a dual-index
+        migration. Retrieval is hybrid: BM25 plus vectors, fused with RRF, then reranked.
 
         > [!example] Retrieval stack for a support assistant
         > BM25 top 50 plus vector top 50, fused with RRF, reranked to 8 passages, filtered by the
@@ -289,6 +397,12 @@ export const track: Track = {
         > [!senior] Scale talking points
         > Shard by tenant or by hash, replicate for read throughput, keep the index build off the
         > serving path, and alert on index freshness lag the same way you alert on a late table.
+
+        ## In one breath
+
+        Treat embedding like any incremental pipeline: hash each chunk, skip what you already embedded,
+        version every vector and propagate deletes. Search with both keywords and vectors, merge them by
+        rank, and rerank the best few.
       `,
       checks: [
         {
@@ -332,62 +446,92 @@ export const track: Track = {
       title: 'RAG pipelines from document to answer',
       summary:
         'Design the ingestion, chunking, retrieval and generation path of a production RAG system.',
-      minutes: 16,
+      minutes: 18,
       body: `
-        **Retrieval-augmented generation** (RAG) answers a question with a language model that
-        reads passages retrieved from your own data. It keeps answers current without retraining,
-        lets you cite sources, and lets you enforce access control at retrieval time.
+        ## Start with the problem
+
+        You ask a general chat model: "What is our hotel limit for business trips to Paris?" It answers
+        confidently: "$250 a night." Your company's real limit is €200, changed last month. The model never
+        saw your policy, so it guessed.
+
+        You could retrain the model every time a policy changes, but that is slow and expensive, and it
+        still could not show where the answer came from.
+
+        **Retrieval-augmented generation** (RAG) answers a question with a language model that reads
+        passages retrieved from your own data. It keeps answers current without retraining, lets you cite
+        sources, and lets you enforce access control at retrieval time.
+
+        ## Idea 1: an open-book exam
+
+        A closed-book exam tests what the student memorised. An open-book exam lets them look up the right
+        page first. RAG is an open-book exam for the model. Your job as a data engineer is the book: keep
+        it current, well indexed, and only show each reader the pages they may see.
+
+        There are two halves:
 
         ~~~text
-        OFFLINE (ingestion)                         ONLINE (per question)
-        sources -> parse -> clean -> chunk          question -> rewrite -> retrieve (hybrid)
-          -> enrich metadata -> embed -> index        -> ACL filter -> rerank -> build prompt
-                                                      -> LLM -> answer + citations -> log
+        OFFLINE (ingestion):
+        sources → parse → clean
+         → chunk → enrich metadata
+         → embed → index
+
+        ONLINE (per question):
+        question → rewrite
+         → retrieve (hybrid)
+         → ACL filter → rerank
+         → build prompt → LLM
+         → answer + citations
+         → log
         ~~~
 
-        ## Parsing unstructured data
+        ## Idea 2: parsing decides most of the quality
 
-        Parsing decides more of the answer quality than the model does. A PDF table read as one
-        line of text gives wrong numbers in every answer that uses it.
+        Parsing decides more of the answer quality than the model does. A PDF table read as one line of
+        text gives wrong numbers in every answer that uses it.
 
         - Keep **structure**: headings, lists, tables as rows, page numbers for citations.
-        - Use layout-aware parsers or OCR for scans and slides. Cloud services (Document AI,
-          Textract, Azure Document Intelligence) and open-source tools (Unstructured, Docling,
-          Apache Tika) cover different formats; test them on your worst documents.
+        - Use layout-aware parsers or OCR for scans and slides. Cloud services (Document AI, Textract,
+          Azure Document Intelligence) and open-source tools (Unstructured, Docling, Apache Tika) cover
+          different formats. Test them on your worst documents.
         - Remove boilerplate: headers, footers, navigation, signatures, repeated disclaimers.
-        - At scale, run parsing as a distributed batch job (Spark or Ray) with a dead-letter
-          table for files that fail, and record the parser version per document.
+        - At scale, run parsing as a distributed batch job (Spark or Ray), with a dead-letter table for
+          files that fail, and record the parser version per document.
 
-        ## Chunking
+        ## Idea 3: chunking, cutting the book into pages
 
-        | Strategy | How | Use when |
-        |---|---|---|
-        | Fixed size with overlap | 300 to 800 tokens, 10 to 20% overlap | A simple, robust start |
-        | Structure-aware | Split on headings, sections, list items | Docs, wikis, policies |
-        | Parent and child | Retrieve small chunks, send their larger parent section | Precise match, full context |
-        | Semantic | Split where the meaning shifts between sentences | Long prose without structure |
+        - **Fixed size with overlap:** 300 to 800 tokens, with 10 to 20% overlap. A simple, robust start.
+        - **Structure-aware:** split on headings, sections and list items. For docs, wikis, policies.
+        - **Parent and child:** retrieve small chunks, but send their larger parent section. A precise
+          match, with full context.
+        - **Semantic:** split where the meaning shifts between sentences. For long prose without
+          structure.
 
-        Prepend context to each chunk before embedding, such as the document title and section
-        path ("Travel policy > Hotels > Limits"). A chunk that says "the limit is 200" means
-        nothing alone.
+        Prepend context to each chunk before embedding, such as the document title and section path
+        ("Travel policy > Hotels > Limits"). A chunk that says "the limit is 200" means nothing alone.
 
-        ## Retrieval and generation
+        ## Idea 4: retrieval and generation, six steps
 
         1. **Rewrite the question** if it depends on the chat history ("and for Paris?").
-        2. **Retrieve** with hybrid search, 20 to 100 candidates.
+        2. **Retrieve** with hybrid search: 20 to 100 candidates.
         3. **Filter by permission** inside the search, with the user's groups as a filter.
-        4. **Rerank** and keep the best 5 to 10 passages.
-        5. **Prompt**: instructions, the passages with ids, the question, and a rule to cite ids
-           and to say "not found" when the passages do not answer it.
-        6. **Log** the question, passage ids, prompt version, model, answer, latency and tokens.
-           This log is your evaluation and debugging data.
+        4. **Rerank**, and keep the best 5 to 10 passages.
+        5. **Prompt**: instructions, the passages with ids, the question, and a rule to cite ids and to
+           say "not found" when the passages do not answer it.
+        6. **Log** the question, passage ids, prompt version, model, answer, latency and tokens. This log
+           is your evaluation and debugging data.
 
-        ## Frameworks
+        ## Idea 5: frameworks
 
-        LangChain, LlamaIndex and Haystack give loaders, splitters and retrieval chains. They are
-        fast for a prototype. In production, many teams keep the ingestion in their normal data
-        stack (Spark, Airflow, dbt) and use a thin library on the serving side, because the hard
-        parts are data freshness and access control, which frameworks do not solve for you.
+        LangChain, LlamaIndex and Haystack give loaders, splitters and retrieval chains. They are fast for
+        a prototype. In production, many teams keep the ingestion in their normal data stack (Spark,
+        Airflow, dbt) and use a thin library on the serving side, because the hard parts are data freshness
+        and access control, which frameworks do not solve for you.
+
+        ## Now say it like a senior engineer
+
+        RAG has an offline pipeline (parse with structure, chunk with context, embed, index with metadata)
+        and an online path (rewrite, hybrid retrieve with ACL filters, rerank, prompt with citations, log).
+        Parsing and permissions decide quality and safety more than the model does.
 
         > [!trap] Access control after generation
         > Filtering the answer is too late: the model has already read the secret passage and
@@ -402,6 +546,12 @@ export const track: Track = {
         > RAG adds knowledge that changes and must be cited. Fine-tuning changes behaviour: tone,
         > format, a narrow task. A senior answer often uses RAG for facts and, only if needed, a
         > small fine-tune for format.
+
+        ## In one breath
+
+        RAG is an open-book exam: parse and chunk your documents well, retrieve the right permitted
+        passages, and let the model answer from them with citations. Most failures come from parsing,
+        chunking and permissions, not from the model.
       `,
       checks: [
         {
@@ -433,57 +583,83 @@ export const track: Track = {
       title: 'Evaluate retrieval and answers',
       summary:
         'Measure a RAG system with retrieval metrics, answer metrics and a golden set, and find which stage fails.',
-      minutes: 14,
+      minutes: 16,
       body: `
-        "It looks good in the demo" is not a quality bar. A RAG system has two stages that fail in
-        different ways, so measure them separately.
+        ## Start with the problem
 
-        ## Measure retrieval
+        The team shows the assistant to the director. Five questions, five great answers. It launches.
+        Two weeks later HR says half its answers about leave are wrong. Nobody knows whether it got worse,
+        or was always bad at HR, or which part is broken.
 
-        Build a **golden set**: 100 to 500 real questions, each with the passages that answer it,
-        labelled by domain experts. Then score the retriever alone:
+        "It looks good in the demo" is not a quality bar. A RAG system has **two stages** that fail in
+        different ways, finding the passages and writing the answer, so measure them separately.
 
-        | Metric | Question it answers |
-        |---|---|
-        | **Recall at k** | Did the right passage appear in the top k at all? |
-        | **MRR** (mean reciprocal rank) | How high was the first right passage? |
-        | **nDCG at k** | Were the most useful passages ranked highest? |
-        | Context precision | How much of what we sent the model was relevant? |
+        ## Idea 1: measure retrieval, did we open the right page?
 
-        If recall at 10 is low, no prompt or model fixes the answer. Fix parsing, chunking,
-        metadata or search first.
+        Build a **golden set**: 100 to 500 real questions, each with the passages that answer it, labelled
+        by domain experts. Then score the retriever alone:
 
-        ## Measure answers
+        - **Recall at k:** did the right passage appear in the top k at all?
+        - **MRR (mean reciprocal rank):** how high was the first right passage?
+        - **nDCG at k:** were the most useful passages ranked highest?
+        - **Context precision:** how much of what we sent the model was relevant?
 
-        | Metric | Question it answers |
-        |---|---|
-        | **Faithfulness** (groundedness) | Is every claim supported by the retrieved passages? |
-        | Answer relevance | Does it answer the question that was asked? |
-        | Correctness | Does it match the expert's reference answer? |
-        | Citation accuracy | Do the cited passages support the sentence they are attached to? |
-        | Refusal rate | How often does it say "not found", and is it right to? |
+        Tiny example. For one question the right passage is ranked 4th. Recall at 10 is 1 (it is in the
+        top 10). Its reciprocal rank is 1/4 = 0.25. MRR is the average of that over all questions.
 
-        **LLM as judge**: a strong model grades answers against a rubric. It scales, but it has
-        biases (it likes long answers, and its own style). Calibrate it against a few hundred
-        human labels, and track agreement. Libraries such as Ragas compute these metrics for you.
+        If recall at 10 is low, no prompt or model fixes the answer. A student cannot answer from a page
+        they never opened. Fix parsing, chunking, metadata or search first.
 
-        ## Find the failing stage
+        ## Idea 2: measure answers, did we read the page correctly?
+
+        - **Faithfulness (groundedness):** is every claim supported by the retrieved passages?
+        - **Answer relevance:** does it answer the question that was asked?
+        - **Correctness:** does it match the expert's reference answer?
+        - **Citation accuracy:** do the cited passages support the sentence they are attached to?
+        - **Refusal rate:** how often does it say "not found", and is it right to?
+
+        **LLM as judge**: a strong model grades answers against a rubric. It scales, but it has biases (it
+        likes long answers, and its own style). Calibrate it against a few hundred human labels, and track
+        agreement. Libraries such as Ragas compute these metrics for you.
+
+        ## Idea 3: find the failing stage
+
+        A wrong answer has four possible causes, checked in order:
 
         ~~~text
-        wrong answer
-          |- right passage not retrieved?      -> retrieval: parsing, chunking, search, filters
-          |- retrieved but ranked low or cut?  -> reranking, top k, context budget
-          |- in context but ignored or wrong?  -> prompt, model, conflicting passages
-          |- right answer, stale fact?         -> freshness: ingestion lag, deletes
+        Wrong answer. Was the
+        right passage...
+
+        1. not retrieved?
+           → parsing, chunking,
+             search, filters
+        2. retrieved but ranked
+           low or cut off?
+           → reranking, top k,
+             context budget
+        3. in context but
+           ignored or misread?
+           → prompt, model,
+             conflicting passages
+        4. right, but stale?
+           → freshness: ingestion
+             lag, deletes
         ~~~
 
-        ## Evaluate continuously
+        ## Idea 4: evaluate continuously
 
-        - Run the golden set in **CI** on every change to chunking, embedding model, prompt or
-          model version. Block the merge on a regression.
-        - **Online**: thumbs up and down, copy rate, follow-up questions that rephrase the same
-          ask, escalation to a human. Sample live traffic for weekly human review.
+        - Run the golden set in **CI** on every change to chunking, embedding model, prompt or model
+          version. Block the merge on a regression.
+        - **Online:** thumbs up and down, copy rate, follow-up questions that rephrase the same ask,
+          escalation to a human. Sample live traffic for weekly human review.
         - Add every bad answer from production to the golden set, like a regression test.
+
+        ## Now say it like a senior engineer
+
+        Evaluate retrieval (recall at k, MRR, nDCG, context precision) separately from answers
+        (faithfulness, relevance, correctness, citations, refusals). Calibrate LLM judges against humans,
+        diagnose by stage, slice by topic, gate changes in CI, and feed production failures back into the
+        golden set.
 
         > [!trap] One number for everything
         > An average score hides that HR questions fail while IT questions pass. Slice metrics by
@@ -492,6 +668,12 @@ export const track: Track = {
         > [!senior] Evaluation is a data product
         > The golden set, the judge prompts and the scores live in versioned tables with an
         > owner. A senior engineer budgets time for them in the design, not after launch.
+
+        ## In one breath
+
+        Measure finding and answering separately: first did we retrieve the right passage, then did the
+        answer stay true to it. Keep a golden set that grows with every failure, run it on every change,
+        and slice the scores so one weak topic cannot hide.
       `,
       checks: [
         {
@@ -523,59 +705,99 @@ export const track: Track = {
       title: 'LLMOps: running model calls in production',
       summary:
         'Version prompts, route and cache model calls, control cost, trace requests and guard inputs and outputs.',
-      minutes: 14,
+      minutes: 16,
       body: `
-        **LLMOps** is the practice of running language model features in production. It shares
-        the MLOps ideas of versioning, evaluation and monitoring, but most teams do not train the
-        model. They operate prompts, retrieval and calls to a hosted or self-hosted model.
+        ## Start with the problem
 
-        | | MLOps | LLMOps |
-        |---|---|---|
-        | Main artefact | A trained model | A prompt, retrieval config and model choice |
-        | Quality check | Accuracy on a labelled test set | Golden sets, LLM judges, human review |
-        | Main cost | Training compute | Tokens per request |
-        | Main drift | Input data distribution | Provider model updates, content changes, new user behaviour |
+        The assistant is live. Then, in one month:
 
-        ## The parts of the platform
+        - Someone edits the prompt directly in production. Answers get worse, and nobody knows which
+          version was running when.
+        - The model provider updates the "latest" model overnight. Output format changes and a parser
+          breaks.
+        - The bill triples, because one feature sends 20 pages of context with every request.
 
-        - **Prompt registry.** Prompts live in version control with an id and a version. Every
-          logged request records which version produced it.
-        - **Gateway.** One service between apps and model providers: keys, routing, retries,
-          fallbacks to a second provider, rate limits and spend per team.
-        - **Evaluation in CI.** A prompt or model change runs the golden set before release, like
-          a unit test suite.
-        - **Tracing.** Each request becomes a trace: retrieval, rerank, model call, tool calls,
-          with tokens, latency and cost per span. Tools such as Langfuse, LangSmith or an
-          OpenTelemetry backend show it.
-        - **Guardrails.** Input checks (PII, prompt injection, topic limits) and output checks
-          (schema validation, banned content, citation present).
+        **LLMOps** is the practice of running language model features in production. It shares the MLOps
+        ideas of versioning, evaluation and monitoring, but most teams do not train the model. They operate
+        prompts, retrieval and calls to a hosted or self-hosted model.
 
-        ## Cost and latency
+        ## Idea 1: how it differs from MLOps
+
+        **MLOps.**
+
+        - Main artefact: a trained model.
+        - Quality check: accuracy on a labelled test set.
+        - Main cost: training compute.
+        - Main drift: the input data distribution.
+
+        **LLMOps.**
+
+        - Main artefact: a prompt, a retrieval config and a model choice.
+        - Quality check: golden sets, LLM judges, human review.
+        - Main cost: tokens per request.
+        - Main drift: provider model updates, content changes, new user behaviour.
+
+        ## Idea 2: the parts of the platform
+
+        Each part fixes one problem from the story.
+
+        - **Prompt registry.** Prompts live in version control with an id and a version. Every logged
+          request records which version produced it.
+        - **Gateway.** One service between apps and model providers: keys, routing, retries, fallbacks to a
+          second provider, rate limits and spend per team. Like one switchboard instead of every desk
+          dialling out on its own.
+        - **Evaluation in CI.** A prompt or model change runs the golden set before release, like a unit
+          test suite.
+        - **Tracing.** Each request becomes a trace: retrieval, rerank, model call, tool calls, with
+          tokens, latency and cost per span. Tools such as Langfuse, LangSmith or an OpenTelemetry backend
+          show it.
+        - **Guardrails.** Input checks (PII, prompt injection, topic limits) and output checks (schema
+          validation, banned content, citation present).
+
+        ## Idea 3: cost and latency
 
         ~~~text
-        cost per request = input tokens x input price + output tokens x output price
-        1M requests/day x (3,000 in + 300 out tokens) = 3B input + 0.3B output tokens per day
+        cost per request =
+          input tokens × input price
+        + output tokens × output price
+
+        1M requests/day ×
+         (3,000 in + 300 out)
+        = 3B input tokens
+        + 0.3B output tokens
+          per day
         ~~~
 
         Levers, in the order to try them:
 
         1. **Send less context.** Rerank and keep fewer, better passages.
-        2. **Route by difficulty.** A small, cheap model handles easy requests; the large model
-           handles the rest.
-        3. **Cache.** Exact-match caching of repeated requests, provider prompt caching for a long
-           shared prefix, and semantic caching only where a near-duplicate answer is safe.
-        4. **Batch offline work.** Batch APIs cost less than live calls for non-urgent jobs such
-           as nightly classification.
-        5. **Cap output.** Set max tokens and ask for structured, short output.
+        2. **Route by difficulty.** A small, cheap model handles easy requests; the large model handles the
+           rest.
+        3. **Cache.** Exact-match caching of repeated requests, provider prompt caching for a long shared
+           prefix, and semantic caching only where a near-duplicate answer is safe.
+        4. **Batch offline work.** Batch APIs cost less than live calls for non-urgent jobs, such as
+           nightly classification.
+        5. **Cap output.** Set max tokens, and ask for structured, short output.
 
-        ## LLM calls inside data pipelines
+        ## Idea 4: LLM calls inside data pipelines
 
         Classifying 50 million support tickets with a model is a batch job. Treat it like one:
-        partition the input, checkpoint progress, make each call idempotent by storing the
-        result keyed by «(record_id, prompt_version, model)», validate the output against a
-        schema, and send failures to a dead-letter table. Warehouses now offer SQL functions that
-        call a model per row (for example BigQuery «AI.GENERATE», Snowflake «AI_COMPLETE»,
-        Databricks «ai_query»). They are convenient, and a full-table call is a full-table bill.
+
+        - partition the input and checkpoint progress;
+        - make each call idempotent by storing the result keyed by «(record_id, prompt_version, model)»;
+        - validate the output against a schema;
+        - send failures to a dead-letter table.
+
+        Warehouses now offer SQL functions that call a model per row (for example BigQuery «AI.GENERATE»,
+        Snowflake «AI_COMPLETE», Databricks «ai_query»). They are convenient, and a full-table call is a
+        full-table bill.
+
+        ## Now say it like a senior engineer
+
+        LLMOps versions prompts, routes every call through a gateway, gates changes with golden-set
+        evaluation, traces each request with token cost, and applies input and output guardrails. Cost is
+        cut by less context, model routing, caching, batching and output caps. Pipeline LLM calls are
+        idempotent, schema-checked batch jobs.
 
         > [!trap] The silent model update
         > A provider alias such as "latest" can change behaviour overnight. Pin model versions in
@@ -584,6 +806,12 @@ export const track: Track = {
         > [!senior] Name the budget
         > State a cost per request and a p95 latency target early, for example "under 1 cent and
         > under 2 seconds", then design retrieval depth, model routing and caching against them.
+
+        ## In one breath
+
+        Run model features like any production system: version the prompts, send every call through one
+        gateway, test changes against a golden set, and trace token cost. Pin model versions, send less
+        context, and treat bulk model calls as idempotent batch jobs.
       `,
       checks: [
         {
@@ -617,36 +845,65 @@ export const track: Track = {
       title: 'Feature stores and point-in-time correctness',
       summary:
         'Explain offline and online feature stores, build a point-in-time correct training set, and prevent training-serving skew.',
-      minutes: 16,
+      minutes: 18,
       body: `
-        A **feature** is an input to a model: a driver's trips in the last hour, a user's average
-        basket, a merchant's chargeback rate. A **feature store** keeps one definition of each
-        feature and serves it two ways: history for training, and the latest value for live
-        predictions.
+        ## Start with the problem
+
+        A fraud model scores 0.97 AUC in training. In production it catches almost nothing. After a week of
+        digging, the team finds two bugs:
+
+        - The training query joined each order to the user's **latest** feature values, including orders
+          placed after the one being scored. The model learned from the future.
+        - In training, "orders in the last 7 days" was computed in SQL by calendar day. In the live service
+          it was computed in Java over the last 168 hours. Same name, different number.
+
+        A **feature** is an input to a model: a driver's trips in the last hour, a user's average basket, a
+        merchant's chargeback rate. A **feature store** keeps one definition of each feature and serves it
+        two ways: history for training, and the latest value for live predictions.
+
+        ## Idea 1: two stores, one definition
+
+        Think of a shop's sales ledger and its price tags. The ledger holds every past price with its date,
+        for the accountant. The price tag holds only today's price, for the customer at the till. Both come
+        from the same price list.
 
         ~~~text
-        sources -> feature pipelines (batch, streaming) -> OFFLINE store (lake / warehouse)
-                                                         |    full history, for training
-                                                         -> ONLINE store (key-value)
-                                                              latest value, read in ms
+        sources
+         → feature pipelines
+           (batch, streaming)
+           ├─► OFFLINE store
+           │   (lake/warehouse)
+           │   full history,
+           │   for training
+           └─► ONLINE store
+               (key-value)
+               latest value,
+               read in ms
         ~~~
 
-        | | Offline store | Online store |
-        |---|---|---|
-        | Holds | Every value with its timestamp | The latest value per entity key |
-        | Read by | Training jobs, batch scoring | The model server, per request |
-        | Latency | Seconds to minutes | Single-digit milliseconds at p99 |
-        | Typical tech | BigQuery, Delta or Iceberg tables | Redis, Bigtable, DynamoDB, Cassandra |
+        **Offline store.**
 
-        Options to name: **Feast** (open source, plugs into your own stores), **Tecton**,
-        **Vertex AI Feature Store**, **Databricks Feature Engineering** in Unity Catalog and
-        **SageMaker Feature Store**. Many large companies build their own on the same pattern.
+        - Holds every value with its timestamp.
+        - Read by training jobs and batch scoring.
+        - Latency: seconds to minutes.
+        - Typical tech: BigQuery, Delta or Iceberg tables.
 
-        ## Point-in-time correctness
+        **Online store.**
 
-        A training row for an event at time T may only use feature values that were **known
-        before T**. Joining the latest value instead leaks the future into training. The model
-        looks great offline and fails in production.
+        - Holds the latest value per entity key.
+        - Read by the model server, per request.
+        - Latency: single-digit milliseconds at p99.
+        - Typical tech: Redis, Bigtable, DynamoDB, Cassandra.
+
+        Options to name: **Feast** (open source, plugs into your own stores), **Tecton**, **Vertex AI
+        Feature Store**, **Databricks Feature Engineering** in Unity Catalog and **SageMaker Feature
+        Store**. Many large companies build their own on the same pattern.
+
+        ## Idea 2: point-in-time correctness, no peeking at the future
+
+        A training row for an event at time T may only use feature values that were **known before T**.
+        Joining the latest value instead leaks the future into training. Like grading a weather forecast
+        using tomorrow's newspaper: it looks perfect, and it is useless. That was the first bug.
 
         ~~~sql
         -- one row per labelled order, with the user's features as they were at order time
@@ -668,30 +925,40 @@ export const track: Track = {
         ) = 1
         ~~~
 
-        The 30-day bound is a **time to live**: a value older than that counts as missing, the
-        same rule the online store applies. Some engines have an «ASOF JOIN» that does this
-        directly.
+        For each labelled order, the join finds the newest feature row from before the order, and keeps
+        only that one.
 
-        ## Training-serving skew
+        The 30-day bound is a **time to live**: a value older than that counts as missing, the same rule the
+        online store applies. Some engines have an «ASOF JOIN» that does this directly.
 
-        Skew is when the model sees different values for the "same" feature in training and in
-        production. Common causes:
+        ## Idea 3: training-serving skew
 
-        - Two code paths: SQL for training, Java in the service. They drift apart.
-        - Different windows: training uses calendar days, serving uses the last 24 hours.
-        - Freshness: training assumes values are current; online values lag 15 minutes.
-        - Defaults: nulls become 0 in one path and the mean in the other.
+        Skew is when the model sees different values for the "same" feature in training and in production.
+        That was the second bug. Common causes:
 
-        Fixes: one feature definition that generates both paths, logging the exact feature values
-        the model used at serving time and training on those logs, and a daily job that compares
-        offline and online values for a sample of keys.
+        - **Two code paths:** SQL for training, Java in the service. They drift apart.
+        - **Different windows:** training uses calendar days, serving uses the last 24 hours.
+        - **Freshness:** training assumes values are current; online values lag 15 minutes.
+        - **Defaults:** nulls become 0 in one path and the mean in the other.
 
-        ## Streaming features
+        Fixes:
 
-        "Trips in the last 10 minutes" needs a streaming pipeline (Flink, Spark Structured
-        Streaming) that updates the online store within seconds and also writes the history to
-        the offline store, so training sees the same values. Backfilling a new streaming feature
-        means replaying history through the same logic, or the batch version must provably match.
+        - one feature definition that generates both paths;
+        - log the exact feature values the model used at serving time, and train on those logs;
+        - a daily job that compares offline and online values for a sample of keys.
+
+        ## Idea 4: streaming features
+
+        "Trips in the last 10 minutes" needs a streaming pipeline (Flink, Spark Structured Streaming) that
+        updates the online store within seconds, and also writes the history to the offline store, so
+        training sees the same values. Backfilling a new streaming feature means replaying history through
+        the same logic, or the batch version must provably match.
+
+        ## Now say it like a senior engineer
+
+        A feature store defines each feature once, writes history to an offline store and latest values to
+        an online store, and builds training sets with point-in-time joins bounded by a TTL. Skew is
+        prevented by one definition, logged serving features and offline-online comparisons.
 
         > [!trap] Event time vs availability time
         > A feature computed for 09:00 that lands at 09:20 was not available at 09:05. Join on when
@@ -701,6 +968,12 @@ export const track: Track = {
         > Two models sharing three batch features need a well-modelled table, not a platform.
         > Argue for a feature store when many teams reuse features, online serving is needed, or
         > skew incidents keep happening.
+
+        ## In one breath
+
+        A feature store defines each feature once and serves it as history for training and as the latest
+        value for live requests. Train only on values known before each event, and generate both paths from
+        one definition so training and serving see the same numbers.
       `,
       checks: [
         {
@@ -732,50 +1005,71 @@ export const track: Track = {
       title: 'Training data pipelines and ML observability',
       summary:
         'Version training data, reproduce a model, and monitor drift, freshness and model quality after launch.',
-      minutes: 13,
+      minutes: 15,
       body: `
-        A model is a function of its code, its data and its configuration. To reproduce or debug
-        it, you must be able to rebuild the exact training set months later.
+        ## Start with the problem
 
-        ## Version the training data
+        Six months after launch, the fraud model starts missing more fraud. The data scientist wants to
+        compare it with the original model, trained on the original data. But the training tables have been
+        overwritten many times since. Nobody can rebuild the exact training set. And the drop was only
+        noticed because finance complained about chargebacks; no monitor fired.
 
-        | Approach | How it works |
-        |---|---|
-        | Table time travel (Delta, Iceberg, BigQuery) | Record the snapshot id or timestamp used for training |
-        | Immutable snapshots | Write each training set to a new dated path and never change it |
-        | lakeFS or DVC | Git-like commits and branches over files in object storage |
+        A model is a function of its code, its data and its configuration. To reproduce or debug it, you
+        must be able to rebuild the exact training set months later. And after launch, you must notice
+        when it goes wrong before the business does.
 
-        Record with the model, in the model registry (MLflow, Vertex AI, SageMaker): the data
-        snapshot ids, the feature definitions and their versions, the label query, the code
-        commit and the split method.
+        ## Idea 1: version the training data
 
-        ## Build training sets like any important pipeline
+        Think of a recipe that says "a cup of flour". If you cannot find the exact bag of flour you used,
+        you can never bake that cake again. Three ways to keep the bag:
 
-        - **Labels arrive late.** Fraud chargebacks come weeks after the payment. Train only on
-          events old enough for their label to be final, or model the delay.
-        - **Split by time**, not at random, for anything that predicts the future. A random split
-          puts tomorrow's rows in training and today's in test.
-        - **Check for leakage**: no feature computed from the label, no ids that encode the
-          outcome.
-        - **Sample on purpose**, keep the sampling rate, and weight it back in evaluation.
+        - **Table time travel** (Delta, Iceberg, BigQuery): record the snapshot id or timestamp used for
+          training.
+        - **Immutable snapshots:** write each training set to a new dated path, and never change it.
+        - **lakeFS or DVC:** git-like commits and branches over files in object storage.
 
-        ## What to monitor after launch
+        Record with the model, in the model registry (MLflow, Vertex AI, SageMaker):
 
-        | Signal | Example check |
-        |---|---|
-        | Data freshness | Online features older than their SLA |
-        | Input drift | Population stability index (PSI) of each top feature vs training |
-        | Data quality | Null rate, out-of-range values, new categories |
-        | Prediction drift | Share of "fraud" predictions moves from 2% to 9% |
-        | Model quality | Precision and recall once labels arrive, by segment |
-        | Business metric | Chargeback cost, conversion, time saved |
+        - the data snapshot ids;
+        - the feature definitions and their versions;
+        - the label query;
+        - the code commit;
+        - the split method.
 
-        A common reading of PSI: below 0.1 stable, 0.1 to 0.25 worth a look, above 0.25 a real
-        shift. Treat these as starting points and tune them for each feature.
+        ## Idea 2: build training sets like any important pipeline
 
-        Most model incidents are data incidents: a renamed upstream column turns a feature to
-        null, the model quietly falls back to defaults, and predictions degrade for days. Data
-        contracts and quality tests on feature pipelines catch this before the model does.
+        - **Labels arrive late.** Fraud chargebacks come weeks after the payment. Train only on events old
+          enough for their label to be final, or model the delay.
+        - **Split by time**, not at random, for anything that predicts the future. A random split puts
+          tomorrow's rows in training and today's in test. Like studying with next week's exam paper.
+        - **Check for leakage:** no feature computed from the label, no ids that encode the outcome.
+        - **Sample on purpose,** keep the sampling rate, and weight it back in evaluation.
+
+        ## Idea 3: what to monitor after launch
+
+        - **Data freshness:** online features older than their SLA.
+        - **Input drift:** the population stability index (PSI) of each top feature against training.
+        - **Data quality:** null rate, out-of-range values, new categories.
+        - **Prediction drift:** the share of "fraud" predictions moves from 2% to 9%.
+        - **Model quality:** precision and recall once labels arrive, by segment.
+        - **Business metric:** chargeback cost, conversion, time saved.
+
+        A common reading of PSI: below 0.1 stable, 0.1 to 0.25 worth a look, above 0.25 a real shift. Treat
+        these as starting points, and tune them for each feature.
+
+        ## Idea 4: most model incidents are data incidents
+
+        A renamed upstream column turns a feature to null. The model quietly falls back to defaults, and
+        predictions degrade for days. Nothing in the model changed.
+
+        Data contracts and quality tests on feature pipelines catch this before the model does.
+
+        ## Now say it like a senior engineer
+
+        Every model records its data snapshots, feature versions, label query, commit and split. Training
+        sets respect label delay, use time-based splits and are checked for leakage. Monitoring covers
+        freshness, drift, data quality, prediction mix, delayed-label quality and the business metric, with
+        data contracts on feature pipelines.
 
         > [!trap] Alerting on every drift
         > Drift is normal; seasons change. Alert when drift meets a quality drop or a top feature
@@ -784,6 +1078,12 @@ export const track: Track = {
         > [!senior] Close the loop
         > Log features, predictions and model version per request, join them to outcomes when
         > labels arrive, and you have both monitoring and the next training set from one table.
+
+        ## In one breath
+
+        Keep the exact data every model was trained on, split by time, and wait for labels to settle. After
+        launch, watch the inputs, the predictions and the business result, because most model failures
+        start as quiet data failures upstream.
       `,
       checks: [
         {
@@ -815,75 +1115,91 @@ export const track: Track = {
       title: 'AI for SQL, pipelines and operations',
       summary:
         'Judge text-to-SQL, use AI in dbt, Spark and Airflow work, and design agents that help with incidents safely.',
-      minutes: 15,
+      minutes: 17,
       body: `
-        AI tools now write queries for analysts, draft pipeline code for engineers, and read logs
-        during incidents. A senior engineer knows where each one is reliable and where it needs a
-        fence.
+        ## Start with the problem
 
-        ## Text-to-SQL: what works and what does not
+        The company launches "ask the data in plain English". In the demo, an analyst asks "revenue last
+        month" and gets a perfect chart. In real use, the tool joins «orders_v2» instead of «orders_clean»,
+        counts test accounts, and uses UTC instead of local time. The answers look confident and are 12%
+        off. Meanwhile someone wants an AI agent to "fix failed pipelines automatically".
 
-        On a clean demo schema, models write correct SQL most of the time. On a real warehouse
-        accuracy drops sharply. Benchmarks with enterprise schemas, such as Spider 2.0 and BIRD,
-        show the gap. The reasons are data problems, not model problems:
+        AI tools now write queries for analysts, draft pipeline code for engineers, and read logs during
+        incidents. A senior engineer knows where each one is reliable, and where it needs a fence.
+
+        ## Idea 1: text-to-SQL fails on data, not on the model
+
+        On a clean demo schema, models write correct SQL most of the time. On a real warehouse, accuracy
+        drops sharply. Benchmarks with enterprise schemas, such as Spider 2.0 and BIRD, show the gap. The
+        reasons are data problems, not model problems:
 
         - Thousands of tables with similar names («orders», «orders_v2», «orders_clean»).
         - Business definitions that live in people's heads: what counts as an "active user".
         - Joins that fan out, time zones, soft deletes, test accounts.
 
-        What makes it work:
+        A new hire with a perfect SQL brain still gets these wrong in week one. So does the model.
 
-        1. A **semantic layer** (dbt Semantic Layer, LookML, Cube, Snowflake Cortex Analyst's
-           semantic model) that defines metrics, dimensions and joins once. The model picks
-           metrics and filters; the layer writes the SQL.
-        2. **Curated context**: a small set of certified tables, column descriptions and verified
-           example queries, retrieved per question.
-        3. **Guardrails**: read-only roles, row and column security, a cost limit per query, and
-           a dry run that checks bytes scanned before execution.
-        4. **Show the work**: the SQL and the metric definition next to the answer, so a user can
-           check it.
+        ## Idea 2: what makes text-to-SQL work
 
-        ## AI in pipeline work
+        1. A **semantic layer** (dbt Semantic Layer, LookML, Cube, Snowflake Cortex Analyst's semantic
+           model) that defines metrics, dimensions and joins once. The model picks metrics and filters; the
+           layer writes the SQL.
+        2. **Curated context:** a small set of certified tables, column descriptions and verified example
+           queries, retrieved per question.
+        3. **Guardrails:** read-only roles, row and column security, a cost limit per query, and a dry run
+           that checks bytes scanned before execution.
+        4. **Show the work:** the SQL and the metric definition next to the answer, so a user can check it.
 
-        | Task | Good use | Check you keep |
-        |---|---|---|
-        | dbt | Draft staging models, tests and YAML docs from a source schema | Review grain and keys; run the tests |
-        | Spark | Explain a slow plan, suggest broadcast or repartition | Measure before and after on real data |
-        | Airflow | Scaffold a DAG, convert operators, explain a failure log | Idempotency, retries and backfill logic |
-        | Testing | Generate edge-case rows and test cases | You choose what "correct" means |
-        | Catalogs | Draft table and column descriptions, tag PII | An owner approves before publish |
-        | Data quality | Anomaly detection on volumes and distributions | Thresholds tuned per table, with owners |
+        ## Idea 3: AI in pipeline work, a good use and a check you keep
 
-        ## Agents and self-healing pipelines
+        - **dbt.** Use: draft staging models, tests and YAML docs from a source schema. Check: review grain
+          and keys, and run the tests.
+        - **Spark.** Use: explain a slow plan, suggest broadcast or repartition. Check: measure before and
+          after on real data.
+        - **Airflow.** Use: scaffold a DAG, convert operators, explain a failure log. Check: idempotency,
+          retries and backfill logic.
+        - **Testing.** Use: generate edge-case rows and test cases. Check: you choose what "correct" means.
+        - **Catalogs.** Use: draft table and column descriptions, tag PII. Check: an owner approves before
+          publish.
+        - **Data quality.** Use: anomaly detection on volumes and distributions. Check: thresholds tuned per
+          table, with owners.
 
-        An **agent** is a model that calls tools in a loop: read the failed task log, query the
-        source, look at the last commit, propose a fix. Protocols such as MCP give agents a
-        standard way to reach tools like the warehouse, the orchestrator and the catalog.
+        ## Idea 4: agents and self-healing pipelines
 
-        Safe design, from least to most autonomy:
+        An **agent** is a model that calls tools in a loop: read the failed task log, query the source,
+        look at the last commit, propose a fix. Protocols such as MCP give agents a standard way to reach
+        tools like the warehouse, the orchestrator and the catalog.
+
+        Think of a trainee on night shift. First they only take notes, then they suggest, then they may
+        press a few safe buttons. They never get the keys to the vault. Safe design, from least to most
+        autonomy:
 
         1. **Triage only.** The agent summarises the failure, links the likely cause and the owner.
         2. **Suggest.** It opens a pull request or a runbook step; a human approves.
-        3. **Act on a whitelist.** It may retry a task, clear a stuck sensor or rerun a partition,
-           because those actions are idempotent and reversible.
-        4. **Never alone**: delete data, change production schemas, grant access or skip a
-           failing quality check.
+        3. **Act on a whitelist.** It may retry a task, clear a stuck sensor or rerun a partition, because
+           those actions are idempotent and reversible.
+        4. **Never alone:** delete data, change production schemas, grant access, or skip a failing quality
+           check.
 
-        Log every action the agent takes, give it its own service account with the narrowest
-        permissions, and measure it: time to resolve, wrong suggestions, actions undone.
+        Log every action the agent takes, give it its own service account with the narrowest permissions,
+        and measure it: time to resolve, wrong suggestions, actions undone.
 
-        ## AI services on the platforms
+        ## Idea 5: AI services on the platforms
 
-        | Platform | Examples |
-        |---|---|
-        | Google Cloud | Vertex AI, BigQuery ML and AI functions, BigQuery vector search |
-        | AWS | Bedrock, Bedrock Knowledge Bases, SageMaker |
-        | Azure | Azure OpenAI in Azure AI Foundry, Azure AI Search |
-        | Snowflake | Cortex AI functions, Cortex Search, Cortex Analyst |
-        | Databricks | Mosaic AI Vector Search, model serving, «ai_query», Unity Catalog for models |
+        - **Google Cloud:** Vertex AI, BigQuery ML and AI functions, BigQuery vector search.
+        - **AWS:** Bedrock, Bedrock Knowledge Bases, SageMaker.
+        - **Azure:** Azure OpenAI in Azure AI Foundry, Azure AI Search.
+        - **Snowflake:** Cortex AI functions, Cortex Search, Cortex Analyst.
+        - **Databricks:** Mosaic AI Vector Search, model serving, «ai_query», Unity Catalog for models.
 
-        Product names change often; in an interview, name the capability first and the product
-        second.
+        Product names change often. In an interview, name the capability first and the product second.
+
+        ## Now say it like a senior engineer
+
+        Text-to-SQL accuracy comes from a semantic layer, curated context, guardrails and visible SQL. AI
+        speeds up dbt, Spark, Airflow, tests and catalog work, with a human check on each. Agents move up a
+        ladder from triage to whitelisted idempotent actions, under their own narrow identity, with every
+        action logged.
 
         > [!trap] An agent with the pipeline's own credentials
         > If the agent runs as the pipeline's service account, a bad suggestion can drop a
@@ -894,6 +1210,12 @@ export const track: Track = {
         > "Accuracy comes from the semantic layer and curated context, not a bigger model. We
         > start with certified metrics for one domain, show the SQL with every answer, and
         > measure accuracy on a test set of real questions before we widen it."
+
+        ## In one breath
+
+        AI writes good SQL and pipeline code only when the data has clear definitions and curated context,
+        so build the semantic layer first and always show the SQL. Let agents triage and suggest, allow only
+        safe reversible actions, and never give them the pipeline's own keys.
       `,
       checks: [
         {
@@ -925,52 +1247,83 @@ export const track: Track = {
       title: 'A framework for AI system design rounds',
       summary:
         'Run an AI-flavoured design interview: requirements, data, the offline and online paths, evaluation and cost.',
-      minutes: 13,
+      minutes: 15,
       body: `
-        AI design prompts sound different ("design a recommendation system", "design an
-        assistant over company documents") but a data engineering loop scores the same things:
-        data flow, freshness, correctness, scale, failure handling and cost. Add three AI-specific
-        parts: the offline and online split, evaluation, and the feedback loop.
+        ## Start with the problem
 
-        ## The steps
+        The prompt: "Design an assistant over our company documents." A candidate spends 20 minutes on
+        transformer layers, attention and which model is best. The interviewer, a data engineer, never
+        hears how documents get in, how deletes reach the index, how anyone knows the answers are right, or
+        what it costs.
 
-        | Step | Minutes | What you produce |
-        |---|---|---|
-        | 1. Clarify | 5 | Users, the decision or answer, latency, freshness, scale, risk of a wrong answer |
-        | 2. Estimate | 3 | Requests per second, items, vectors, feature keys, tokens per day |
-        | 3. Data | 7 | Sources, entities, labels or documents, and access rules |
-        | 4. Offline path | 8 | Feature or embedding pipelines, training or indexing, backfill |
-        | 5. Online path | 8 | Request flow with a latency budget per step |
-        | 6. Evaluate and loop | 6 | Offline metrics, online metrics, logging, retraining or re-indexing |
-        | 7. Operate | 5 | Monitoring, fallbacks, cost, privacy, what changes at 10x |
+        AI design prompts sound different ("design a recommendation system", "design an assistant over
+        company documents"), but a data engineering loop scores the same things: data flow, freshness,
+        correctness, scale, failure handling and cost. Add three AI-specific parts: the offline and online
+        split, evaluation, and the feedback loop.
 
-        ## Questions that change the design
+        ## Idea 1: seven steps
 
-        - **What happens on a wrong answer?** A bad song suggestion costs nothing; a wrong fraud
-          block loses a customer; a wrong HR answer is a legal risk. Risk sets the human review.
-        - **How fresh?** Features from seconds ago need streaming; documents from yesterday do
-          not.
-        - **What is the latency budget?** Split it: 10 ms features, 20 ms retrieval, 30 ms
-          ranking, or 1.5 s for a generated answer.
+        1. **Clarify** (5 minutes): users, the decision or answer, latency, freshness, scale, and the risk
+           of a wrong answer.
+        2. **Estimate** (3 minutes): requests per second, items, vectors, feature keys, tokens per day.
+        3. **Data** (7 minutes): sources, entities, labels or documents, and access rules.
+        4. **Offline path** (8 minutes): feature or embedding pipelines, training or indexing, backfill.
+        5. **Online path** (8 minutes): the request flow, with a latency budget per step.
+        6. **Evaluate and loop** (6 minutes): offline metrics, online metrics, logging, retraining or
+           re-indexing.
+        7. **Operate** (5 minutes): monitoring, fallbacks, cost, privacy, what changes at 10x.
+
+        ## Idea 2: four questions that change the design
+
+        - **What happens on a wrong answer?** A bad song suggestion costs nothing; a wrong fraud block loses
+          a customer; a wrong HR answer is a legal risk. Risk sets the human review.
+        - **How fresh?** Features from seconds ago need streaming; documents from yesterday do not.
+        - **What is the latency budget?** Split it: 10 ms features, 20 ms retrieval, 30 ms ranking, or 1.5 s
+          for a generated answer. Like a delivery deadline split between packing, driving and handover.
         - **Who may see what?** Tenants, roles and document ACLs shape every index.
 
-        ## The shape most answers share
+        ## Idea 3: the shape most answers share
 
         ~~~text
-        events / documents -> stream + batch pipelines -> offline store (history, training, eval)
-                                                       -> online store / vector index (serving)
-        request -> fetch features or retrieve -> model -> decision or answer -> log everything
-        logs + outcomes -> labels and golden sets -> retrain / re-index -> gated release
+        1. Build (offline):
+        events / documents
+         → stream + batch
+           pipelines
+         → offline store
+           (history, training,
+            evaluation)
+         → online store /
+           vector index
+
+        2. Serve (online):
+        request
+         → fetch features
+           or retrieve
+         → model
+         → decision or answer
+         → log everything
+
+        3. Improve (loop):
+        logs + outcomes
+         → labels, golden sets
+         → retrain / re-index
+         → gated release
         ~~~
 
-        ## Deep-dive topics to offer
+        ## Idea 4: deep-dive topics to offer
 
-        - Point-in-time correct training data and skew prevention.
+        - Point-in-time correct training data, and skew prevention.
         - Index freshness, deletes and ACL sync for a vector store.
-        - Backfilling a new feature or re-embedding with a new model.
-        - Fallbacks: a rules engine when the model is down, a popular-items list when features
-          are missing, "I could not find that" when retrieval is empty.
+        - Backfilling a new feature, or re-embedding with a new model.
+        - Fallbacks: a rules engine when the model is down, a popular-items list when features are missing,
+          "I could not find that" when retrieval is empty.
         - Cost: tokens or GPU hours per day, and how caching and routing cut them.
+
+        ## Now say it like a senior engineer
+
+        Clarify risk, freshness, latency and access; estimate; then design the offline path, the online path
+        with a per-step latency budget, and the evaluation and feedback loop. Offer deep dives on
+        point-in-time data, index freshness and ACLs, backfills, fallbacks and cost.
 
         > [!trap] Spending the interview on the model
         > In a data engineering loop, five minutes on transformer layers and none on freshness or
@@ -979,6 +1332,12 @@ export const track: Track = {
         > [!senior] Lead with the feedback loop
         > Saying early "every prediction is logged with its features and model version, and joined
         > to the outcome later" shows you plan for improvement and debugging, not only launch.
+
+        ## In one breath
+
+        An AI design round is still a data design round: build offline, serve online within a latency
+        budget, and close the loop with logs, outcomes and evaluation. Name a sensible model and spend your
+        time on its data, its freshness and what happens when it is wrong.
       `,
       checks: [
         {

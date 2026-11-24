@@ -45,6 +45,17 @@ The types are in [`types/course.ts`](../../types/course.ts).
 4. Give each lesson at least one quick check. The learner can finish a lesson only after they answer every check correctly.
 5. Run the code you show. Extract SQL and Python snippets and run them, or parse them at least.
 
+## How a DE lesson reads
+
+Each DE lesson teaches from first principles. A learner reads it once and understands it. Use this shape:
+
+1. `## Start with the problem`: a concrete situation, the obvious first design, and why it fails.
+2. One `##` section per idea. Each idea fixes one named problem. Give an everyday comparison and a small worked example.
+3. `## Now say it like a senior engineer`: the short interview version, with the `senior` and `trap` callouts. Keep every fact.
+4. `## In one breath`: a summary of one or two sentences.
+
+Write short sentences in plain English. Explain each term before you use it. On a phone, prefer a list to a table with more than three columns. Keep `~~~text` diagrams to about 30 characters per line. Do not put «code» inside **bold**: the bold text then shows the « » marks.
+
 ## Add a lesson
 
 1. Open the track module in `tracks/`.

@@ -14,51 +14,87 @@ export const track: Track = {
       title: 'How Spark runs your code',
       summary:
         'Drivers, executors, jobs, stages and tasks, and why nothing happens until an action.',
-      minutes: 13,
+      minutes: 14,
       body: `
-        Spark turns your DataFrame code into a plan, splits it into stages at every shuffle, and
-        runs each stage as parallel tasks, one per partition. Explaining this chain clearly is the
-        foundation for every performance question.
+        ## Start with the problem
+
+        You write five lines of PySpark: read, filter, group, join, write. You run it on 2 TB. It takes
+        40 minutes, and a colleague's version of the same logic takes 6. Neither of you wrote anything
+        "slow" in the code. The difference is in what Spark **did** with the code.
+
+        Every Spark performance question starts here: how Spark turns your code into work spread over
+        many machines. Learn this chain once, and every later lesson makes sense.
+
+        ## Idea 1: a head chef and many cooks (driver and executors)
+
+        Picture a big restaurant kitchen. The **head chef** reads the order, plans it, and hands out
+        tasks. Many **cooks** do the actual chopping and cooking, each at their own station.
+
+        - The **driver** is the head chef. It plans the work and schedules tasks. It also holds the
+          results of «collect()», so collecting a huge result floods one person.
+        - An **executor** is a cook: a JVM process on a worker machine that runs tasks and can cache
+          data.
+
+        ## Idea 2: nothing happens until you ask for the result (lazy evaluation)
+
+        «filter», «select» and «join» do not touch any data. They only add steps to a plan, like
+        writing a recipe. An **action** («write», «count», «collect») says "now cook it".
+
+        Why wait? Because with the whole recipe in hand, the **Catalyst optimizer** can improve it
+        first: push filters down to the file reader so less data is read, drop columns nobody uses, and
+        reorder the work.
+
+        ## Idea 3: jobs, stages and tasks
+
+        When an action runs, Spark breaks the plan into pieces.
+
+        - A **job** is one action.
+        - A **stage** is a run of steps that need no data from other machines.
+        - A **task** is one stage's work on one **partition** (one slice of the data). Tasks run in
+          parallel, one per partition.
 
         ~~~text
-        action (write, count, collect)
-          └─ job
-               ├─ stage 1: read + filter + map         (narrow, one task per input partition)
-               │      shuffle (exchange) by key
-               └─ stage 2: aggregate / join            (one task per shuffle partition)
+        action (write)
+         └ job
+           ├ stage 1
+           │  read + filter + map
+           │  one task per partition
+           │
+           │  shuffle by key
+           │
+           └ stage 2
+              aggregate / join
+              one task per partition
         ~~~
 
-        | Term | Meaning |
-        |---|---|
-        | Driver | Plans the work and schedules tasks. Holds results of «collect()». |
-        | Executor | A JVM process on a worker that runs tasks and caches data. |
-        | Job | Triggered by one action. |
-        | Stage | A set of tasks with no shuffle between them. |
-        | Task | One unit of work on one partition. |
+        ## Idea 4: narrow and wide, and why the shuffle is expensive
 
-        ## Lazy evaluation
+        - **Narrow** steps need only their own partition: «filter», «select», «withColumn». Each cook
+          works on their own tray.
+        - **Wide** steps need rows from many partitions: «groupBy», «join» (unless broadcast),
+          «distinct», «orderBy», window functions. All the rows for one key must meet in one place.
 
-        Transformations («filter», «select», «join») only build a plan. An action runs it. That lets
-        the Catalyst optimizer push filters down to the file reader, prune columns and reorder work.
-
-        ## Narrow versus wide
-
-        - **Narrow** transformations need only their own partition: «filter», «select», «withColumn».
-        - **Wide** transformations need data from many partitions, so Spark shuffles: «groupBy»,
-          «join» (unless broadcast), «distinct», «orderBy», window functions.
-
-        A shuffle writes data to local disk, sends it across the network and reads it back. It is
-        usually the most expensive thing in a job.
+        To make rows meet, Spark **shuffles**: each task writes its rows to local disk, sorted into
+        buckets by key, then sends them over the network, and the next stage reads them back. Every
+        cook passes ingredients to every other cook. A shuffle is usually the most expensive thing in
+        a job, and every shuffle starts a new stage.
 
         > [!tip] Read the plan
         > «df.explain("formatted")» shows «Exchange» nodes (shuffles), «BroadcastHashJoin» versus
         > «SortMergeJoin», and «PushedFilters» on the scan. The Spark UI's SQL tab shows the same plan
         > with real row counts and time per node.
 
+        ## Now say it like a senior engineer
+
         > [!senior] Count the shuffles
-        > When asked to optimise, start with: "How many shuffles does this plan have, and can I
-        > remove one?" Pre-partitioned inputs, broadcast joins and combining aggregations are the
-        > usual ways.
+        > When asked to optimise, start with: "How many shuffles does this plan have, and can I remove
+        > one?" Pre-partitioned inputs, broadcast joins and combining aggregations are the usual ways.
+
+        ## In one breath
+
+        The driver plans, executors run one task per partition, and nothing runs until an action.
+        Every wide step shuffles data across the network and starts a new stage, so performance work
+        starts by counting and removing shuffles.
       `,
       checks: [
         {
@@ -73,19 +109,27 @@ export const track: Track = {
       slug: 'joins-and-skew',
       title: 'Joins, skew and how to fix them',
       summary: 'Pick broadcast or sort-merge joins, and fix a skewed key with AQE or salting.',
-      minutes: 16,
+      minutes: 17,
       body: `
-        Skew is the classic senior Spark question: the job is 95 percent done in two minutes and the
-        last task runs for an hour. One key (a huge city, a bot user, a NULL) holds a big share of
-        the rows, so one task gets all of them.
+        ## Start with the problem
 
-        ## Join strategies
+        Your Spark job is 95 percent done in two minutes. Then the progress bar stops. One task runs
+        for an hour while the other 199 sit finished and idle.
 
-        | Strategy | When | Cost |
-        |---|---|---|
-        | Broadcast hash join | One side is small (default threshold 10 MB, often raised) | No shuffle of the big side |
-        | Sort-merge join | Both sides large | Shuffle both sides, sort, merge |
-        | Shuffle hash join | Both large, one side's partitions fit in memory | Shuffle, no sort |
+        That is **skew**, the classic senior Spark question. Remember: in a join or group, all the rows
+        with the same key go to the same task. If one key (a huge city, a bot user, a NULL) holds a big
+        share of the rows, one task gets all of them. One cook gets 40 crates of onions; everyone else
+        gets one.
+
+        ## Idea 1: three ways to join
+
+        - **Broadcast hash join.** One side is small, so copy it whole to every executor. The big side
+          never moves: **no shuffle** of the big side. The default size threshold is 10 MB, often
+          raised.
+        - **Sort-merge join.** Both sides are large. Shuffle both by key, sort, then merge. Robust,
+          but costs two shuffles and a sort.
+        - **Shuffle hash join.** Both large, but one side's partitions fit in memory. Shuffle, build a
+          hash table, no sort.
 
         ~~~python
         from pyspark.sql import functions as F
@@ -93,24 +137,29 @@ export const track: Track = {
         trips.join(F.broadcast(cities), "city_id")   # force a broadcast of the small side
         ~~~
 
-        ## Spotting skew
+        ## Idea 2: how to spot skew
 
-        In the Spark UI stage view, compare the median and max task duration and shuffle read size.
-        A max that is ten or more times the median is skew. Then find the key:
+        In the Spark UI stage view, compare the **median** and **max** task duration, and the shuffle
+        read size. A max that is ten or more times the median is skew. Then find the guilty key:
 
         ~~~python
         trips.groupBy("rider_id").count().orderBy(F.desc("count")).show(10)
         ~~~
 
-        ## Fixes, in the order to try them
+        ## Idea 3: fixes, in the order to try them
 
         1. **Filter or handle the hot key separately.** NULL keys and test accounts are often the
-           cause and should not be joined at all.
+           cause, and should not be joined at all.
         2. **Adaptive Query Execution (AQE).** On by default since Spark 3.2. With
-           «spark.sql.adaptive.skewJoin.enabled», Spark splits oversized partitions at runtime.
-        3. **Broadcast** the other side if it fits.
-        4. **Salting.** Add a random suffix to the hot key on the big side and replicate the small
-           side once per suffix.
+           «spark.sql.adaptive.skewJoin.enabled», Spark splits oversized partitions while the job
+           runs.
+        3. **Broadcast** the other side, if it fits. No shuffle means no hot task.
+        4. **Salting.** Split the hot key into many smaller keys.
+
+        Salting, step by step. Add a random number from 0 to 15 (the **salt**) to each row on the big
+        side, so "driver 7" becomes 16 different keys spread over 16 tasks. Then copy each row of the
+        small side 16 times, once per salt, so every salted key still finds its match. Join on the key
+        plus the salt.
 
         ~~~python
         SALTS = 16
@@ -120,13 +169,21 @@ export const track: Track = {
         ~~~
 
         > [!trap] Salting everything is wasteful
-        > Replicating the small side 16 times costs memory and network. Salt only the hot keys if
-        > you can identify them, and leave the rest on the normal path.
+        > Copying the small side 16 times costs memory and network. Salt only the hot keys if you can
+        > identify them, and leave the rest on the normal path.
+
+        ## Now say it like a senior engineer
 
         > [!senior] Skew in aggregations too
         > «groupBy» on a skewed key has the same problem. Spark's partial aggregation (map-side
-        > combine) helps for sums and counts, but not for «collect_list». A two-stage aggregation
-        > with a salt is the general fix.
+        > combine) helps for sums and counts, but not for «collect_list». A two-stage aggregation with
+        > a salt is the general fix.
+
+        ## In one breath
+
+        Skew is one key holding a big share of the rows, so one task does most of the work. Drop junk
+        keys, let AQE split big partitions, broadcast the small side, and salt the hot key when nothing
+        else works.
       `,
       checks: [
         {
@@ -147,34 +204,48 @@ export const track: Track = {
       slug: 'partitions-and-files',
       title: 'Partitions, files and the small files problem',
       summary: 'Size shuffle partitions and output files so jobs and their readers stay fast.',
-      minutes: 13,
+      minutes: 14,
       body: `
-        Partitions decide parallelism. Too few and executors sit idle or run out of memory. Too many
-        and scheduling overhead dominates and the job writes thousands of tiny files.
+        ## Start with the problem
 
-        ## Shuffle partitions
+        A job writes a table. The next morning, a dashboard query on that table takes 3 minutes. You
+        look at the storage: 480,000 files, most of them 200 KB. The query spends almost all its time
+        opening files, not reading data.
 
-        «spark.sql.shuffle.partitions» defaults to 200 whatever the data size. Aim for shuffle
-        partitions of roughly 100 to 200 MB. With AQE on, Spark coalesces small shuffle partitions
-        automatically, which removes most of the tuning.
+        Partitions decide how work is split. Too few, and executors sit idle or run out of memory. Too
+        many, and scheduling overhead dominates and the job writes thousands of tiny files. Getting the
+        size right fixes both the job and everyone who reads its output.
 
-        ## repartition versus coalesce
+        ## Idea 1: size the slices (shuffle partitions)
 
-        | | «repartition(n)» or «repartition(n, col)» | «coalesce(n)» |
-        |---|---|---|
-        | Shuffle | Yes, full | No, merges existing partitions |
-        | Can increase partitions | Yes | No |
-        | Balance | Even | Can be uneven |
-        | Use for | Changing parallelism, partitioning by a key before a write | Reducing output file count cheaply |
+        After a shuffle, Spark splits the data into «spark.sql.shuffle.partitions» pieces. The default
+        is 200, **whatever the data size**. 200 pieces of 10 TB is 50 GB each: too big. 200 pieces of
+        100 MB is 500 KB each: too small.
+
+        Aim for shuffle partitions of roughly 100 to 200 MB. With AQE on, Spark merges small shuffle
+        partitions automatically, which removes most of this tuning.
+
+        ## Idea 2: repartition or coalesce
+
+        Both change the number of partitions. They do it very differently.
+
+        - «repartition(n)» or «repartition(n, col)»: a **full shuffle**. Can increase or decrease the
+          count, and gives even partitions. Use it to change parallelism, or to group rows by a key
+          before a write.
+        - «coalesce(n)»: **no shuffle**; it just glues existing partitions together. Can only
+          decrease the count, and partitions can be uneven. Use it to reduce output file count cheaply.
 
         > [!trap] coalesce(1) before a write
-        > It makes one task do the whole final stage, often the entire job upstream too. Use it only
-        > for tiny outputs.
+        > It makes one task do the whole final stage, and often the entire job upstream too, because
+        > Spark folds the earlier steps into that one task. Use it only for tiny outputs.
 
-        ## The small files problem
+        ## Idea 3: the small files problem
 
-        Writing with «partitionBy("date", "city")» from 400 tasks can create 400 files per
-        partition directory. Readers then pay a fixed cost per file (listing, opening, footers).
+        Each task writes its own file into each partition directory it touches. Write with
+        «partitionBy("date", "city")» from 400 tasks, and each directory can get 400 small files.
+        Readers then pay a fixed cost per file: listing, opening, reading footers.
+
+        The fix: shuffle once by the partition column first, so each date lands in only a few tasks.
 
         ~~~python
         (trips
@@ -189,10 +260,18 @@ export const track: Track = {
         Target files of 128 MB to 1 GB. Table formats such as Delta, Iceberg and Hudi add compaction
         jobs that merge small files after the fact.
 
+        ## Now say it like a senior engineer
+
         > [!senior] Dynamic partition overwrite
         > With «spark.sql.sources.partitionOverwriteMode=dynamic», an overwrite replaces only the
-        > partitions present in the new data. That makes a daily rerun idempotent without deleting
-        > the rest of the table. Mention it whenever you talk about backfills.
+        > partitions present in the new data. That makes a daily rerun idempotent without deleting the
+        > rest of the table. Mention it whenever you talk about backfills.
+
+        ## In one breath
+
+        Aim for shuffle partitions of 100 to 200 MB and output files of 128 MB to 1 GB. Use
+        «repartition» to reshape and «coalesce» only to shrink, and repartition by the partition column
+        before a write so each directory gets a few big files.
       `,
       checks: [
         {
@@ -207,31 +286,53 @@ export const track: Track = {
       slug: 'memory-and-udfs',
       title: 'Memory, caching and UDFs',
       summary: 'Explain out-of-memory errors, when caching helps, and why Python UDFs are slow.',
-      minutes: 12,
+      minutes: 13,
       body: `
-        ## Where memory goes
+        ## Start with the problem
 
-        Executor memory is split between **execution** (shuffles, joins, sorts, aggregations) and
-        **storage** (cached data), which borrow from each other. When execution memory runs out,
-        Spark spills to disk, which is slow but survives. Out-of-memory errors usually come from:
+        A Spark job dies with "OutOfMemoryError" after an hour. Someone doubles the executor memory,
+        and it dies again, only later. Someone else adds «cache()» everywhere "to make it faster", and
+        it gets slower. A third person writes a small Python function to clean a column, and the job
+        time triples.
+
+        All three problems come from not knowing where Spark's memory goes, and what crossing from the
+        JVM into Python costs.
+
+        ## Idea 1: where the memory goes
+
+        Executor memory is shared between two jobs, which borrow from each other:
+
+        - **Execution** memory: the working space for shuffles, joins, sorts and aggregations. A desk
+          where you lay out the papers you are working on.
+        - **Storage** memory: cached data. A shelf for things you want to keep handy.
+
+        When execution memory runs out, Spark **spills** to disk: slow, but it survives. So an
+        out-of-memory error usually means something could not spill, or something was far bigger than
+        expected:
 
         - One huge partition (skew), or a few very wide rows.
         - «collect()» or «toPandas()» pulling a large result into the driver.
         - A broadcast that is bigger than expected.
         - Python workers using memory outside the JVM's accounting (overhead memory).
 
-        ## Caching
+        ## Idea 2: caching only pays when you reuse
 
-        «cache()» helps only when the same DataFrame is used by more than one action. Caching
-        something used once just adds cost. Unpersist when done.
+        «cache()» keeps a DataFrame in memory after it is computed once. That helps **only** when the
+        same DataFrame is used by more than one action. Caching something used once just adds the cost
+        of storing it. Unpersist when you are done.
 
-        ## UDFs
+        ## Idea 3: why Python functions are slow (UDFs)
 
-        | Kind | Speed | Why |
-        |---|---|---|
-        | Built-in functions («F.when», «F.regexp_extract») | Fastest | Run in the JVM, optimised by Catalyst |
-        | Pandas (vectorised) UDF | Good | Batches via Apache Arrow |
-        | Row-by-row Python UDF | Slowest | Serialises each row to a Python process and back |
+        Spark runs in the JVM. Your Python function runs in a separate Python process. A row-by-row
+        Python **UDF** (user-defined function) must send each row across that border, convert it, run
+        your code, and send the answer back. Picture passing a million letters one at a time through a
+        small window.
+
+        - **Built-in functions** («F.when», «F.regexp_extract»): fastest. They run inside the JVM,
+          and Catalyst can optimise them.
+        - **Pandas (vectorised) UDF:** good. Rows cross in large batches through Apache Arrow, so
+          the window opens once per batch, not once per row.
+        - **Row-by-row Python UDF:** slowest. Every row crosses the border twice.
 
         ~~~python
         import pandas as pd
@@ -242,9 +343,17 @@ export const track: Track = {
             return amount * rate
         ~~~
 
+        ## Now say it like a senior engineer
+
         > [!senior] Prefer expressions, then vectorise
-        > "First I would rewrite it with built-in functions. If logic needs Python, a pandas UDF.
-        > A plain UDF only for something tiny." That order is what reviewers want to hear.
+        > "First I would rewrite it with built-in functions. If the logic needs Python, a pandas UDF. A
+        > plain UDF only for something tiny." That order is what reviewers want to hear.
+
+        ## In one breath
+
+        Executor memory is a desk for work and a shelf for cache, and out-of-memory usually means one
+        partition or one result was far too big. Cache only what you reuse, and keep logic in built-in
+        functions so rows never cross into Python one by one.
       `,
       checks: [
         {
@@ -265,85 +374,102 @@ export const track: Track = {
       title: 'Catalyst, AQE and how Spark picks a join',
       summary:
         'Walk a query through Catalyst, explain how Spark chooses a join strategy, what AQE changes at runtime, and what blocks the optimiser.',
-      minutes: 16,
+      minutes: 17,
       body: `
-        "How does Spark optimise this?" is a standard senior question. The answer has two halves:
-        **Catalyst** plans before the job runs, and **Adaptive Query Execution (AQE)** re-plans
-        while it runs.
+        ## Start with the problem
 
-        ## Catalyst in four phases
+        You write a join. Spark could run it as a broadcast join in 2 minutes or a sort-merge join in
+        40. You did not choose; Spark did. "How does Spark decide?" is a standard senior question.
+
+        The answer has two halves. **Catalyst** plans before the job runs, using estimates. **Adaptive
+        Query Execution (AQE)** re-plans while it runs, using real numbers. Think of a satnav that
+        picks a route before you leave, then reroutes when it sees the actual traffic.
+
+        ## Idea 1: Catalyst, from your code to a plan
 
         ~~~text
         DataFrame / SQL
-          → unresolved logical plan
-          → analysis            names and types resolved against the catalog
-          → logical optimisation rule-based rewrites
-          → physical planning   choose join strategies and operators (with statistics)
-          → code generation     whole-stage codegen into Java bytecode
+         → unresolved plan
+         → analysis
+           (names, types)
+         → logical optimisation
+           (rule rewrites)
+         → physical planning
+           (pick joins, operators)
+         → code generation
         ~~~
 
         Logical rules you should be able to name:
 
-        - **Predicate pushdown:** filters move below joins and into the file scan.
+        - **Predicate pushdown:** filters move below joins and into the file scan, so less is read.
         - **Column pruning:** read only the columns used.
-        - **Constant folding** and **boolean simplification.**
+        - **Constant folding** and **boolean simplification:** work out fixed parts once.
         - **Combining** adjacent filters and projections.
 
-        **Whole-stage code generation** fuses a chain of narrow operators into one function, which
-        works on Spark's compact binary row format (the Tungsten project) instead of Java objects.
-        In «explain» output, operators inside a codegen stage carry a «*(n)» prefix.
+        **Whole-stage code generation** fuses a chain of narrow operators into one function, working
+        on Spark's compact binary row format (the Tungsten project) instead of Java objects. In
+        «explain» output, operators inside a codegen stage carry a «*(n)» prefix.
 
-        ## How Spark picks a join
+        ## Idea 2: how Spark picks a join
 
-        For an equi-join, Spark checks, in order:
+        For an equi-join, Spark checks, in this order:
 
-        1. A **hint**: «BROADCAST», «MERGE», «SHUFFLE_HASH» or «SHUFFLE_REPLICATE_NL».
+        1. A **hint**: «BROADCAST», «MERGE», «SHUFFLE_HASH» or «SHUFFLE_REPLICATE_NL». You told it.
         2. **Broadcast hash join** if one side's estimated size is under
            «spark.sql.autoBroadcastJoinThreshold» (10 MB by default).
         3. **Sort-merge join** otherwise («spark.sql.join.preferSortMergeJoin» is true by default).
-        4. Shuffle hash join when sort-merge is not preferred and one side's partitions fit in memory.
+        4. Shuffle hash join, when sort-merge is not preferred and one side's partitions fit in memory.
 
         ~~~sql
         SELECT /*+ BROADCAST(z) */ t.*, z.zone_name
         FROM trips t JOIN zones z ON t.zone_id = z.zone_id;
         ~~~
 
-        The size estimate comes from file sizes unless you collect statistics. The cost-based
-        optimiser («spark.sql.cbo.enabled») is **off by default**. With
-        «ANALYZE TABLE t COMPUTE STATISTICS FOR COLUMNS a, b» and CBO on, Spark can reorder joins
-        using row counts and distinct values.
+        The weak point is step 2's "estimated size". By default it comes from **file sizes**, not from
+        the size after your filter. The cost-based optimiser («spark.sql.cbo.enabled») is **off by
+        default**. With «ANALYZE TABLE t COMPUTE STATISTICS FOR COLUMNS a, b» and CBO on, Spark can
+        also reorder joins using row counts and distinct values.
 
-        ## What AQE changes at runtime
+        ## Idea 3: AQE, rerouting with real numbers
 
-        AQE is on by default since Spark 3.2. After each shuffle stage, Spark knows the real sizes and can:
+        AQE is on by default since Spark 3.2. After each shuffle stage, Spark knows the **real** sizes,
+        and can change the rest of the plan.
 
-        | Feature | Effect |
-        |---|---|
-        | **Coalesce shuffle partitions** | Merges many tiny post-shuffle partitions, so 200 tasks of 1 MB become 4 tasks |
-        | **Switch join strategy** | Turns a planned sort-merge join into a broadcast join when a side is small after filtering |
-        | **Skew join** | Splits oversized partitions and replicates the matching side |
+        - **Coalesce shuffle partitions:** merges many tiny post-shuffle partitions, so 200 tasks of
+          1 MB become 4 tasks.
+        - **Switch join strategy:** turns a planned sort-merge join into a broadcast join, when a side
+          turns out small after filtering.
+        - **Skew join:** splits oversized partitions, and replicates the matching side.
 
-        **Dynamic partition pruning** (Spark 3.0) is related: a filter on a small dimension prunes
-        the partitions of a large fact table at runtime.
+        **Dynamic partition pruning** (Spark 3.0) is related: a filter on a small dimension prunes the
+        partitions of a large fact table at runtime.
 
-        ## What blocks the optimiser
+        ## Idea 4: what blinds the optimiser
 
-        - **Python UDFs** are opaque. Catalyst cannot push a filter through one or read its result
-          statistics, and every row crosses to a Python worker. Prefer built-in functions; if you
+        - **Python UDFs** are a black box. Catalyst cannot push a filter through one or know its
+          output size, and every row crosses to a Python worker. Prefer built-in functions; if you
           must, use a vectorised pandas UDF.
         - **Casting or wrapping a filter column** («CAST(dt AS STRING) = '2026-11-01'») can stop
           partition pruning and pushdown.
         - **Dropping to RDDs** («df.rdd.map(...)») leaves Catalyst entirely.
-        - **Caching too early** freezes a plan and can hide pushdown from later filters.
+        - **Caching too early** freezes a plan, and can hide pushdown from later filters.
 
         > [!tip] Confirm in the plan
-        > Look for «PushedFilters» and «PartitionFilters» on the scan node, «BroadcastHashJoin»
-        > versus «SortMergeJoin», and «AdaptiveSparkPlan isFinalPlan=true» after the job ran.
+        > Look for «PushedFilters» and «PartitionFilters» on the scan node, «BroadcastHashJoin» versus
+        > «SortMergeJoin», and «AdaptiveSparkPlan isFinalPlan=true» after the job ran.
+
+        ## Now say it like a senior engineer
 
         > [!senior] Statistics drive everything
-        > "Spark chose sort-merge because it estimated the filtered dimension from its full file
-        > size. AQE switched it to broadcast at runtime. I would also add a broadcast hint, since the
+        > "Spark chose sort-merge because it estimated the filtered dimension from its full file size.
+        > AQE switched it to broadcast at runtime. I would also add a broadcast hint, since the
         > dimension is always small after this filter." That shows you know both planning halves.
+
+        ## In one breath
+
+        Catalyst plans before the run from estimates: push filters down, prune columns, pick a join by
+        estimated size. AQE re-plans after each shuffle with real sizes, and UDFs, casts on filter
+        columns and RDDs blind both.
       `,
       checks: [
         {
@@ -376,38 +502,70 @@ export const track: Track = {
       title: 'DuckDB, Spark or Trino',
       summary:
         'Compare an in-process engine, a distributed batch engine and an MPP SQL engine, and choose one for a workload by data size, latency and failure tolerance.',
-      minutes: 14,
+      minutes: 15,
       body: `
-        Three engines cover most analytical work on a lake. They make different trade-offs, so
+        ## Start with the problem
+
+        You have a 2 GB Parquet file to aggregate. A colleague spins up a Spark cluster: 4 minutes to
+        start, 3 minutes to run. You run DuckDB on your laptop: 6 seconds. Next week, the job is 40 TB
+        and runs for six hours. Now DuckDB is hopeless, and Spark is the obvious answer. Then an
+        analyst wants to join lake data with Postgres, interactively. Neither fits well.
+
+        Three engines cover most analytical work on a lake. They are built on different ideas, so
         "which one?" is a frequent design question.
 
-        ## Three architectures
+        ## Idea 1: three shapes
 
-        | | **DuckDB** | **Spark** | **Trino** |
-        |---|---|---|---|
-        | Shape | A library inside your process | Driver plus executors on a cluster | Coordinator plus workers, always running |
-        | Execution | Vectorised, multi-core, one machine | Stages split at shuffles; tasks written to disk between stages | Pipelined stages that stream data in memory between workers |
-        | Scale | One machine: up to hundreds of GB with spilling | Petabytes | Petabytes of scans; joins limited by memory |
-        | Start-up | Milliseconds | Seconds to minutes for a cluster | Already running; sub-second queries |
-        | Failure | Process dies, query dies | Retries failed tasks and stages | A worker failure fails the query by default; fault-tolerant mode spools exchanges |
-        | Languages | SQL, Python and others | SQL, Python, Scala, Java | SQL |
-        | Best at | Local analysis, tests, small pipelines, notebooks | Long ETL, heavy joins, ML preprocessing, streaming | Interactive SQL across many sources (federation) |
+        Think of three ways to cook for a crowd.
 
-        ## Choosing
+        - **DuckDB** is a great home kitchen. A library inside your own process: no servers, starts
+          in milliseconds, uses every core of one machine.
+        - **Spark** is a catering company. It sets up a crew (driver plus executors) for each big
+          job. Slow to start, but it can cook anything, at any size, and replaces a cook who falls ill.
+        - **Trino** is a restaurant that is always open. A coordinator plus workers, always running,
+          serving many small orders fast.
+
+        ## Idea 2: how each one behaves
+
+        **DuckDB**
+        - Execution: vectorised, multi-core, one machine.
+        - Scale: one machine, up to hundreds of GB with spilling.
+        - Start-up: milliseconds.
+        - Failure: if the process dies, the query dies.
+        - Languages: SQL, Python and others.
+        - Best at: local analysis, tests, small pipelines, notebooks.
+
+        **Spark**
+        - Execution: stages split at shuffles; data written to disk between stages.
+        - Scale: petabytes.
+        - Start-up: seconds to minutes for a cluster.
+        - Failure: retries failed tasks and stages.
+        - Languages: SQL, Python, Scala, Java.
+        - Best at: long ETL, heavy joins, ML preprocessing, streaming.
+
+        **Trino**
+        - Execution: pipelined stages that stream data in memory between workers.
+        - Scale: petabytes of scans; joins are limited by memory.
+        - Start-up: already running; sub-second queries.
+        - Failure: a worker failure fails the query by default; fault-tolerant mode spools exchanges.
+        - Languages: SQL.
+        - Best at: interactive SQL across many sources (federation).
+
+        ## Idea 3: choosing
 
         - **Data under about 100 GB, one job, one machine:** DuckDB (or Polars). No cluster, no
-          scheduler, and a laptop or one large VM often beats a small Spark cluster because there is
-          no shuffle over a network.
+          scheduler. A laptop or one large VM often beats a small Spark cluster, because there is no
+          shuffle over a network.
         - **Hours-long transformations of terabytes, Python logic, retries needed:** Spark. A task
           failure at hour three costs one task, not the whole job.
-        - **Analysts running ad hoc SQL over the lake and joining it with Postgres or Kafka:** Trino.
-          Low latency, many connectors, one SQL dialect.
+        - **Analysts running ad hoc SQL over the lake, joined with Postgres or Kafka:** Trino. Low
+          latency, many connectors, one SQL dialect.
 
-        ## They work together
+        ## Idea 4: they work together
 
-        A common lake stack: Spark writes Iceberg tables in nightly and streaming jobs; Trino serves
-        analysts on the same tables; DuckDB runs unit tests in CI and lets engineers explore a
-        sample on a laptop with «read_parquet('s3://...')».
+        A common lake stack: Spark writes Iceberg tables in nightly and streaming jobs. Trino serves
+        analysts on the same tables. DuckDB runs unit tests in CI, and lets engineers explore a sample
+        on a laptop with «read_parquet('s3://...')».
 
         ~~~python
         import duckdb
@@ -429,10 +587,18 @@ export const track: Track = {
         > 2 GB is slower and costlier than one process. Interviewers like to hear that you would not
         > use Spark.
 
+        ## Now say it like a senior engineer
+
         > [!senior] Decide on three axes
-        > Say the data size, the latency target and what happens on failure. "Interactive, under
-        > 10 seconds, read-only: Trino. Six-hour ETL that must survive a lost node: Spark. CI tests
-        > and 50 GB exploration: DuckDB."
+        > Say the data size, the latency target and what happens on failure. "Interactive, under 10
+        > seconds, read-only: Trino. Six-hour ETL that must survive a lost node: Spark. CI tests and
+        > 50 GB exploration: DuckDB."
+
+        ## In one breath
+
+        DuckDB is a fast home kitchen on one machine, Spark is a fault-tolerant crew for huge batch
+        jobs, and Trino is an always-open SQL service across many sources. Choose by data size, latency
+        and what must survive a failure.
       `,
       checks: [
         {

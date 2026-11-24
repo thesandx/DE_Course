@@ -14,13 +14,19 @@ export const pysparkLessons: readonly Lesson[] = [
     title: 'PySpark for the live coding round',
     summary:
       'Write the DataFrame code that live rounds ask for, from memory: joins, aggregates, windows and null handling.',
-    minutes: 16,
+    minutes: 17,
     body: `
-      Flipkart, Walmart, Swiggy and Microsoft rounds often say "share your screen and write
-      it in PySpark". The questions are SQL questions, and the test is whether you know the
-      DataFrame API without documentation. This lesson is the part to know by heart.
+      ## Start with the problem
 
-      ## The imports and the shape
+      The interviewer says: "Share your screen and write it in PySpark." No documentation, no
+      autocomplete. You know exactly what the SQL would be, but you cannot remember if it is
+      «F.countDistinct» or «F.count_distinct», and the clock is running.
+
+      Flipkart, Walmart, Swiggy and Microsoft rounds often work this way. The questions are SQL
+      questions; the test is whether you know the DataFrame API by heart. Here is the good news:
+      every SQL idea you know has one PySpark form. This lesson is the part to memorise.
+
+      ## Idea 1: the shape, a SQL query written top to bottom
 
       ~~~python
       from pyspark.sql import SparkSession, Window, functions as F
@@ -36,18 +42,18 @@ export const pysparkLessons: readonly Lesson[] = [
                      F.countDistinct("customer_id").alias("customers")))
       ~~~
 
-      Write one transformation on each line, inside one pair of brackets. It reads like a SQL
-      query from top to bottom, and you can comment out one line to debug.
+      Read it as SQL: WHERE, then a computed column, then GROUP BY, then the aggregates. Write one
+      transformation on each line, inside one pair of brackets. It reads from top to bottom, and you
+      can comment out one line to debug.
 
-      ## Joins
+      ## Idea 2: joins, and the two that save you a subquery
 
-      | Join type | Keeps | Use for |
-      |---|---|---|
-      | «inner» | Matching rows | The default |
-      | «left» | All left rows | Enrich without losing rows |
-      | «left_semi» | Left rows that have a match, left columns only | "Customers who ordered" |
-      | «left_anti» | Left rows with no match | "Customers who never ordered", missing rows |
-      | «full» | Everything | Reconcile two tables |
+      - «inner»: matching rows. The default.
+      - «left»: all left rows. Enrich without losing rows.
+      - «left_semi»: left rows that **have** a match, with left columns only. "Customers who
+        ordered", with no duplicates from multiple orders.
+      - «left_anti»: left rows with **no** match. "Customers who never ordered", or missing rows.
+      - «full»: everything from both sides. Reconcile two tables.
 
       ~~~python
       never_ordered = customers.join(orders, "customer_id", "left_anti")
@@ -57,11 +63,13 @@ export const pysparkLessons: readonly Lesson[] = [
                   .select("o.order_id", "c.segment", "o.amount"))
       ~~~
 
-      Join on a **column name** and Spark keeps one copy of the key. Join on an expression
-      such as «o.customer_id == c.customer_id» and both copies stay, so the next «select» fails
-      with an "ambiguous reference" error. Use aliases when two tables share other column names.
+      Join on a **column name**, and Spark keeps one copy of the key. Join on an expression such as
+      «o.customer_id == c.customer_id», and both copies stay, so the next «select» fails with an
+      "ambiguous reference" error. Use aliases when two tables share other column names.
 
-      ## Windows
+      ## Idea 3: windows
+
+      A window in PySpark is the «OVER (...)» clause, built as an object you reuse.
 
       ~~~python
       by_customer = Window.partitionBy("customer_id").orderBy("ordered_at")
@@ -75,10 +83,10 @@ export const pysparkLessons: readonly Lesson[] = [
 
       - «row_number» gives 1, 2, 3. «rank» leaves gaps after ties. «dense_rank» does not.
       - «lag» and «lead» read the row before or after.
-      - «rowsBetween» counts rows. «rangeBetween» counts **values** of the order column, which
+      - «rowsBetween» counts **rows**. «rangeBetween» counts **values** of the order column, which
         is what "the last 7 days" needs.
 
-      ## Nulls and conditions
+      ## Idea 4: nulls and conditions
 
       ~~~python
       cleaned = (orders
@@ -89,11 +97,11 @@ export const pysparkLessons: readonly Lesson[] = [
                  .dropDuplicates(["order_id"]))
       ~~~
 
-      «==» with a null gives null, and a filter drops the row. Use «eqNullSafe» to compare
-      two columns that may both be null. «dropDuplicates» keeps an arbitrary row for each key;
-      when you need the latest one, use «row_number» with an order.
+      «==» with a null gives null, and a filter drops that row. Use «eqNullSafe» to compare two
+      columns that may both be null. «dropDuplicates» keeps an **arbitrary** row for each key; when
+      you need the latest one, use «row_number» with an order.
 
-      ## SQL is allowed
+      ## Idea 5: SQL is allowed
 
       ~~~python
       orders.createOrReplaceTempView("orders")
@@ -106,17 +114,25 @@ export const pysparkLessons: readonly Lesson[] = [
       """)
       ~~~
 
-      Both forms compile to the same plan. Ask the interviewer which one they prefer. Most
-      want the DataFrame API, because it shows you can write a pipeline.
-
-      > [!senior] What a senior answer adds
-      > Say what the cluster does as you type: "This groupBy is a shuffle. The join after it
-      > is a broadcast, because the customer table is small." Then name the check you would
-      > run: a row count before and after the join, to catch a fan-out.
+      Both forms compile to the same plan. Ask the interviewer which one they prefer. Most want the
+      DataFrame API, because it shows you can write a pipeline.
 
       > [!trap] Actions inside a loop
-      > «count()», «collect()» and «show()» each run the whole plan again. Calling one inside
-      > a Python loop over 500 dates runs 500 jobs. Group by the date in one job.
+      > «count()», «collect()» and «show()» each run the whole plan again. Calling one inside a
+      > Python loop over 500 dates runs 500 jobs. Group by the date in one job.
+
+      ## Now say it like a senior engineer
+
+      > [!senior] What a senior answer adds
+      > Say what the cluster does as you type: "This groupBy is a shuffle. The join after it is a
+      > broadcast, because the customer table is small." Then name the check you would run: a row
+      > count before and after the join, to catch a fan-out.
+
+      ## In one breath
+
+      PySpark is SQL written top to bottom: filter, withColumn, groupBy, agg, join and a reusable
+      Window. Know semi and anti joins, null-safe comparison, and that every action reruns the whole
+      plan.
     `,
     checks: [
       {
@@ -144,13 +160,22 @@ export const pysparkLessons: readonly Lesson[] = [
     title: 'Nested data: structs, arrays and JSON',
     summary:
       'Parse JSON with a schema, flatten arrays with explode, and keep the grain correct after you flatten.',
-    minutes: 14,
+    minutes: 15,
     body: `
-      Real event data is nested: an order holds an array of items, and each item is a struct.
-      A reported Flipkart round hands you several nested JSON files and asks for a joined
-      result. Four functions do most of the work.
+      ## Start with the problem
 
-      ## Read with a schema
+      A reported Flipkart round hands you several JSON files. Each order holds a customer object, and
+      an array of items, and each item is an object with sku, quantity and price. "Give me revenue by
+      city."
+
+      The trouble: a table wants one value per cell, and this data has boxes inside boxes. You must
+      unpack it, and the moment you unpack the items array, one order becomes three rows. Do that
+      without noticing, and revenue triples. Four functions, and one habit, handle all of it.
+
+      ## Idea 1: describe the boxes first (read with a schema)
+
+      Real event data is **nested**. A **struct** is a box with named fields inside (the customer).
+      An **array** is a list of boxes (the items). Tell Spark the shape up front:
 
       ~~~python
       from pyspark.sql import functions as F
@@ -173,11 +198,11 @@ export const pysparkLessons: readonly Lesson[] = [
       orders = spark.read.schema(order_schema).json(path)
       ~~~
 
-      Without a schema, Spark reads the files twice: once to infer types and once to load.
-      Inference also changes a type when one day's data looks different. In production, always
-      give the schema.
+      Without a schema, Spark reads the files twice: once to guess the types and once to load. And
+      the guess can change when one day's data looks different. In production, always give the
+      schema.
 
-      ## Structs: dot into them
+      ## Idea 2: structs, dot into them
 
       ~~~python
       flat = orders.select("order_id",
@@ -185,7 +210,10 @@ export const pysparkLessons: readonly Lesson[] = [
                            F.col("customer.city").alias("city"))
       ~~~
 
-      ## Arrays: explode makes one row for each element
+      ## Idea 3: arrays, explode makes one row per element
+
+      «explode» unpacks a list: one order with 3 items becomes 3 rows, each carrying the order id
+      and one item.
 
       ~~~python
       lines = (orders
@@ -194,15 +222,16 @@ export const pysparkLessons: readonly Lesson[] = [
                        (F.col("item.qty") * F.col("item.price")).alias("line_amount")))
       ~~~
 
-      «explode» drops an order whose array is empty or null. «explode_outer» keeps it with a
-      null item. «posexplode» also returns the position.
+      - «explode» drops an order whose array is empty or null.
+      - «explode_outer» keeps it, with a null item.
+      - «posexplode» also returns each element's position.
 
-      After the explode, the **grain changed** from one row for each order to one row for each
+      Now the habit. After the explode, the **grain changed**: from one row per order to one row per
       order line. A «count("*")» now counts lines. Count orders with «countDistinct("order_id")».
 
-      ## A JSON string inside a column
+      ## Idea 4: a JSON string inside a column
 
-      Kafka gives you the payload as a string. Parse it with the same kind of schema.
+      Kafka gives you the payload as one string. Parse it with the same kind of schema.
 
       ~~~python
       parsed = (raw
@@ -210,19 +239,19 @@ export const pysparkLessons: readonly Lesson[] = [
                 .select("event.*"))
       ~~~
 
-      A record that does not match becomes null in every field. Count those rows and send
-      them to a quarantine table; do not drop them silently.
+      A record that does not match becomes null in every field. Count those rows and send them to a
+      quarantine table; do not drop them silently.
 
-      ## Work on an array without exploding
+      ## Idea 5: work on an array without exploding
 
-      | Need | Function |
-      |---|---|
-      | Number of elements | «F.size("items")» |
-      | Is a value present | «F.array_contains("tags", "gift")» |
-      | Change each element | «F.transform("items", lambda i: i.qty * i.price)» |
-      | Keep some elements | «F.filter("items", lambda i: i.qty > 1)» |
-      | Sum the elements | «F.aggregate(...)» |
-      | Back to an array | «F.collect_list("sku")» after a groupBy |
+      You can often work inside the list and keep one row per order.
+
+      - **Number of elements:** «F.size("items")».
+      - **Is a value present:** «F.array_contains("tags", "gift")».
+      - **Change each element:** «F.transform("items", lambda i: i.qty * i.price)».
+      - **Keep some elements:** «F.filter("items", lambda i: i.qty > 1)».
+      - **Sum the elements:** «F.aggregate(...)».
+      - **Back to an array:** «F.collect_list("sku")» after a groupBy.
 
       ~~~python
       totals = orders.select(
@@ -234,13 +263,21 @@ export const pysparkLessons: readonly Lesson[] = [
           ).alias("order_amount"))
       ~~~
 
-      Higher-order functions keep one row for each order and need no shuffle. An explode
-      followed by a groupBy shuffles.
+      These higher-order functions keep one row per order and need no shuffle. An explode followed by
+      a groupBy shuffles.
+
+      ## Now say it like a senior engineer
 
       > [!senior] What a senior answer adds
-      > Talk about the grain: "After the explode I have one row for each line. I aggregate
-      > back to the order before I join to payments, or the payment amount repeats on every
-      > line and the revenue doubles."
+      > Talk about the grain: "After the explode I have one row for each line. I aggregate back to
+      > the order before I join to payments, or the payment amount repeats on every line and the
+      > revenue doubles."
+
+      ## In one breath
+
+      Give nested JSON a schema, dot into structs, and explode arrays into rows, knowing that the
+      grain just changed. When you can, work inside the array with transform and aggregate, and keep
+      one row per order with no shuffle.
     `,
     checks: [
       {
@@ -267,88 +304,101 @@ export const pysparkLessons: readonly Lesson[] = [
     title: 'Inside a shuffle, and how to size a job',
     summary:
       'Explain what a shuffle writes and reads, then size partitions and executors for a 1 TB job with numbers.',
-    minutes: 16,
+    minutes: 17,
     body: `
-      "What happens in a shuffle?" is the most common Spark internals question in Indian
-      product company loops, and "how would you size this job?" is the usual follow-up. A
-      senior answer gives the mechanism and then the arithmetic.
+      ## Start with the problem
 
-      ## Jobs, stages and tasks
+      "What happens in a shuffle?" is the most common Spark internals question in Indian product
+      company loops. "How would you size this job?" is the usual follow-up. Most candidates say "data
+      moves across the network" and "add more executors". A senior answer gives the **mechanism**,
+      then the **arithmetic**.
+
+      ## Idea 1: jobs, stages and tasks (a quick recap)
 
       - An **action** starts a **job**.
       - Spark cuts the job into **stages** at each shuffle boundary.
       - A stage runs one **task** for each partition.
 
-      A query with a join and a groupBy has three or four stages: scan each input, join,
-      aggregate. A stage that reads 800 partitions runs 800 tasks.
+      A query with a join and a groupBy has three or four stages: scan each input, join, aggregate.
+      A stage that reads 800 partitions runs 800 tasks.
 
-      ## What the shuffle does
+      ## Idea 2: what a shuffle really does
 
-      1. **Map side.** Each task computes the target partition of every row, by a hash of the
-         key modulo the number of shuffle partitions. It sorts the rows by target partition in
-         memory, and **spills** to disk when memory runs out. At the end it writes **one data
-         file and one index file** to the executor's local disk.
-      2. **Fetch.** Each reduce task asks every executor for the blocks of its partition, and
-         pulls them over the network.
-      3. **Reduce side.** The task merges the blocks. A sort-merge join sorts both sides by the
-         key and walks them together. An aggregation merges the partial results.
+      Picture sorting post. Every sorting office (map task) has letters for every city. Each office
+      bags its letters by destination city, then each city's van (reduce task) visits every office
+      to collect its bag.
 
-      So a shuffle costs **serialisation, disk writes, network transfer and often a sort**.
-      A narrow operation such as «filter» costs none of these.
+      1. **Map side.** Each task works out the target partition of every row: a hash of the key,
+         modulo the number of shuffle partitions. It sorts rows by target partition in memory, and
+         **spills** to disk when memory runs out. At the end it writes **one data file and one index
+         file** to the executor's local disk.
+      2. **Fetch.** Each reduce task asks every executor for the blocks of its partition, and pulls
+         them over the network.
+      3. **Reduce side.** The task merges the blocks. A sort-merge join sorts both sides by key and
+         walks them together. An aggregation merges the partial results.
+
+      So a shuffle costs **serialisation, disk writes, network transfer and often a sort**. A narrow
+      operation such as «filter» costs none of these.
 
       ~~~text
-      map task 1 ──► [p0|p1|p2] file ─┐
-      map task 2 ──► [p0|p1|p2] file ─┼──► reduce task p0, p1, p2
-      map task 3 ──► [p0|p1|p2] file ─┘
+      map 1 → [p0|p1|p2] ─┐
+      map 2 → [p0|p1|p2] ─┼→ reduce p0, p1, p2
+      map 3 → [p0|p1|p2] ─┘
       ~~~
 
-      ## The settings that matter
+      ## Idea 3: the settings that matter
 
-      | Setting | Default | Meaning |
-      |---|---|---|
-      | «spark.sql.shuffle.partitions» | 200 | Partitions after a shuffle |
-      | «spark.sql.files.maxPartitionBytes» | 128 MB | Size of an input split |
-      | «spark.sql.adaptive.enabled» | true since Spark 3.2 | Adaptive query execution |
-      | «spark.sql.adaptive.advisoryPartitionSizeInBytes» | 64 MB | Target size when AQE merges partitions |
-      | «spark.sql.autoBroadcastJoinThreshold» | 10 MB | Largest table that is broadcast |
+      - «spark.sql.shuffle.partitions»: default **200**. Partitions after a shuffle.
+      - «spark.sql.files.maxPartitionBytes»: default **128 MB**. Size of an input split.
+      - «spark.sql.adaptive.enabled»: **true** since Spark 3.2. Adaptive query execution.
+      - «spark.sql.adaptive.advisoryPartitionSizeInBytes»: default **64 MB**. Target size when
+        AQE merges partitions.
+      - «spark.sql.autoBroadcastJoinThreshold»: default **10 MB**. Largest table that is broadcast.
 
-      With adaptive execution, Spark merges small shuffle partitions after the map stage. So
-      set the partition count **high enough** and let it merge down. It cannot split a count
-      that is too low, except for skewed joins.
+      With adaptive execution, Spark merges small shuffle partitions after the map stage. So set the
+      partition count **high enough** and let it merge down. It cannot split a count that is too low,
+      except for skewed joins.
 
-      ## Size a 1 TB job
+      ## Idea 4: size a 1 TB job, step by step
 
       Say the job joins and aggregates 1 TB of shuffle data.
 
       1. **Partitions.** Aim for 100 to 200 MB each. 1 TB ÷ 200 MB = about **5,000 partitions**.
-         The default of 200 gives 5 GB a partition, which spills and fails.
-      2. **Executor shape.** About 5 cores for each executor keeps garbage collection and disk
+         The default of 200 gives 5 GB per partition, which spills and fails.
+      2. **Executor shape.** About 5 cores per executor keeps garbage collection and disk
          throughput healthy. Give each core 4 to 8 GB: an executor of **5 cores and 32 GB**.
-      3. **Executor count.** 50 executors give 250 cores. 5,000 tasks ÷ 250 = 20 waves of
-         tasks for each stage. At about 1 minute a task, a stage takes about 20 minutes.
-      4. **Check memory per task.** 32 GB × 0.6 unified memory ÷ 5 tasks is about 3.8 GB for a
-         200 MB compressed partition. Data grows 3 to 5 times when it is deserialised, so
-         this fits without a spill.
-      5. **Local disk.** Shuffle files need space on each node: about 1 TB over the cluster,
-         plus room for spills.
+      3. **Executor count.** 50 executors give 250 cores. 5,000 tasks ÷ 250 = 20 waves of tasks per
+         stage. At about 1 minute a task, a stage takes about 20 minutes.
+      4. **Check memory per task.** 32 GB × 0.6 unified memory ÷ 5 tasks is about 3.8 GB, for a
+         200 MB compressed partition. Data grows 3 to 5 times when it is deserialised, so this fits
+         without a spill.
+      5. **Local disk.** Shuffle files need space on each node: about 1 TB over the cluster, plus
+         room for spills.
 
-      State the assumptions and say what you would measure after the first run.
+      State the assumptions, and say what you would measure after the first run.
 
-      ## Dynamic allocation
+      ## Idea 5: dynamic allocation
 
-      «spark.dynamicAllocation.enabled» adds executors when tasks wait and removes idle ones.
-      An executor that leaves takes its shuffle files with it, so Spark needs the **external
-      shuffle service** on YARN, or **shuffle tracking** on Kubernetes, to keep them
-      reachable.
-
-      > [!senior] What a senior answer adds
-      > Lead with avoiding the shuffle: filter and select early, broadcast the small side,
-      > aggregate before the join, and bucket tables that are joined on the same key every
-      > day. Then tune the shuffle that remains.
+      «spark.dynamicAllocation.enabled» adds executors when tasks wait, and removes idle ones. But
+      an executor that leaves takes its shuffle files with it. So Spark needs the **external shuffle
+      service** on YARN, or **shuffle tracking** on Kubernetes, to keep them reachable.
 
       > [!trap] "More partitions is always safer"
-      > 100,000 tiny partitions make 100,000 tasks, and the driver spends its time scheduling
-      > and tracking them. Small output files follow. Size from the data volume.
+      > 100,000 tiny partitions make 100,000 tasks, and the driver spends its time scheduling and
+      > tracking them. Small output files follow. Size from the data volume.
+
+      ## Now say it like a senior engineer
+
+      > [!senior] What a senior answer adds
+      > Lead with avoiding the shuffle: filter and select early, broadcast the small side, aggregate
+      > before the join, and bucket tables that are joined on the same key every day. Then tune the
+      > shuffle that remains.
+
+      ## In one breath
+
+      A shuffle bags every row by destination partition on local disk, then every reducer fetches
+      its bag over the network. Size a job from the data: about 200 MB per partition, about 5 cores
+      per executor, and check memory per task before you run.
     `,
     checks: [
       {
@@ -381,83 +431,111 @@ export const pysparkLessons: readonly Lesson[] = [
     title: 'The executor memory model and out of memory errors',
     summary:
       'Read an out of memory message, say which memory region failed, and choose the fix that matches the cause.',
-    minutes: 14,
+    minutes: 15,
     body: `
-      "How do you handle an out of memory error in Spark?" has a weak answer and a strong one.
-      The weak answer is "increase executor memory". The strong answer names **which memory**
-      ran out, **why**, and the cheapest fix.
+      ## Start with the problem
 
-      ## Where an executor's memory goes
+      "How do you handle an out-of-memory error in Spark?" has a weak answer and a strong one. The
+      weak answer is "increase executor memory". Sometimes that works. Often the job just fails
+      later, and costs twice as much.
+
+      The strong answer names **which memory** ran out, **why**, and the cheapest fix. Spark has
+      several memory regions, and each error message points at a different one. It is like a doctor
+      asking where it hurts before prescribing.
+
+      ## Idea 1: where an executor's memory goes
 
       A container holds more than the Java heap.
 
       ~~~text
-      container = spark.executor.memory (heap) + spark.executor.memoryOverhead
+      container
+       = heap + overhead
 
       heap
-      ├── reserved               300 MB
-      ├── unified memory         60% of the rest   (spark.memory.fraction)
-      │   ├── execution          shuffles, sorts, joins, aggregations
-      │   └── storage            cached data, broadcast variables
-      └── user memory            40% of the rest   (your objects, UDF data)
+      ├ reserved   300 MB
+      ├ unified    60% of rest
+      │ ├ execution
+      │ │ shuffles, sorts,
+      │ │ joins, aggregations
+      │ └ storage
+      │   cache, broadcasts
+      └ user       40% of rest
+        your objects, UDF data
 
-      overhead                   max(384 MB, 10% of the heap)
-                                 Python workers, Arrow buffers, network buffers
+      overhead
+       max(384 MB, 10% heap)
+       Python workers,
+       Arrow and network buffers
       ~~~
 
-      Execution and storage borrow from each other. Execution can evict cached blocks, and
-      it **spills to disk** when it still needs more. A spill is slow, not fatal.
+      The heap is «spark.executor.memory», and the overhead is «spark.executor.memoryOverhead».
+      The 60 percent comes from «spark.memory.fraction».
 
-      ## Three different errors
+      Execution and storage borrow from each other. Execution can evict cached blocks, and it
+      **spills to disk** when it still needs more. A spill is slow, not fatal. So a real crash means
+      something could not spill.
 
-      | Message | What ran out | Usual cause |
-      |---|---|---|
-      | «java.lang.OutOfMemoryError: Java heap space» on an executor | The heap | A huge partition, a wide row, a large «collect_list», a hash table too big to spill |
-      | "Container killed by YARN for exceeding memory limits", or «OOMKilled» on Kubernetes | The overhead | Python UDF workers, pandas UDF batches, off-heap buffers |
-      | Out of memory on the **driver** | The driver heap | «collect()», «toPandas()», a large broadcast, too many tasks or files to track |
+      ## Idea 2: three different errors, three different places
 
-      ## Fix the cause, in this order
+      - «java.lang.OutOfMemoryError: Java heap space» **on an executor**. The heap ran out. Usual
+        cause: a huge partition, a wide row, a large «collect_list», or a hash table too big to
+        spill.
+      - **"Container killed by YARN for exceeding memory limits"**, or «OOMKilled» on Kubernetes.
+        The **overhead** ran out. Usual cause: Python UDF workers, pandas UDF batches, off-heap
+        buffers.
+      - **Out of memory on the driver.** The driver heap ran out. Usual cause: «collect()»,
+        «toPandas()», a large broadcast, or too many tasks or files to track.
+
+      ## Idea 3: fix the cause, in this order
 
       1. **Find the big partition.** In the Spark UI, compare the maximum task input with the
-         median. A 20 GB task next to 100 MB tasks is **skew**. Fix the skew; more memory
-         does not help.
-      2. **Raise the partition count.** Smaller partitions need less memory for each task.
-      3. **Lower the cores for each executor.** Fewer tasks share the same heap.
+         median. A 20 GB task next to 100 MB tasks is **skew**. Fix the skew; more memory does not
+         help.
+      2. **Raise the partition count.** Smaller partitions need less memory per task.
+      3. **Lower the cores per executor.** Fewer tasks share the same heap.
       4. **Check the driver's work.** Replace «collect()» with a write. Lower the broadcast
          threshold if a table is larger than its statistics say.
-      5. **For container kills, raise the overhead**, not the heap, and shrink the pandas
-         batch size with «spark.sql.execution.arrow.maxRecordsPerBatch».
+      5. **For container kills, raise the overhead**, not the heap, and shrink the pandas batch
+         size with «spark.sql.execution.arrow.maxRecordsPerBatch».
       6. **Only then add memory.**
 
-      ## Memory for each task
-
-      A quick estimate tells you whether a setup can work:
+      ## Idea 4: memory per task, a quick estimate
 
       ~~~text
-      memory per task ≈ (heap − 300 MB) × 0.6 ÷ cores per executor
+      per task ≈
+       (heap − 300 MB) × 0.6
+       ÷ cores per executor
 
-      16 GB heap, 4 cores  →  about 2.4 GB for each task
-      16 GB heap, 8 cores  →  about 1.2 GB for each task
+      16 GB, 4 cores → ~2.4 GB
+      16 GB, 8 cores → ~1.2 GB
       ~~~
 
-      A 1 GB Parquet partition can be 3 to 5 GB as Java objects. This is why partition size is
-      the first control.
+      A 1 GB Parquet partition can be 3 to 5 GB as Java objects. That is why partition size is the
+      first control, before memory.
 
-      ## Caching and memory
+      ## Idea 5: caching and memory
 
-      Cached data lives in storage memory. «MEMORY_AND_DISK» is the default for DataFrames,
-      so blocks that do not fit go to disk. A cache that fills memory makes every later stage
-      spill. Unpersist when you are done.
-
-      > [!senior] What a senior answer adds
-      > Describe the evidence you collect before you change a setting: the exact message, the
-      > stage, the task with the largest input, its spill and its garbage collection time.
-      > "I change one thing and run again" beats a list of flags.
+      Cached data lives in storage memory. «MEMORY_AND_DISK» is the default for DataFrames, so
+      blocks that do not fit go to disk. A cache that fills memory makes every later stage spill.
+      Unpersist when you are done.
 
       > [!trap] The same job passes on retry
-      > A task that fails and then passes on another executor still shows a problem, often a
-      > skewed key or memory pressure from a neighbour task. Speculation and retries hide it
-      > until the data grows.
+      > A task that fails and then passes on another executor still shows a problem, often a skewed
+      > key or memory pressure from a neighbour task. Speculation and retries hide it until the data
+      > grows.
+
+      ## Now say it like a senior engineer
+
+      > [!senior] What a senior answer adds
+      > Describe the evidence you collect before you change a setting: the exact message, the stage,
+      > the task with the largest input, its spill and its garbage collection time. "I change one
+      > thing and run again" beats a list of flags.
+
+      ## In one breath
+
+      Read the message to know which memory failed: executor heap, container overhead or driver.
+      Then fix the cause in order: skew, partition size, cores per executor, driver work, overhead,
+      and only last, more memory.
     `,
     checks: [
       {
@@ -490,63 +568,82 @@ export const pysparkLessons: readonly Lesson[] = [
     title: 'Debug a slow job from the Spark UI',
     summary:
       'Walk the Spark UI in a fixed order and tell skew, spill, small files and a bad join apart from the numbers.',
-    minutes: 13,
+    minutes: 14,
     body: `
-      Interviewers ask "a job that took 20 minutes now takes 3 hours; what do you do?" to see
-      whether you have operated Spark. The answer is a walk through the **Spark UI** in a
-      fixed order, with a named symptom at each stop.
+      ## Start with the problem
 
-      ## The order of the walk
+      "A job that took 20 minutes now takes 3 hours. What do you do?" Interviewers ask this to see
+      whether you have really operated Spark. The weak answer is a list of settings to try. The
+      strong answer is a **walk through the Spark UI in a fixed order**, naming a symptom at each
+      stop, like a mechanic who checks the same things in the same order every time.
 
-      1. **Jobs tab.** Which job is slow? Did the number of jobs change? Hundreds of small
-         jobs mean an action inside a loop.
+      ## Idea 1: the walk, in order
+
+      1. **Jobs tab.** Which job is slow? Did the number of jobs change? Hundreds of small jobs mean
+         an action inside a loop.
       2. **Stages tab.** Sort by duration. One stage usually holds most of the time.
-      3. **Stage detail.** Read the **summary metrics** table: minimum, median and maximum
-         for duration, input size, shuffle read, spill and garbage collection time.
+      3. **Stage detail.** Read the **summary metrics** table: minimum, median and maximum for
+         duration, input size, shuffle read, spill and garbage collection time. The gap between
+         median and maximum is where most answers hide.
       4. **SQL tab.** Open the query plan. Read the join types and the row counts on each node.
-      5. **Executors tab.** Failed tasks, lost executors and garbage collection for each one.
+      5. **Executors tab.** Failed tasks, lost executors, and garbage collection per executor.
 
-      ## Symptoms and causes
+      ## Idea 2: symptom to cause to fix
 
-      | What you see | Cause | Fix |
-      |---|---|---|
-      | Max task time is 50 times the median, and so is its shuffle read | **Skew** | Salting, AQE skew join, split the hot key |
-      | Every task has "spill (disk)" | Partitions too large | More shuffle partitions |
-      | 50,000 tasks of 100 ms each | **Small files** or too many partitions | Compact the input, lower the partition count |
-      | Garbage collection time above 10% of task time | Memory pressure | Smaller partitions, fewer cores for each executor |
-      | A «BroadcastNestedLoopJoin» or «CartesianProduct» node | A join with no equality condition | Fix the join condition |
-      | A «SortMergeJoin» where one side is small | Missing or stale statistics | Broadcast hint, refresh statistics |
-      | Scan reads all partitions | No partition pruning | Filter on the raw partition column |
-      | Rows grow a lot after a join | Duplicate keys, a **fan-out** | Deduplicate or aggregate before the join |
-      | Executors lost, tasks retried | Memory kills or spot node loss | See the memory lesson; check the cluster events |
+      - **Max task time is 50 times the median, and so is its shuffle read.** Cause: **skew**. Fix:
+        salting, AQE skew join, or split the hot key.
+      - **Every task shows "spill (disk)".** Cause: partitions too large. Fix: more shuffle
+        partitions.
+      - **50,000 tasks of 100 ms each.** Cause: **small files**, or too many partitions. Fix:
+        compact the input, lower the partition count.
+      - **Garbage collection above 10 percent of task time.** Cause: memory pressure. Fix: smaller
+        partitions, fewer cores per executor.
+      - **A «BroadcastNestedLoopJoin» or «CartesianProduct» node.** Cause: a join with no
+        equality condition. Fix: the join condition.
+      - **A «SortMergeJoin» where one side is small.** Cause: missing or stale statistics. Fix: a
+        broadcast hint, refresh statistics.
+      - **The scan reads all partitions.** Cause: no partition pruning. Fix: filter on the raw
+        partition column.
+      - **Rows grow a lot after a join.** Cause: duplicate keys, a **fan-out**. Fix: deduplicate or
+        aggregate before the join.
+      - **Executors lost, tasks retried.** Cause: memory kills, or spot nodes lost. Fix: see the
+        memory lesson, and check the cluster events.
 
-      ## Read the plan
+      ## Idea 3: read the plan
 
       «df.explain("formatted")» prints the physical plan. Read it from the bottom up.
 
       - «Exchange» is a shuffle. Count them.
-      - «PartitionFilters» and «PushedFilters» on a scan show what the reader skips. An empty
-        list on a large table is a finding.
-      - «BroadcastHashJoin» against «SortMergeJoin» shows the join strategy Spark chose.
-      - «AdaptiveSparkPlan isFinalPlan=true» means you see the plan after runtime changes.
+      - «PartitionFilters» and «PushedFilters» on a scan show what the reader skips. An empty list
+        on a large table is a finding.
+      - «BroadcastHashJoin» versus «SortMergeJoin» shows the join strategy Spark chose.
+      - «AdaptiveSparkPlan isFinalPlan=true» means you are seeing the plan after runtime changes.
 
-      ## What changed?
+      ## Idea 4: ask what changed
 
-      A job that was fast last week did not get slow on its own. Check, in order:
+      A job that was fast last week did not get slow on its own. Check, in this order:
 
-      - **Data volume.** Compare the input size and row count with the last good run.
-      - **Data shape.** A new hot key, a burst of nulls in the join key, or many more small files.
-      - **Code and configuration.** A new UDF, a changed join, a library or runtime upgrade.
-      - **Cluster.** Fewer nodes, a noisy neighbour, slower disks, lost spot instances.
-
-      > [!senior] What a senior answer adds
-      > End with prevention: record the input size, the shuffle size and the duration of every
-      > run, and alert on the trend. Add a row-count check after the join. Then the next
-      > regression is found by a monitor, not by a late report.
+      1. **Data volume.** Compare the input size and row count with the last good run.
+      2. **Data shape.** A new hot key, a burst of nulls in the join key, or many more small files.
+      3. **Code and configuration.** A new UDF, a changed join, a library or runtime upgrade.
+      4. **Cluster.** Fewer nodes, a noisy neighbour, slower disks, lost spot instances.
 
       > [!example] Null keys
-      > A join key that is null in 30 percent of rows sends all those rows to one partition.
-      > They can never match. Filter them out before the join and union them back after it.
+      > A join key that is null in 30 percent of rows sends all those rows to one partition, and they
+      > can never match anything. Filter them out before the join, and union them back after it.
+
+      ## Now say it like a senior engineer
+
+      > [!senior] What a senior answer adds
+      > End with prevention: record the input size, the shuffle size and the duration of every run,
+      > and alert on the trend. Add a row-count check after the join. Then the next regression is
+      > found by a monitor, not by a late report.
+
+      ## In one breath
+
+      Walk the UI in a fixed order (jobs, stages, stage metrics, SQL plan, executors) and compare
+      median with maximum at every stop. Name the symptom, match it to its cause, and then ask what
+      changed since the last good run.
     `,
     checks: [
       {

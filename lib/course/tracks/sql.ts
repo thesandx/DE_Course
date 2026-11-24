@@ -12,21 +12,53 @@ export const track: Track = {
       slug: 'window-functions',
       title: 'Window functions without guessing',
       summary: 'Pick the right ranking function and frame, and explain the difference out loud.',
-      minutes: 14,
+      minutes: 16,
       body: `
-        A window function computes a value for each row from a set of related rows, **without
-        collapsing them** the way «GROUP BY» does. Interviewers use them because one query shows
-        whether you understand partitions, ordering and frames.
+        ## Start with the problem
 
-        ## The three parts of «OVER (...)»
+        You have one row per driver per day, with the number of trips. You want, next to each row,
+        the driver's rank inside their city.
 
-        | Part | Question it answers | Example |
+        Try «GROUP BY city_id». It gives one row per city, and the driver rows are gone. Try a
+        self-join: join the table to itself and count drivers with more trips. It works, but it is slow
+        and hard to read.
+
+        What we want is a way to look at **the other rows in my group** while **keeping my own
+        row**. That is exactly what a **window function** does. It computes a value for each row from a
+        set of related rows, **without collapsing them** the way «GROUP BY» does.
+
+        ## Idea 1: the three questions inside «OVER (...)»
+
+        Imagine a class photo. To give each student a rank by height, you answer three questions.
+
+        1. **Who is in my group?** My class, not the whole school. That is «PARTITION BY».
+        2. **In what order do we line up?** Tallest first. That is «ORDER BY».
+        3. **Which neighbours do I look at?** Everyone before me, or just the two next to me? That is
+           the **frame**.
+
+        | Part | Question | Example |
         |---|---|---|
-        | «PARTITION BY» | Which rows belong together? | «PARTITION BY rider_id» |
-        | «ORDER BY» | In which order inside the group? | «ORDER BY requested_at» |
-        | Frame | Which rows around the current one? | «ROWS BETWEEN 6 PRECEDING AND CURRENT ROW» |
+        | «PARTITION BY» | Which rows belong together? | «city_id» |
+        | «ORDER BY» | In which order? | «trips DESC» |
+        | Frame | Which rows around me? | «6 PRECEDING» |
 
-        ## Ranking: say which one and why
+        ## Idea 2: three ways to number a line
+
+        Four drivers in one city did 50, 40, 40 and 30 trips. Look at how each function numbers them.
+
+        | Trips | Row number | Rank | Dense rank |
+        |---|---|---|---|
+        | 50 | 1 | 1 | 1 |
+        | 40 | 2 | 2 | 2 |
+        | 40 | 3 | 2 | 2 |
+        | 30 | 4 | 4 | 3 |
+
+        - «ROW_NUMBER» always counts 1, 2, 3, 4. Ties are broken at random. Use it to pick **exactly
+          one row**, and add a tie-breaker column so the result is the same on every run.
+        - «RANK» gives ties the same number, then **skips**, like a race: two runners share second
+          place, so nobody is third. Use it for "top 3 including ties, like a leaderboard".
+        - «DENSE_RANK» gives ties the same number and **does not skip**. Use it for "the three
+          highest distinct values".
 
         ~~~sql
         SELECT
@@ -39,16 +71,18 @@ export const track: Track = {
         FROM driver_daily;
         ~~~
 
-        - «ROW_NUMBER» breaks ties arbitrarily. Use it to pick exactly one row, and add a tie-breaker
-          column so the result is deterministic.
-        - «RANK» leaves gaps after ties. Use it for "top 3 including ties, like a leaderboard".
-        - «DENSE_RANK» has no gaps. Use it for "the three highest distinct values".
+        ## Idea 3: the frame, and the default that surprises people
 
-        ## Frames: the default is a trap
+        Once rows are in order, the frame says which ones to add up. "Me and the 6 rows before me"
+        gives a rolling 7-row average. "Every row from the start up to me" gives a running total.
 
-        With an «ORDER BY» and no frame, most engines use
-        «RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW». «RANGE» treats rows with the same
-        ordering value as peers, so a running total jumps by all tied rows at once.
+        Now the trap. With an «ORDER BY» and no frame, most engines use
+        «RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW». **RANGE** treats rows with the same order
+        value as **peers**, so they all join the frame at once.
+
+        Tiny example: two orders on Monday, 10 and 20. With the default RANGE frame, both Monday rows
+        show a running total of 30, because each one sees its peer. With a **ROWS** frame and a
+        tie-breaker, they show 10 and then 30.
 
         ~~~sql
         -- Rolling 7-row average and a running total that is safe with ties
@@ -61,14 +95,16 @@ export const track: Track = {
         ~~~
 
         > [!trap] Seven rows are not seven days
-        > «ROWS BETWEEN 6 PRECEDING» counts rows. If a day has no row, the window reaches further
-        > back in time. For a true calendar window, join to a date spine first, or use
+        > «ROWS BETWEEN 6 PRECEDING» counts rows. If a day has no row, the window reaches further back
+        > in time. For a true calendar window, join to a date spine first, or use
         > «RANGE BETWEEN INTERVAL 6 DAY PRECEDING AND CURRENT ROW» where the engine supports it.
 
-        ## LAG and LEAD
+        ## Idea 4: looking one row back or forward (LAG and LEAD)
 
-        «LAG(x)» reads the previous row in the window, «LEAD(x)» the next one. They replace most
-        self-joins on "the row before". Give a default for the first row: «LAG(x, 1, 0)».
+        Often you only need the neighbour. "How long since this rider's last trip?" needs the previous
+        row. «LAG(x)» reads the previous row in the window, and «LEAD(x)» reads the next one. They
+        replace most self-joins on "the row before". The first row has no previous row, so give a
+        default: «LAG(x, 1, 0)».
 
         ~~~sql
         SELECT
@@ -78,10 +114,22 @@ export const track: Track = {
         FROM trips;
         ~~~
 
+        ## Now say it like a senior engineer
+
+        - A window keeps every row and adds a value computed from its group.
+        - Pick the ranking function by the tie rule; always add a tie-breaker for «ROW_NUMBER».
+        - Write the frame explicitly; prefer ROWS with a unique order for running totals.
+
         > [!senior] What a senior answer adds
         > Name the cost. A window with a «PARTITION BY» makes the engine shuffle and sort by that key.
-        > On a skewed key (one huge city) one worker does most of the work. Say so, and mention that
+        > On a skewed key (one huge city), one worker does most of the work. Say so, and mention that
         > filtering before the window keeps the sort small.
+
+        ## In one breath
+
+        A window function lets each row look at its group without losing itself: partition says who
+        is in the group, order says the line-up, and the frame says which neighbours count. Choose the
+        ranking function by how you want ties to behave.
       `,
       checks: [
         {
@@ -109,17 +157,34 @@ export const track: Track = {
       slug: 'gaps-and-islands',
       title: 'Gaps, islands and sessions',
       summary: 'Find streaks and sessions with the difference trick and running sums.',
-      minutes: 16,
+      minutes: 17,
       body: `
-        "Longest streak", "consecutive days" and "split events into sessions" are the same family of
-        problem: rows that belong together because nothing breaks the sequence. There are two
-        reliable patterns. Learn both, because interviewers change the problem halfway.
+        ## Start with the problem
 
-        ## Pattern 1: the difference trick for consecutive values
+        "What is each driver's longest streak of days online?" "Split these clicks into sessions."
+        "How long was each run of the same status?" They sound different, but they are one family.
 
-        For consecutive days, subtract a row number from the date. Inside an unbroken run, the
-        date and the row number grow together, so the difference stays constant. That constant is
-        the island id.
+        Picture a row of days. Some days the driver was online, some not. The online days form
+        **islands**, and the missing days are the **gaps** between them. Every question above asks
+        you to find the islands. There are two reliable patterns. Learn both, because interviewers
+        change the problem halfway.
+
+        ## Idea 1: the difference trick (for consecutive values)
+
+        Look at one driver's online days, numbered in order.
+
+        | Day | Row number | Day minus row number |
+        |---|---|---|
+        | Jan 3 | 1 | Jan 2 |
+        | Jan 4 | 2 | Jan 2 |
+        | Jan 5 | 3 | Jan 2 |
+        | Jan 8 | 4 | Jan 4 |
+        | Jan 9 | 5 | Jan 4 |
+
+        Inside an unbroken run, the date goes up by one and the row number goes up by one, so their
+        **difference stays the same**. When a gap appears, the date jumps but the row number does not,
+        so the difference changes. That constant difference is the **island id**. Group by it, and
+        each group is one streak: Jan 3 to 5 (3 days), and Jan 8 to 9 (2 days).
 
         ~~~sql
         WITH active AS (
@@ -142,10 +207,22 @@ export const track: Track = {
         > If a driver has two sessions on one day, the row number grows twice while the date grows
         > once, and the island breaks. The «DISTINCT» in the first CTE is not optional.
 
-        ## Pattern 2: flag the breaks, then a running sum
+        ## Idea 2: flag the breaks, then count them (for any rule)
 
-        When "together" means "less than 30 minutes apart", there is no row-number trick. Flag each
-        row that starts a new group, then a running sum of the flags numbers the groups.
+        Now the rule is "a new session starts after 30 quiet minutes". Times are not whole steps, so
+        the difference trick cannot work. Use two simple steps instead.
+
+        1. **Flag** each row that starts a new group: 1 if it is the first row, or if the gap since
+           the previous row is more than 30 minutes; otherwise 0.
+        2. **Running sum** of the flags. Each time a new group starts, the sum goes up by one. So the
+           sum is the session number.
+
+        | Event time | Gap | New session? | Running sum |
+        |---|---|---|---|
+        | 10:00 | none | 1 | 1 |
+        | 10:10 | 10 min | 0 | 1 |
+        | 10:55 | 45 min | 1 | 2 |
+        | 11:05 | 10 min | 0 | 2 |
 
         ~~~sql
         WITH flagged AS (
@@ -169,14 +246,24 @@ export const track: Track = {
         FROM flagged;
         ~~~
 
-        This pattern is general. Swap the condition for "status changed" or "city changed" and the
+        This pattern is general. Swap the condition for "status changed" or "city changed", and the
         same two steps find runs of any kind.
+
+        ## Now say it like a senior engineer
+
+        - Consecutive integers or dates: the difference trick, after a «DISTINCT».
+        - Any other rule: flag the breaks with «LAG», then a running «SUM» of the flags.
 
         > [!senior] Talk about the data, not just the query
         > Sessions from mobile clients arrive late and out of order. Say whether you sessionize on
-        > event time or arrival time, and what happens when a late event lands between two
-        > sessions you already published: it can merge them. That is the bridge to the streaming
-        > round, where session windows handle exactly this.
+        > event time or arrival time, and what happens when a late event lands between two sessions
+        > you already published: it can merge them. That is the bridge to the streaming round, where
+        > session windows handle exactly this.
+
+        ## In one breath
+
+        Inside a streak, the date and the row number climb together, so their difference names the
+        streak. For any other rule, mark where a new group starts and add up the marks.
       `,
       checks: [
         {
@@ -209,13 +296,21 @@ export const track: Track = {
       slug: 'dedup-and-top-n',
       title: 'Deduplication and top N per group',
       summary: 'Keep the right row per key, deterministically, and say what "latest" means.',
-      minutes: 12,
+      minutes: 13,
       body: `
-        Event data is full of duplicates: retries from phones, replays from Kafka, and change
-        records with several versions of one entity. "Keep the latest version per key" is asked in
-        almost every loop, often hidden inside a bigger question.
+        ## Start with the problem
 
-        ## The standard shape
+        A trip changes many times: requested, accepted, started, finished. Each change arrives as a
+        new row. Phones also retry, and Kafka replays. So the table has many rows for one trip, and a
+        report that counts rows counts trips three or four times.
+
+        You want **one row per trip: the latest version**. This is asked in almost every loop, often
+        hidden inside a bigger question.
+
+        ## Idea 1: line up each trip's rows, keep the first
+
+        For each trip, sort its rows newest first, and number them 1, 2, 3. Keep the rows numbered 1.
+        That is «ROW_NUMBER» from the window functions lesson, partitioned by the key.
 
         ~~~sql
         SELECT *
@@ -231,8 +326,8 @@ export const track: Track = {
         WHERE rn = 1;
         ~~~
 
-        BigQuery, Snowflake and Databricks support «QUALIFY», which filters on a window function
-        without the subquery:
+        BigQuery, Snowflake and Databricks support «QUALIFY». It filters on a window function directly,
+        the way «HAVING» filters on a «GROUP BY», so you do not need the subquery.
 
         ~~~sql
         SELECT *
@@ -240,25 +335,37 @@ export const track: Track = {
         QUALIFY ROW_NUMBER() OVER (PARTITION BY trip_id ORDER BY updated_at DESC, ingest_offset DESC) = 1;
         ~~~
 
-        ## Questions to ask before you write it
+        ## Idea 2: three questions before you write it
 
-        - **Latest by what clock?** The device time can be wrong. The server receive time is
-          monotonic per partition but arrives late. Many teams order by a source version number or
-          the log offset.
+        The query is easy. The thinking is in these three questions, and asking them out loud is
+        what interviewers listen for.
+
+        - **Latest by what clock?** The phone's clock can be wrong. The server receive time arrives
+          late. Many teams order by a source version number or the log offset.
         - **What breaks ties?** Two updates with the same timestamp are common at millisecond
-          precision. Add a second ordering column, or the result changes between runs.
-        - **Exact duplicates or versions?** If rows are byte-identical, «SELECT DISTINCT» works and is
-          cheaper to explain. If they are versions, you need the window.
+          precision. Without a second ordering column, the winner can change from run to run. That is
+          why the query orders by «ingest_offset» too.
+        - **Exact copies or versions?** If the rows are byte-identical, «SELECT DISTINCT» works and is
+          simpler. If they are different versions, you need the window.
 
-        ## Top N per group
+        ## Idea 3: top N per group is the same query
 
-        The same window solves "top 3 products per category". Choose the ranking function from the
-        tie rule (see the window functions lesson), then filter «rn <= 3».
+        "Top 3 products per category" is the same shape. Partition by category, order by sales,
+        number the rows, and keep «rn <= 3». The only new decision is the tie rule, which picks
+        «ROW_NUMBER», «RANK» or «DENSE_RANK».
+
+        ## Now say it like a senior engineer
 
         > [!senior] Deduplicate where it is cheapest
         > At scale, deduplication belongs at ingestion with an idempotent key, or in an incremental
         > merge (for example «MERGE» on «trip_id» into a Hudi, Iceberg or Delta table), not in every
         > downstream query. Say where you would put it and why.
+
+        ## In one breath
+
+        Number each key's rows newest first and keep number one, with a tie-breaker so the same row
+        wins every time. Then say which clock "latest" means, and where in the pipeline the dedup
+        should really live.
       `,
       checks: [
         {
@@ -278,15 +385,34 @@ export const track: Track = {
       slug: 'cohorts-and-funnels',
       title: 'Cohorts, retention and funnels',
       summary: 'Write the product analytics queries that marketplace teams ask for every week.',
-      minutes: 15,
+      minutes: 16,
       body: `
-        Product questions show up in SQL rounds because they test whether you can turn a vague
-        business question into a precise definition first. Always restate the definition before you
-        write SQL. Most wrong answers here are wrong definitions, not wrong syntax.
+        ## Start with the problem
 
-        ## Retention cohorts
+        A product manager asks: "Are riders sticking around?" That is not a query yet. "Sticking
+        around" could mean ten different things, and each one gives a different number. Two people
+        who both write correct SQL can get answers that differ by 30 percent.
 
-        "Of riders who took a first trip in a week, how many took a trip in each following week?"
+        That is why these questions show up in SQL rounds. They test whether you turn a vague question
+        into a **precise definition first**. Most wrong answers here are wrong definitions, not wrong
+        syntax. So always say the definition out loud before you write SQL.
+
+        ## Idea 1: group people by when they started (cohorts)
+
+        Compare a school's class of 2024 with its class of 2025. You would not mix them, because they
+        started at different times. A **cohort** is the same idea: everyone whose first trip was in
+        the same week.
+
+        Then for each cohort, ask: how many were still active 1 week later? 2 weeks later? That table
+        is a **retention cohort**.
+
+        | Cohort week | Week 0 | Week 1 | Week 2 |
+        |---|---|---|---|
+        | Oct 6 | 1,000 | 420 | 310 |
+        | Oct 13 | 900 | 400 | (not yet) |
+
+        Read across a row to see one cohort fade. Read down a column to see if newer cohorts do
+        better at the same age.
 
         ~~~sql
         WITH first_trip AS (
@@ -310,13 +436,18 @@ export const track: Track = {
         ORDER BY 1, 2;
         ~~~
 
-        Divide each row by the week 0 count for the retention rate. Mention that the newest cohorts
-        have fewer weeks of data, so their curves are incomplete, not worse.
+        Divide each cell by the week 0 count to get the retention rate. And say this out loud: the
+        newest cohorts have fewer weeks of data, so their curves are **incomplete, not worse**.
 
-        ## Funnels with order
+        ## Idea 2: steps that must happen in order (funnels)
 
-        A funnel counts users who did step 2 **after** step 1. Counting users who did both, in any
-        order, overstates conversion.
+        A **funnel** counts how many people get through each step: open the app, request a trip,
+        complete the trip. The key word is **after**. A rider who completed a trip and then opened
+        the app has done both steps, but not in funnel order. Counting "did both, in any order"
+        overstates conversion.
+
+        So take the first time of each step per rider, then only count a step if it came after the one
+        before.
 
         ~~~sql
         WITH steps AS (
@@ -338,13 +469,21 @@ export const track: Track = {
 
         > [!trap] MIN per step is a simplification
         > Taking the first time of each step can miss a user who opened the app twice and requested
-        > after the second open. Say the simplification out loud, and offer the stricter version:
-        > per session, or with «LEAD» over an ordered event stream.
+        > after the second open. Say the simplification out loud, and offer the stricter version: per
+        > session, or with «LEAD» over an ordered event stream.
+
+        ## Now say it like a senior engineer
 
         > [!senior] Define the denominator
         > Say who is in the population (new riders only? all riders active in the period?), which
         > time zone defines a week, and whether cancelled trips count. A senior answer settles these
         > in the first two minutes.
+
+        ## In one breath
+
+        A cohort groups people by when they started and follows each group over time; a funnel counts
+        people who did each step after the last one. The SQL is the easy part; the definition is the
+        real answer.
       `,
       checks: [
         {
@@ -365,36 +504,54 @@ export const track: Track = {
       slug: 'query-performance',
       title: 'Query performance and correctness traps',
       summary: 'Read a plan, prune partitions, pick join strategies and avoid the NULL traps.',
-      minutes: 15,
+      minutes: 16,
       body: `
-        A senior candidate is expected to write SQL that is correct **and** cheap on a warehouse that
-        bills by bytes scanned or by slot time. These are the ideas interviewers probe.
+        ## Start with the problem
 
-        ## Scan less
+        A warehouse bills you for the data it reads, or for the compute time it uses. Two queries can
+        return the same correct answer, and one costs 2 dollars while the other costs 2,000. And a
+        query can also run fast, look fine, and be quietly wrong.
 
-        - **Partition pruning.** Filter on the partition column directly: «WHERE event_date = '2026-10-31'».
-          Wrapping it in a function, such as «WHERE DATE(event_ts) = ...» on a table partitioned by
-          «event_date», can stop the engine from pruning.
-        - **Column pruning.** Columnar engines read only the columns you name. «SELECT *» on a wide
-          table reads everything.
-        - **Clustering or sorting** inside partitions lets the engine skip blocks using min and max
-          statistics. Cluster on columns that appear in selective filters.
+        A senior candidate is expected to write SQL that is **correct and cheap**. This lesson builds
+        both habits, one idea at a time.
 
-        ## Join strategies
+        ## Idea 1: read less (pruning)
 
-        | Strategy | When the engine picks it | What to say |
-        |---|---|---|
-        | Broadcast (map-side) join | One side is small | No shuffle of the big side. Fast. |
-        | Shuffle hash join | Both sides large, equality join | Both sides move by key. Watch skew. |
-        | Sort-merge join | Both sides large, sortable keys | Robust, spills to disk, needs a sort. |
-        | Nested loop | Non-equality join | Can explode. Rewrite with ranges or buckets. |
+        The cheapest data is the data you never read. Think of a library: if the books are shelved by
+        year, and you want 2026, you walk to one shelf, not every shelf.
 
-        ## Correctness traps that interviewers plant
+        - **Partition pruning.** A table split by «event_date» stores each day separately. Filter on
+          the partition column directly, «WHERE event_date = '2026-10-31'», and the engine reads one
+          day. Wrap it in a function, such as «WHERE DATE(event_ts) = ...» on a table partitioned by
+          «event_date», and the engine may read every day.
+        - **Column pruning.** Columnar engines store each column separately and read only the columns
+          you name. «SELECT *» on a 200-column table reads all 200.
+        - **Clustering or sorting** inside partitions keeps similar values together. The engine
+          stores the min and max of each block, so it can skip blocks that cannot match. Cluster on
+          columns used in selective filters.
+
+        ## Idea 2: how two big tables meet (join strategies)
+
+        To join, matching keys must end up on the same machine. The engine picks how.
+
+        - **Broadcast (map-side) join:** one side is small, so copy it to every machine. The big side
+          never moves. Fast.
+        - **Shuffle hash join:** both sides are large and the join is on equality. Both sides move by
+          key. Watch for skew: one huge key lands on one machine.
+        - **Sort-merge join:** both sides large, sortable keys. Robust, can spill to disk, but needs
+          a sort.
+        - **Nested loop:** used for non-equality joins. Every row meets every row, so it can explode.
+          Rewrite with ranges or buckets.
+
+        ## Idea 3: the quiet wrong answers
+
+        These traps return a result with no error. That is what makes them dangerous, and why
+        interviewers plant them.
 
         > [!trap] NOT IN with a NULL returns nothing
         > «WHERE rider_id NOT IN (SELECT rider_id FROM banned)» returns zero rows if any
-        > «banned.rider_id» is NULL, because «x <> NULL» is unknown. Use «NOT EXISTS» or a left join
-        > with «IS NULL».
+        > «banned.rider_id» is NULL, because «x <> NULL» is unknown, not true. Use «NOT EXISTS» or a
+        > left join with «IS NULL».
 
         ~~~sql
         SELECT r.*
@@ -402,16 +559,24 @@ export const track: Track = {
         WHERE NOT EXISTS (SELECT 1 FROM banned b WHERE b.rider_id = r.rider_id);
         ~~~
 
-        - **Join fan-out.** Joining trips to a table with several rows per trip (for example
-          payment attempts) multiplies trip revenue. Aggregate to the join grain first.
-        - **COUNT(column)** skips NULLs; «COUNT(*)» does not. «AVG» ignores NULLs, which changes the
-          denominator.
-        - **Integer division.** «1 / 4» is 0 in several engines. Cast before dividing.
+        - **Join fan-out.** A trip worth 10 dollars has 3 payment attempts. Join trips to attempts,
+          then sum trip revenue, and you get 30. Aggregate to the join grain first.
+        - **COUNT and AVG with NULLs.** «COUNT(column)» skips NULLs; «COUNT(*)» does not. «AVG»
+          ignores NULLs, which quietly changes the denominator.
+        - **Integer division.** «1 / 4» is 0 in several engines. Cast before you divide.
         - **Time zones.** «DATE(ts)» uses the session time zone. Say which zone defines a day.
+
+        ## Now say it like a senior engineer
 
         > [!senior] Approximate on purpose
         > «APPROX_COUNT_DISTINCT» (HyperLogLog) gives about 1 percent error for a fraction of the
         > memory. Offering it for a dashboard, and refusing it for billing, shows judgement.
+
+        ## In one breath
+
+        Cheap SQL reads only the partitions, columns and blocks it needs, and lets the engine join
+        without moving the big side. Correct SQL watches for NULLs, fan-out, integer division and time
+        zones, because those fail silently.
       `,
       checks: [
         {
@@ -445,12 +610,29 @@ export const track: Track = {
       title: 'Recursive CTEs: hierarchies, graphs and series',
       summary:
         'Walk org charts, category trees and referral chains in SQL, and stop recursion that never ends.',
-      minutes: 14,
+      minutes: 15,
       body: `
-        A **recursive CTE** repeats a query, feeding each round’s output into the next round,
-        until a round returns no rows. It is how SQL walks a hierarchy of unknown depth.
+        ## Start with the problem
 
-        ## The shape
+        "List everyone who reports to Asha, directly or through someone else." The employees table
+        only stores each person's direct manager. To find Ben's team you join once. To find Ben's
+        team's teams you join twice. But how deep does the company go? 3 levels? 12? You do not
+        know, so you cannot write a fixed number of joins.
+
+        You need a query that **repeats a step until there is nothing left to find**. That is a
+        **recursive CTE**.
+
+        ## Idea 1: a starting point and a repeating step
+
+        Think of how news spreads. Asha tells her direct reports. Each of them tells their direct
+        reports. It stops when someone has nobody to tell.
+
+        A recursive CTE has exactly those two parts.
+
+        1. The **anchor** runs once and gives the starting rows: Asha.
+        2. The **recursive member** joins the table to the rows found in the **previous round only**,
+           and finds the next level.
+        3. It stops when a round adds no rows.
 
         ~~~sql
         WITH RECURSIVE chain AS (
@@ -459,7 +641,9 @@ export const track: Track = {
                  CAST(name AS VARCHAR) AS path
           FROM employees
           WHERE manager_id IS NULL
+
           UNION ALL
+
           -- Recursive step: join the table to the previous round
           SELECT e.employee_id, e.name, e.manager_id, c.depth + 1,
                  c.path || ' > ' || e.name
@@ -470,24 +654,22 @@ export const track: Track = {
         SELECT employee_id, name, depth, path FROM chain ORDER BY path;
         ~~~
 
-        | employee_id | name | depth | path |
-        |---|---|---|---|
-        | 1 | Asha | 0 | Asha |
-        | 2 | Ben | 1 | Asha > Ben |
-        | 4 | Dev | 2 | Asha > Ben > Dev |
-        | 3 | Chen | 1 | Asha > Chen |
+        | Name | Depth | Path |
+        |---|---|---|
+        | Asha | 0 | Asha |
+        | Ben | 1 | Asha > Ben |
+        | Dev | 2 | Asha > Ben > Dev |
+        | Chen | 1 | Asha > Chen |
 
-        1. The **anchor** runs once.
-        2. The **recursive member** joins the base table to the rows produced by the previous
-           round only, not to everything so far.
-        3. It stops when a round adds nothing. «UNION ALL» keeps duplicates and is faster;
-           «UNION» removes them, which also stops some cycles.
+        Round 0 found Asha. Round 1 found Ben and Chen. Round 2 found Dev. Round 3 found nobody, so
+        it stopped. «UNION ALL» keeps duplicates and is faster; «UNION» removes them, which also stops
+        some cycles.
 
-        ## Uses that come up
+        ## Idea 2: where it comes up
 
         - **Hierarchies:** everyone under a manager, a product category tree, a bill of materials.
-        - **Graphs:** referral chains, "which accounts are reachable from this one", the shortest
-          number of transfers between two airports.
+        - **Graphs:** referral chains, "which accounts are reachable from this one", the fewest
+          transfers between two airports.
         - **Series:** generate every date in a range to fill gaps, where the engine has no
           «generate_series» or «GENERATE_DATE_ARRAY».
 
@@ -500,26 +682,34 @@ export const track: Track = {
         SELECT day FROM days;
         ~~~
 
-        ## Stopping safely
+        ## Idea 3: make sure it stops
 
-        Real data has cycles: a manager record pointing back down the chain, two accounts that
-        referred each other. Without a guard, recursion runs until the engine’s limit.
+        Real data has loops. A bad manager record points back down the chain. Two accounts referred
+        each other. Then the news goes round and round forever, until the engine's limit stops it.
 
-        - A **depth cap** in the recursive member («WHERE c.depth < 20»).
-        - A **visited path**: carry an array or string of visited ids and skip a row whose id is
+        - A **depth cap** in the recursive member: «WHERE c.depth < 20».
+        - A **visited path**: carry an array or string of visited ids, and skip a row whose id is
           already in it. Postgres 14 and later also offer a «CYCLE» clause.
         - Know the engine limit: BigQuery stops at 500 iterations, SQL Server at 100 by default
-          («MAXRECURSION»), Postgres has no limit.
+          («MAXRECURSION»), and Postgres has no limit.
 
         > [!trap] Recursion in a warehouse is a loop of joins
-        > Each round is a full join. A graph that fans out widely produces huge intermediate
-        > results by round four or five. For deep or wide graphs, precompute a closure table
-        > (every ancestor and descendant pair) in a batch job, or use a graph engine.
+        > Each round is a full join. A graph that fans out widely produces huge intermediate results
+        > by round four or five. For deep or wide graphs, precompute a closure table (every ancestor
+        > and descendant pair) in a batch job, or use a graph engine.
+
+        ## Now say it like a senior engineer
 
         > [!senior] Mention the closure table
-        > If the hierarchy is read far more often than it changes, store the transitive closure:
-        > one row per (ancestor, descendant, depth). "Everyone under Asha" becomes a single
-        > equi-join, with no recursion at query time.
+        > If the hierarchy is read far more often than it changes, store the transitive closure: one
+        > row per (ancestor, descendant, depth). "Everyone under Asha" becomes a single equi-join, with
+        > no recursion at query time.
+
+        ## In one breath
+
+        A recursive CTE starts from an anchor and repeats one join on the last round's results until
+        nothing new appears. Always give it a way to stop, and precompute a closure table when the
+        same tree is read all day.
       `,
       checks: [
         {
@@ -552,28 +742,37 @@ export const track: Track = {
       title: 'GROUPING SETS, ROLLUP and CUBE',
       summary:
         'Compute subtotals and grand totals in one pass, and tell a real NULL from a subtotal row.',
-      minutes: 12,
+      minutes: 13,
       body: `
-        Reports want totals at several levels: revenue per city and product, per city, and
-        overall. Three queries joined with «UNION ALL» scan the table three times. **Grouping
-        sets** compute all levels in one scan.
+        ## Start with the problem
 
-        ## The three forms
+        A report needs totals at three levels: revenue per city and product, per city, and overall.
+        The first idea is three «GROUP BY» queries glued together with «UNION ALL». It works, but it
+        reads the whole table three times, and three separate queries can drift apart over time.
 
-        | Syntax | Levels it produces |
-        |---|---|
-        | «GROUPING SETS ((city, product), (city), ())» | Exactly the listed levels |
-        | «ROLLUP (city, product)» | (city, product), (city), () : a hierarchy, right to left |
-        | «CUBE (city, product)» | Every combination: (city, product), (city), (product), () |
+        **Grouping sets** compute all the levels in **one scan**.
 
-        «ROLLUP» suits hierarchies (country, city, zone). «CUBE» suits independent dimensions,
-        but its size is 2 to the power of the column count, so keep it to two or three columns.
+        ## Idea 1: name the levels you want
 
-        ## Which NULL is which
+        Think of a shopping receipt. It shows each item, then a subtotal per section, then a grand
+        total at the bottom. Each of those is a "level" of grouping.
 
-        In a subtotal row, the rolled-up column is NULL. If the data has real NULLs too, the
-        report shows two rows that look the same. «GROUPING(col)» returns 1 when the column was
-        rolled up in that row, 0 otherwise.
+        - «GROUPING SETS ((city, product), (city), ())» gives **exactly** the levels you list. The
+          empty «()» means the grand total.
+        - «ROLLUP (city, product)» gives a **hierarchy**, peeled from the right: (city, product),
+          then (city), then (). It suits real hierarchies like country, city, zone.
+        - «CUBE (city, product)» gives **every combination**: (city, product), (city), (product)
+          and (). It suits independent dimensions. But the number of levels is 2 to the power of the
+          column count, so keep it to two or three columns.
+
+        ## Idea 2: which NULL is which
+
+        In a subtotal row, the rolled-up column shows NULL. "City: NULL, product: x" means "all
+        cities, product x". But what if some trips really have no city? Then the report has two rows
+        that look the same and mean different things.
+
+        «GROUPING(col)» fixes that. It returns 1 when the column was rolled up in that row, and 0
+        otherwise. Use it to print a clear label.
 
         ~~~sql
         SELECT CASE WHEN GROUPING(city) = 1 THEN 'All cities' ELSE COALESCE(city, 'Unknown') END AS city,
@@ -584,9 +783,7 @@ export const track: Track = {
         ORDER BY 1, 2;
         ~~~
 
-        The first rows of the result:
-
-        | city | product | trips |
+        | City | Product | Trips |
         |---|---|---|
         | All cities | All products | 5 |
         | All cities | black | 1 |
@@ -594,20 +791,29 @@ export const track: Track = {
         | Unknown | All products | 1 |
         | Unknown | x | 1 |
 
-        Without «GROUPING()», the trip with no city and the grand total both print as NULL, NULL.
+        Without «GROUPING()», the trip with no city and the grand total would both print as NULL,
+        NULL.
 
-        ## Where it matters for a data engineer
+        ## Idea 3: why a data engineer cares
 
-        - **Pre-aggregated tables for dashboards:** one job writes every level the dashboard
-          needs, with a «grouping_id» column (some engines name it «GROUPING_ID») to filter on.
-        - **Distinct counts do not add up.** A city’s distinct riders is not the sum of its
-          products’ distinct riders. Grouping sets compute each level correctly from raw rows;
-          summing a lower level does not.
+        - **Pre-aggregated tables for dashboards.** One job writes every level the dashboard needs,
+          with a «grouping_id» column (some engines name it «GROUPING_ID») to filter on.
+        - **Distinct counts do not add up.** A rider who took both an x and a black trip counts once
+          in the city's distinct riders, but once in each product. So a city's distinct riders is not
+          the sum of its products' distinct riders. Grouping sets compute each level correctly from
+          the raw rows; summing a lower level does not.
+
+        ## Now say it like a senior engineer
 
         > [!senior] Say why not UNION ALL
         > "One scan instead of three, totals guaranteed consistent with the detail rows, and
-        > GROUPING() to label subtotals so real NULLs stay visible." That sentence covers what
-        > the interviewer wants.
+        > GROUPING() to label subtotals so real NULLs stay visible." That sentence covers what the
+        > interviewer wants.
+
+        ## In one breath
+
+        Grouping sets give a receipt's item lines, subtotals and grand total in one pass over the
+        data. Use «GROUPING()» to tell a subtotal from a real NULL, and never add up distinct counts.
       `,
       checks: [
         {
@@ -639,62 +845,92 @@ export const track: Track = {
       title: 'Indexes, clustering and stored procedures',
       summary:
         'Choose indexes for an OLTP source and clustering for a warehouse, and know when procedural SQL helps.',
-      minutes: 13,
+      minutes: 15,
       body: `
-        Data engineers sit between two kinds of database. A row store (Postgres, MySQL) serves
-        the app with indexes. A columnar warehouse (BigQuery, Snowflake, Redshift) serves
-        analysis with partitions, clustering and pruning. Interviewers check that you know which
-        tool fits which side.
+        ## Start with the problem
 
-        ## Indexes in a row store
+        You need one rider's last 20 trips from a table with a billion rows. Without help, the
+        database reads all billion rows to find them. That takes minutes, and the app needs an
+        answer in milliseconds.
 
-        A **B-tree index** keeps keys sorted, so a lookup or a range scan reads a few pages
-        instead of the table.
+        Data engineers sit between two kinds of database that solve this in opposite ways. A **row
+        store** (Postgres, MySQL) serves the app, and uses **indexes**. A **columnar warehouse**
+        (BigQuery, Snowflake, Redshift) serves analysis, and **skips data** instead. Interviewers check
+        that you know which tool fits which side.
 
-        - **Composite index order matters.** An index on «(rider_id, created_at)» serves
-          «WHERE rider_id = ? ORDER BY created_at DESC LIMIT 20». It does not serve a filter on
+        ## Idea 1: an index is the index at the back of a book
+
+        To find "Kafka" in a book, you do not read every page. You look in the index at the back,
+        which is sorted, and jump to page 212.
+
+        A **B-tree index** is that, for a table. It keeps keys sorted, so a lookup or a range scan
+        reads a few pages instead of the whole table.
+
+        ## Idea 2: the order of columns in an index matters
+
+        A phone book is sorted by last name, then first name. Finding "Sharma, Priya" is fast.
+        Finding everyone named Priya is not, because the book is not sorted by first name.
+
+        Indexes work the same way.
+
+        - An index on «(rider_id, created_at)» serves
+          «WHERE rider_id = ? ORDER BY created_at DESC LIMIT 20». It does **not** serve a filter on
           «created_at» alone. Put equality columns first, then the range or sort column.
-        - A **covering index** includes every column the query reads, so the table is never
-          touched (Postgres «INCLUDE», MySQL secondary indexes that hold the needed columns).
-        - A **partial index** («WHERE status = 'open'») stays small when queries touch a small
-          slice.
-        - Every index slows writes and takes space. An extract query that scans «updated_at»
-          each hour needs one index; ten speculative ones hurt the service you extract from.
+        - A **covering index** includes every column the query reads, so the table is never touched
+          (Postgres «INCLUDE», or MySQL secondary indexes that hold the needed columns).
+        - A **partial index** («WHERE status = 'open'») stays small when queries touch a small slice.
+        - Every index slows writes and takes space. An extract query that scans «updated_at» each
+          hour needs one index. Ten speculative ones hurt the service you extract from.
 
         > [!trap] Functions hide the index
-        > «WHERE DATE(created_at) = '2026-10-01'» cannot use an index on «created_at». Write a
-        > range: «created_at >= '2026-10-01' AND created_at < '2026-10-02'».
+        > «WHERE DATE(created_at) = '2026-10-01'» cannot use an index on «created_at». The index is
+        > sorted by the raw value, not by the function. Write a range instead:
+        > «created_at >= '2026-10-01' AND created_at < '2026-10-02'».
 
-        ## The warehouse equivalent
+        ## Idea 3: warehouses skip instead of look up
 
-        Warehouses have no B-trees to tune. They skip data instead.
+        Warehouses read huge amounts of data for each query, so they have no B-trees to tune. They
+        keep small notes about each block of data (for example the min and max value) and **skip**
+        blocks that cannot match.
 
-        | Engine | Skips data with |
-        |---|---|
-        | BigQuery | Partitioning (by date or integer range) and clustering on up to four columns |
-        | Snowflake | Micro-partition min and max pruning; optional clustering keys; search optimization for point lookups |
-        | Redshift | Sort keys and distribution keys |
-        | Iceberg and Delta | Partition transforms, file statistics, Z-order or liquid clustering |
+        - **BigQuery:** partitioning (by date or integer range) and clustering on up to four columns.
+        - **Snowflake:** micro-partition min and max pruning, optional clustering keys, and search
+          optimization for point lookups.
+        - **Redshift:** sort keys and distribution keys.
+        - **Iceberg and Delta:** partition transforms, file statistics, Z-order or liquid
+          clustering.
 
-        The rule is the same in all of them: filter on the partition column, cluster on the next
-        most selective filters, and read the query plan’s bytes-scanned number.
+        The rule is the same in all of them: filter on the partition column, cluster on the next most
+        selective filters, and read the query plan's bytes-scanned number.
 
-        ## Stored procedures
+        ## Idea 4: code inside the database (stored procedures)
 
-        A **stored procedure** keeps procedural logic (variables, loops, IF, transactions) in
-        the database. BigQuery scripting, Snowflake Scripting and Postgres PL/pgSQL all have one.
+        A **stored procedure** keeps procedural logic (variables, loops, IF, transactions) inside the
+        database. BigQuery scripting, Snowflake Scripting and Postgres PL/pgSQL all have one.
 
-        | Use it for | Avoid it for |
-        |---|---|
-        | A short multi-statement step that must be one transaction | Business logic nobody can test or review |
-        | Admin tasks close to the data, such as partition maintenance | Orchestration: retries, dependencies, alerts |
-        | Loops the SQL engine runs well, such as a batch MERGE per partition | Logic you want in version control with tests |
+        Use it for:
+        - A short multi-statement step that must be one transaction.
+        - Admin tasks close to the data, such as partition maintenance.
+        - Loops the SQL engine runs well, such as a batch MERGE per partition.
+
+        Avoid it for:
+        - Business logic nobody can test or review.
+        - Orchestration: retries, dependencies, alerts.
+        - Logic you want in version control with tests.
+
+        ## Now say it like a senior engineer
 
         > [!senior] Where logic should live
-        > "Transformations go in versioned SQL models (dbt or similar) with tests; orchestration
-        > goes in the orchestrator; a procedure is acceptable for a small transactional step,
-        > kept in the repository and deployed by CI." That shows you have inherited a database
-        > full of untested procedures before.
+        > "Transformations go in versioned SQL models (dbt or similar) with tests; orchestration goes
+        > in the orchestrator; a procedure is acceptable for a small transactional step, kept in the
+        > repository and deployed by CI." That shows you have inherited a database full of untested
+        > procedures before.
+
+        ## In one breath
+
+        A row store finds rows with a sorted index, like the back of a book, so column order and
+        plain (unwrapped) columns matter. A warehouse skips blocks instead, so partition and cluster on
+        the columns you filter by.
       `,
       checks: [
         {
@@ -727,55 +963,77 @@ export const track: Track = {
       title: 'Execution plans and cost-based optimisation',
       summary:
         'Read a plan in Postgres, Trino, BigQuery or Snowflake, explain how a cost-based optimiser chooses joins, and rewrite a query it got wrong.',
-      minutes: 16,
+      minutes: 17,
       body: `
-        A senior candidate does not stop at a correct query. They can say how the engine will run
-        it and what it will cost. That starts with the plan.
+        ## Start with the problem
 
-        ## How to get the plan
+        You write a correct query. It runs for 40 minutes. A colleague changes two lines, and it runs
+        in 20 seconds, with the same answer. What changed is not the result but the **plan**: the
+        steps the engine chose to get the result.
 
-        | Engine | Command or screen | Look for |
-        |---|---|---|
-        | Postgres | «EXPLAIN (ANALYZE, BUFFERS)» | Estimated versus actual rows, loops, buffers read |
-        | Trino | «EXPLAIN ANALYZE» | Rows and CPU per stage, join distribution, dynamic filters |
-        | Spark | «df.explain("formatted")» and the SQL tab | «Exchange» nodes, join type, pushed filters |
-        | BigQuery | Execution details of the job | Slot time, bytes shuffled and spilled per stage, the slowest stage |
-        | Snowflake | Query Profile | Partitions scanned of total, spilling, rows out of each join |
-        | DuckDB | «EXPLAIN ANALYZE» | Time and rows per operator |
+        A senior candidate does not stop at a correct query. They can say how the engine will run it
+        and what it will cost. That starts with reading the plan.
 
-        ## What a cost-based optimiser decides
+        ## Idea 1: the engine is a travel planner
 
-        1. **Join order.** Ten tables have millions of possible orders. The optimiser searches a part
+        Ask a travel planner to get you from Delhi to Goa. They could fly direct, take two trains, or
+        drive. They pick by estimated cost and time. They do not know the traffic exactly, so they
+        **estimate**.
+
+        The **cost-based optimiser** does the same with your query. It decides four things.
+
+        1. **Join order.** Ten tables have millions of possible orders. The optimiser searches part
            of that space and costs each candidate.
         2. **Join algorithm and distribution.** Hash, merge or nested loop; broadcast the small side
-           or partition (shuffle) both sides.
-        3. **Access path.** Full scan, partition and file pruning, index use.
+           or shuffle both sides.
+        3. **Access path.** Full scan, partition and file pruning, or an index.
         4. **Where filters go.** Push them below joins and into the scan.
 
-        Every decision depends on **cardinality estimates**: how many rows leave each step.
-        Estimates come from statistics: row counts, distinct counts (often from HyperLogLog
+        ## Idea 2: everything depends on guessing row counts
+
+        Each decision depends on **cardinality estimates**: how many rows leave each step. If the
+        planner thinks a filter keeps 100 rows, it broadcasts them. If it really keeps 40 million, that
+        broadcast falls over.
+
+        Estimates come from **statistics**: row counts, distinct counts (often from HyperLogLog
         sketches), min and max, null counts and histograms.
 
-        ## Why estimates go wrong
+        ## Idea 3: why the guesses go wrong
 
         - **Stale or missing statistics** after a large load.
-        - **Correlated predicates:** «country = 'IN' AND city = 'Mumbai'» is treated as two
-          independent filters, so the estimate is too low.
-        - **Functions on columns:** «WHERE DATE(created_at) = '2026-11-01'» can hide the column from
+        - **Correlated predicates.** «country = 'IN' AND city = 'Mumbai'» is treated as two
+          independent filters, so the estimate is far too low. Every Mumbai row is already in India.
+        - **Functions on columns.** «WHERE DATE(created_at) = '2026-11-01'» can hide the column from
           statistics and from pruning.
-        - **Skew:** an average says 100 rows per key, but one key has 40 million.
-        - **Errors multiply:** a 10 times error at each of three joins is a 1,000 times error at the top.
+        - **Skew.** The average says 100 rows per key, but one key has 40 million.
+        - **Errors multiply.** A 10 times error at each of three joins is a 1,000 times error at the
+          top.
 
-        ## Runtime help
+        ## Idea 4: engines that fix the plan while running
 
-        Modern engines do not trust the plan blindly:
+        Modern engines do not trust the plan blindly.
 
-        - **Dynamic filtering / runtime filters:** after building the hash table of a small filtered
+        - **Dynamic filtering / runtime filters.** After building the hash table of a small, filtered
           dimension, the engine pushes its keys into the scan of the large fact table (Trino dynamic
           filters, Spark dynamic partition pruning, Snowflake and BigQuery runtime pruning).
-        - **Adaptive execution:** Spark AQE re-plans after each shuffle with real sizes.
+        - **Adaptive execution.** Spark AQE re-plans after each shuffle, using the real sizes.
 
-        ## Rewrites that help the optimiser
+        ## Idea 5: how to read the plan in each engine
+
+        - **Postgres:** «EXPLAIN (ANALYZE, BUFFERS)». Compare estimated and actual rows; check loops
+          and buffers read.
+        - **Trino:** «EXPLAIN ANALYZE». Rows and CPU per stage, join distribution, dynamic filters.
+        - **Spark:** «df.explain("formatted")» and the SQL tab. Look for «Exchange» nodes, the join
+          type and pushed filters.
+        - **BigQuery:** the job's execution details. Slot time, bytes shuffled and spilled per stage,
+          and the slowest stage.
+        - **Snowflake:** Query Profile. Partitions scanned of total, spilling, rows out of each join.
+        - **DuckDB:** «EXPLAIN ANALYZE». Time and rows per operator.
+
+        The habit in all of them: **find where estimated and actual rows differ most.** That is where
+        the plan went wrong.
+
+        ## Idea 6: rewrite so the optimiser cannot get it wrong
 
         ~~~sql
         -- Before: function on the partition column, join before aggregate
@@ -799,18 +1057,26 @@ export const track: Track = {
         GROUP BY d.city;
         ~~~
 
-        The second form prunes partitions and joins a few hundred thousand pre-aggregated rows
+        The second form prunes partitions, and joins a few hundred thousand pre-aggregated rows
         instead of tens of millions of trips.
 
         > [!trap] The exploding join
-        > A join on a key that is not unique on either side multiplies rows. In a Snowflake profile
-        > it shows as a join with far more rows out than in. Check the grain of both sides before you
+        > A join on a key that is not unique on either side multiplies rows. In a Snowflake profile it
+        > shows as a join with far more rows out than in. Check the grain of both sides before you
         > tune anything else.
+
+        ## Now say it like a senior engineer
 
         > [!senior] Talk in rows and bytes
         > "This scans 2 TB because the filter wraps the partition column; with a range it reads one
-        > day, 6 GB" is the language of a senior candidate. Bring the plan, then the numbers, then
-        > the fix.
+        > day, 6 GB" is the language of a senior candidate. Bring the plan, then the numbers, then the
+        > fix.
+
+        ## In one breath
+
+        The optimiser is a travel planner that picks join order, algorithm and access path from row
+        count guesses. Find where its guesses were wrong, then rewrite so it reads less and joins
+        smaller inputs.
       `,
       checks: [
         {

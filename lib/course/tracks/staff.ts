@@ -17,52 +17,84 @@ export const track: Track = {
       title: 'What the staff bar actually is',
       summary:
         'Name the four things a staff loop scores, and hear the difference between a senior and a staff answer.',
-      minutes: 14,
+      minutes: 16,
       body: `
-        A senior engineer owns a hard problem and solves it well. A staff engineer owns a
-        **problem space**: they find the problems worth solving, set a direction several teams
-        follow, and leave the organization better at solving the next one. Staff loops at Uber
-        and Google test this in every round, not only in behavioral.
+        ## Start with the problem
 
-        ## The four things that are scored
+        Two engineers tell the same story about a pipeline they rebuilt. Both are strong. One is levelled
+        senior, the other staff. The difference is not how hard they worked. It is **how far the work
+        reached**.
 
-        | Dimension | Senior answer | Staff answer |
-        |---|---|---|
-        | **Scope** | One system, one team | Several teams, a platform, or a company metric |
-        | **Ambiguity** | Clarifies the requirements given | Decides what the problem is, and what not to solve |
-        | **Influence** | Convinces the team | Aligns teams and leaders who do not report to them |
-        | **Time horizon** | This quarter | One to three years, with a migration path from today |
+        A senior engineer owns a hard problem and solves it well. A staff engineer owns a **problem
+        space**: they find the problems worth solving, set a direction several teams follow, and leave the
+        organization better at solving the next one. Staff loops at Uber and Google test this in every
+        round, not only in behavioral.
 
-        A fifth signal runs through all four: **judgement**. You make a call with incomplete
-        data, say what would change your mind, and own the result.
+        ## Idea 1: the four things that are scored
 
-        ## Where each round probes it
+        Think of a doctor and a head of a hospital ward. The doctor treats the patient in front of them
+        very well. The head of the ward decides which patients come first, sets the rules every doctor
+        follows, and fixes why the same illness keeps coming back.
 
-        - **System design:** "What would you not build?", "How do you migrate 300 jobs to
-          this?", "What does this cost and who pays?"
+        Interviewers score four dimensions. For each, here is what a senior answer and a staff answer
+        sound like:
+
+        - **Scope.** Senior: one system, one team. Staff: several teams, a platform, or a company metric.
+        - **Ambiguity.** Senior: clarifies the requirements given. Staff: decides what the problem is, and
+          what not to solve.
+        - **Influence.** Senior: convinces the team. Staff: aligns teams and leaders who do not report to
+          them.
+        - **Time horizon.** Senior: this quarter. Staff: one to three years, with a migration path from
+          today.
+
+        A fifth signal runs through all four: **judgement**. You make a call with incomplete data, say
+        what would change your mind, and own the result.
+
+        A tiny example. Asked "How would you fix late dashboards?", a senior answer tunes one Spark job.
+        A staff answer notices that five teams have the same late-data problem, proposes one shared fix,
+        and says which old jobs get turned off and when.
+
+        ## Idea 2: every round probes it
+
+        Staff is not one round. It leaks into all of them:
+
+        - **System design:** "What would you not build?", "How do you migrate 300 jobs to this?", "What
+          does this cost and who pays?"
         - **Data modeling:** "Who else will use this model, and how do you stop it forking?"
         - **Behavioral:** "Tell me about a decision that affected several teams."
-        - **Coding and SQL:** rarely staff-specific. Pass them cleanly so they do not lower
-          your level.
+        - **Coding and SQL:** rarely staff-specific. Pass them cleanly so they do not lower your level.
 
-        ## The three ways strong engineers miss the bar
+        ## Idea 3: the three ways strong engineers miss the bar
 
-        1. **The deep-but-narrow answer.** A brilliant design for one pipeline, with no word on
-           who else needs it, how it is adopted, or how the old system dies.
-        2. **"We" everywhere.** The interviewer cannot tell what you decided. Say "I proposed",
-           "I chose", "I convinced".
-        3. **No trade-off named.** A staff engineer always says what they gave up. "We chose
-           Iceberg; the cost was a 3-month migration of the Hive catalog, which I planned."
+        1. **The deep-but-narrow answer.** A brilliant design for one pipeline, with no word on who else
+           needs it, how it is adopted, or how the old system dies.
+        2. **"We" everywhere.** The interviewer cannot tell what you decided. Say "I proposed", "I chose",
+           "I convinced".
+        3. **No trade-off named.** A staff engineer always says what they gave up. "We chose Iceberg; the
+           cost was a 3-month migration of the Hive catalog, which I planned."
+
+        ## Idea 4: calibrate honestly
+
+        If your real experience is senior scope, interview for senior with one or two staff stories, not
+        for staff with inflated ones. Down-levelling happens when follow-up questions show the scope was
+        smaller than claimed. A true senior story beats a fake staff story every time.
+
+        ## Now say it like a senior engineer
+
+        Staff is scored on scope, ambiguity, influence and time horizon, with judgement through all four.
+        Show it in every round: what you would not build, how the old system dies, who pays, and what
+        changed for other teams because of you. Say "I", name the trade-off, and claim only the scope you
+        really had.
 
         > [!senior] The one-sentence test
         > After each answer, ask yourself: "Did I say what changed for other teams because of
         > me?" If not, the answer sounds senior, not staff.
 
-        ## Calibrate honestly
+        ## In one breath
 
-        If your real experience is senior scope, interview for senior with one or two staff
-        stories, not for staff with inflated ones. Down-levelling happens when follow-up
-        questions show the scope was smaller than claimed.
+        Senior solves the hard problem; staff chooses which problems matter, aligns several teams on a
+        multi-year direction, and names what it gave up. Show that in every round, say "I", and never
+        inflate your scope.
       `,
       checks: [
         {
@@ -95,41 +127,62 @@ export const track: Track = {
       title: 'Turning an ambiguous ask into a plan',
       summary:
         'Take a vague request like "make our data trustworthy", find the real problem, and commit to a first step.',
-      minutes: 16,
+      minutes: 18,
       body: `
-        Staff loops often start with a deliberately vague prompt: "Our data is a mess. What do
-        you do?" There is no design to draw yet. The test is whether you can turn fog into a
-        plan without either freezing or jumping to a tool.
+        ## Start with the problem
 
-        ## The five-step frame
+        Staff loops often start with a deliberately vague prompt: "Our data is a mess. What do you do?"
+        There is no design to draw yet. The test is whether you can turn fog into a plan without either
+        freezing or jumping to a tool.
 
-        1. **Find who hurts and how.** "Who noticed the mess? What decision went wrong?" A
-           wrong revenue number in a board deck is a different problem from slow dashboards.
-        2. **Quantify it.** "How often? What did it cost?" Two incidents a month that each
-           cost an executive decision is enough to justify a quarter of work.
-        3. **Split it into problems you can own.** Trust usually breaks into ownership (no one
-           owns the table), detection (people find errors before machines do), and definition
-           (two teams compute "active rider" differently).
-        4. **Choose the first problem by leverage.** Pick the one that unblocks the others or
-           hurts the most. Say what you are deliberately not doing yet.
-        5. **Define done and a checkpoint.** "In one quarter, the 50 tier 1 tables have owners,
-           tests and freshness SLOs. Then we decide on the next 500."
+        Think of a doctor whose patient says "I feel bad". A weak doctor prescribes a pill at once. A good
+        one asks where it hurts, since when, and how badly, and only then decides. The vague prompt is the
+        patient saying "I feel bad".
 
-        ## Questions that move the conversation
+        ## Idea 1: the five-step frame
 
-        | You want to learn | Ask |
-        |---|---|
-        | The real goal | "What decision will this help someone make?" |
-        | The constraint | "What is fixed: date, headcount or budget?" |
-        | The appetite | "Is this a quarter of one team, or a year of three?" |
-        | The politics | "Who has tried this before, and what happened?" |
+        1. **Find who hurts and how.** "Who noticed the mess? What decision went wrong?" A wrong revenue
+           number in a board deck is a different problem from slow dashboards.
+        2. **Quantify it.** "How often? What did it cost?" Two incidents a month that each cost an
+           executive decision is enough to justify a quarter of work.
+        3. **Split it into problems you can own.** Trust usually breaks into ownership (no one owns the
+           table), detection (people find errors before machines do), and definition (two teams compute
+           "active rider" differently).
+        4. **Choose the first problem by leverage.** Pick the one that unblocks the others or hurts the
+           most. Say what you are deliberately not doing yet.
+        5. **Define done and a checkpoint.** "In one quarter, the 50 tier 1 tables have owners, tests and
+           freshness SLOs. Then we decide on the next 500."
 
-        ## Reversible and irreversible decisions
+        A tiny worked example. "Our data is a mess" becomes: the finance team found a wrong revenue number
+        twice last quarter (who and how often), it came from two tables with no owner (the split), so
+        quarter one is owners and tests on the top 50 tables (the first problem and done).
 
-        Sort each decision by how hard it is to undo. A **reversible** one (which monitor to
-        try first) should be made fast by the team. An **irreversible** one (the storage
-        format for a petabyte lake, a public data contract) deserves a written proposal and
-        review. Saying this out loud is itself a staff signal: you spend care where it pays.
+        ## Idea 2: questions that move the conversation
+
+        Each question buys one missing piece of the picture:
+
+        - **The real goal:** "What decision will this help someone make?"
+        - **The constraint:** "What is fixed: date, headcount or budget?"
+        - **The appetite:** "Is this a quarter of one team, or a year of three?"
+        - **The politics:** "Who has tried this before, and what happened?"
+
+        Ask two or three, not all at once. Then state your assumptions and move on.
+
+        ## Idea 3: reversible and irreversible decisions
+
+        Think of a door. Some doors swing both ways: you walk through, and you can walk back. Others lock
+        behind you.
+
+        Sort each decision by how hard it is to undo. A **reversible** one (which monitor to try first)
+        should be made fast by the team. An **irreversible** one (the storage format for a petabyte lake,
+        a public data contract) deserves a written proposal and review. Saying this out loud is itself a
+        staff signal: you spend care where it pays.
+
+        ## Now say it like a senior engineer
+
+        Turn a vague ask into a plan: find who hurts, put a number on it, split it into ownable problems,
+        pick the first by leverage, and define done with a checkpoint. Ask a few questions about goal,
+        constraint, appetite and politics. Move fast on reversible decisions and slow on irreversible ones.
 
         > [!trap] Do not solve the vague ask with a tool
         > "We should buy a data observability product" in minute two shows you skipped the
@@ -141,6 +194,11 @@ export const track: Track = {
         > who found it. My guess is that most problems come from a few critical tables with
         > no owner. If that is true, I would start with ownership and tests on those, not a
         > platform for all 20,000 tables."
+
+        ## In one breath
+
+        Diagnose before you prescribe: who hurts, how much, which small problem to fix first, and what
+        done looks like. Move fast on doors that swing back, slowly on doors that lock.
       `,
       checks: [
         {
@@ -173,55 +231,75 @@ export const track: Track = {
       title: 'Technical strategy and roadmaps',
       summary:
         'Write a two-year direction for a data platform: where you are, where you go, and the order of steps.',
-      minutes: 17,
+      minutes: 19,
       body: `
-        A strategy is not a list of projects. It is a **diagnosis**, a **direction** and a
-        **sequence of steps** that each pay off on their own. Staff candidates are asked to
-        produce one in an interview: "Where should our data platform be in two years?"
+        ## Start with the problem
 
-        ## The shape of a strategy
+        "Where should our data platform be in two years?" Many candidates answer with a wish list: Iceberg,
+        a feature store, streaming, a new catalog. The interviewer hears a shopping list, not a plan.
 
-        1. **Diagnosis.** The two or three facts that matter. "Batch freshness is 24 hours,
-           and three product teams built their own streaming stacks to escape it."
-        2. **Guiding policy.** The direction that follows. "One streaming path, owned by the
-           platform, that product teams use instead of building their own."
-        3. **Coherent steps.** Each step delivers value, so the plan survives a budget cut.
-           "Quarter 1: shared Kafka and schema registry. Quarter 2: migrate the payments
-           stream. Quarter 3: the self-serve template."
+        A strategy is not a list of projects. It is a **diagnosis**, a **direction** and a **sequence of
+        steps** that each pay off on their own. Staff candidates are asked to produce one in an interview.
 
-        ## Sequence by value and dependency
+        ## Idea 1: the shape of a strategy
 
-        | Step type | Example | Why first or later |
-        |---|---|---|
-        | Foundations others need | Catalog, schema registry, table format | First, but keep them thin |
-        | A visible win | Move the most painful pipeline | Early, to earn trust and budget |
-        | Scale-out | Self-serve templates | After two teams have proved the path |
-        | Decommission | Turn off the old stack | Planned from day one, with a date |
+        Think of planning a road trip. First you check where you are and what is wrong (the diagnosis).
+        Then you pick the destination (the direction). Then you plan stops where each one is worth
+        visiting even if the trip ends early (the steps).
 
-        ## Build, buy or adopt open source
+        1. **Diagnosis.** The two or three facts that matter. "Batch freshness is 24 hours, and three
+           product teams built their own streaming stacks to escape it."
+        2. **Guiding policy.** The direction that follows. "One streaming path, owned by the platform, that
+           product teams use instead of building their own."
+        3. **Coherent steps.** Each step delivers value, so the plan survives a budget cut. "Quarter 1:
+           shared Kafka and schema registry. Quarter 2: migrate the payments stream. Quarter 3: the
+           self-serve template."
 
-        | Question | Build leans | Buy leans |
-        |---|---|---|
-        | Is it core to how the company wins? | Yes | No |
-        | Does our scale or need differ from the market? | Very much | Not really |
-        | Can we staff it for years? | Yes, a team | No |
-        | What does lock-in cost us? | High | Acceptable |
+        ## Idea 2: sequence by value and dependency
 
-        Most data platforms should buy or adopt for commodity layers (storage, warehouse,
-        orchestration) and build the thin layer that is specific to the business (metric
-        definitions, domain contracts).
+        Four kinds of step, in roughly this order:
 
-        ## Make it survive contact with reality
+        - **Foundations others need.** Example: catalog, schema registry, table format. Do these first, but
+          keep them thin.
+        - **A visible win.** Example: move the most painful pipeline. Do this early, to earn trust and
+          budget.
+        - **Scale-out.** Example: self-serve templates. Do this after two teams have proved the path.
+        - **Decommission.** Example: turn off the old stack. Plan it from day one, with a date.
 
-        - **Name the bets.** "We bet that Iceberg support in our engines keeps improving. If
-          not by quarter 3, we fall back to Delta for the lake tables."
+        ## Idea 3: build, buy or adopt open source
+
+        Ask four questions. Each answer leans one way:
+
+        - **Is it core to how the company wins?** Yes leans build; no leans buy.
+        - **Does our scale or need differ from the market?** Very much leans build; not really leans buy.
+        - **Can we staff it for years?** Yes, with a team, leans build; no leans buy.
+        - **What does lock-in cost us?** High leans build; acceptable leans buy.
+
+        Most data platforms should buy or adopt for commodity layers (storage, warehouse, orchestration)
+        and build the thin layer that is specific to the business (metric definitions, domain contracts).
+
+        ## Idea 4: make it survive contact with reality
+
+        - **Name the bets.** "We bet that Iceberg support in our engines keeps improving. If not by quarter
+          3, we fall back to Delta for the lake tables."
         - **Name the non-goals.** "We will not build a feature store this year."
-        - **Name the metrics.** Freshness of tier 1 tables, cost per TB processed, the number
-          of teams on the paved road, incidents caused by schema changes.
+        - **Name the metrics.** Freshness of tier 1 tables, cost per TB processed, the number of teams on
+          the paved road, incidents caused by schema changes.
+
+        ## Now say it like a senior engineer
+
+        Give a diagnosis, a guiding policy and coherent steps. Sequence thin foundations, then a visible
+        win, then scale-out, with decommission dated from day one. Buy commodity layers and build the thin
+        business-specific layer. Name the bets, the non-goals and the metrics.
 
         > [!senior] Every step pays for itself
         > If the budget is cut after step two, the company should still be better off than
         > today. A plan whose value arrives only at the end is a big-bang plan in disguise.
+
+        ## In one breath
+
+        A strategy is a diagnosis, a direction and steps that each pay off alone. Lay thin foundations,
+        win visibly, scale out, retire the old stack, and say your bets, non-goals and metrics.
       `,
       checks: [
         {
@@ -253,46 +331,71 @@ export const track: Track = {
       title: 'Reviewing a design document',
       summary:
         'Find the important flaws in someone else’s design, and give feedback that changes the design without breaking trust.',
-      minutes: 15,
+      minutes: 17,
       body: `
-        Some staff loops hand you a short design and ask you to review it. Others ask, "Tell
-        me about a design you pushed back on." Both test the same skill: seeing what matters
-        in a design you did not write.
+        ## Start with the problem
 
-        ## Read in this order
+        You are handed a ten-page design and asked, "What do you think?" You leave twelve comments: a
+        typo, a naming preference, a question about a library version, and somewhere in the middle, "this
+        job is not idempotent". The author fixes the typos and ships. The idempotency bug pages someone a
+        month later.
 
-        1. **The problem and the requirements.** Is the stated problem the real one? Are the
-           numbers there? A design without a freshness or scale target cannot be judged.
-        2. **The alternatives.** A doc with one option has not been thought through. Ask what
-           else was considered and why it lost.
-        3. **The failure modes.** What happens when the source is late, the job runs twice,
-           or a dependency is down? Look for idempotency and backfill.
+        Some staff loops hand you a short design and ask you to review it. Others ask, "Tell me about a
+        design you pushed back on." Both test the same skill: seeing what matters in a design you did not
+        write.
+
+        ## Idea 1: read in this order
+
+        Think of a house inspector. They check the foundation before the paint colour, because a cracked
+        foundation makes the paint irrelevant.
+
+        1. **The problem and the requirements.** Is the stated problem the real one? Are the numbers
+           there? A design without a freshness or scale target cannot be judged.
+        2. **The alternatives.** A doc with one option has not been thought through. Ask what else was
+           considered and why it lost.
+        3. **The failure modes.** What happens when the source is late, the job runs twice, or a
+           dependency is down? Look for idempotency and backfill.
         4. **The operations.** Who is paged? What is the SLO? How is it rolled back?
         5. **The cost.** Is there an estimate, and who pays?
         6. **The migration.** How do current users move, and when does the old thing die?
 
-        ## Rank your findings
+        ## Idea 2: rank your findings
 
-        | Level | Example | What you do |
-        |---|---|---|
-        | **Blocking** | Billing reads from a non-replayable stream | Must change before approval |
-        | **Important** | No backfill plan | Should change, can be a follow-up with an owner |
-        | **Optional** | A naming preference | Mention once, then let it go |
+        Sort every comment into one of three buckets:
 
-        Ten comments at the same level hide the one that matters. Lead with the blocking
-        finding and say why it blocks.
+        - **Blocking.** Example: billing reads from a non-replayable stream. It must change before
+          approval.
+        - **Important.** Example: no backfill plan. It should change, and it can be a follow-up with an
+          owner.
+        - **Optional.** Example: a naming preference. Mention it once, then let it go.
 
-        ## Feedback that lands
+        Ten comments at the same level hide the one that matters. Lead with the blocking finding and say
+        why it blocks.
 
-        - Ask before you assert: "What happens if this job runs twice for the same day?"
-          lets the author find the bug, which they will defend less.
+        ## Idea 3: feedback that lands
+
+        - Ask before you assert: "What happens if this job runs twice for the same day?" lets the author
+          find the bug, which they will defend less.
         - Offer an alternative, not only a problem.
-        - Approve with conditions when you can. Blocking every doc makes you the bottleneck,
-          which is the opposite of staff impact.
+        - Approve with conditions when you can. Blocking every doc makes you the bottleneck, which is the
+          opposite of staff impact.
+
+        ## Now say it like a senior engineer
+
+        Read a design from the foundation up: problem and numbers, alternatives, failure modes,
+        operations, cost, migration. Rank findings as blocking, important or optional, lead with the
+        blocker, ask questions that let the author find it, offer an alternative, and approve with
+        conditions where you can.
 
         > [!senior] Review the decision, not the author
         > The staff signal is that the design got better and the author would ask you to
         > review the next one.
+
+        ## In one breath
+
+        Check the foundation before the paint: requirements, alternatives, failures, operations, cost and
+        migration. Lead with the one blocking issue, ask rather than accuse, and leave the author wanting
+        your next review.
       `,
       checks: [
         {
@@ -313,40 +416,66 @@ export const track: Track = {
       title: 'Influence, alignment and disagreement',
       summary:
         'Move several teams and leaders to one decision when nobody reports to you, and disagree without damage.',
-      minutes: 15,
+      minutes: 17,
       body: `
-        Staff engineers rarely have authority over the people who must change. Influence is
-        the skill that replaces it, and it can be learned as a process.
+        ## Start with the problem
 
-        ## The alignment process
+        You have a good idea: three teams should share one ingestion path. You present it in a big
+        meeting. One director asks about their roadmap, another worries about on-call, a third says
+        nothing and later blocks it. The idea was right; the process was wrong.
 
-        1. **Map the people.** Who decides, who is affected, who can block? A director who
-           owns the budget matters more than the loudest voice in the meeting.
-        2. **Talk one to one before the meeting.** Learn each person's real concern. A
-           proposal that already answers those concerns passes in the meeting; one that
-           surprises people stalls.
-        3. **Write it down.** A short proposal with the problem, the options, the
-           recommendation and the cost. Writing forces clarity and travels without you.
-        4. **Lower the cost of yes.** Offer to build the first part, migrate the first team,
-           or run a two-week trial.
+        Staff engineers rarely have authority over the people who must change. Influence is the skill that
+        replaces it, and it can be learned as a process.
+
+        ## Idea 1: the alignment process
+
+        Think of planning a group holiday. If you announce the destination in the group chat, half the
+        group objects. If you first ask each friend privately what they care about (budget, beach, dates),
+        the plan you post already fits, and everyone says yes.
+
+        1. **Map the people.** Who decides, who is affected, who can block? A director who owns the budget
+           matters more than the loudest voice in the meeting.
+        2. **Talk one to one before the meeting.** Learn each person's real concern. A proposal that
+           already answers those concerns passes in the meeting; one that surprises people stalls.
+        3. **Write it down.** A short proposal with the problem, the options, the recommendation and the
+           cost. Writing forces clarity and travels without you.
+        4. **Lower the cost of yes.** Offer to build the first part, migrate the first team, or run a
+           two-week trial.
         5. **Find a sponsor.** A leader who feels the pain gives the decision weight.
 
-        ## When you disagree
+        ## Idea 2: when you disagree
 
-        | Situation | Good move |
-        |---|---|
-        | You think the decision is wrong but reversible | Say so once, with data, then commit fully |
-        | You think it is wrong and expensive to reverse | Escalate with a written view of both sides, agreed with the other party |
-        | You were overruled | Commit, and set a checkpoint: "If lag still exceeds 10 minutes in March, we revisit" |
-        | New data proves you wrong | Say so publicly; it builds trust for the next time |
+        Four situations, and the good move for each:
 
-        **Escalation is not failure.** Two teams with a real conflict of goals need a leader
-        to choose. The staff move is to escalate together, with a shared document that states
-        both positions fairly.
+        - **You think the decision is wrong, but it is reversible.** Say so once, with data, then commit
+          fully.
+        - **You think it is wrong and expensive to reverse.** Escalate with a written view of both sides,
+          agreed with the other party.
+        - **You were overruled.** Commit, and set a checkpoint: "If lag still exceeds 10 minutes in March,
+          we revisit."
+        - **New data proves you wrong.** Say so publicly; it builds trust for the next time.
+
+        ## Idea 3: escalation is not failure
+
+        Two teams with a real conflict of goals need a leader to choose. The staff move is to escalate
+        together, with a shared document that states both positions fairly. Like two friends asking a
+        third to settle a bet: you agree on the question first, then accept the answer.
+
+        ## Now say it like a senior engineer
+
+        Map who decides and who can block, meet them one to one first, write a short proposal, lower the
+        cost of yes, and find a sponsor. Disagree once with data on reversible calls; escalate together
+        with a fair shared document on expensive ones; commit with a checkpoint when overruled; admit it
+        publicly when proved wrong.
 
         > [!trap] Winning the argument is not the goal
         > An interviewer listens for whether the relationship survived. "They agreed in the
         > end, and we still work well together" is the result that scores.
+
+        ## In one breath
+
+        Influence without authority is a process: map people, talk privately first, write it down, make
+        yes cheap, and find a sponsor. Disagree with data, escalate together, and keep the relationship.
       `,
       checks: [
         {
@@ -379,43 +508,71 @@ export const track: Track = {
       title: 'Cost, risk and the business case',
       summary:
         'Put a price on a platform decision, including people, and present it to leadership in their terms.',
-      minutes: 14,
+      minutes: 16,
       body: `
-        Leaders approve money and headcount, not architectures. A staff engineer translates a
-        technical choice into **cost, risk and time to value**.
+        ## Start with the problem
 
-        ## Total cost of ownership
+        You propose moving the lake to Iceberg. You explain snapshots, hidden partitioning and time
+        travel. The VP nods and asks one question: "What does it cost, and what do we get?" You do not
+        have an answer, and the proposal waits another quarter.
 
-        | Cost | What to count | Often forgotten |
-        |---|---|---|
-        | Compute and storage | The cloud bill at expected scale | Growth over 2 years, egress |
-        | People | Engineers to build and run it | On-call, upgrades, security patches |
-        | Migration | Dual running and engineer time | The weeks both systems run |
-        | Opportunity | What the team does not build instead | Usually the largest |
+        Leaders approve money and headcount, not architectures. A staff engineer translates a technical
+        choice into **cost, risk and time to value**.
 
-        A rough rule for a business case: one engineer costs a company about $250,000 to
-        $400,000 a year fully loaded in a US tech hub. A "free" open source system that needs
-        two engineers to run costs more than most managed services.
+        ## Idea 1: total cost of ownership
 
-        ## A one-page business case
+        Think of buying a car. The price on the window is not the cost. Fuel, insurance, servicing, and the
+        holiday you did not take because you bought it are all part of the cost.
 
-        1. **The problem in money or risk.** "Late data costs ops about $2M a year in
-           mis-priced surge."
+        Four costs to count, and what is often forgotten in each:
+
+        - **Compute and storage.** Count the cloud bill at expected scale. Often forgotten: growth over two
+          years, and egress.
+        - **People.** Count the engineers to build and run it. Often forgotten: on-call, upgrades and
+          security patches.
+        - **Migration.** Count dual running and engineer time. Often forgotten: the weeks both systems run.
+        - **Opportunity.** Count what the team does not build instead. This is usually the largest.
+
+        A rough rule for a business case: one engineer costs a company about $250,000 to $400,000 a year
+        fully loaded in a US tech hub. A "free" open source system that needs two engineers to run costs
+        more than most managed services.
+
+        A tiny worked example. A self-hosted system saves $150,000 a year in licence fees but needs two
+        engineers to run. At $300,000 each, it costs $450,000 more than it saves.
+
+        ## Idea 2: a one-page business case
+
+        1. **The problem in money or risk.** "Late data costs ops about $2M a year in mis-priced surge."
         2. **Options with cost and benefit.** Always include "do nothing" with its cost.
         3. **The recommendation and the ask.** "Three engineers for two quarters."
         4. **The risks and how you limit them.** A pilot, a checkpoint, a fallback.
         5. **How you will measure success.** One or two numbers leaders already care about.
 
-        ## Risk in a design
+        ## Idea 3: risk in a design
 
-        Name the top two or three risks, with a plan for each: **avoid** (choose another
-        option), **reduce** (a pilot, a feature flag), or **accept** (with a reason). A design
-        with "no risks" was not examined.
+        Name the top two or three risks, with a plan for each:
+
+        - **Avoid:** choose another option.
+        - **Reduce:** a pilot, a feature flag.
+        - **Accept:** with a reason.
+
+        A design with "no risks" was not examined.
+
+        ## Now say it like a senior engineer
+
+        Translate every technical choice into cost, risk and time to value. Count compute, people,
+        migration and opportunity cost, write a one-page case with "do nothing" as an option, and name the
+        top risks with avoid, reduce or accept for each.
 
         > [!senior] Speak the listener's language
         > To a finance leader: cost and payback period. To a product leader: what customers
         > get and when. To engineers: the design and the trade-offs. Same decision, three
         > framings.
+
+        ## In one breath
+
+        Leaders buy outcomes, not architectures: give the full cost including people and opportunity, a
+        one-page case with "do nothing" priced, and the top risks with a plan for each.
       `,
       checks: [
         {
