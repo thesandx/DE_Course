@@ -13,12 +13,34 @@ export const track: Track = {
       title: 'dbt in one picture',
       summary:
         'Explain what dbt compiles, how «ref» builds the graph, and how a project is layered.',
-      minutes: 13,
+      minutes: 15,
       body: `
-        dbt is the **T in ELT**. Data already sits in the warehouse; dbt turns «SELECT» statements
-        into tables and views there. It does not move data and has no compute of its own. It
-        compiles SQL plus Jinja, sends it to BigQuery, Snowflake, Databricks, Redshift or Postgres,
-        and records what ran.
+        ## Start with the problem
+
+        Your warehouse has 200 SQL scripts that build tables. Each one says «CREATE TABLE ... AS
+        SELECT ...». A cron file runs them in an order someone wrote by hand two years ago.
+
+        Then three things go wrong:
+
+        - Someone adds a script that reads «stg_trips», but puts it in the list before «stg_trips» is
+          built. It reads yesterday's data, and nobody notices.
+        - A developer tests a change on their laptop. The script says «from analytics.stg_trips»,
+          so the test reads and overwrites **production** tables.
+        - Nobody can answer "if I change this table, which dashboards break?"
+
+        dbt is the tool that fixes this mess. To see how, you need one picture: SQL files plus a graph.
+
+        ## Idea 1: dbt is the T in ELT, and nothing more
+
+        ELT means Extract, Load, Transform. Other tools extract and load: raw data already sits in the
+        warehouse. dbt does the **T**. It turns «SELECT» statements into tables and views in the
+        warehouse.
+
+        Think of dbt as a recipe book plus a head chef who reads it. It has no stove of its own. It
+        compiles SQL plus Jinja, sends it to BigQuery, Snowflake, Databricks, Redshift or Postgres, and
+        records what ran. It does not move data and has no compute of its own.
+
+        Each model is one SQL file with one «SELECT»:
 
         ~~~sql
         -- models/marts/fct_trips.sql
@@ -33,33 +55,66 @@ export const track: Track = {
         left join {{ ref('dim_drivers') }} as d using (driver_id)
         ~~~
 
-        ## ref and source build the graph
+        You write only the «SELECT». dbt wraps it in the «CREATE TABLE» for you, because of
+        «materialized='table'».
 
-        «ref('stg_trips')» does two things. At compile time it becomes the real table name for the
-        current target, such as «analytics_prod.stg_trips». It also adds an edge to the graph, so
-        dbt knows «stg_trips» must build first. You never write the build order by hand.
+        ## Idea 2: ref draws the graph for you
 
-        «source('ops', 'trips')» points at raw tables that dbt does not build. Declaring sources in
-        YAML gives you lineage from raw to mart, and freshness checks on the raw data.
+        Look at «{{ ref('stg_trips') }}» in the model. It does two jobs.
 
-        ## The commands that matter
+        1. **At compile time it becomes the real table name** for the current target. In production
+           that is «analytics_prod.stg_trips». In your dev run it is your own schema. So a dev run
+           never touches production.
+        2. **It adds an edge to the graph.** dbt now knows «stg_trips» must build before «fct_trips».
+           You never write the build order by hand.
 
-        | Command | What it does |
-        |---|---|
-        | «dbt build» | Runs models, tests, seeds and snapshots in graph order. A failed test stops what depends on it. |
-        | «dbt run» | Builds models only. No tests. |
-        | «dbt test» | Runs tests only. |
-        | «dbt compile» | Writes the final SQL to «target/» without running it |
-        | «dbt retry» | Reruns only what failed or was skipped in the last command |
+        Like a family tree: every model names its parents, and dbt draws the tree and builds from the
+        roots down.
 
-        Selection keeps runs small: «dbt build -s +fct_trips» builds the model and everything
-        upstream of it; «-s fct_trips+» builds everything downstream; «-s tag:hourly» picks a tag.
+        Raw tables that dbt does not build are declared as **sources**. «source('ops', 'trips')» points
+        at one. Declaring sources in YAML gives you lineage from raw to mart, and freshness checks on
+        the raw data.
 
-        ## Layers
+        ## Idea 3: five commands
 
-        - **Staging** («stg_»): one model per source table. Rename, cast, deduplicate. No joins.
-        - **Intermediate** («int_»): reusable joins and business logic.
-        - **Marts** («fct_», «dim_»): what analysts and dashboards query.
+        - «dbt build»: runs models, tests, seeds and snapshots in graph order. A failed test stops what
+          depends on it.
+        - «dbt run»: builds models only. No tests.
+        - «dbt test»: runs tests only.
+        - «dbt compile»: writes the final SQL to «target/» without running it.
+        - «dbt retry»: reruns only what failed or was skipped in the last command.
+
+        You rarely want the whole project. **Selection** keeps runs small:
+
+        - «dbt build -s +fct_trips» builds the model and everything **upstream** of it (the plus is on
+          the left, the parents' side).
+        - «-s fct_trips+» builds everything **downstream**.
+        - «-s tag:hourly» picks every model with that tag.
+
+        ## Idea 4: three layers, like a kitchen
+
+        A kitchen washes vegetables, then prepares sauces, then plates dishes. A dbt project has the
+        same three layers.
+
+        - **Staging** («stg_»): one model per source table. Rename, cast, deduplicate. No joins. The
+          washing.
+        - **Intermediate** («int_»): reusable joins and business logic. The sauces.
+        - **Marts** («fct_», «dim_»): what analysts and dashboards query. The plated dish.
+
+        ## Idea 5: Core, Cloud and Fusion
+
+        - **dbt Core** is the open-source command-line tool.
+        - **dbt Cloud** (now marketed as the dbt platform) adds a hosted scheduler, an IDE, CI jobs and
+          cross-project references.
+        - **Fusion** (2025) is a faster engine from dbt Labs, written in Rust. It parses SQL and
+          catches errors before it runs. Check its licence and adapter support before you promise it in
+          an answer.
+
+        ## Now say it like a senior engineer
+
+        dbt compiles SELECT statements plus Jinja into warehouse DDL. ref and source build the
+        dependency graph and resolve names per target, so order and environments come for free. Projects
+        are layered staging, intermediate, marts, and runs use selection to stay small.
 
         > [!senior] Say what dbt is not
         > dbt is a build tool for SQL in one warehouse. It is not an orchestrator, not an
@@ -70,13 +125,11 @@ export const track: Track = {
         > Writing «from analytics.stg_trips» instead of «ref» breaks lineage, ignores the build
         > order and points dev runs at production tables.
 
-        ## Core, Cloud and the new engine
+        ## In one breath
 
-        **dbt Core** is the open-source command-line tool. **dbt Cloud** (now marketed as the dbt
-        platform) adds a hosted scheduler, an IDE, CI jobs and cross-project references. In 2025
-        dbt Labs also released **Fusion**, a faster engine written in Rust that parses SQL and
-        catches errors before it runs. Check its licence and adapter support before you promise
-        it in an answer.
+        dbt is a recipe book of SELECT statements that the warehouse cooks. Every ref names a parent,
+        so dbt draws the graph, builds in the right order, and points each environment at its own
+        tables.
       `,
       checks: [
         {
@@ -103,19 +156,30 @@ export const track: Track = {
       title: 'Materializations and incremental models',
       summary:
         'Pick a materialization, write an incremental model that survives late data, and choose the strategy.',
-      minutes: 16,
+      minutes: 18,
       body: `
-        A **materialization** says what dbt creates from a model.
+        ## Start with the problem
 
-        | Materialization | Creates | Use when |
-        |---|---|---|
-        | «view» | A view | Cheap, small, or rarely queried |
-        | «table» | A full rebuild every run | Small to medium tables, simple logic |
-        | «incremental» | A table updated with new rows only | Large event or fact tables |
-        | «ephemeral» | Nothing: inlined as a CTE | Small helper logic used once or twice |
-        | «materialized_view» | A warehouse materialized view | The warehouse can refresh it for you |
+        Your «fct_trips» model is a table with 4 billion rows. It is built with
+        «materialized='table'», so every hour dbt rebuilds all 4 billion rows from scratch, to add the
+        200,000 trips from the last hour. The build takes 40 minutes and the warehouse bill doubles.
 
-        ## An incremental model
+        The obvious fix is "only add the new rows". That is an **incremental model**. But the obvious
+        way to write one has a bug that silently loses data. This lesson shows both.
+
+        ## Idea 1: a materialization is what dbt builds from your SELECT
+
+        Same SELECT, five possible results.
+
+        - «view»: a view. Use it when the model is cheap, small, or rarely queried.
+        - «table»: a full rebuild every run. Use it for small to medium tables with simple logic.
+        - «incremental»: a table updated with new rows only. Use it for large event or fact tables.
+        - «ephemeral»: nothing at all; it is inlined as a CTE. Use it for small helper logic used once
+          or twice.
+        - «materialized_view»: a warehouse materialized view. Use it when the warehouse can refresh it
+          for you.
+
+        ## Idea 2: an incremental model, read line by line
 
         ~~~sql
         {{ config(
@@ -136,26 +200,46 @@ export const track: Track = {
         {% endif %}
         ~~~
 
-        On the first run, and with «--full-refresh», «is_incremental()» is false and the whole
-        table builds. Later runs select only the recent rows, and the merge on «unique_key»
-        updates rows that already exist instead of adding duplicates.
+        - On the **first run**, and with «--full-refresh», «is_incremental()» is false. The «where» is
+          left out and the whole table builds.
+        - On **later runs**, the «where» keeps only the recent rows.
+        - The **merge** on «unique_key» updates rows that already exist instead of adding duplicates.
+          A trip that changed from «requested» to «completed» updates its old row.
 
-        ## Late data is the classic bug
+        ## Idea 3: late data, the classic bug
 
-        A filter of «updated_at > max(updated_at)» with no lookback drops every row that lands
-        after a newer row was loaded. A mobile client that uploads an hour late loses its events
-        for good. The fix is a **lookback window** plus a **unique key**, so reprocessing the
-        overlap is safe.
+        The tempting filter is «updated_at > max(updated_at)»: "give me rows newer than the newest row I
+        already have."
 
-        ## Strategies
+        Tiny example. At 10:00 the table's newest row is 09:58. A phone was offline and uploads a trip
+        updated at 09:10. It lands at 10:05. The next run asks for rows after 09:58. The 09:10 row is
+        older, so it is never selected. Not on this run, not on any run. It is **dropped for good**.
 
-        | Strategy | How it writes | Watch out for |
-        |---|---|---|
-        | «append» | Inserts the new rows | Duplicates on any rerun |
-        | «merge» | «MERGE» on «unique_key» | Scans the target; slow on huge tables without a partition filter |
-        | «delete+insert» | Deletes matching keys, then inserts | Two statements; fine where MERGE is weak |
-        | «insert_overwrite» | Replaces whole partitions | BigQuery and Spark; rebuild a day without row-level merge |
-        | «microbatch» | One query per time batch, using «event_time» | dbt 1.9+; batches retry and backfill on their own |
+        Think of a teacher who only reads homework dated after the last one they marked. A student who
+        hands in Monday's homework on Wednesday is never marked.
+
+        The fix is two parts together:
+
+        - a **lookback window**: re-read the last 3 hours, as the code above does;
+        - a **unique key**: so re-reading the overlap updates rows instead of duplicating them.
+
+        ## Idea 4: five ways to write the new rows
+
+        - «append»: inserts the new rows. Watch out: duplicates on any rerun.
+        - «merge»: a «MERGE» on «unique_key». Watch out: it scans the target, which is slow on huge
+          tables without a partition filter.
+        - «delete+insert»: deletes the matching keys, then inserts. Two statements; fine where MERGE is
+          weak.
+        - «insert_overwrite»: replaces whole partitions. On BigQuery and Spark it rebuilds a day without
+          a row-level merge.
+        - «microbatch»: one query per time batch, using «event_time». Needs dbt 1.9+. Batches retry and
+          backfill on their own.
+
+        ## Now say it like a senior engineer
+
+        Large facts are incremental with a unique key and a lookback, so late rows are reprocessed
+        safely. Choose merge for row-level updates, insert_overwrite for partition rebuilds, and
+        microbatch for time-batched backfills, and bound the target scan.
 
         > [!senior] Cost of merge
         > On a 5 TB table, a MERGE without a partition filter can read the whole target every hour.
@@ -165,6 +249,12 @@ export const track: Track = {
         > [!trap] Schema changes
         > The default «on_schema_change» is «ignore»: a new column in the source never reaches the
         > table and nobody notices. Choose «append_new_columns» or «fail» on purpose.
+
+        ## In one breath
+
+        An incremental model adds only new rows instead of rebuilding everything. Always give it a
+        lookback and a unique key, or late rows vanish for good, and pick the write strategy by how much
+        of the target it has to read.
       `,
       checks: [
         {
@@ -193,13 +283,25 @@ export const track: Track = {
       title: 'Tests, unit tests and contracts',
       summary:
         'Layer data tests, unit tests, freshness and contracts so a bad change fails before it ships.',
-      minutes: 15,
+      minutes: 17,
       body: `
-        dbt has three kinds of checks, and a senior answer uses all three.
+        ## Start with the problem
 
-        ## Data tests check the data
+        Four different bad days:
 
-        A data test is a query that returns failing rows. Zero rows means it passes.
+        1. A source system starts sending the same trip twice. Revenue doubles on the dashboard.
+        2. A developer rewrites the surge pricing logic. The SQL runs, but fares are now wrong.
+        3. Someone renames the «trip_id» column. Three other teams' dashboards break the next morning.
+        4. The upstream load fails silently. dbt rebuilds the dashboard from yesterday's data and it
+           says "updated 5 minutes ago".
+
+        Each of these needs a **different kind** of check. dbt has one for each. A senior answer uses
+        all of them, and puts each where the risk is.
+
+        ## Idea 1: data tests check today's data
+
+        A data test is a query that returns **failing rows**. Zero rows means it passes. Like a
+        security guard who lists everyone without a badge: an empty list is good news.
 
         ~~~yaml
         models:
@@ -220,19 +322,23 @@ export const track: Track = {
                       field: driver_id
         ~~~
 
-        The four built-in **generic tests** are «unique», «not_null», «accepted_values» and
-        «relationships». Packages such as «dbt_utils» and «dbt_expectations» add more. A
-        **singular test** is a SQL file in «tests/» for a rule only one model has, such as "fare
-        is never negative for a completed trip". dbt 1.8 renamed the YAML key from «tests» to
-        «data_tests»; the old key still works.
+        - The four built-in **generic tests** are «unique», «not_null», «accepted_values» and
+          «relationships». Packages such as «dbt_utils» and «dbt_expectations» add more.
+        - A **singular test** is a SQL file in «tests/» for a rule only one model has, such as "fare is
+          never negative for a completed trip".
+        - dbt 1.8 renamed the YAML key from «tests» to «data_tests». The old key still works.
+        - Set «severity: warn» for checks that should alert but not block, and «store_failures» to keep
+          the failing rows in a table you can query.
 
-        Set «severity: warn» for checks that should alert but not block, and «store_failures» to
-        keep the failing rows in a table you can query.
+        Bad day 1 is caught by «unique» on «trip_id».
 
-        ## Unit tests check the logic
+        ## Idea 2: unit tests check your logic
 
-        Since dbt 1.8, a **unit test** runs a model against fixed input rows and compares the
-        output. It tests your SQL logic, not today's data, so it belongs in CI.
+        A data test checks the data you happen to have today. It cannot tell you that your formula is
+        wrong if today's data does not hit the edge case.
+
+        Since dbt 1.8, a **unit test** runs a model against **fixed input rows** and compares the
+        output. Like a calculator check: put in 10 and 1.5, expect 15.
 
         ~~~yaml
         unit_tests:
@@ -247,10 +353,13 @@ export const track: Track = {
                 - {trip_id: 't1', fare_usd: 15}
         ~~~
 
-        ## Contracts check the shape
+        It tests your SQL logic, not today's data, so it belongs in CI. Bad day 2 is caught here,
+        before the change merges.
+
+        ## Idea 3: contracts check the shape
 
         A **model contract** fixes the columns and types of a model. If the SQL returns a different
-        shape, the build fails before the table changes.
+        shape, the build fails **before** the table changes. Like a plug that only fits one socket.
 
         ~~~yaml
         models:
@@ -265,19 +374,30 @@ export const track: Track = {
                   - type: not_null
         ~~~
 
-        Use contracts on public models that other teams or dashboards read. Add **model versions**
-        when you must change a public model, so consumers move on their own schedule.
+        Use contracts on public models that other teams or dashboards read. When you must change a
+        public model, add **model versions**, so consumers move on their own schedule. Bad day 3 fails
+        the build instead of breaking three teams.
 
-        ## Freshness checks the input
+        ## Idea 4: freshness checks the input
 
         «dbt source freshness» compares a source's «loaded_at_field» with «warn_after» and
-        «error_after» limits. Run it before the build, so a stale upstream table is not quietly
-        rebuilt into a "fresh" dashboard.
+        «error_after» limits. Run it **before** the build, so a stale upstream table is not quietly
+        rebuilt into a "fresh" dashboard. Bad day 4 stops here.
+
+        ## Now say it like a senior engineer
+
+        Data tests guard the data, unit tests guard the logic in CI, contracts guard the public shape,
+        and freshness guards the inputs. Put them where the risk is, not everywhere.
 
         > [!senior] Test where the risk is
         > Primary keys on every model, relationships on the joins that feed revenue, unit tests on
         > the tricky logic, contracts on public models. A thousand «not_null» tests on columns
         > nobody reads slow CI and teach people to ignore red.
+
+        ## In one breath
+
+        dbt checks four things: the data (data tests), the logic (unit tests with fixed rows), the
+        shape (contracts) and the input (freshness). Use each where a failure would really hurt.
       `,
       checks: [
         {
@@ -309,10 +429,27 @@ export const track: Track = {
       slug: 'snapshots-and-history',
       title: 'Snapshots and slowly changing history',
       summary: 'Use snapshots for type 2 history, and know what they miss compared with CDC.',
-      minutes: 12,
+      minutes: 14,
       body: `
-        A **snapshot** keeps the history of a mutable table as a type 2 slowly changing
-        dimension. Each run compares the source with the last version and closes or opens rows.
+        ## Start with the problem
+
+        The «drivers» table in the app database has one row per driver. When driver 7 moves from Pune
+        to Mumbai, the app **updates** the row. The old city is gone.
+
+        Six months later finance asks: "How much revenue did Pune drivers bring in March?" Driver 7
+        now says Mumbai, so their March trips count for Mumbai. The answer is wrong, and the source
+        cannot fix it, because it no longer remembers.
+
+        You need **history**: every version of each row, with the time it was true. That is a type 2
+        slowly changing dimension. A dbt **snapshot** builds one for you.
+
+        ## Idea 1: a snapshot is a photo album
+
+        Think of taking a photo of the drivers table every night and keeping every photo. A snapshot
+        does that, but it only stores what changed.
+
+        Each run compares the source with the last version it kept. When a row changed, it **closes**
+        the old version and **opens** a new one.
 
         ~~~yaml
         snapshots:
@@ -325,22 +462,40 @@ export const track: Track = {
               hard_deletes: new_record
         ~~~
 
-        dbt adds «dbt_valid_from», «dbt_valid_to», «dbt_scd_id» and «dbt_updated_at». The current
-        row has «dbt_valid_to» empty. dbt 1.9 added this YAML form and the «hard_deletes» option;
-        older projects define snapshots in SQL files.
+        dbt adds four columns: «dbt_valid_from», «dbt_valid_to», «dbt_scd_id» and «dbt_updated_at». The
+        current row has «dbt_valid_to» empty.
 
-        ## Two strategies
+        Tiny example. Driver 7 now has two rows:
 
-        | Strategy | Detects a change by | Use when |
-        |---|---|---|
-        | «timestamp» | A newer «updated_at» | The source keeps a reliable update time |
-        | «check» | Comparing listed columns | No reliable timestamp; costs more |
+        - Pune, valid from 1 January to 4 April.
+        - Mumbai, valid from 4 April, «dbt_valid_to» empty.
 
-        ## What a snapshot misses
+        Join March trips to the row valid in March, and Pune gets the revenue.
 
-        A snapshot sees the table only when it runs. If a driver changes city at 09:00 and back at
-        15:00, a daily snapshot at midnight records no change at all. It also cannot tell you
-        **when** the change happened, only when the snapshot saw it.
+        dbt 1.9 added this YAML form and the «hard_deletes» option. Older projects define snapshots in
+        SQL files.
+
+        ## Idea 2: two ways to notice a change
+
+        - «timestamp»: a change means a newer «updated_at». Use it when the source keeps a reliable
+          update time.
+        - «check»: a change means one of the listed columns differs. Use it when there is no reliable
+          timestamp. It costs more, because it compares columns.
+
+        ## Idea 3: what a photo album misses
+
+        A snapshot sees the table **only when it runs**. Photos do not show what happened between them.
+
+        - A driver changes city at 09:00 and back at 15:00. A daily snapshot at midnight sees Pune both
+          times. It records **no change** at all.
+        - It also cannot tell you **when** a change happened, only when the snapshot saw it. A change
+          at 09:00 shows up as "valid from midnight".
+
+        ## Now say it like a senior engineer
+
+        A snapshot builds type 2 history by comparing state at each run, with the timestamp or check
+        strategy. It misses changes between runs and records detection time, not change time, so
+        audit-grade history needs CDC.
 
         > [!senior] Snapshot or CDC
         > For audit-grade history, read the database log with CDC (such as Debezium into Kafka) and
@@ -351,6 +506,12 @@ export const track: Track = {
         > A snapshot is the only copy of history it captured. Dropping it or running it against a
         > new source loses that history for good. Treat its table like source data: back it up and
         > never full-refresh it.
+
+        ## In one breath
+
+        A snapshot is a photo album of a changing table: each run closes old versions and opens new
+        ones. It cannot see changes between photos, so use CDC when every change matters, and protect
+        the snapshot table like source data.
       `,
       checks: [
         {
@@ -367,46 +528,77 @@ export const track: Track = {
       title: 'Running dbt in production',
       summary:
         'Schedule dbt from Airflow, build slim CI with state selection, and keep a large project fast.',
-      minutes: 15,
+      minutes: 17,
       body: `
-        ## Who runs dbt
+        ## Start with the problem
 
-        | Option | How | Trade-off |
-        |---|---|---|
-        | One Airflow task | «BashOperator» runs «dbt build» | Simple. One retry reruns everything; the graph is hidden inside one task. |
-        | One task per model | Astronomer Cosmos renders the dbt graph as Airflow tasks | Per-model retries and timing; a big DAG for the scheduler |
-        | dbt Cloud jobs | Airflow triggers a job with «DbtCloudRunJobOperator» | Hosted runs and logs; a paid platform |
+        Your dbt project has 900 models. Three problems show up as it grows:
 
-        Whichever you pick, run «dbt source freshness» first, and use «dbt retry» after a failure so
-        only failed and skipped nodes rerun.
+        - Every night one job runs «dbt build» for everything. At 03:00 one model fails. Every
+          dashboard is late, and the retry rebuilds all 900 models again.
+        - Every pull request runs the whole project in CI. A one-line change waits two hours for green.
+        - The nightly run writes straight into production tables. When it fails halfway, the
+          dashboards show half old and half new numbers.
 
-        ## Environments
+        This lesson fixes each one: who runs dbt, how environments work, slim CI, and how to publish
+        safely.
 
-        «profiles.yml» defines **targets**, such as «dev» and «prod». Each developer builds into
-        their own schema («dbt_sandeep»), and production builds into the real one. The macro
-        «generate_schema_name» decides the final schema name, so override it once for the whole
-        project rather than per model.
+        ## Idea 1: who runs dbt
 
-        ## Slim CI
+        dbt does not schedule itself. Something else starts it. Three common options:
 
-        Every run writes artifacts to «target/»: «manifest.json» (the graph) and
-        «run_results.json» (timings and results). CI keeps production's manifest and compares:
+        - **One Airflow task.** A «BashOperator» runs «dbt build». Simple. But one retry reruns
+          everything, and the graph is hidden inside one task.
+        - **One task per model.** Astronomer Cosmos renders the dbt graph as Airflow tasks. You get
+          per-model retries and timing, but a big DAG for the scheduler.
+        - **dbt Cloud jobs.** Airflow triggers a job with «DbtCloudRunJobOperator». Hosted runs and
+          logs, on a paid platform.
+
+        Whichever you pick, run «dbt source freshness» first. After a failure, use «dbt retry», so only
+        failed and skipped nodes rerun. That fixes the "retry rebuilds 900 models" problem.
+
+        ## Idea 2: environments, everyone gets their own sandbox
+
+        «profiles.yml» defines **targets**, such as «dev» and «prod». Each developer builds into their
+        own schema («dbt_sandeep»), and production builds into the real one. Same code, different
+        sandbox.
+
+        The macro «generate_schema_name» decides the final schema name. Override it once for the whole
+        project, not per model.
+
+        ## Idea 3: slim CI, test only what you changed
+
+        Every run writes artifacts to «target/»:
+
+        - «manifest.json»: the graph.
+        - «run_results.json»: timings and results.
+
+        CI keeps production's manifest and compares the pull request against it:
 
         ~~~bash
         dbt build --select state:modified+ --defer --state ./prod-artifacts
         ~~~
 
-        «state:modified+» builds only the models a pull request changed, plus their children.
-        «--defer» reads every unchanged parent from production instead of rebuilding it. A
-        900-model project then tests a pull request in minutes, not hours.
+        - «state:modified+» builds only the models the pull request changed, plus their children.
+        - «--defer» reads every unchanged parent **from production** instead of rebuilding it.
 
-        ## Keeping it fast and cheap
+        Like a builder who renovates one room: they check the new room and the rooms that lean on it,
+        and trust the rest of the house as it stands. A 900-model project then tests a pull request in
+        minutes, not hours.
+
+        ## Idea 4: keep it fast and cheap
 
         - Read model timings from «run_results.json» and fix the slowest ten first.
         - Make large facts incremental, with partition filters on the target.
         - Raise «threads» to run independent models in parallel, within warehouse limits.
         - Tag models by schedule («hourly», «daily») so each job builds only what it needs.
         - Declare **exposures** for dashboards, so a change shows which reports it breaks.
+
+        ## Now say it like a senior engineer
+
+        An orchestrator runs freshness, then build, then retry on failure. Each developer has a
+        target schema. CI uses state selection with deferral against production artifacts. Jobs are
+        split by domain and schedule, and publishing is atomic.
 
         > [!senior] Publish safely
         > Building straight into production tables means a failed run leaves half-updated marts.
@@ -417,6 +609,12 @@ export const track: Track = {
         > [!trap] One huge job
         > A single nightly «dbt build» for 1,000 models means one failure at 03:00 delays every
         > dashboard. Split by domain and schedule, and give each job an owner.
+
+        ## In one breath
+
+        Let an orchestrator run dbt, check freshness first and use «dbt retry» after a failure. In CI,
+        build only what changed and read the rest from production, and publish by swapping, so nobody
+        sees a half-built mart.
       `,
       checks: [
         {
@@ -444,43 +642,77 @@ export const track: Track = {
       title: 'dbt at scale, in design rounds and with AI',
       summary:
         'Place dbt in a system design, split a big project across teams, and use AI on dbt code safely.',
-      minutes: 13,
+      minutes: 14,
       body: `
-        ## dbt in a design answer
+        ## Start with the problem
 
-        dbt fits the batch part of a design: raw data lands (from Kafka, Fivetran or a CDC tool),
-        then dbt builds staging, facts and marts on a schedule. Say three things:
+        A design interviewer says: "Riders, trips and payments flow into Kafka. Build the analytics
+        layer, and fraud needs a score within 5 seconds." You say "dbt" for everything. The interviewer
+        frowns. dbt runs batch SQL on a schedule. It cannot score a trip in 5 seconds.
+
+        Later the same company has one dbt project with 3,000 models and 40 contributors. Parsing is
+        slow, nobody knows who owns what, and a change in one team's model breaks another team's
+        dashboard.
+
+        And now people want an AI assistant to write the dbt models. How do you keep that safe?
+
+        ## Idea 1: put dbt in the right place in a design
+
+        dbt fits the **batch** part of a design. Raw data lands (from Kafka, Fivetran or a CDC tool),
+        then dbt builds staging, facts and marts on a schedule. In your answer, say three things:
 
         1. **What schedules it** and how often: hourly or daily, not "real time".
         2. **How it stays correct**: incremental with a lookback, keys, tests that block.
-        3. **What it does not do**: sub-minute freshness belongs in a streaming engine such as
-           Flink, with dbt rebuilding the corrected batch view later.
+        3. **What it does not do**: sub-minute freshness belongs in a streaming engine such as Flink,
+           with dbt rebuilding the corrected batch view later.
 
-        ## Many teams, one warehouse
+        So for the fraud question: a streaming engine scores events in seconds. dbt builds the batch
+        tables that analysts study later.
 
-        A single project with 3,000 models and 40 contributors gets slow to parse and hard to own.
-        Split it by domain:
+        ## Idea 2: many teams, one warehouse
 
-        - **Groups** and **access** («private», «protected», «public») mark which models other
-          teams may «ref».
-        - **Contracts** and **versions** on the public models keep consumers safe.
-        - **Cross-project refs** let a team read another project's public models. dbt Cloud calls
-          this dbt Mesh; on open-source dbt, plugins such as «dbt-loom» do the same job.
+        Think of a big office building. One open floor for 40 people is noisy and nobody owns
+        anything. So you give each team its own floor, with some rooms open to visitors and some
+        locked.
 
-        ## Using AI on dbt code
+        Split the project by domain:
 
-        AI assistants are good at the boring parts: staging models from a source schema, YAML
-        docs, a first draft of tests. dbt Labs also ships an MCP server, so an assistant can read
-        the project's lineage and metadata. Keep the controls:
+        - **Groups** and **access** («private», «protected», «public») mark which models other teams
+          may «ref». The locked rooms and the open rooms.
+        - **Contracts** and **versions** on the public models keep consumers safe. A public room does
+          not change shape overnight.
+        - **Cross-project refs** let a team read another project's public models. dbt Cloud calls this
+          dbt Mesh. On open-source dbt, plugins such as «dbt-loom» do the same job.
+
+        ## Idea 3: using AI on dbt code, with the same controls
+
+        AI assistants are good at the boring parts: staging models from a source schema, YAML docs, a
+        first draft of tests. dbt Labs also ships an MCP server, so an assistant can read the
+        project's lineage and metadata.
+
+        Treat the assistant like a fast new hire. You still review their work.
 
         - Generated SQL runs through «dbt build» and unit tests in CI, like human code.
         - Read every generated join. A wrong join key passes «not_null» and still doubles revenue.
-        - Never give an assistant production credentials; let it work against a dev target.
+        - Never give an assistant production credentials. Let it work against a dev target.
+
+        ## Now say it like a senior engineer
+
+        dbt is the scheduled batch layer after ingestion, correct through incremental lookbacks, keys
+        and blocking tests, with low-latency needs handed to a streaming engine. At scale, split by
+        domain with groups, access levels, contracts, versions and cross-project refs. AI output goes
+        through the same CI and review as human code.
 
         > [!senior] Analytics engineering
         > Interviewers may ask how data engineers and analytics engineers split work. A clear
         > answer: the platform team owns ingestion, the warehouse and dbt's CI and conventions;
         > domain teams own their models, tests and contracts.
+
+        ## In one breath
+
+        dbt is the batch layer: say what schedules it, how it stays correct, and what it leaves to
+        streaming. At scale, give each team its own project with public, contracted models, and let AI
+        write dbt code only through the same tests and review.
       `,
       checks: [
         {
