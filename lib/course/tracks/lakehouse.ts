@@ -12,49 +12,106 @@ export const track: Track = {
       slug: 'file-formats',
       title: 'Columnar files from the inside',
       summary: 'Explain how Parquet stores data and why that makes analytic scans cheap.',
-      minutes: 14,
+      minutes: 16,
       body: `
-        Analytic queries read a few columns from many rows. A **row format** (CSV, JSON, Avro)
-        stores each record together, so reading two columns still reads every byte. A **columnar
-        format** (Parquet, ORC) stores each column together, so a query reads only the columns it
-        names. That is the first and largest saving.
+        ## Start with the problem
 
-        ## Parquet's layout
+        You have a trips table with 40 columns and a billion rows, stored as CSV. A dashboard asks:
+        "Total fare per city last week." That needs 3 columns: city, fare, date.
+
+        With CSV, each line holds one whole trip, all 40 columns side by side. To read the city and
+        fare of every trip, the engine must read every line, which means all 40 columns. You pay to read
+        37 columns you do not want.
+
+        Analytic queries almost always look like this: **a few columns, many rows**. The file format
+        decides whether you read 3 columns or 40.
+
+        ## Idea 1: rows together or columns together
+
+        Think of a school's records.
+
+        - **Row format:** one folder per student, with their name, age, marks and address inside. To
+          find the average age, you open every folder. CSV, JSON and Avro work like this.
+        - **Columnar format:** one list of all names, one list of all ages, one list of all marks. To
+          find the average age, you read only the ages list. Parquet and ORC work like this.
+
+        A **columnar format** stores each column together, so a query reads only the columns it names.
+        That is the first and largest saving.
+
+        ## Idea 2: how a Parquet file is built
+
+        From big to small:
 
         - A file holds one or more **row groups** (typically 128 MB to 1 GB of rows).
         - Inside a row group, each column is a **column chunk**, split into **pages**.
-        - The **footer** holds the schema plus statistics for each column chunk: min, max and null count.
-        - Readers fetch the footer first, then skip whole row groups whose stats cannot match the filter.
+        - The **footer** holds the schema plus statistics for each column chunk: min, max and null
+          count.
+        - Readers fetch the footer first, then skip whole row groups whose stats cannot match the
+          filter.
 
-        | Technique | What it skips | Needs |
-        |---|---|---|
-        | Projection pruning | Columns the query does not name | Columnar layout |
-        | Predicate pushdown | Row groups whose min/max cannot match | Data sorted or clustered on the filter column |
-        | Partition pruning | Whole files or folders | A partition column in the filter |
-        | Bloom filters | Row groups that cannot hold a value | Bloom filter written for that column |
+        The footer is like the index on the spine of each box in a storeroom: "box 3 holds dates from 1
+        to 7 March". Looking for 20 March? Skip box 3 without opening it.
 
-        ## Encodings and compression
+        ## Idea 3: four ways to skip work
 
-        Values in one column look alike, so they compress well. **Dictionary encoding** replaces
-        repeated strings (city names, status codes) with small integers. **Run-length encoding**
-        stores "the next 4,000 values are 'completed'" once. A general codec (Snappy for speed,
-        ZSTD for a better ratio) runs on top.
+        - **Projection pruning** skips the columns the query does not name. It needs a columnar
+          layout.
+        - **Predicate pushdown** skips row groups whose min/max cannot match. It needs data sorted or
+          clustered on the filter column.
+        - **Partition pruning** skips whole files or folders. It needs a partition column in the
+          filter.
+        - **Bloom filters** skip row groups that cannot hold a value. They need a Bloom filter written
+          for that column.
+
+        ## Idea 4: min/max only helps when the data is sorted
+
+        Tiny example. You filter «city_id = 42».
+
+        - Files written in **arrival order**: trips from all cities are mixed. Every row group holds
+          cities from 1 to 900. Its range is "1 to 900", and 42 is inside every range. Nothing is
+          skipped.
+        - Files **sorted by city**: row group 1 holds cities 1 to 30, row group 2 holds 31 to 60. Only
+          row group 2 can hold 42. The rest are skipped.
+
+        Same data, same file format, very different cost. Sorting is what makes the stats useful.
+
+        ## Idea 5: similar values squeeze small
+
+        Values in one column look alike, so they compress well.
+
+        - **Dictionary encoding** replaces repeated strings (city names, status codes) with small
+          integers.
+        - **Run-length encoding** stores "the next 4,000 values are 'completed'" once.
+        - A general codec runs on top: Snappy for speed, ZSTD for a better ratio.
+
+        ## Idea 6: where row formats still win
+
+        Avro carries its schema with the data and handles schema evolution well, which is why it is
+        common on Kafka. Writing one record at a time is cheap in a row format and awkward in a columnar
+        one. A common pattern: Avro or Protobuf on the wire, Parquet at rest.
+
+        ## Now say it like a senior engineer
+
+        Columnar files read only the named columns, and footer statistics let the reader skip row groups,
+        but only when the data is sorted or clustered on the filter column. Encoding and compression
+        work well because a column's values are similar. Row formats stay on the wire, where records are
+        written one at a time.
 
         > [!trap] Min/max stats only help sorted data
         > If «city_id» is spread randomly across every row group, every row group's range covers
         > almost every city, and pushdown skips nothing. Sorting or clustering on the filter column
         > is what makes the stats useful.
 
-        ## Where row formats still win
-
-        Avro carries its schema with the data and handles schema evolution well, which is why it
-        is common on Kafka. Writing one record at a time is cheap in a row format and awkward in a
-        columnar one. A common pattern: Avro or Protobuf on the wire, Parquet at rest.
-
         > [!senior] Tie the format to the access pattern
         > Say which queries read the data, how often, and on which columns. "Parquet because it is
         > columnar" is a mid-level answer. "Parquet sorted by event time, because every dashboard
         > filters the last seven days, so the stats skip most row groups" is a senior one.
+
+        ## In one breath
+
+        Parquet stores each column together and keeps a min/max label on every block, so a query reads
+        only the columns it needs and skips the blocks that cannot match. The labels only help if the
+        data is sorted on the column you filter.
       `,
       checks: [
         {
@@ -87,54 +144,96 @@ export const track: Track = {
       title: 'Table formats: Iceberg, Delta and Hudi',
       summary:
         'Explain how a table format adds transactions, snapshots and time travel on object storage.',
-      minutes: 16,
+      minutes: 18,
       body: `
-        A folder of Parquet files is not a table. Two writers can collide, a reader can see half a
-        write, and nobody knows which files make up "the table right now". A **table format** adds
-        a metadata layer that answers that question atomically.
+        ## Start with the problem
 
-        ## The shared idea
+        Your lake has a folder called «trips/» full of Parquet files. You call it "the trips table". Then:
 
-        Every table format keeps a log or tree of metadata that lists exactly which data files form
-        each **snapshot**. A commit writes new data files first, then publishes new metadata in one
-        atomic step. Readers use the latest published snapshot and never see a partial write.
+        - A job is writing 50 new files. A dashboard query runs halfway through and reads 23 of them.
+          The numbers are half updated.
+        - Two jobs write at the same time. One deletes old files while the other still reads them.
+          Both crash.
+        - A bad job writes wrong data. You want yesterday's table back. There is no "yesterday": only
+          the files that are there now.
 
-        | Format | Where the commit lives | Known for |
-        |---|---|---|
-        | Apache Iceberg | A catalog pointer to a metadata file, which points to manifest lists and manifests | Hidden partitioning, partition evolution, wide engine support |
-        | Delta Lake | Numbered JSON commits in «_delta_log», with periodic Parquet checkpoints | Tight Spark integration, deletion vectors |
-        | Apache Hudi | A timeline of actions in «.hoodie» | Record-level upserts and incremental pulls, built at Uber |
+        A folder of Parquet files is not a table. Nobody knows **which files make up the table right
+        now**. A **table format** is the answer to that one question.
 
-        ## Copy-on-write and merge-on-read
+        ## Idea 1: a list of files, swapped in one step
 
-        An update or delete must change rows that already live in immutable files. There are two ways.
+        Think of a restaurant menu board. The kitchen can cook new dishes all afternoon, but guests only
+        see what is on the board. At 6 PM the manager swaps the old board for a new one in one move.
+        Nobody ever sees half a board.
 
-        - **Copy-on-write (CoW):** rewrite every file that holds a changed row. Reads stay fast;
-          writes are expensive when changes are spread out.
-        - **Merge-on-read (MoR):** write the change separately (a delete file, a deletion vector or a
-          log file) and merge it at read time. Writes are cheap; reads slow down until compaction
-          folds the changes back in.
+        Every table format keeps a log or tree of metadata that lists exactly which data files form each
+        **snapshot**. A commit works in two steps:
+
+        1. Write the new data files. Nobody can see them yet.
+        2. Publish new metadata that lists them, in **one atomic step**.
+
+        Readers use the latest published snapshot, so they never see a partial write.
+
+        ## Idea 2: three formats, same idea
+
+        - **Apache Iceberg.** The commit lives in a catalog pointer to a metadata file, which points to
+          manifest lists and manifests. Known for hidden partitioning, partition evolution and wide
+          engine support.
+        - **Delta Lake.** The commit lives in numbered JSON commits in «_delta_log», with periodic
+          Parquet checkpoints. Known for tight Spark integration and deletion vectors.
+        - **Apache Hudi.** The commit lives in a timeline of actions in «.hoodie». Known for
+          record-level upserts and incremental pulls. It was built at Uber.
+
+        ## Idea 3: changing rows in files you cannot edit
+
+        Parquet files are immutable: you cannot change one row inside. So how do you update a trip's
+        status, or delete a user? Two ways.
+
+        - **Copy-on-write (CoW).** Rewrite every file that holds a changed row. Like reprinting a whole
+          page of a book to fix one typo. Reads stay fast; writes are expensive when changes are spread
+          out.
+        - **Merge-on-read (MoR).** Write the change separately (a delete file, a deletion vector or a
+          log file) and merge it at read time. Like a printed errata sheet tucked in the book. Writes are
+          cheap; reads slow down until **compaction** folds the changes back in.
+
+        ## Idea 4: two writers at once
+
+        Writers use **optimistic concurrency**. Each writer reads snapshot N, does its work, and tries
+        to commit N+1. If another writer committed first, the format checks whether the two changes
+        conflict.
+
+        - Non-overlapping appends usually retry cleanly.
+        - Two updates to the same files fail, and one must be redone.
+
+        Like two people editing a shared document: if they edited different paragraphs, both edits
+        stay. If they edited the same sentence, one must try again.
+
+        ## Idea 5: time travel
+
+        Old snapshots stay readable until you expire them. So you can query the table "as of"
+        yesterday, or roll back a bad write by pointing the table at an earlier snapshot. The bad job
+        from the story is undone in one command.
+
+        ## Now say it like a senior engineer
+
+        A table format writes data files first and then atomically publishes metadata listing them, so
+        readers see whole snapshots. Updates use copy-on-write or merge-on-read, writers use optimistic
+        concurrency, and old snapshots allow time travel until they expire.
 
         > [!example] Choosing between them
         > A daily batch that rewrites a few partitions: copy-on-write. A stream of CDC upserts from
         > an operational database every minute: merge-on-read, with compaction on a schedule.
 
-        ## Concurrency
-
-        Writers use optimistic concurrency. Each writer reads snapshot N, does its work, and tries
-        to commit N+1. If another writer committed first, the format checks whether the two changes
-        conflict. Non-overlapping appends usually retry cleanly; two updates to the same files fail
-        and must be redone.
-
-        ## Time travel
-
-        Old snapshots stay readable until you expire them, so you can query the table "as of"
-        yesterday, or roll back a bad write by pointing the table at an earlier snapshot.
-
         > [!trap] Time travel is not a backup
         > Snapshot expiry and file cleanup delete old data on a schedule (Delta's «VACUUM» keeps
         > 7 days by default). Once files are gone, so is the history. Keep real backups for data
         > you must restore after weeks.
+
+        ## In one breath
+
+        A table format is a menu board over a pile of files: new files stay invisible until one atomic
+        swap lists them. That gives you whole snapshots, safe concurrent writers, row updates by rewrite
+        or by errata, and time travel until old snapshots expire.
       `,
       checks: [
         {
@@ -165,49 +264,81 @@ export const track: Track = {
       slug: 'layout-and-maintenance',
       title: 'Layout, small files and compaction',
       summary: 'Choose a partition scheme and keep a lakehouse table healthy over time.',
-      minutes: 14,
+      minutes: 16,
       body: `
-        A table's physical layout decides how much data every query reads. Get it right once and
-        maintain it, or the table slowly gets slower and more expensive.
+        ## Start with the problem
 
-        ## Partitioning
+        You launch a new events table in the lake. On day 1 every query takes 3 seconds. A month later
+        the same queries take 90 seconds, and nobody changed any code.
 
-        Partition on a column that almost every query filters on and that has modest cardinality.
-        Event date is the classic choice.
+        What changed is the **physical layout**. A streaming job wrote a small file every 30 seconds:
+        86,000 files a month. And the table was partitioned on a column nobody filters on. A table's
+        layout decides how much data every query reads. Get it right once and maintain it, or the table
+        slowly gets slower and more expensive.
 
-        | Partition column | Verdict |
-        |---|---|
-        | «event_date» | Good: most queries filter by date, about 365 partitions a year |
-        | «event_hour» | Good only for very large tables queried by hour |
-        | «user_id» | Bad: millions of tiny partitions, and most queries do not filter on it |
-        | «country» plus «event_date» | Fine if many queries filter by country, but watch skew from big countries |
+        ## Idea 1: partitioning, the drawers of a filing cabinet
 
-        Iceberg's **hidden partitioning** stores a transform such as «day(event_ts)», so queries
-        filter on «event_ts» and still prune. You can also change the partition scheme later
-        (partition evolution) without rewriting old data.
+        A partition is a drawer. A query that filters on the partition column opens only the drawers it
+        needs. Two rules for choosing the column:
 
-        ## The small files problem
+        - **Almost every query filters on it.** Otherwise nobody skips any drawers.
+        - **It has modest cardinality.** A few hundred drawers, not millions.
 
-        Streaming and frequent micro-batches write many small files. Every file costs a metadata
-        entry, an open call and a footer read. Ten thousand 1 MB files are far slower to scan than
-        ten 1 GB files holding the same data.
+        Event date is the classic choice. Some examples:
 
-        - **Compaction** rewrites small files into larger ones (Iceberg «rewrite_data_files»,
-          Delta «OPTIMIZE», Hudi compaction and clustering).
-        - **Clustering** (sorting or Z-ordering inside the rewrite) puts similar values together
-          so file and row-group stats skip more.
-        - Target file sizes of roughly 256 MB to 1 GB for analytic tables.
+        - «event_date»: good. Most queries filter by date, and it makes about 365 partitions a year.
+        - «event_hour»: good only for very large tables queried by hour.
+        - «user_id»: bad. Millions of tiny partitions, and most queries do not filter on it.
+        - «country» plus «event_date»: fine if many queries filter by country, but watch skew from big
+          countries.
 
-        ## Housekeeping
+        Iceberg's **hidden partitioning** stores a transform such as «day(event_ts)». Queries filter on
+        «event_ts» and still prune; nobody needs to know a separate date column exists. You can also
+        change the partition scheme later (**partition evolution**) without rewriting old data.
+
+        ## Idea 2: the small files problem
+
+        Streaming and frequent micro-batches write many small files. Every file has a fixed cost: a
+        metadata entry, an open call and a footer read.
+
+        Think of moving house. Ten big boxes take ten trips. The same things in ten thousand envelopes
+        take ten thousand trips. Ten thousand 1 MB files are far slower to scan than ten 1 GB files
+        holding the same data.
+
+        The fixes:
+
+        - **Compaction** rewrites small files into larger ones: Iceberg «rewrite_data_files», Delta
+          «OPTIMIZE», Hudi compaction and clustering.
+        - **Clustering** sorts or Z-orders the data inside that rewrite. Similar values end up in the
+          same files, so file and row-group stats skip more.
+        - **Target file sizes** of roughly 256 MB to 1 GB for analytic tables.
+
+        Compaction fixes the size of the boxes. Clustering also puts similar things in the same box.
+
+        ## Idea 3: housekeeping
+
+        A table format keeps old snapshots and metadata. Without cleaning, they pile up.
 
         - **Expire snapshots** so metadata stays small and old files can be deleted.
         - **Remove orphan files** left by failed writes.
         - **Rewrite manifests** when planning a query becomes slow because of many manifests.
 
+        ## Now say it like a senior engineer
+
+        Partition on a low-cardinality column that almost every query filters on, usually the event
+        date. Compact small files toward 256 MB to 1 GB, cluster within the rewrite so stats skip more,
+        and schedule snapshot expiry, orphan cleanup and manifest rewrites.
+
         > [!senior] Make maintenance part of the design
         > When you design a streaming sink into a lake, name the compaction job, its schedule, and
         > who owns it. An answer that writes files every 30 seconds and stops there will be asked
         > "what does this table look like after a month?"
+
+        ## In one breath
+
+        Partition on the column every query filters by, and keep the drawers few. Streaming leaves
+        thousands of tiny files, so compact and cluster them on a schedule, and clean up old snapshots,
+        or the table gets slower every week.
       `,
       checks: [
         {
@@ -238,34 +369,50 @@ export const track: Track = {
       slug: 'bigquery',
       title: 'BigQuery: storage, slots and cost',
       summary: 'Explain how BigQuery runs a query and design tables that scan less.',
-      minutes: 15,
+      minutes: 17,
       body: `
-        BigQuery separates storage from compute. Tables live in a columnar format (Capacitor) on
-        Google's distributed file system (Colossus). Queries run on **slots**, units of compute
-        that a scheduler hands out. A shuffle tier between stages lets thousands of workers
-        exchange data. Because storage and compute scale separately, the bill has two parts.
+        ## Start with the problem
 
-        ## How you pay
+        An analyst runs «SELECT * FROM events LIMIT 10» to "just have a look". It returns 10 rows in two
+        seconds. The next morning the bill shows that query cost about $60. They ran it 30 times last
+        month.
 
-        - **On-demand:** pay per byte scanned (list price is about $6.25 per TiB in the US, with
-          the first 1 TiB each month free). Every column you read counts, even if the result is small.
-        - **Capacity (editions):** pay for slots over time, with autoscaling. Cost then depends on
-          how long queries hold slots, not on bytes.
-        - **Storage:** active storage, and cheaper long-term storage for partitions untouched for
-          90 days.
+        BigQuery does not charge for rows returned. On demand, it charges for **bytes scanned**. To keep
+        BigQuery cheap you need to know how it stores data, how it runs a query, and what makes it scan
+        less.
 
-        > [!trap] LIMIT does not cut the scan
-        > «SELECT * FROM events LIMIT 10» on a non-clustered table still reads every column of every
-        > row in scope. Name the columns and filter on the partition column instead.
+        ## Idea 1: storage and compute live apart
 
-        ## Partitioning and clustering
+        Think of a library with a separate reading room. The books (storage) sit in a huge store. The
+        reading room (compute) has tables you rent by the hour.
+
+        - Tables live in a columnar format (**Capacitor**) on Google's distributed file system
+          (**Colossus**).
+        - Queries run on **slots**, units of compute that a scheduler hands out.
+        - A **shuffle tier** between stages lets thousands of workers exchange data.
+
+        Because storage and compute scale separately, the bill has two parts.
+
+        ## Idea 2: how you pay
+
+        - **On-demand:** pay per byte scanned. List price is about $6.25 per TiB in the US, with the
+          first 1 TiB each month free. Every column you read counts, even if the result is small.
+        - **Capacity (editions):** pay for slots over time, with autoscaling. Cost then depends on how
+          long queries hold slots, not on bytes.
+        - **Storage:** active storage, and cheaper long-term storage for partitions untouched for 90
+          days.
+
+        Back to the story. «SELECT *» reads every column, and «LIMIT» is applied **after** the scan. On
+        a 10 TiB table, that is about $60, for 10 rows.
+
+        ## Idea 3: partitioning and clustering, so it reads less
 
         - **Partitioning** splits a table by a date, timestamp or integer-range column (or by
-          ingestion time). A filter on that column prunes partitions before the scan, and the dry
-          run shows the reduced byte count.
-        - **Clustering** sorts data inside partitions by up to four columns. Filters on those
-          columns skip blocks. The dry-run estimate is an upper bound; the real scan is often smaller.
-        - Set «require_partition_filter» on large tables so nobody scans all history by accident.
+          ingestion time). A filter on that column prunes partitions before the scan, and the dry run
+          shows the reduced byte count.
+        - **Clustering** sorts data inside partitions by up to four columns. Filters on those columns
+          skip blocks. The dry-run estimate is an upper bound; the real scan is often smaller.
+        - Set «require_partition_filter» on large tables, so nobody scans all history by accident.
 
         ~~~sql
         CREATE TABLE analytics.trip_events
@@ -281,7 +428,11 @@ export const track: Track = {
         OPTIONS (require_partition_filter = TRUE);
         ~~~
 
-        ## Other levers
+        Now a query for last week's trips in city 42 opens 7 daily partitions, and inside them only the
+        blocks for city 42. Like a library sorted by year, then by shelf: you walk to one shelf in seven
+        rooms, not every shelf in the building.
+
+        ## Idea 4: other levers
 
         - **Materialized views** keep an aggregate up to date incrementally, and the optimizer can
           rewrite matching queries to use them.
@@ -289,10 +440,26 @@ export const track: Track = {
         - **Search indexes** speed up point lookups on text columns.
         - **BigLake and external tables** let BigQuery read Iceberg or Parquet in Cloud Storage.
 
+        ## Now say it like a senior engineer
+
+        BigQuery separates Capacitor storage on Colossus from slot-based compute. On demand you pay for
+        bytes scanned, so name the columns, filter on the partition column, cluster on common filters
+        and require a partition filter. On capacity pricing you pay for slot time instead.
+
+        > [!trap] LIMIT does not cut the scan
+        > «SELECT * FROM events LIMIT 10» on a non-clustered table still reads every column of every
+        > row in scope. Name the columns and filter on the partition column instead.
+
         > [!senior] Answer cost questions with numbers
         > "This dashboard query scans 3 TiB, runs 200 times a day, so it costs about 600 TiB a
         > day on demand. Partitioning to the last 7 days and clustering on «city_id» cuts each run
         > to roughly 60 GiB." Interviewers remember the candidate who did the arithmetic.
+
+        ## In one breath
+
+        BigQuery keeps storage and compute apart, and on demand it bills the bytes a query reads, not
+        the rows it returns. Read fewer columns, prune partitions, cluster on your filters, and do the
+        cost arithmetic out loud.
       `,
       checks: [
         {
@@ -319,15 +486,25 @@ export const track: Track = {
       slug: 'incremental-processing',
       title: 'Incremental processing and upserts',
       summary: 'Move from daily full rebuilds to incremental merges without losing correctness.',
-      minutes: 14,
+      minutes: 16,
       body: `
-        A daily job that rebuilds a 50 TB table to apply 0.1% of changes wastes almost all of its
-        compute. **Incremental processing** reads only what changed and merges it into the target.
-        It is how Uber cut lake latency from a day to minutes, and it is a frequent design topic.
+        ## Start with the problem
 
-        ## The MERGE pattern
+        The «trips» table in the lake is 50 TB. Every night a job rebuilds all of it from the source, to
+        apply the day's changes: new trips, fares corrected, a few trips cancelled. That is about 0.1%
+        of the rows. The job reads and writes 50 TB to change 50 GB, and the data is a day old by the
+        time it lands.
 
-        Upserts take a batch of changes, keep the latest version of each key, and merge it.
+        **Incremental processing** reads only what changed and merges it into the target. It is how
+        Uber cut lake latency from a day to minutes, and it is a frequent design topic.
+
+        ## Idea 1: an upsert is "update if it exists, insert if it does not"
+
+        Think of a class register. A new student joins: add a line. A student changes their phone
+        number: fix their existing line. You never rewrite the whole register.
+
+        In SQL this is a **MERGE**. It takes a batch of changes, keeps the latest version of each key,
+        and merges it into the target.
 
         ~~~sql
         MERGE INTO lake.trips AS t
@@ -347,20 +524,47 @@ export const track: Track = {
         WHEN NOT MATCHED THEN INSERT ROW;
         ~~~
 
-        Three details make this correct:
+        ## Idea 2: three details make it correct
 
-        - **Dedupe the source first.** Two changes for one key in a batch make MERGE fail or pick one arbitrarily.
-        - **Guard on version.** «s.updated_at > t.updated_at» stops a late, older change from overwriting a newer row.
-        - **Handle deletes.** CDC streams carry delete events; map them to «WHEN MATCHED AND s.op = 'd' THEN DELETE».
+        Each one fixes a real bug.
 
-        ## Reading changes
+        - **Dedupe the source first.** Trip 9 changed twice in this batch: first «accepted», then
+          «completed». Two changes for one key in a batch make MERGE fail or pick one arbitrarily. The
+          inner query keeps only the newest row per «trip_id» («rn = 1»).
+        - **Guard on version.** A late change from 09:00 arrives after the 09:30 change was already
+          merged. «s.updated_at > t.updated_at» stops the late, older change from overwriting the newer
+          row.
+        - **Handle deletes.** CDC streams carry delete events. Map them to «WHEN MATCHED AND s.op = 'd'
+          THEN DELETE».
 
-        - **Change data capture (CDC)** from database logs (Debezium on MySQL binlog or Postgres WAL)
-          gives every insert, update and delete in order.
-        - **Incremental reads** from a table format return only rows changed since a snapshot:
-          Hudi incremental queries, Delta change data feed, Iceberg incremental scans.
-        - **Watermark columns** («updated_at > last_run») are the simplest option, but miss hard
-          deletes and rows whose clock was wrong.
+        ## Idea 3: where do the changes come from?
+
+        Three ways to find "what changed since last time":
+
+        - **Change data capture (CDC)** reads the database's own log (Debezium on the MySQL binlog or
+          the Postgres WAL). It gives every insert, update and delete, in order. Like reading the bank's
+          full transaction history.
+        - **Incremental reads** from a table format return only rows changed since a snapshot: Hudi
+          incremental queries, Delta change data feed, Iceberg incremental scans.
+        - **Watermark columns** («updated_at > last_run») are the simplest option. Like asking "which
+          accounts changed since Monday?" by looking at a "last changed" stamp. But they miss hard
+          deletes, because a deleted row has no row left to carry a new timestamp. And they miss rows
+          whose clock was wrong.
+
+        ## Idea 4: the hidden cost is finding the matches
+
+        MERGE must find the target rows that match each change. If the changed trips are spread across
+        every file in the table, every merge rewrites most of the table, and you are back to a full
+        rebuild.
+
+        Partition so changes cluster. Most changes touch recent trips, so partition by trip date, and
+        add the partition to the ON condition. Then a merge touches the last few days of files.
+
+        ## Now say it like a senior engineer
+
+        Incremental pipelines read changes through CDC, table-format incremental reads or a watermark
+        column, dedupe to the latest version per key, merge with a version guard and delete handling,
+        and partition the target so the changes land in few files.
 
         > [!trap] Merge cost hides in the join
         > MERGE must find matching rows. If the target is not partitioned or clustered so the
@@ -370,6 +574,12 @@ export const track: Track = {
         > [!senior] Keep a full rebuild path
         > Incremental pipelines drift: a missed delete, a bug in one batch. Keep a tested way to
         > rebuild the table from source and reconcile counts on a schedule.
+
+        ## In one breath
+
+        Instead of rebuilding 50 TB, read only the changes and MERGE them: dedupe per key, keep the
+        newest version, apply deletes, and partition so the merge touches few files. Keep a full rebuild
+        for the day the increments drift.
       `,
       checks: [
         {
@@ -401,49 +611,87 @@ export const track: Track = {
       title: 'Block, file and object storage',
       summary:
         'Compare block, file and object storage by interface, latency, sharing and cost, and explain why the lake lives on object storage.',
-      minutes: 13,
+      minutes: 15,
       body: `
-        Every byte in a data platform sits on one of three kinds of storage. Each one exposes a
-        different interface, and that interface explains a lot of lakehouse design.
+        ## Start with the problem
 
-        ## The three kinds
+        An old Hadoop job moves to the cloud. On HDFS it wrote its output to a temporary folder, then
+        renamed the folder to «output/» to "commit". It worked for years. On S3 the same job now takes 40
+        minutes to commit, and once a dashboard read «output/» while only half the files were in it.
 
-        | | **Block** | **File** | **Object** |
-        |---|---|---|---|
-        | Examples | EBS, GCP Persistent Disk, Azure Managed Disks, SAN | NFS, SMB, EFS, Filestore, Azure Files, HDFS | S3, GCS, Azure Blob and ADLS Gen2 |
-        | Interface | Numbered blocks; the OS puts a file system on top | Directories and files (POSIX): open, seek, append, rename | HTTP: PUT, GET, LIST, DELETE whole objects by key |
-        | Shared by | Usually one machine at a time | Many machines, with locks | Any number of clients |
-        | Latency | Sub-millisecond to a few ms | A few ms | Tens of ms per request; high throughput in parallel |
-        | Scale | Up to tens of TB per volume | Up to petabytes, with limits | Practically unlimited |
-        | Typical cost | Highest per GB | Middle | Lowest per GB, plus per-request fees |
-        | DE use | Database data files, Spark shuffle and spill disks | Shared notebooks, legacy tools, HDFS clusters | The data lake, backups, landing zones |
+        Nothing in the code changed. The **storage** changed. Every byte in a data platform sits on one
+        of three kinds of storage, and each one exposes a different interface. That interface explains
+        a lot of lakehouse design.
 
-        ## What object storage does not give you
+        ## Idea 1: three kinds of storage, three kinds of shop
 
-        - **No in-place update.** You rewrite the whole object. That is why lake files are immutable
+        **Block storage: your own hard drive.**
+
+        - Examples: EBS, GCP Persistent Disk, Azure Managed Disks, SAN.
+        - Interface: numbered blocks; the OS puts a file system on top.
+        - Shared by: usually one machine at a time.
+        - Latency: sub-millisecond to a few ms.
+        - Scale: up to tens of TB per volume.
+        - Cost: highest per GB.
+        - DE use: database data files, Spark shuffle and spill disks.
+
+        **File storage: a shared office cabinet.**
+
+        - Examples: NFS, SMB, EFS, Filestore, Azure Files, HDFS.
+        - Interface: directories and files (POSIX): open, seek, append, rename.
+        - Shared by: many machines, with locks.
+        - Latency: a few ms.
+        - Scale: up to petabytes, with limits.
+        - Cost: middle.
+        - DE use: shared notebooks, legacy tools, HDFS clusters.
+
+        **Object storage: a giant warehouse with a counter.**
+
+        - Examples: S3, GCS, Azure Blob and ADLS Gen2.
+        - Interface: HTTP. PUT, GET, LIST and DELETE whole objects by key.
+        - Shared by: any number of clients.
+        - Latency: tens of ms per request, but high throughput in parallel.
+        - Scale: practically unlimited.
+        - Cost: lowest per GB, plus per-request fees.
+        - DE use: the data lake, backups, landing zones.
+
+        At the warehouse counter you hand in a whole parcel or ask for a whole parcel by its label. You
+        cannot open a parcel on the shelf and change one page.
+
+        ## Idea 2: what object storage does not give you
+
+        - **No in-place update.** You rewrite the whole object. That is why lake files are immutable,
           and tables change by adding new files.
-        - **No atomic rename of a folder.** A "folder" is only a key prefix. Renaming one is a copy and
-          delete of every object, which is slow and not atomic. Old Hadoop jobs that commit by
-          renaming a temporary folder are slow and unsafe on S3. ADLS Gen2 with a hierarchical
-          namespace is the exception: it renames directories atomically.
-        - **Listing is slow and costs money.** Listing millions of keys to plan a query is the
-          problem that table formats solve with manifests.
-        - **Request limits per prefix.** S3 supports about 3,500 writes and 5,500 reads per second
-          per prefix, and scales by splitting busy prefixes. A sudden burst can get 503 SlowDown errors.
+        - **No atomic rename of a folder.** A "folder" is only a key prefix, a common start of the
+          labels. Renaming one is a copy and delete of every object, which is slow and not atomic. That
+          is the story above: old Hadoop jobs that commit by renaming a temporary folder are slow and
+          unsafe on S3. ADLS Gen2 with a hierarchical namespace is the exception: it renames directories
+          atomically.
+        - **Listing is slow and costs money.** Listing millions of keys to plan a query is the problem
+          that table formats solve with manifests.
+        - **Request limits per prefix.** S3 supports about 3,500 writes and 5,500 reads per second per
+          prefix, and scales by splitting busy prefixes. A sudden burst can get 503 SlowDown errors.
 
-        S3 has given strong read-after-write consistency for all operations since December 2020,
-        and GCS has always been strongly consistent for object reads. Old advice about eventual
-        consistency on S3 is out of date.
+        One piece of good news: S3 has given strong read-after-write consistency for all operations
+        since December 2020, and GCS has always been strongly consistent for object reads. Old advice
+        about eventual consistency on S3 is out of date.
 
-        ## Why the lake is on object storage
+        ## Idea 3: why the lake still lives on object storage
 
         - Storage and compute **scale apart**: ten clusters can read the same files.
-        - It is the cheapest durable tier (S3 Standard is about 0.02 USD per GB-month, block storage
-          is several times more).
+        - It is the cheapest durable tier. S3 Standard is about 0.02 USD per GB-month; block storage is
+          several times more.
         - Lifecycle rules move cold data to cheaper classes automatically.
 
-        Table formats (Iceberg, Delta, Hudi) add what the object store lacks: atomic commits,
-        snapshots and a file list that does not need «LIST».
+        Table formats (Iceberg, Delta, Hudi) add what the object store lacks: atomic commits, snapshots
+        and a file list that does not need «LIST».
+
+        ## Now say it like a senior engineer
+
+        Block storage is fast, single-machine and expensive; file storage is shared POSIX; object
+        storage is cheap, unlimited HTTP with no in-place update, no atomic folder rename and costly
+        listing. The lake lives on object storage, and table formats supply the missing commit
+        semantics.
 
         > [!trap] Local disks still matter
         > Spark shuffles and spills to local block storage, not to the lake. A job with small or slow
@@ -453,6 +701,12 @@ export const track: Track = {
         > "Object stores cannot rename a folder atomically, so Iceberg commits by swapping one
         > metadata pointer in the catalog" links storage to table format design. That link is the
         > senior signal.
+
+        ## In one breath
+
+        Block storage is your own fast drive, file storage is a shared cabinet, and object storage is a
+        cheap, endless warehouse that only takes and gives whole parcels. The lake lives there, and
+        because it cannot rename folders or update in place, table formats commit through metadata.
       `,
       checks: [
         {
@@ -484,56 +738,81 @@ export const track: Track = {
       title: 'Compression codecs and encodings',
       summary:
         'Choose a codec and encoding per layer, explain splittability, and trade CPU for bytes on purpose.',
-      minutes: 13,
+      minutes: 15,
       body: `
-        Compression cuts storage cost and, more important, the bytes each query reads. It costs CPU
-        to write and to read. A senior engineer picks it per layer instead of keeping the default.
+        ## Start with the problem
 
-        ## Two layers of saving
+        A partner sends one file a day: «events.json.gz», 20 GB. Your Spark cluster has 200 cores, but
+        the read uses **one task**. It takes 50 minutes while 199 cores wait.
 
-        1. **Encodings** work on the values of one column, inside Parquet or ORC pages. They are
-           cheap to decode and some engines run filters on encoded data directly.
-        2. **Codecs** compress the encoded bytes of each page with a general algorithm.
+        Meanwhile someone switches the whole lake from Snappy to GZIP "to save storage", and every
+        dashboard gets slower.
 
-        | Encoding | Best for | Idea |
-        |---|---|---|
-        | **Dictionary** | Low to medium distinct values: status, city, country | Store each distinct value once, then small integer ids |
-        | **RLE / bit-packing** | Repeated values, booleans, dictionary ids | "4,000 times id 3", and ids packed in few bits |
-        | **Delta** | Sorted integers and timestamps | Store differences between neighbours, which are small |
-        | **Byte stream split** | Floating point measures | Groups the bytes of floats so the codec finds patterns |
+        Compression cuts storage cost and, more important, the bytes each query reads. But it costs CPU
+        to write and to read, and some choices block parallel reads entirely. A senior engineer picks it
+        per layer instead of keeping the default.
+
+        ## Idea 1: two layers of saving
+
+        1. **Encodings** work on the values of one column, inside Parquet or ORC pages. They are cheap
+           to decode, and some engines run filters on encoded data directly.
+        2. **Codecs** then compress the encoded bytes of each page with a general algorithm.
+
+        Think of packing a suitcase. Encoding is folding the clothes neatly. The codec is the vacuum
+        bag on top.
+
+        ## Idea 2: four encodings, each for one kind of column
+
+        - **Dictionary.** Best for low to medium distinct values: status, city, country. Store each
+          distinct value once, then small integer ids. "Mumbai" becomes 3, everywhere.
+        - **RLE / bit-packing.** Best for repeated values, booleans and dictionary ids. Store "4,000
+          times id 3", and pack ids in few bits.
+        - **Delta.** Best for sorted integers and timestamps. Store the differences between neighbours,
+          which are small: 1700000000, +2, +1, +3.
+        - **Byte stream split.** Best for floating point measures. It groups the bytes of floats so the
+          codec finds patterns.
 
         Parquet writers fall back from dictionary to plain encoding when a column chunk has too many
-        distinct values for the dictionary page (about 1 MB by default in many writers). A UUID
-        column will never dictionary-encode well.
+        distinct values for the dictionary page (about 1 MB by default in many writers). A UUID column
+        will never dictionary-encode well: every value is new, so the dictionary is as big as the data.
 
-        ## Codecs
+        ## Idea 3: four codecs, speed against size
 
-        | Codec | Speed | Ratio | Use |
-        |---|---|---|---|
-        | **LZ4** | Fastest | Lower | Hot data where CPU is the limit |
-        | **Snappy** | Very fast | Lower | Spark's default for Parquet; safe general choice |
-        | **ZSTD** | Fast at low levels, tunable 1 to 22 | High | Iceberg's default for Parquet since 1.4; good default for the lake |
-        | **GZIP** | Slow | High | Legacy and interchange; avoid for hot tables |
+        - **LZ4:** fastest, lower ratio. For hot data where CPU is the limit.
+        - **Snappy:** very fast, lower ratio. Spark's default for Parquet; a safe general choice.
+        - **ZSTD:** fast at low levels, tunable from 1 to 22, high ratio. Iceberg's default for Parquet
+          since 1.4; a good default for the lake.
+        - **GZIP:** slow, high ratio. For legacy and interchange; avoid it for hot tables.
 
-        On typical event data, ZSTD at a low level often makes files noticeably smaller than Snappy
-        at a similar read speed. Measure on your own data before you change a large table.
+        On typical event data, ZSTD at a low level often makes files noticeably smaller than Snappy at a
+        similar read speed. Measure on your own data before you change a large table.
 
-        ## Splittability
+        ## Idea 4: splittability, the one-task problem
 
         A file is **splittable** when many tasks can read parts of it in parallel.
+
+        A gzip stream can only be decompressed from its beginning, like a scroll you must unroll from
+        the top. A book with chapters is different: ten people can each read one chapter.
 
         - A 10 GB «.json.gz» or «.csv.gz» file is **not** splittable: one task must read it from the
           start. bzip2 is splittable but slow.
         - Parquet, ORC and Avro compress inside blocks or pages, so they stay splittable with any codec.
 
-        So the codec matters most for raw text files in the landing zone. Convert them to a
-        columnar format early.
+        So the codec matters most for raw text files in the landing zone. Convert them to a columnar
+        format early. That fixes the 20 GB story: read it once, write Parquet, and every later read uses
+        all 200 cores.
 
-        ## Sorting multiplies compression
+        ## Idea 5: sorting multiplies compression
 
-        Sorting rows by a low-cardinality column puts equal values next to each other, so RLE and
+        Sorting rows by a low-cardinality column puts equal values next to each other. Then RLE and
         dictionary encoding shrink them further, and min/max statistics get tighter. Sorting by
         «country, city, event_date» before writing can cut file size and scan time together.
+
+        ## Now say it like a senior engineer
+
+        Encodings shrink column values and codecs shrink pages. Text in gzip is not splittable, so
+        convert landing files to columnar formats at once. Pick a codec per layer, and sort on
+        low-cardinality columns so encodings and statistics work harder.
 
         > [!trap] Compressing an already compressed column
         > Images, encrypted fields and already-zipped blobs do not compress again. Paying ZSTD level
@@ -543,6 +822,12 @@ export const track: Track = {
         > "Landing: whatever the source sends, converted to Parquet at once. Bronze and silver: ZSTD
         > level 3. Gold tables read by dashboards all day: ZSTD or Snappy, sorted on the filter
         > columns. Archive: a high ZSTD level." That answer shows deliberate trade-offs.
+
+        ## In one breath
+
+        Encodings fold each column neatly and a codec vacuum-packs the result; choose both per layer,
+        trading CPU for bytes on purpose. Never leave big gzip text in the lake, because one task must
+        read it end to end.
       `,
       checks: [
         {
@@ -570,46 +855,80 @@ export const track: Track = {
       title: 'Warehouses, lakes and lakehouses',
       summary:
         'Compare the three architectures by storage, format, governance and cost, and say which one fits a given company.',
-      minutes: 14,
+      minutes: 16,
       body: `
-        "Warehouse or lakehouse?" is a common opening question in a design round. A good answer
-        compares them on concrete properties and then chooses for the company in front of you.
+        ## Start with the problem
 
-        ## Three architectures
+        A design interviewer opens with: "Warehouse or lakehouse?" The weak answer picks the newest
+        word. The strong answer compares them on concrete properties, then chooses for the company in
+        front of you.
 
-        | | **Data warehouse** | **Data lake** | **Lakehouse** |
-        |---|---|---|---|
-        | Storage | Managed, proprietary | Object storage | Object storage |
-        | Format | Internal columnar format | Open files: Parquet, JSON, CSV | Open files plus an open table format (Iceberg, Delta, Hudi) |
-        | Transactions | Full ACID | None: files appear one by one | ACID per table through the table format |
-        | Schema | On write, enforced | On read, often drifting | On write, with evolution rules |
-        | Engines | One (the vendor's) | Many, but each must guess the table state | Many, sharing one table state through a catalog |
-        | Governance | Built in: grants, masking, audit | Bucket permissions only | A catalog with grants, row filters and masks |
-        | Strength | Fast SQL, low operations work | Cheap, any data type, ML access | Open, one copy, many engines |
-        | Weakness | Lock-in, cost of compute and copies | "Data swamp", no updates, no consistency | You run more pieces: compaction, catalog, engines |
+        To do that you need the story of why there are three architectures at all.
 
-        ## How we got here
+        ## Idea 1: how we got here, in four steps
 
-        1. **Warehouses** (Teradata, then Redshift, BigQuery, Snowflake) gave fast SQL on structured data.
+        1. **Warehouses** (Teradata, then Redshift, BigQuery, Snowflake) gave fast SQL on structured
+           data.
         2. **Lakes** (HDFS, then S3) stored everything cheaply, including logs and images for ML.
         3. Most companies ran **both**: raw data in the lake, a copy in the warehouse for BI. That
-           two-tier design doubled storage, added a copy pipeline and gave two answers to one question.
+           two-tier design doubled storage, added a copy pipeline, and gave two answers to one question.
         4. **Lakehouses** put warehouse features (ACID, schema, time travel, governance) on the open
            files, so one copy serves BI, data science and streaming.
 
-        ## The lines are blurring
+        Think of a restaurant (the warehouse), a market (the lake), and then a market hall with proper
+        kitchens inside (the lakehouse). Before the hall, you bought at the market and carried
+        everything to the restaurant. Two places, two bills, and the food in each did not always match.
 
-        - Warehouses read and write open tables: BigQuery tables for Apache Iceberg, Snowflake
-          Iceberg tables, Redshift reading Iceberg through the Glue catalog.
+        ## Idea 2: the three side by side
+
+        **Data warehouse.**
+
+        - Storage: managed, proprietary. Format: an internal columnar format.
+        - Transactions: full ACID. Schema: on write, enforced.
+        - Engines: one, the vendor's.
+        - Governance: built in. Grants, masking, audit.
+        - Strength: fast SQL, low operations work.
+        - Weakness: lock-in, and the cost of compute and copies.
+
+        **Data lake.**
+
+        - Storage: object storage. Format: open files such as Parquet, JSON and CSV.
+        - Transactions: none. Files appear one by one.
+        - Schema: on read, often drifting.
+        - Engines: many, but each must guess the table state.
+        - Governance: bucket permissions only.
+        - Strength: cheap, any data type, ML access.
+        - Weakness: a "data swamp", no updates, no consistency.
+
+        **Lakehouse.**
+
+        - Storage: object storage. Format: open files plus an open table format (Iceberg, Delta, Hudi).
+        - Transactions: ACID per table, through the table format.
+        - Schema: on write, with evolution rules.
+        - Engines: many, sharing one table state through a catalog.
+        - Governance: a catalog with grants, row filters and masks.
+        - Strength: open, one copy, many engines.
+        - Weakness: you run more pieces. Compaction, catalog, engines.
+
+        ## Idea 3: the lines are blurring
+
+        - Warehouses read and write open tables: BigQuery tables for Apache Iceberg, Snowflake Iceberg
+          tables, Redshift reading Iceberg through the Glue catalog.
         - Lakehouse engines give warehouse speed: Databricks SQL with Photon, Trino, StarRocks.
 
         So the real choice is often **who owns the storage and the catalog**: the vendor, or you.
 
-        ## How to choose
+        ## Idea 4: how to choose
 
         - **A small team, mostly BI, one cloud:** a warehouse. Fewer moving parts, quick value.
         - **Large scale, ML and streaming, several engines, cost pressure:** a lakehouse on open tables.
         - **Both:** open tables as the single copy, with the warehouse reading them for BI.
+
+        ## Now say it like a senior engineer
+
+        Warehouses give managed ACID SQL with lock-in; lakes give cheap open files without consistency;
+        lakehouses add ACID and governance to open files so many engines share one copy. As warehouses
+        adopt open tables, the decision is who owns storage and catalog, sized to the team.
 
         > [!trap] "The lake is cheaper" is half the story
         > Storage is cheap in both. The bill is compute and people. A lakehouse that needs three
@@ -619,6 +938,12 @@ export const track: Track = {
         > "With 6 analysts, 2 data engineers and 3 TB, I choose BigQuery and keep raw files in GCS.
         > If we add streaming and ML at 500 TB, I move the core tables to Iceberg so Spark and
         > BigQuery share one copy." Naming the trigger for change is the senior part.
+
+        ## In one breath
+
+        A warehouse is fast and managed but closed, a lake is cheap and open but messy, and a lakehouse
+        puts warehouse guarantees on open files so one copy serves everyone. Choose by team size, scale
+        and who should own the storage, and name what would make you switch.
       `,
       checks: [
         {
@@ -640,55 +965,85 @@ export const track: Track = {
       title: 'Catalogs: Hive Metastore, Glue, Unity and REST',
       summary:
         'Explain what a catalog stores, how it makes a table commit atomic, and how to choose one for several engines.',
-      minutes: 15,
+      minutes: 17,
       body: `
-        A lakehouse table is a set of files plus metadata. The **catalog** tells every engine which
-        metadata is current. Without one shared catalog, two engines see two different tables.
+        ## Start with the problem
 
-        ## What a catalog does
+        Spark writes the «trips» table in the lake. Trino reads it for dashboards. One morning, Trino
+        shows yesterday's numbers, while Spark shows today's. Same files in the same bucket. How can two
+        engines see two different tables?
 
-        1. **Names:** maps «catalog.schema.table» to a location and a current metadata pointer.
-        2. **Atomic commits:** a writer commits by changing that pointer only if nobody else changed
-           it first (compare and swap).
-        3. **Access control:** who can read or write which table, column or row.
-        4. **Discovery and lineage:** descriptions, owners, tags and usage.
+        Because a lakehouse table is a set of files **plus metadata**, and each engine asked a different
+        place "which metadata is current?". The **catalog** is the one place that answers. Without one
+        shared catalog, two engines see two different tables.
 
-        ## How a commit works
+        ## Idea 1: a catalog is the library's front desk
+
+        A library has millions of books on shelves. The front desk keeps the record of where each book
+        is, which edition is current, and who may borrow it. A catalog does four jobs for tables:
+
+        1. **Names.** It maps «catalog.schema.table» to a location and a current metadata pointer.
+        2. **Atomic commits.** A writer commits by changing that pointer, only if nobody else changed it
+           first (compare and swap).
+        3. **Access control.** Who can read or write which table, column or row.
+        4. **Discovery and lineage.** Descriptions, owners, tags and usage.
+
+        ## Idea 2: how a commit works, step by step
 
         ~~~text
-        writer reads current pointer → v41.metadata.json
-        writer writes new data files and v42.metadata.json
-        writer asks catalog: set pointer to v42 IF it is still v41
-          success → readers now see v42
-          conflict → another writer committed v42 first: re-read, check for conflicts, retry
+        1. Read pointer: v41
+        2. Write data files
+           and v42.metadata.json
+        3. Ask catalog:
+           "set pointer to v42,
+            only if it is v41"
+        4a. Yes: readers see v42
+        4b. No: someone else
+            wrote v42 first.
+            Re-read, check for
+            conflicts, retry.
         ~~~
 
-        This is **optimistic concurrency**. Two appends rarely conflict and both succeed after a
-        retry. Two jobs rewriting the same files (a compaction and a «MERGE») can conflict, and one
-        must redo its work. Delta Lake commits a different way: it writes the next numbered file in
-        «_delta_log» with "create only if absent", so the object store or a coordinator acts as
-        the arbiter.
+        This is **optimistic concurrency**. Like booking the last seat on a train: you fill in the form,
+        and at the end the system checks the seat is still free. If someone took it first, you try
+        again.
 
-        ## The catalogs you will meet
+        - Two appends rarely conflict, and both succeed after a retry.
+        - Two jobs rewriting the same files (a compaction and a «MERGE») can conflict, and one must redo
+          its work.
 
-        | Catalog | What it is | Notes |
-        |---|---|---|
-        | **Hive Metastore** | A Thrift service on a relational database | The old default. Knows tables and partitions; no fine-grained access control |
-        | **AWS Glue Data Catalog** | Managed, Hive-compatible, serverless | Used by Athena, EMR, Redshift Spectrum; Lake Formation adds grants |
-        | **Unity Catalog** | Databricks' catalog for tables, volumes, models and functions | Grants, row filters, column masks, lineage; an open source version exists |
-        | **Iceberg REST catalog** | An open HTTP API spec | Any engine speaks it; implementations include Apache Polaris, Unity, Glue and others |
-        | **Nessie** | A catalog with git-like branches and tags | Commit to a branch, test, then merge |
-        | **Managed table services** | S3 Tables, BigLake metastore | The cloud runs the catalog and table maintenance |
+        Delta Lake commits a different way. It writes the next numbered file in «_delta_log» with
+        "create only if absent", so the object store or a coordinator acts as the arbiter.
 
-        ## Choosing
+        ## Idea 3: the catalogs you will meet
+
+        - **Hive Metastore.** A Thrift service on a relational database. The old default. It knows tables
+          and partitions, with no fine-grained access control.
+        - **AWS Glue Data Catalog.** Managed, Hive-compatible and serverless. Used by Athena, EMR and
+          Redshift Spectrum; Lake Formation adds grants.
+        - **Unity Catalog.** Databricks' catalog for tables, volumes, models and functions. Grants, row
+          filters, column masks and lineage. An open source version exists.
+        - **Iceberg REST catalog.** An open HTTP API spec that any engine speaks. Implementations include
+          Apache Polaris, Unity, Glue and others.
+        - **Nessie.** A catalog with git-like branches and tags. Commit to a branch, test, then merge.
+        - **Managed table services.** S3 Tables and the BigLake metastore. The cloud runs the catalog
+          and table maintenance.
+
+        ## Idea 4: choosing one, three questions
 
         - **Which engines must read and write?** If Spark, Trino, Snowflake and BigQuery all need the
-          tables, pick a catalog every one of them supports, which today usually means the Iceberg
-          REST protocol.
-        - **Where do grants live?** Access rules belong in one place. If each engine has its own
-          grants, they drift.
-        - **One writer per table.** Many readers are fine, but one engine should own writes to a
-          table, so commit conflicts and semantics stay simple.
+          tables, pick a catalog every one of them supports. Today that usually means the Iceberg REST
+          protocol.
+        - **Where do grants live?** Access rules belong in one place. If each engine has its own grants,
+          they drift.
+        - **One writer per table.** Many readers are fine, but one engine should own writes to a table,
+          so commit conflicts and semantics stay simple.
+
+        ## Now say it like a senior engineer
+
+        The catalog maps names to the current metadata pointer, commits by compare and swap on that
+        pointer, and holds the grants. Choose one catalog that every engine supports, usually through
+        the Iceberg REST protocol, keep grants there, and give each table a single writing engine.
 
         > [!trap] Two catalogs for one table
         > If Spark registers a table in Hive Metastore and Trino uses a different catalog that also
@@ -698,6 +1053,12 @@ export const track: Track = {
         > [!senior] Make the catalog an explicit design box
         > Draw the catalog in your design, name it, and say who may write each table. Interviewers
         > notice when a lakehouse answer has engines and files but no catalog.
+
+        ## In one breath
+
+        The catalog is the front desk that says which version of each table is current, and a commit is
+        a "change it only if nobody else did" on that one pointer. Use one shared catalog for every
+        engine, with the grants in it, or each engine sees its own truth.
       `,
       checks: [
         {
@@ -729,56 +1090,89 @@ export const track: Track = {
       title: 'Partitioning, clustering and Z-ordering',
       summary:
         'Lay out a table for its filters: partition for coarse pruning, sort or Z-order for skipping inside partitions, and know when liquid clustering fits.',
-      minutes: 14,
+      minutes: 16,
       body: `
-        Partitioning prunes whole folders. Inside a partition, the order of rows decides how many
+        ## Start with the problem
+
+        The «trips» table is partitioned by date. A dashboard asks for one day of trips in pickup zone
+        17. Partitioning already cut it to one day's folder, 2,000 files. But zone 17's trips are spread
+        across all 2,000 files, so the query reads 1,800 of them.
+
+        Partitioning prunes whole folders. **Inside** a partition, the order of rows decides how many
         files and row groups a filter can skip. That second layer is **clustering**.
 
-        ## Linear sort order
+        ## Idea 1: a linear sort helps the first column most
 
-        Sorting by «(city, event_ts)» makes every file cover one or a few cities, so «city = 'SF'»
-        skips most files. But a filter on «event_ts» alone gets little help, because each city's
-        rows span the full time range. A linear sort serves the **first** column well and later
-        columns poorly.
+        Sort the rows by «(city, event_ts)». Now each file covers one or a few cities, so «city = 'SF'»
+        skips most files.
 
-        ## Z-ordering
+        But a filter on «event_ts» alone gets little help. Each city's rows span the full time range, so
+        every file still covers almost all times.
 
-        A Z-order curve interleaves the bits of several columns into one value and sorts by it.
+        Think of a phone book sorted by surname, then first name. Finding every "Sharma" is quick.
+        Finding every "Priya", whatever her surname, means reading the whole book. A linear sort serves
+        the **first** column well and later columns poorly.
+
+        ## Idea 2: Z-ordering helps several columns at once
+
+        A **Z-order curve** interleaves the bits of several columns into one value, and sorts by it.
         Rows close in **any** of the columns end up close on disk.
 
         ~~~text
-        x = 2 → 10, y = 3 → 11
-        interleave y1 x1 y0 x0 → 1 1 1 0 → z = 14
-        sort rows by z → files cover small squares of the (x, y) space
+        x = 2 → bits 10
+        y = 3 → bits 11
+
+        Take bits in turn:
+        y1 x1 y0 x0
+         1  1  1  0  → z = 14
+
+        Sort rows by z.
+        Each file covers a
+        small square of (x, y).
         ~~~
+
+        Think of a city map cut into small squares. Searching by street or by avenue, you only look in
+        a few squares, not the whole map.
 
         - Good for 2 to 4 columns that are filtered **independently**, such as «pickup_zone» and
           «driver_id».
         - Each extra column weakens the benefit for every column.
         - Use high-cardinality columns. A boolean or a three-value column gains little.
 
-        ## How each platform does it
+        ## Idea 3: how each platform does it
 
-        | Platform | Feature |
-        |---|---|
-        | Delta Lake | «OPTIMIZE t ZORDER BY (a, b)»; or **liquid clustering** with «CLUSTER BY (a, b)» |
-        | Iceberg | A table sort order; «rewrite_data_files» with a «sort» or «zorder(a, b)» strategy |
-        | BigQuery | «CLUSTER BY» up to four columns, re-clustered automatically |
-        | Snowflake | Micro-partitions with a clustering key, maintained by Automatic Clustering (billed) |
+        - **Delta Lake:** «OPTIMIZE t ZORDER BY (a, b)», or **liquid clustering** with «CLUSTER BY
+          (a, b)».
+        - **Iceberg:** a table sort order, and «rewrite_data_files» with a «sort» or «zorder(a, b)»
+          strategy.
+        - **BigQuery:** «CLUSTER BY» up to four columns, re-clustered automatically.
+        - **Snowflake:** micro-partitions with a clustering key, maintained by Automatic Clustering
+          (billed).
 
-        ## Liquid clustering
+        ## Idea 4: liquid clustering
 
-        Delta's liquid clustering replaces fixed partitions and Z-order for many tables. You
-        declare clustering columns, it clusters data incrementally (with a Hilbert curve), and you
-        can **change the columns later** without rewriting the table. It cannot be combined with
-        partitioning or Z-order on the same table.
+        Delta's **liquid clustering** replaces fixed partitions and Z-order for many tables.
 
-        ## A decision path
+        - You declare clustering columns.
+        - It clusters data incrementally, with a Hilbert curve.
+        - You can **change the columns later** without rewriting the table.
 
-        1. Is there a column in almost every filter with modest cardinality (a date)? Partition on it.
+        It cannot be combined with partitioning or Z-order on the same table.
+
+        ## Idea 5: a decision path
+
+        1. Is there a column in almost every filter, with modest cardinality (a date)? Partition on it.
         2. Is there one more dominant filter column? Sort by it within partitions.
         3. Are there 2 to 4 columns filtered separately? Z-order or cluster on them.
-        4. Do access patterns change, or is the table small to medium? Prefer liquid or automatic clustering.
+        4. Do access patterns change, or is the table small to medium? Prefer liquid or automatic
+           clustering.
+
+        ## Now say it like a senior engineer
+
+        Partition for coarse pruning, sort within partitions for one dominant filter, and Z-order or
+        multi-column clustering for 2 to 4 independent high-cardinality filters. Liquid or automatic
+        clustering fits changing access patterns. Re-cluster the hot partitions on a schedule and prove
+        the win with files scanned.
 
         > [!trap] Clustering is not free or permanent
         > New writes arrive unsorted, so the layout decays. Clustering rewrites data and costs
@@ -788,6 +1182,12 @@ export const track: Track = {
         > Measure files scanned before and after: "The query read 1,800 of 2,000 files; after
         > Z-ordering on pickup_zone and driver_id it reads 140." Numbers like this show you
         > validated the layout instead of applying it by habit.
+
+        ## In one breath
+
+        Partitions skip folders; clustering decides how many files a filter skips inside them. A plain
+        sort helps only the first column, Z-order helps a few columns at once, and every layout decays,
+        so re-cluster the hot data and measure files scanned.
       `,
       checks: [
         {
