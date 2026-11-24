@@ -13,67 +13,89 @@ export const track: Track = {
       title: 'S3, the Glue catalog and Athena',
       summary:
         'Lay out a data lake on S3, know its request limits and missing rename, and query it through the Glue catalog.',
-      minutes: 15,
+      minutes: 16,
       body: `
-        On AWS the data lake is **Amazon S3**. Everything else, from Spark to Redshift, reads and
-        writes objects there. Three facts about S3 decide most designs.
+        ## Start with the problem
 
-        ## Strongly consistent, but no rename
+        A team moves its Hadoop jobs to AWS and keeps everything as it was, only pointing at S3. Within
+        a month:
 
-        Since December 2020, S3 gives **strong read-after-write consistency** for every PUT, DELETE
-        and LIST. A reader sees a new object as soon as the write returns.
+        - A failed job leaves half an output folder, and a dashboard reads it.
+        - A streaming job writes millions of 10 KB files. The S3 request bill is bigger than the storage
+          bill.
+        - Athena queries that took 5 seconds now spend a minute just planning, because the table has
+          200,000 partitions.
 
-        S3 has **no rename**. A "rename" is a copy plus a delete, object by object. The old Hadoop
-        commit protocol writes to a temp folder and renames it at the end. On S3 that is slow and
-        not atomic: a failed job can leave half a folder behind.
+        On AWS the data lake is **Amazon S3**. Everything else, from Spark to Redshift, reads and writes
+        objects there. Three facts about S3 decide most designs, and each one explains one of the
+        problems above.
+
+        ## Idea 1: strongly consistent, but no rename
+
+        The good news first. Since December 2020, S3 gives **strong read-after-write consistency** for
+        every PUT, DELETE and LIST. A reader sees a new object as soon as the write returns.
+
+        The catch: S3 has **no rename**. A "rename" is a copy plus a delete, object by object. Like
+        moving house by carrying each item separately to the new address, then going back to throw out
+        the old one.
+
+        The old Hadoop commit protocol writes to a temp folder and renames it at the end. On S3 that is
+        slow and not atomic: a failed job can leave half a folder behind. The fixes:
 
         - Use a **table format** (Iceberg, Delta or Hudi). A commit is one atomic metadata swap.
         - For plain Parquet, use the S3A magic committer or the EMRFS S3-optimized committer.
         - Since 2024, S3 supports **conditional writes** («If-None-Match» and «If-Match»), so two
           writers cannot overwrite the same object by accident.
 
-        ## Request limits are per prefix
+        ## Idea 2: request limits are per prefix
 
-        S3 serves at least **3,500 PUT, COPY, POST or DELETE** and **5,500 GET or HEAD requests per
-        second per prefix**. It splits a busy prefix over time. Until it does, extra requests get
-        «503 SlowDown».
+        A **prefix** is the start of an object's key, like a folder path. S3 serves at least **3,500
+        PUT, COPY, POST or DELETE** and **5,500 GET or HEAD requests per second per prefix**. It splits a
+        busy prefix over time. Until it does, extra requests get «503 SlowDown».
 
-        | Layout | Effect |
-        |---|---|
-        | «s3://lake/raw/trips/dt=2026-11-03/» | One hot prefix per day. Fine for most loads. |
-        | Millions of 10 KB files | Request cost and listing time dominate. Compact them. |
-        | 128 MB to 1 GB Parquet files | The sweet spot for Spark, Athena and Redshift Spectrum |
+        How layout plays out:
 
-        Each request costs money. Ten million small PUTs cost more than the storage of the bytes in
-        them.
+        - «s3://lake/raw/trips/dt=2026-11-03/»: one hot prefix per day. Fine for most loads.
+        - Millions of 10 KB files: request cost and listing time dominate. Compact them.
+        - 128 MB to 1 GB Parquet files: the sweet spot for Spark, Athena and Redshift Spectrum.
 
-        ## Storage classes and lifecycle
+        Each request costs money. Ten million small PUTs cost more than the storage of the bytes in them.
+        Like paying a fee per envelope: posting a book one page per envelope costs more than the book.
 
-        | Class | Use for | Catch |
-        |---|---|---|
-        | Standard | Hot data | The most expensive per GB |
-        | Intelligent-Tiering | Unknown access patterns | A small per-object monitoring fee |
-        | Standard-IA | Read about once a month | 30-day minimum and a retrieval fee |
-        | Glacier Instant Retrieval | Read a few times a year | 90-day minimum |
-        | Glacier Deep Archive | Compliance copies | Hours to restore, 180-day minimum |
+        ## Idea 3: storage classes, hot shelf to deep basement
 
-        A **lifecycle rule** moves or expires objects by prefix and age. A versioned bucket also
-        keeps old versions forever unless a rule expires noncurrent versions.
+        - **Standard:** hot data. The most expensive per GB.
+        - **Intelligent-Tiering:** unknown access patterns. A small per-object monitoring fee.
+        - **Standard-IA:** read about once a month. A 30-day minimum and a retrieval fee.
+        - **Glacier Instant Retrieval:** read a few times a year. A 90-day minimum.
+        - **Glacier Deep Archive:** compliance copies. Hours to restore, and a 180-day minimum.
 
-        ## The catalog and Athena
+        A **lifecycle rule** moves or expires objects by prefix and age. A versioned bucket also keeps old
+        versions forever unless a rule expires noncurrent versions.
 
-        The **AWS Glue Data Catalog** is a Hive-compatible metastore: databases, tables, columns and
-        partitions over S3 paths. Athena, EMR, Glue jobs and Redshift Spectrum all read it.
-        **Crawlers** infer schemas, but they guess. On a stable pipeline, register tables from code.
+        ## Idea 4: the catalog and Athena
 
-        **Athena** is serverless SQL over the catalog (Trino and Spark engines). SQL queries cost
-        about **$5 per TB scanned**. Parquet plus partition filters is the whole cost strategy.
-        **Partition projection** computes partitions from a pattern, so Athena does not list
-        thousands of partitions from the catalog.
+        Files alone are not tables. Something must say "this folder is the trips table, with these
+        columns and partitions".
 
-        **Lake Formation** adds fine-grained grants on catalog tables: column and row filters, and
-        tag-based access (LF-tags). **S3 Tables** (2024) are managed Iceberg tables in a special
-        bucket type, with compaction run for you.
+        - The **AWS Glue Data Catalog** is a Hive-compatible metastore: databases, tables, columns and
+          partitions over S3 paths. Athena, EMR, Glue jobs and Redshift Spectrum all read it.
+        - **Crawlers** infer schemas, but they guess. On a stable pipeline, register tables from code.
+        - **Athena** is serverless SQL over the catalog (Trino and Spark engines). SQL queries cost about
+          **$5 per TB scanned**. Parquet plus partition filters is the whole cost strategy.
+        - **Partition projection** computes partitions from a pattern, so Athena does not list thousands
+          of partitions from the catalog. That fixes the slow planning in the story.
+        - **Lake Formation** adds fine-grained grants on catalog tables: column and row filters, and
+          tag-based access (LF-tags).
+        - **S3 Tables** (2024) are managed Iceberg tables in a special bucket type, with compaction run
+          for you.
+
+        ## Now say it like a senior engineer
+
+        S3 is strongly consistent but has no atomic rename, so writes commit through a table format or an
+        S3-aware committer. Request limits and per-request cost favour 128 MB to 1 GB files. Tables live
+        in the Glue catalog, Athena is priced per byte scanned, and partition projection or table-format
+        metadata avoids huge partition listings.
 
         > [!senior] Name the commit protocol
         > When you put S3 in a design, say how a write becomes visible: an Iceberg or Delta commit,
@@ -83,6 +105,12 @@ export const track: Track = {
         > [!trap] The listing that takes an hour
         > A Hive table with 200,000 partitions makes every query plan list or fetch them all. Use
         > coarser partitions, partition projection or a table format with its own metadata.
+
+        ## In one breath
+
+        S3 is consistent but cannot rename, charges per request and limits each prefix, so commit through
+        a table format and write big files. The Glue catalog turns folders into tables, and Athena bills
+        by bytes scanned, so Parquet and partition filters are your cost plan.
       `,
       checks: [
         {
@@ -115,40 +143,61 @@ export const track: Track = {
       title: 'Glue, EMR and Redshift',
       summary:
         'Pick between Glue, EMR and Athena for Spark work, and design Redshift tables with the right distribution and sort keys.',
-      minutes: 16,
+      minutes: 17,
       body: `
-        AWS gives you several ways to run the same Spark job. The choice is about control, cost
-        shape and team skills, not about features.
+        ## Start with the problem
 
-        ## Where Spark runs
+        You have one Spark job. On AWS you can run it five different ways, and the bill can differ by
+        five times. Then the warehouse team says their Redshift join of trips to drivers takes 20 minutes,
+        on a cluster that is mostly idle.
 
-        | Option | You manage | Pay for | Best when |
-        |---|---|---|---|
-        | **Glue jobs** | The script | DPU-seconds (about $0.44 per DPU-hour) | Spiky, medium jobs; small teams |
-        | **EMR on EC2** | Cluster size, instance types, Spot | The instances plus an EMR fee | Large, steady jobs; tuning matters |
-        | **EMR Serverless** | The job and limits | vCPU and memory per second | Spark without a cluster to run |
-        | **EMR on EKS** | Kubernetes | Pods on your cluster | A team already runs Kubernetes |
-        | **Athena** | SQL only | Bytes scanned | Ad hoc and light transforms |
+        Both problems have the same root: **where the work physically runs**. For Spark, the choice is
+        about control, cost shape and team skills, not about features. For Redshift, it is about which
+        rows sit on which machine.
 
-        A Glue **DPU** is 4 vCPU and 16 GB. Glue adds **job bookmarks** to process only new files,
-        and a **Flex** class that is cheaper for jobs that can wait. At a steady heavy load, EMR on
-        EC2 with **Spot task nodes** is usually the cheapest. Keep core nodes on demand: they hold
-        HDFS and shuffle data, and losing them fails the job.
+        ## Idea 1: five places to run Spark, like five ways to get a car
 
-        ## Redshift in one picture
+        Buy, lease, rent by the hour, borrow a friend's, or take a taxi. Each fits a different driver.
 
-        **Redshift** is an MPP columnar warehouse. A cluster has nodes, and each node has
-        **slices**. A table's rows are spread over the slices. A join or aggregation is fast when
-        the rows it needs are already on the same slice.
+        - **Glue jobs.** You manage the script. You pay for DPU-seconds (about $0.44 per DPU-hour). Best
+          for spiky, medium jobs and small teams.
+        - **EMR on EC2.** You manage cluster size, instance types and Spot. You pay for the instances plus
+          an EMR fee. Best for large, steady jobs where tuning matters.
+        - **EMR Serverless.** You manage the job and its limits. You pay for vCPU and memory per second.
+          Spark without a cluster to run.
+        - **EMR on EKS.** You manage Kubernetes. You pay for pods on your cluster. Best when a team
+          already runs Kubernetes.
+        - **Athena.** SQL only. You pay for bytes scanned. Best for ad hoc and light transforms.
 
-        - **RA3** nodes keep data in Redshift managed storage on S3 and cache hot blocks on local
-          SSD, so storage and compute scale apart.
+        A few facts interviewers check:
+
+        - A Glue **DPU** is 4 vCPU and 16 GB.
+        - Glue adds **job bookmarks** to process only new files, and a **Flex** class that is cheaper
+          for jobs that can wait.
+        - At a steady heavy load, EMR on EC2 with **Spot task nodes** is usually the cheapest. Keep core
+          nodes on demand: they hold HDFS and shuffle data, and losing them fails the job.
+
+        ## Idea 2: Redshift is many workers, each with their own pile
+
+        **Redshift** is an MPP columnar warehouse. A cluster has nodes, and each node has **slices**. A
+        table's rows are spread over the slices.
+
+        Think of a team of clerks, each with a pile of forms. To match each trip form with its driver
+        form, a clerk needs both forms in their own pile. If they are in different piles, forms must be
+        passed across the room first, and that is the slow part.
+
+        A join or aggregation is fast when the rows it needs are already on the same slice.
+
+        Around that core:
+
+        - **RA3** nodes keep data in Redshift managed storage on S3, and cache hot blocks on local SSD,
+          so storage and compute scale apart.
         - **Redshift Serverless** bills in RPU-hours while queries run. It suits uneven load.
-        - **Spectrum** queries S3 tables from the Glue catalog. **Concurrency scaling** adds
-          capacity for bursts. **Data sharing** lets other clusters read without copies.
+        - **Spectrum** queries S3 tables from the Glue catalog. **Concurrency scaling** adds capacity for
+          bursts. **Data sharing** lets other clusters read without copies.
         - **Zero-ETL integrations** replicate Aurora, RDS and DynamoDB tables into Redshift.
 
-        ## Distribution and sort keys
+        ## Idea 3: distribution keys decide whose pile a row goes in
 
         ~~~sql
         CREATE TABLE fct_trips (
@@ -169,21 +218,35 @@ export const track: Track = {
         DISTSTYLE ALL;
         ~~~
 
-        | Style | Rows go | Use for |
-        |---|---|---|
-        | «KEY» | By hash of one column | Large tables joined on that column |
-        | «ALL» | A full copy on every node | Small dimensions |
-        | «EVEN» | Round robin | Tables with no dominant join |
-        | «AUTO» | Redshift chooses and changes it | The default; fine until a join is slow |
+        - «KEY»: rows go by the hash of one column. For large tables joined on that column.
+        - «ALL»: a full copy on every node. For small dimensions.
+        - «EVEN»: round robin. For tables with no dominant join.
+        - «AUTO»: Redshift chooses and changes it. The default; fine until a join is slow.
 
-        Read the plan. «DS_DIST_NONE» means the join is co-located. «DS_BCAST_INNER» copies the
-        inner table to every node. «DS_DIST_BOTH» moves both tables, the most expensive case.
+        Read the plan to see whether forms are being passed around:
 
-        A **sort key** stores rows in order, so zone maps skip blocks a filter does not need. Put
-        the column most queries filter on, usually the date, first.
+        - «DS_DIST_NONE»: the join is co-located. Nothing moves.
+        - «DS_BCAST_INNER»: the inner table is copied to every node.
+        - «DS_DIST_BOTH»: both tables move. The most expensive case.
 
-        Load with «COPY» from S3, never row inserts. Split the input into files of similar size,
-        with a file count that is a multiple of the slice count, so every slice works.
+        The 20-minute join from the story showed «DS_DIST_BOTH». Distributing both tables on
+        «driver_id» makes it «DS_DIST_NONE».
+
+        ## Idea 4: sort keys and loading
+
+        A **sort key** stores rows in order, so zone maps skip blocks a filter does not need. Put the
+        column most queries filter on, usually the date, first.
+
+        Load with «COPY» from S3, never row inserts. Split the input into files of similar size, with a
+        file count that is a multiple of the slice count, so every slice works. Twelve slices and one
+        giant file means one busy clerk and eleven waiting.
+
+        ## Now say it like a senior engineer
+
+        Choose Spark compute by cost shape and control: Glue for spiky jobs, EMR on EC2 with Spot task
+        nodes for steady heavy load, serverless options to avoid clusters. In Redshift, co-locate the big
+        join with a distribution key, replicate small dimensions, sort by the main filter, and load with
+        COPY from evenly split files.
 
         > [!senior] Distribution key choice
         > Pick the column of the biggest join, and check it has many distinct values and no giant
@@ -193,6 +256,12 @@ export const track: Track = {
         > [!trap] Spot for everything
         > Spot can save up to about 90%, and AWS can take the instance back with two minutes of
         > notice. Spot core nodes on a long EMR job turn savings into reruns.
+
+        ## In one breath
+
+        Pick where Spark runs by how much control you want and how steady the load is, and keep core
+        nodes off Spot. In Redshift, put the rows that join together on the same slice, sort by the main
+        filter, and load big evenly split files with COPY.
       `,
       checks: [
         {
@@ -220,18 +289,29 @@ export const track: Track = {
       title: 'Kinesis, MSK and Step Functions',
       summary:
         'Size a Kinesis stream, choose between Kinesis and MSK, and choose between Step Functions and Airflow.',
-      minutes: 15,
+      minutes: 16,
       body: `
-        ## Kinesis Data Streams
+        ## Start with the problem
 
-        A Kinesis stream is a log split into **shards**. In provisioned mode, each shard takes up to
-        **1 MB/s or 1,000 records/s in** and gives **2 MB/s out**. All standard consumers share the
-        2 MB/s out, with up to 5 read calls per second per shard.
+        The trips app sends 40,000 events a second. Five teams want to read them: fraud, pricing, the
+        lake, a live dashboard and a search index. Then, when a file lands, a chain of AWS steps must run,
+        and each night a calendar of dependent data jobs must run too.
+
+        On AWS you have two logs (Kinesis and MSK), one pipe (Firehose) and two schedulers (Step
+        Functions and Airflow). Picking well means knowing what each one is really built for.
+
+        ## Idea 1: Kinesis Data Streams, a log cut into lanes
+
+        A Kinesis stream is a log split into **shards**. Think of a motorway with lanes. Each lane has a
+        speed limit.
+
+        In provisioned mode, each shard takes up to **1 MB/s or 1,000 records/s in** and gives **2 MB/s
+        out**. All standard consumers share the 2 MB/s out, with up to 5 read calls per second per shard.
 
         - **Enhanced fan-out** gives each registered consumer its own 2 MB/s per shard, pushed over
-          HTTP/2. Use it with more than two or three consumers.
-        - The **partition key** picks the shard. Order holds inside a shard only. A hot key makes a
-          hot shard, and more shards do not help.
+          HTTP/2. Use it with more than two or three consumers. With five teams reading, you need it.
+        - The **partition key** picks the shard. Order holds inside a shard only. A hot key makes a hot
+          shard, and more shards do not help: one lane is jammed however many lanes you add.
         - Retention is 24 hours by default and up to 365 days.
         - **On-demand mode** scales shards for you. It costs more per GB at a steady load.
         - The **KCL** keeps checkpoints and shard leases in a DynamoDB table.
@@ -240,39 +320,62 @@ export const track: Track = {
         shards for the bytes and 40 for the record count. Add headroom for peaks: about 60 shards.
 
         **Amazon Data Firehose** delivers a stream to S3, Redshift, OpenSearch, Snowflake or Iceberg
-        tables. It buffers by size and time, and can convert JSON to Parquet. It has no replay and
-        no custom consumers. It is a pipe, not a log.
+        tables. It buffers by size and time, and can convert JSON to Parquet. It has no replay and no
+        custom consumers. It is a pipe, not a log.
 
-        ## MSK: managed Kafka
+        ## Idea 2: MSK, managed Kafka
 
-        **Amazon MSK** runs Apache Kafka. **Provisioned** clusters use Standard or Express brokers.
-        **MSK Serverless** sizes itself, with lower limits. **MSK Connect** runs Kafka Connect.
+        **Amazon MSK** runs Apache Kafka.
 
-        | | Kinesis Data Streams | MSK |
-        |---|---|---|
-        | API | AWS SDK and KCL | Kafka clients, Connect, Streams |
-        | Scale unit | Shard | Partition and broker |
-        | Retention | Up to 365 days | Set by you, tiered storage for long |
-        | Ops work | Almost none | Brokers, partitions, upgrades, quotas |
-        | Ecosystem | AWS services, Flink | Every Kafka tool, Debezium, schema registries |
-        | Lock-in | AWS only | Kafka protocol, portable |
+        - **Provisioned** clusters use Standard or Express brokers.
+        - **MSK Serverless** sizes itself, with lower limits.
+        - **MSK Connect** runs Kafka Connect.
 
-        Choose Kinesis for an AWS-native team with few consumers and no Kafka skills. Choose MSK
-        when you need the Kafka ecosystem, Debezium CDC, many consumer groups, or a path to another
-        cloud. **Amazon Managed Service for Apache Flink** runs Flink jobs on either one.
+        Kinesis or MSK, side by side:
 
-        ## Step Functions or Airflow
+        **Kinesis Data Streams.**
 
-        **Step Functions** is a serverless state machine. It calls AWS services directly, with
-        retries, catches and parallel branches.
+        - API: the AWS SDK and the KCL.
+        - Scale unit: the shard.
+        - Retention: up to 365 days.
+        - Ops work: almost none.
+        - Ecosystem: AWS services, Flink.
+        - Lock-in: AWS only.
 
-        | Type | Runs for | Semantics | Priced by |
-        |---|---|---|---|
-        | Standard | Up to one year | Exactly once per step | State transitions |
-        | Express | Up to five minutes | At least once | Requests and duration |
+        **MSK.**
 
-        A **Distributed Map** state fans out over millions of S3 objects. **MWAA** is managed
-        Airflow. **EventBridge Scheduler** starts either one on a schedule.
+        - API: Kafka clients, Connect, Streams.
+        - Scale unit: the partition and the broker.
+        - Retention: set by you, with tiered storage for long periods.
+        - Ops work: brokers, partitions, upgrades, quotas.
+        - Ecosystem: every Kafka tool, Debezium, schema registries.
+        - Lock-in: the Kafka protocol is portable.
+
+        Choose Kinesis for an AWS-native team with few consumers and no Kafka skills. Choose MSK when you
+        need the Kafka ecosystem, Debezium CDC, many consumer groups, or a path to another cloud.
+        **Amazon Managed Service for Apache Flink** runs Flink jobs on either one.
+
+        ## Idea 3: Step Functions or Airflow
+
+        **Step Functions** is a serverless state machine. It calls AWS services directly, with retries,
+        catches and parallel branches. Two types:
+
+        - **Standard:** runs for up to one year. Exactly once per step. Priced by state transitions.
+        - **Express:** runs for up to five minutes. At least once. Priced by requests and duration.
+
+        A **Distributed Map** state fans out over millions of S3 objects. **MWAA** is managed Airflow.
+        **EventBridge Scheduler** starts either one on a schedule.
+
+        Think of a relay race versus a train timetable. Step Functions is the relay: one event starts it,
+        and each runner hands the baton to the next. Airflow is the timetable: every day has its runs, and
+        you can rerun last Tuesday.
+
+        ## Now say it like a senior engineer
+
+        Kinesis scales by shards at 1 MB/s in and 2 MB/s out each, keeps order per partition key, and
+        needs enhanced fan-out for many consumers. MSK brings the Kafka ecosystem at the cost of
+        operations. Firehose is delivery without replay. Step Functions runs event-driven AWS chains;
+        Airflow runs data calendars with backfills.
 
         > [!senior] Event workflows versus a data calendar
         > Step Functions fits event-driven chains of AWS calls: a file lands, a Glue job runs, a
@@ -282,6 +385,12 @@ export const track: Track = {
         > [!trap] Shards for the bytes, not the keys
         > Ten times more shards do not fix one partition key that carries 20% of traffic. Salt the
         > key, or aggregate before you write.
+
+        ## In one breath
+
+        Kinesis is a log in shard-sized lanes, MSK is Kafka you operate less of, and Firehose is a pipe
+        with no replay. Use Step Functions for event-driven chains of AWS steps and Airflow for a calendar
+        of data runs you may need to backfill.
       `,
       checks: [
         {
@@ -313,73 +422,95 @@ export const track: Track = {
       title: 'The Azure data stack',
       summary:
         'Use ADLS Gen2, Data Factory, Synapse and Event Hubs, and map each service to its AWS and GCP peer.',
-      minutes: 15,
+      minutes: 16,
       body: `
-        ## ADLS Gen2
+        ## Start with the problem
 
-        **Azure Data Lake Storage Gen2** is Blob Storage with the **hierarchical namespace** turned
-        on. Folders are real, so a directory rename is one atomic operation, and POSIX-style ACLs
-        apply per folder and file. Spark commits are cheaper than on a flat object store. Turn the
-        namespace on when you create the account. You cannot turn it off later.
+        You know AWS well. The interviewer says: "We are an Azure shop. How would you build this?" You
+        know the patterns, a log, a lake, a warehouse and an orchestrator, but not the Azure names, and
+        some Azure services behave differently in ways that matter.
 
-        ## Azure Data Factory
+        This lesson maps the Azure data stack piece by piece, and ends with one table you can use in any
+        cloud.
+
+        ## Idea 1: ADLS Gen2, a lake with real folders
+
+        **Azure Data Lake Storage Gen2** is Blob Storage with the **hierarchical namespace** turned on.
+
+        On S3, a "folder" is only the start of a name, so renaming it means copying every file. On ADLS
+        Gen2, folders are real. Like a real filing cabinet versus labels written on loose papers.
+
+        - A directory rename is one atomic operation.
+        - POSIX-style ACLs apply per folder and file.
+        - Spark commits are cheaper than on a flat object store.
+
+        Turn the namespace on when you create the account. You cannot turn it off later.
+
+        ## Idea 2: Data Factory, the scheduler and mover
 
         **Data Factory** (ADF) is the managed orchestration and copy service.
 
-        - A **pipeline** holds **activities**: Copy, a Databricks notebook, a stored procedure, a
-          ForEach loop and so on.
+        - A **pipeline** holds **activities**: Copy, a Databricks notebook, a stored procedure, a ForEach
+          loop and so on.
         - A **linked service** is a connection. A **dataset** points at data through it.
-        - **Triggers**: schedule, **tumbling window** (fixed intervals with dependencies and
-          backfill), and storage events.
-        - The **integration runtime** (IR) is the compute. The **Azure IR** runs in the cloud. A
-          **self-hosted IR** runs on a machine inside your network, to reach on-premises databases.
-          The **Azure-SSIS IR** runs old SSIS packages.
+        - **Triggers**: schedule, **tumbling window** (fixed intervals with dependencies and backfill),
+          and storage events.
+        - The **integration runtime** (IR) is the compute.
+          - The **Azure IR** runs in the cloud.
+          - A **self-hosted IR** runs on a machine inside your network, to reach on-premises databases.
+          - The **Azure-SSIS IR** runs old SSIS packages.
 
-        Mapping data flows run on managed Spark. They are fine for simple shapes. Heavy logic
-        belongs in Databricks, Spark or SQL, with ADF as the scheduler.
+        Mapping data flows run on managed Spark. They are fine for simple shapes. Heavy logic belongs in
+        Databricks, Spark or SQL, with ADF as the scheduler.
 
-        ## Synapse and Fabric
+        ## Idea 3: Synapse and Fabric
 
         **Azure Synapse Analytics** joins three engines:
 
         - A **dedicated SQL pool**: an MPP warehouse sized in DWUs. Every table is spread over **60
-          distributions**: **hash**, **round robin** or **replicated**. The same rules as Redshift
-          apply: hash the big fact on its join key, replicate small dimensions.
+          distributions**: **hash**, **round robin** or **replicated**. The same rules as Redshift apply:
+          hash the big fact on its join key, replicate small dimensions.
         - A **serverless SQL pool**: SQL over lake files, about $5 per TB processed.
         - **Spark pools**.
 
         Microsoft now puts new analytics work into **Microsoft Fabric** (generally available since
-        November 2023). Fabric is a SaaS platform on **OneLake**, with Delta tables as the shared
-        format. Synapse is still supported. For a new platform, expect "why not Fabric?" and know
-        that **Azure Databricks** is the other common answer.
+        November 2023). Fabric is a SaaS platform on **OneLake**, with Delta tables as the shared format.
+        Synapse is still supported. For a new platform, expect "why not Fabric?", and know that **Azure
+        Databricks** is the other common answer.
 
-        ## Event Hubs
+        ## Idea 4: Event Hubs, the Azure event log
 
-        **Event Hubs** is the Azure event log. It has **partitions** and **consumer groups**, like
-        Kafka.
+        **Event Hubs** has **partitions** and **consumer groups**, like Kafka.
 
-        - On Standard, capacity is **throughput units**: each gives 1 MB/s or 1,000 events/s in
-          and 2 MB/s out. Auto-inflate adds units under load.
-        - Standard and higher tiers speak the **Kafka protocol**. Kafka clients connect with a
-          config change.
-        - **Capture** writes the stream to ADLS or Blob as Avro files on a time or size window.
+        - On Standard, capacity is **throughput units**. Each gives 1 MB/s or 1,000 events/s in and 2
+          MB/s out. Auto-inflate adds units under load.
+        - Standard and higher tiers speak the **Kafka protocol**. Kafka clients connect with a config
+          change.
+        - **Capture** writes the stream to ADLS or Blob as Avro files, on a time or size window.
         - On Standard, the partition count is fixed when you create the hub. Plan it for the peak.
 
-        ## One table across three clouds
+        ## Idea 5: one job, three clouds
 
-        | Job | AWS | Azure | GCP |
-        |---|---|---|---|
-        | Object store | S3 | ADLS Gen2 | Cloud Storage |
-        | Table catalog | Glue Data Catalog | Unity Catalog or Purview | Dataplex, BigLake metastore |
-        | SQL on the lake | Athena | Synapse serverless, Fabric | BigQuery external tables |
-        | Warehouse | Redshift | Synapse dedicated, Fabric Warehouse | BigQuery |
-        | Managed Spark | EMR, Glue | Databricks, Synapse Spark | Dataproc |
-        | Event log | Kinesis Data Streams | Event Hubs | Pub/Sub |
-        | Managed Kafka | MSK | Event Hubs Kafka endpoint | Managed Service for Apache Kafka |
-        | Airflow | MWAA | Apache Airflow jobs in Fabric | Cloud Composer |
-        | Workflow engine | Step Functions | Logic Apps, ADF pipelines | Workflows |
-        | Workload identity | IAM role | Managed identity | Service account |
-        | Secrets | Secrets Manager | Key Vault | Secret Manager |
+        Same job, three names. Read each line as AWS / Azure / GCP.
+
+        - **Object store:** S3 / ADLS Gen2 / Cloud Storage.
+        - **Table catalog:** Glue Data Catalog / Unity Catalog or Purview / Dataplex, BigLake metastore.
+        - **SQL on the lake:** Athena / Synapse serverless, Fabric / BigQuery external tables.
+        - **Warehouse:** Redshift / Synapse dedicated, Fabric Warehouse / BigQuery.
+        - **Managed Spark:** EMR, Glue / Databricks, Synapse Spark / Dataproc.
+        - **Event log:** Kinesis Data Streams / Event Hubs / Pub/Sub.
+        - **Managed Kafka:** MSK / Event Hubs Kafka endpoint / Managed Service for Apache Kafka.
+        - **Airflow:** MWAA / Apache Airflow jobs in Fabric / Cloud Composer.
+        - **Workflow engine:** Step Functions / Logic Apps, ADF pipelines / Workflows.
+        - **Workload identity:** IAM role / managed identity / service account.
+        - **Secrets:** Secrets Manager / Key Vault / Secret Manager.
+
+        ## Now say it like a senior engineer
+
+        ADLS Gen2 adds a real namespace with atomic renames and ACLs. ADF orchestrates and copies through
+        integration runtimes, with heavy logic elsewhere. Synapse dedicated pools distribute like
+        Redshift, Fabric is the new default on OneLake, and Event Hubs is a partitioned log with a Kafka
+        endpoint.
 
         > [!senior] Answer in the interviewer's cloud
         > Design with the pattern first (log, lake, warehouse, orchestrator), then name the service
@@ -389,6 +520,12 @@ export const track: Track = {
         > [!trap] Event Hubs is not all of Kafka
         > The Kafka endpoint speaks the protocol. Compacted topics, Kafka Streams state stores and
         > some admin APIs have limits or tier rules. Check before you promise a lift-and-shift.
+
+        ## In one breath
+
+        Azure has a lake with real folders (ADLS Gen2), a scheduler and mover (ADF), warehouses in
+        Synapse and Fabric, and a Kafka-like log (Event Hubs). Design with the pattern first, then name
+        the service for the interviewer's cloud.
       `,
       checks: [
         {
@@ -421,20 +558,34 @@ export const track: Track = {
       title: 'IAM and networking for data platforms',
       summary:
         'Grant least privilege with roles instead of keys, share data across accounts, and route traffic so it is private and cheap.',
-      minutes: 16,
+      minutes: 17,
       body: `
-        ## IAM in four ideas
+        ## Start with the problem
 
-        1. A **principal** (a user, a role, a service) makes a request.
-        2. A **policy** allows or denies actions on resources. An **explicit deny always wins**.
-           With no allow, the answer is deny.
-        3. A **role** has no password or key. A principal assumes it and gets credentials that
-           expire in minutes or hours.
-        4. **Identity-based** policies attach to the caller. **Resource-based** policies, such as an
-           S3 bucket policy or a KMS key policy, attach to the resource.
+        A Spark job in the analytics account must read trips from a bucket in the data account. It fails
+        with "Access Denied". The engineer adds «s3:*» on «*» to the role. Still denied. Then it works in
+        dev, and fails an audit in production.
 
-        A read-only grant on one prefix needs two statements, because «ListBucket» acts on the
-        bucket and «GetObject» acts on objects:
+        The same month, the cloud bill shows $13,500 for something called "NAT gateway".
+
+        Both come from the same gap: data engineers often treat identity and networking as someone
+        else's job. In interviews, and on call, they are yours.
+
+        ## Idea 1: IAM in four ideas
+
+        Think of an office building with key cards.
+
+        1. A **principal** (a user, a role, a service) makes a request. The person at the door.
+        2. A **policy** allows or denies actions on resources. An **explicit deny always wins**. With no
+           allow, the answer is deny. The door's rule list.
+        3. A **role** has no password or key. A principal assumes it and gets credentials that expire in
+           minutes or hours. A visitor badge that stops working tonight.
+        4. **Identity-based** policies attach to the caller. **Resource-based** policies, such as an S3
+           bucket policy or a KMS key policy, attach to the resource. Rules on the card, and rules on the
+           door.
+
+        A read-only grant on one prefix needs two statements, because «ListBucket» acts on the bucket and
+        «GetObject» acts on objects:
 
         ~~~json
         {
@@ -457,46 +608,60 @@ export const track: Track = {
         }
         ~~~
 
-        ## Cross-account access
+        ## Idea 2: cross-account access needs both sides
 
-        Large companies keep data in its own AWS account. A reader in another account needs
-        **both sides** to allow it:
+        Large companies keep data in its own AWS account. A reader in another account needs **both
+        sides** to allow it. Like visiting a friend's building: your company must let you go, and their
+        building must let you in.
 
         - Same account: the identity policy **or** the resource policy can allow.
         - Cross account: the caller's identity policy **and** the bucket policy must allow.
-        - If objects use a customer-managed **KMS key**, the key policy must allow the reader too.
-          This is the step people forget, and the error says "Access Denied".
+        - If objects use a customer-managed **KMS key**, the key policy must allow the reader too. This
+          is the step people forget, and the error says "Access Denied". That is the story above: «s3:*»
+          never helps when the key policy says no.
 
-        At the organisation level, **service control policies** cap what any account may do.
-        **Permission boundaries** cap what a role may grant.
+        At the organisation level, **service control policies** cap what any account may do. **Permission
+        boundaries** cap what a role may grant.
 
-        ## No long-lived keys
+        ## Idea 3: no long-lived keys
 
         Workloads get identity from the platform, never from a key in a file:
 
         - EC2 and EMR: an **instance profile**. EKS: **IRSA** or **EKS Pod Identity**.
         - CI: **OIDC federation**. GitHub Actions exchanges a signed token for a role.
-        - Azure: a **managed identity** with Azure RBAC roles. GCP: a service account with
-          workload identity federation.
+        - Azure: a **managed identity** with Azure RBAC roles. GCP: a service account with workload
+          identity federation.
 
-        ## Networking for data engineers
+        ## Idea 4: networking for data engineers
 
-        - A **VPC** holds **subnets**. A private subnet has no route from the internet.
-        - A **NAT gateway** lets private machines call out. It charges per hour and per GB
-          processed: about $0.045 per GB in us-east-1.
-        - A **gateway endpoint** for S3 and DynamoDB routes that traffic privately, and it is
-          **free**. **Interface endpoints** (PrivateLink) reach other services for an hourly and
-          per-GB fee.
-        - **Security groups** are stateful and attach to instances. **Network ACLs** are stateless
-          and attach to subnets.
+        A **VPC** is your private estate. **Subnets** are its streets. A private subnet has no road from
+        the internet.
+
+        - A **NAT gateway** lets private machines call out. It charges per hour and per GB processed:
+          about $0.045 per GB in us-east-1. A toll booth on the way out.
+        - A **gateway endpoint** for S3 and DynamoDB routes that traffic privately, and it is **free**. A
+          private road with no toll. **Interface endpoints** (PrivateLink) reach other services for an
+          hourly and per-GB fee.
+        - **Security groups** are stateful and attach to instances. **Network ACLs** are stateless and
+          attach to subnets.
         - Data between Availability Zones costs about $0.01 per GB in each direction. Kafka that
           replicates across three zones pays it on every byte.
         - Azure: a **VNet**, **private endpoints** for storage and databases, and managed virtual
           networks in ADF and Synapse.
 
-        Encryption: S3 encrypts every new object by default (SSE-S3). **SSE-KMS** with your own key
-        adds key-level audit and control. Turn on **S3 Bucket Keys**, or a busy job can hit KMS
-        request limits and costs.
+        Tiny example, the NAT bill: 300 TB a month × 1,000 GB × $0.045 is about $13,500. Through a
+        gateway endpoint it is $0.
+
+        ## Idea 5: encryption
+
+        S3 encrypts every new object by default (SSE-S3). **SSE-KMS** with your own key adds key-level
+        audit and control. Turn on **S3 Bucket Keys**, or a busy job can hit KMS request limits and costs.
+
+        ## Now say it like a senior engineer
+
+        Policies default to deny and an explicit deny wins. Cross-account reads need the identity policy,
+        the bucket policy and the KMS key policy. Workloads use roles from the platform or OIDC, never
+        keys. Private subnets reach S3 through a free gateway endpoint, not a NAT gateway.
 
         > [!senior] The NAT bill
         > An EMR cluster in a private subnet reading 300 TB a month from S3 through a NAT gateway
@@ -506,6 +671,12 @@ export const track: Track = {
         > [!trap] Wildcards that ship
         > «"Action": "s3:*"» on «"Resource": "*"» passes every test and fails every audit. Scope
         > actions and resources, and use IAM Access Analyzer to find what is unused.
+
+        ## In one breath
+
+        IAM says no unless something says yes, and across accounts the caller, the bucket and the KMS key
+        must all say yes. Give workloads roles instead of keys, and send S3 traffic through a free gateway
+        endpoint instead of a NAT gateway that charges per GB.
       `,
       checks: [
         {
@@ -538,17 +709,30 @@ export const track: Track = {
       title: 'Terraform and Docker for data platforms',
       summary:
         'Manage buckets, roles and clusters as code with safe state, and build small, pinned, non-root images for jobs.',
-      minutes: 15,
+      minutes: 17,
       body: `
-        Infrastructure as code makes a platform reviewable, repeatable and recoverable. A console
-        click has no review, no history and no undo.
+        ## Start with the problem
 
-        ## Terraform basics
+        The data platform was built by clicking in the cloud console. Two years later:
+
+        - Nobody knows why the lake bucket has a certain policy, or who added it.
+        - Dev and prod were "the same", but a dozen settings now differ, and a job works in one and fails
+          in the other.
+        - Someone deletes the wrong bucket. There is no record of how it was set up.
+
+        A console click has no review, no history and no undo. **Infrastructure as code** makes a platform
+        reviewable, repeatable and recoverable. Docker does the same for the jobs that run on it.
+
+        ## Idea 1: Terraform, a blueprint and a builder
+
+        Think of building a house from a blueprint. The blueprint says what should exist. The builder
+        compares it with the site and does only what is missing.
 
         - **Providers** talk to clouds. **Resources** are what you manage. **Modules** group them.
         - «terraform plan» shows the difference between code and reality. «apply» makes it so.
-        - **State** maps each resource in code to a real object. Lose it, and Terraform no longer
-          knows what it owns.
+        - **State** maps each resource in code to a real object. It is the builder's notebook: "this
+          bucket in the blueprint is that bucket on the site". Lose it, and Terraform no longer knows what
+          it owns.
 
         ~~~hcl
         terraform {
@@ -584,36 +768,37 @@ export const track: Track = {
         }
         ~~~
 
-        ## State rules
+        ## Idea 2: state rules
 
-        - Keep state **remote, encrypted and locked**. Since Terraform 1.10, the S3 backend locks
-          with a lock file («use_lockfile»), and the DynamoDB lock table is deprecated. On Azure,
-          the «azurerm» backend locks with a blob lease.
+        - Keep state **remote, encrypted and locked**. Since Terraform 1.10, the S3 backend locks with a
+          lock file («use_lockfile»), and the DynamoDB lock table is deprecated. On Azure, the «azurerm»
+          backend locks with a blob lease.
         - State can hold secrets in plain text. Restrict who can read the state bucket.
-        - Use **one state per environment and per blast radius**. A typo in the dev network must not
-          be able to touch the prod lake.
+        - Use **one state per environment and per blast radius**. A typo in the dev network must not be
+          able to touch the prod lake.
 
-        ## Changing what exists
+        ## Idea 3: changing what already exists
 
-        | Need | Tool |
-        |---|---|
-        | Adopt a resource made by hand | An «import» block (Terraform 1.5+) |
-        | Rename or move a resource in code | A «moved» block, so Terraform does not destroy and recreate it |
-        | Find changes made outside Terraform | «terraform plan -refresh-only» |
-        | Never delete a data store by accident | «prevent_destroy» and cloud-side delete protection |
+        - **Adopt a resource made by hand:** an «import» block (Terraform 1.5+).
+        - **Rename or move a resource in code:** a «moved» block, so Terraform does not destroy and
+          recreate it.
+        - **Find changes made outside Terraform:** «terraform plan -refresh-only».
+        - **Never delete a data store by accident:** «prevent_destroy», plus cloud-side delete
+          protection.
 
-        HashiCorp moved Terraform to the Business Source License in 2023. **OpenTofu** is the open
-        fork and reads the same code. Most teams can use either.
+        HashiCorp moved Terraform to the Business Source License in 2023. **OpenTofu** is the open fork
+        and reads the same code. Most teams can use either.
 
-        ## Docker for data jobs
+        ## Idea 4: Docker, a lunch box for your job
 
-        Data jobs run in containers on Kubernetes, ECS, EMR on EKS, Cloud Run or a
-        KubernetesPodOperator. A good job image is:
+        Data jobs run in containers on Kubernetes, ECS, EMR on EKS, Cloud Run or a KubernetesPodOperator.
+        A container is a lunch box: the job and everything it needs, packed so it tastes the same
+        wherever it is opened. A good job image is:
 
         - **Pinned.** A fixed base image and a lockfile. The same tag builds the same image.
         - **Small.** A slim base and a multi-stage build, so build tools stay out.
-        - **Cache-friendly.** Copy the lockfile and install before you copy the code, so a code
-          change does not reinstall every package.
+        - **Cache-friendly.** Copy the lockfile and install before you copy the code, so a code change
+          does not reinstall every package.
         - **Non-root**, with **no secrets** in any layer. Secrets come at runtime.
         - **Tagged with the git commit**, never deployed as «latest».
 
@@ -633,6 +818,17 @@ export const track: Track = {
         ENTRYPOINT ["python", "-m", "src.jobs.run"]
         ~~~
 
+        Read it as two rooms. The first stage builds the wheels, with all the tools. The second stage
+        copies only the wheels, installs them, and runs as a normal user. The tools never reach the final
+        image.
+
+        ## Now say it like a senior engineer
+
+        Terraform state is remote, encrypted, locked and split by environment and blast radius. Existing
+        resources are adopted with import blocks and renamed with moved blocks, and stateful resources
+        carry prevent_destroy. Job images are pinned, multi-stage, non-root, secret-free and tagged by
+        commit.
+
         > [!senior] Protect the data, not just the code
         > Terraform can recreate a cluster in minutes. It cannot recreate a deleted bucket's
         > contents. Say how you guard stateful resources: «prevent_destroy», versioning, delete
@@ -642,6 +838,12 @@ export const track: Track = {
         > Renaming «aws_s3_bucket.lake» to «aws_s3_bucket.data_lake» in code makes the plan
         > destroy one bucket and create another. Read every "destroy" line in a plan. Add a
         > «moved» block.
+
+        ## In one breath
+
+        Terraform is a blueprint plus a builder's notebook: keep that state safe and separate, and never
+        let a rename destroy a data store. Docker packs each job like a lunch box: pinned, small,
+        non-root, without secrets, and tagged by commit.
       `,
       checks: [
         {
@@ -676,57 +878,86 @@ export const track: Track = {
         'Ship pipeline, dbt and infrastructure changes through CI/CD safely, and cut cloud cost with the levers that matter.',
       minutes: 16,
       body: `
-        ## CI for a data repository
+        ## Start with the problem
 
-        A pull request runs fast checks on what changed:
+        A data engineer changes one dbt model and merges it on Friday. On Monday:
 
-        - **Lint and format**: ruff for Python, SQLFluff for SQL.
-        - **Unit tests**: pytest on small DataFrames for transform functions.
-        - **DAG import test**: load every Airflow DAG and fail on any import error or cycle.
-        - **dbt slim CI**: build only changed models and their children
-          («state:modified+» with deferral to production).
-        - **Data diff**: compare the changed model's output with production on a sample.
-        - **Terraform plan**: post the plan on the pull request, for review before merge.
+        - An Airflow DAG has vanished, because the same PR had a typo in an import.
+        - A dashboard shows doubled revenue, because the new join was never compared with production.
+        - The cloud bill jumped 40%, and nobody can say which team or pipeline caused it.
 
-        ## CD: one artifact, many environments
+        Code needs checks before it ships, data needs its own safe-change patterns, and cost needs to be
+        visible. This lesson covers all three.
 
-        - Build once. Tag the image with the git commit, and promote the **same artifact** from dev
-          to staging to production.
+        ## Idea 1: CI, the checks on every pull request
+
+        A pull request runs fast checks on what changed. Each one catches a different Monday surprise.
+
+        - **Lint and format:** ruff for Python, SQLFluff for SQL.
+        - **Unit tests:** pytest on small DataFrames for transform functions.
+        - **DAG import test:** load every Airflow DAG and fail on any import error or cycle.
+        - **dbt slim CI:** build only changed models and their children («state:modified+» with deferral
+          to production).
+        - **Data diff:** compare the changed model's output with production on a sample. That catches
+          the doubled revenue.
+        - **Terraform plan:** post the plan on the pull request, for review before merge.
+
+        ## Idea 2: CD, one artifact, many environments
+
+        Think of a dish that is tasted in the test kitchen, then served. You serve **the same dish**, not
+        a new one cooked again for the restaurant.
+
+        - Build once. Tag the image with the git commit, and promote the **same artifact** from dev to
+          staging to production.
         - Give each environment its own account or project, with its own state and its own data.
         - Deploy with **OIDC federation**: the CI job assumes a role. No key lives in CI secrets.
-        - Use **trunk-based** git: short branches, review, and protected «main». A
-          «CODEOWNERS» file routes changes to the owning team.
+        - Use **trunk-based** git: short branches, review, and protected «main». A «CODEOWNERS» file
+          routes changes to the owning team.
 
-        ## Changing data safely
+        ## Idea 3: changing data safely
 
         Code rolls back. Data does not, so data changes need their own patterns.
 
-        - **Expand, migrate, contract** for schema: add the new column, backfill and switch
-          readers, then drop the old column in a later release.
-        - **Blue-green tables**: build the new version beside the old one, check it, then swap a
-          view or a pointer. Roll back by swapping back.
+        - **Expand, migrate, contract** for schema: add the new column, backfill and switch readers, then
+          drop the old column in a later release. Like building the new bridge before you close the old
+          one.
+        - **Blue-green tables:** build the new version beside the old one, check it, then swap a view or
+          a pointer. Roll back by swapping back.
         - Run **backfills as separate, idempotent jobs** with a dry run first, not inside a deploy.
 
-        ## Where cloud money goes
+        ## Idea 4: where cloud money goes
 
-        | Lever | Typical fix |
-        |---|---|
-        | Idle compute | Autoscaling, auto-suspend warehouses, job clusters instead of always-on ones |
-        | Unit price | Spot for fault-tolerant work; Savings Plans or reservations for the steady base |
-        | Bytes scanned | Partition, cluster, columnar formats, no «SELECT *» on wide tables |
-        | Data transfer | Gateway endpoints, same-zone placement, no needless cross-region copies |
-        | Requests | Compact small files; batch writes |
-        | Storage | Lifecycle rules, expire old versions and temp data |
+        Six levers, each with its typical fix:
 
-        ## Make cost visible
+        - **Idle compute:** autoscaling, auto-suspend warehouses, job clusters instead of always-on ones.
+        - **Unit price:** Spot for fault-tolerant work; Savings Plans or reservations for the steady
+          base.
+        - **Bytes scanned:** partition, cluster, columnar formats, no «SELECT *» on wide tables.
+        - **Data transfer:** gateway endpoints, same-zone placement, no needless cross-region copies.
+        - **Requests:** compact small files; batch writes.
+        - **Storage:** lifecycle rules; expire old versions and temp data.
+
+        ## Idea 5: make cost visible
+
+        You cannot cut what you cannot see.
 
         - **Tag** every resource with team, pipeline and environment, and enforce it in Terraform.
-        - Load the billing export (AWS CUR 2.0 through Data Exports, Azure Cost Management
-          exports, GCP billing export) into the warehouse. Join it with job metadata.
+        - Load the billing export (AWS CUR 2.0 through Data Exports, Azure Cost Management exports, GCP
+          billing export) into the warehouse. Join it with job metadata.
         - Track a **unit cost**, such as dollars per TB processed or per 1,000 trips, not just the
-          monthly total. A bill that grows with the business is fine. A unit cost that grows is
-          waste.
+          monthly total. A bill that grows with the business is fine. A unit cost that grows is waste.
         - Set **budgets** and **anomaly detection** alerts that go to the owning team.
+
+        Tiny example. The bill went from $50,000 to $70,000. Trips also went from 10 million to 14
+        million. Cost per 1,000 trips stayed at $5. Nothing is wrong. If trips had stayed at 10 million,
+        cost per 1,000 trips would be $7, and that is the waste to hunt.
+
+        ## Now say it like a senior engineer
+
+        CI runs lint, unit tests, DAG import tests, dbt slim CI, data diffs and Terraform plans. CD
+        promotes one commit-tagged artifact through isolated environments with OIDC. Data changes use
+        expand-migrate-contract, blue-green tables and separate idempotent backfills. Cost work starts from
+        tagged billing data and unit cost.
 
         > [!senior] Lead with measurement
         > "Cut cost by 30%" answers start with where the money goes, ranked, then the cheapest fix
@@ -735,6 +966,12 @@ export const track: Track = {
         > [!trap] Savings Plans first
         > A commitment locks in today's waste for one to three years. Remove idle and oversized
         > resources first, then commit to the steady base that is left.
+
+        ## In one breath
+
+        Check every pull request with tests, DAG imports, slim dbt builds and data diffs, then promote the
+        same artifact everywhere. Change data with expand and contract or blue-green swaps, and manage cost
+        by tagging everything and watching the cost per unit of business.
       `,
       checks: [
         {
