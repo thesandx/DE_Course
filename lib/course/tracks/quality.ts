@@ -12,34 +12,59 @@ export const track: Track = {
       slug: 'data-contracts',
       title: 'Data contracts and schema evolution',
       summary: 'Agree what producers promise, and change schemas without breaking consumers.',
-      minutes: 13,
+      minutes: 15,
       body: `
-        Most bad data starts upstream: an app team renames a field, changes a unit, or stops
+        ## Start with the problem
+
+        On Tuesday the app team ships a small change. They rename «fare» to «fare_amount», and to "keep
+        it consistent" they send it in cents instead of dollars. Their tests pass. Their release is fine.
+
+        Your pipeline breaks in two ways. The rename makes the revenue column null. And in the one place
+        that already used the new field, revenue is now 100 times too high. Nobody told you, because
+        nobody thought it was your business.
+
+        Most bad data starts upstream like this: an app team renames a field, changes a unit, or stops
         sending an event. A **data contract** is an explicit agreement between a producer and its
         consumers about what the data looks like and how it may change.
 
-        ## What a contract states
+        ## Idea 1: a contract is a rental agreement for data
+
+        A rental agreement says what you get, what it costs, who to call when the boiler breaks, and how
+        much notice the landlord gives before changing the rules. A data contract says five things:
 
         - **Schema:** fields, types, nullability, allowed values and units («fare_usd», not «fare»).
         - **Semantics:** what one record means ("one row per trip state change").
-        - **Service levels:** freshness, completeness and how late data may arrive.
+        - **Service levels:** freshness, completeness, and how late data may arrive.
         - **Ownership:** who to page, and how changes are announced.
-        - **Change policy:** which changes are allowed without notice and which need a new version.
+        - **Change policy:** which changes are allowed without notice, and which need a new version.
 
-        ## Compatible and breaking changes
+        ## Idea 2: compatible and breaking changes
 
-        | Change | Compatibility |
-        |---|---|
-        | Add an optional field with a default | Safe for old and new readers |
-        | Remove an optional field | Safe for new readers; old readers get the default |
-        | Rename a field | Breaking (it is a remove plus an add) |
-        | Change a type (string to int) | Breaking unless it is a safe widening |
-        | Change meaning or unit, same name | Breaking, and invisible to schema checks |
+        Not every change hurts. Sort them:
 
-        A **schema registry** (for Avro or Protobuf on Kafka) enforces a compatibility mode at
-        publish time. **Backward** compatibility (the usual default) means consumers on the new
-        schema can read data written with the old one, so you upgrade consumers first. **Forward**
-        means old consumers can read new data. **Full** means both.
+        - **Add an optional field with a default:** safe for old and new readers.
+        - **Remove an optional field:** safe for new readers; old readers get the default.
+        - **Rename a field:** breaking. It is a remove plus an add.
+        - **Change a type (string to int):** breaking, unless it is a safe widening.
+        - **Change meaning or unit, same name:** breaking, and invisible to schema checks.
+
+        The Tuesday change was two of these at once: a rename, and a unit change.
+
+        ## Idea 3: a schema registry checks at the door
+
+        A **schema registry** (for Avro or Protobuf on Kafka) enforces a compatibility mode **at publish
+        time**. A producer that tries a breaking change is refused before any bad record is written.
+
+        - **Backward** compatibility (the usual default): consumers on the new schema can read data
+          written with the old one, so you upgrade consumers first.
+        - **Forward:** old consumers can read new data.
+        - **Full:** both.
+
+        ## Now say it like a senior engineer
+
+        A contract states schema, semantics and units, service levels, ownership and change policy.
+        Additive optional fields are safe; renames, type changes and meaning changes are breaking. A
+        registry enforces compatibility at publish time, and semantic checks catch what schemas cannot.
 
         > [!trap] The worst change passes every check
         > Sending cents in a field documented as dollars keeps the schema valid. Only semantic
@@ -49,6 +74,12 @@ export const track: Track = {
         > [!senior] Enforce in CI, not in a wiki
         > Put the contract next to the producer's code and fail their build on a breaking change.
         > A contract that nobody's pipeline checks is a document, not a contract.
+
+        ## In one breath
+
+        A data contract is a rental agreement between producer and consumers: schema, meaning, units,
+        service levels, owner and how changes happen. Enforce it in the producer's CI and a schema
+        registry, and remember that a unit change passes every schema check.
       `,
       checks: [
         {
@@ -80,41 +111,69 @@ export const track: Track = {
       title: 'Testing pipelines and data',
       summary:
         'Combine code tests, data tests and write-audit-publish so bad data never reaches users.',
-      minutes: 14,
+      minutes: 16,
       body: `
-        Pipelines fail in two ways: the code is wrong, or the input is wrong. You need tests for
+        ## Start with the problem
+
+        Two bad mornings:
+
+        - A developer changes the trip deduplication logic. It looks fine. In production, trips that
+          span midnight are now counted twice.
+        - The code is unchanged, but the source system sends half a day of data. The pipeline runs
+          "successfully" and publishes half the revenue.
+
+        Pipelines fail in two ways: **the code is wrong**, or **the input is wrong**. You need tests for
         both, and they run at different times.
 
-        ## Code tests (before deploy)
+        ## Idea 1: code tests, before deploy
 
-        Unit test transformations on small, hand-made inputs, including the ugly cases: nulls,
-        duplicates, late events, empty partitions, time zones and daylight saving. For SQL, test
-        models against fixture tables in CI.
+        Code tests check your logic, like a recipe tested in your own kitchen before it goes on the menu.
 
-        ## Data tests (every run)
+        Unit test transformations on small, hand-made inputs. Include the ugly cases:
 
-        | Test | Example |
-        |---|---|
-        | Not null | «trip_id» is never null |
-        | Unique | One row per «trip_id» in «fct_trips» |
-        | Accepted values | «status» in ('completed', 'cancelled', 'no_show') |
-        | Referential integrity | Every «driver_id» exists in «dim_driver» |
-        | Volume | Row count within 30% of the same weekday last week |
-        | Freshness | Latest «event_ts» is less than 2 hours old |
-        | Reconciliation | Sum of fares matches the payments system within 0.1% |
+        - nulls;
+        - duplicates;
+        - late events;
+        - empty partitions;
+        - time zones and daylight saving.
 
-        Tools such as dbt tests, Great Expectations and Soda express these as configuration.
+        For SQL, test models against fixture tables in CI. The midnight bug is caught by one hand-made
+        trip from 23:50 to 00:10.
 
-        ## Write-audit-publish
+        ## Idea 2: data tests, on every run
 
-        Do not let consumers see data before it passes its tests.
+        Data tests check today's input, like tasting each delivery before it reaches the kitchen.
 
-        - **Write** the new data to a staging location (a branch, a staging table or an unpublished snapshot).
+        - **Not null:** «trip_id» is never null.
+        - **Unique:** one row per «trip_id» in «fct_trips».
+        - **Accepted values:** «status» in ('completed', 'cancelled', 'no_show').
+        - **Referential integrity:** every «driver_id» exists in «dim_driver».
+        - **Volume:** row count within 30% of the same weekday last week.
+        - **Freshness:** the latest «event_ts» is less than 2 hours old.
+        - **Reconciliation:** the sum of fares matches the payments system within 0.1%.
+
+        The half-day morning is caught by the volume test. Tools such as dbt tests, Great Expectations and
+        Soda express these as configuration.
+
+        ## Idea 3: write-audit-publish
+
+        Do not let consumers see data before it passes its tests. Like a newspaper: the story is written,
+        an editor checks it, and only then is it printed.
+
+        - **Write** the new data to a staging location: a branch, a staging table or an unpublished
+          snapshot.
         - **Audit** it with the data tests.
-        - **Publish** atomically only if the audit passes: swap the partition, merge the branch or commit the snapshot.
+        - **Publish** atomically, only if the audit passes: swap the partition, merge the branch or
+          commit the snapshot.
 
-        Table formats make this cheap: Iceberg branches and the write-audit-publish flow let you
-        write to a branch and fast-forward main after checks.
+        Table formats make this cheap. Iceberg branches and the write-audit-publish flow let you write to
+        a branch and fast-forward main after checks.
+
+        ## Now say it like a senior engineer
+
+        Code tests cover logic before deploy, with edge-case fixtures. Data tests run on every load for
+        keys, values, references, volume, freshness and reconciliation. Write-audit-publish keeps
+        unchecked data invisible, and tests carry a severity so only real problems block.
 
         > [!tip] Severity levels
         > Not every failed test should stop the pipeline. Mark tests as **block** (stop publish:
@@ -123,6 +182,11 @@ export const track: Track = {
         > [!senior] Test the contract, not every column
         > Hundreds of shallow tests create alert fatigue. Put strict tests on keys, money and the
         > columns that dashboards and models depend on, and monitor the rest.
+
+        ## In one breath
+
+        Test the code with ugly hand-made inputs before deploy, and test the data on every run for keys,
+        volume, freshness and money. Write to a staging place, audit, and publish only what passes.
       `,
       checks: [
         {
@@ -153,33 +217,55 @@ export const track: Track = {
       slug: 'observability-and-slos',
       title: 'Observability, lineage and SLOs',
       summary: 'Define what "healthy data" means, measure it, and alert on what users feel.',
-      minutes: 13,
+      minutes: 15,
       body: `
-        Tests catch the failures you predicted. **Observability** catches the rest by watching the
-        data and the pipelines continuously.
+        ## Start with the problem
 
-        ## The signals to watch
+        Your pipeline has 200 tests, and all of them pass. Then the pricing team calls: the
+        «surge_zone» column has been 40% null since yesterday. No test checked that column. A new app
+        release started sending a blank zone for some riders.
+
+        Tests catch the failures you predicted. **Observability** catches the rest, by watching the data
+        and the pipelines continuously.
+
+        ## Idea 1: five signals, like a car's dashboard
+
+        A driver does not test the engine every minute. They glance at the speed, fuel, temperature and
+        warning lights. Watch five signals on your data:
 
         - **Freshness:** how old is the newest data?
         - **Volume:** did the expected number of rows arrive?
         - **Schema:** did columns appear, disappear or change type?
-        - **Distribution:** did null rates, averages or category mixes shift?
+        - **Distribution:** did null rates, averages or category mixes shift? (The «surge_zone» story.)
         - **Lineage:** which upstream tables feed this one, and which dashboards read it?
 
-        ## SLIs, SLOs and SLAs
+        ## Idea 2: SLI, SLO, SLA, three words that build on each other
 
-        - An **SLI** is a measurement: "minutes between 00:00 UTC and the daily trips table being published".
+        - An **SLI** is a measurement: "minutes between 00:00 UTC and the daily trips table being
+          published".
         - An **SLO** is a target for it: "published by 06:00 UTC on 99% of days in a quarter".
-        - An **SLA** is a promise with consequences, usually to another team or customer.
+        - An **SLA** is a promise with consequences, usually to another team or a customer.
 
-        Set SLOs from what consumers need. Finance closing the books needs completeness and
-        correctness; a pricing model needs freshness. One table can have several SLOs.
+        Think of a pizza shop. The SLI is delivery time. The SLO is "30 minutes on 99% of orders". The
+        SLA is "late pizza is free".
 
-        ## Lineage
+        Set SLOs from what consumers need. Finance closing the books needs completeness and correctness;
+        a pricing model needs freshness. One table can have several SLOs.
 
-        Column-level lineage answers two incident questions fast: "what broke this?" (walk
-        upstream) and "who is affected?" (walk downstream). OpenLineage is an open standard that
-        many orchestrators and engines emit.
+        ## Idea 3: lineage, the family tree of a table
+
+        Column-level lineage answers two incident questions fast:
+
+        - "What broke this?" Walk **upstream**.
+        - "Who is affected?" Walk **downstream**.
+
+        OpenLineage is an open standard that many orchestrators and engines emit.
+
+        ## Now say it like a senior engineer
+
+        Monitor freshness, volume, schema and distribution, with lineage to trace causes and impact. Define
+        SLIs and SLOs per consumer need, page only when an SLO is at risk, and use error budgets to decide
+        when to slow down risky changes.
 
         > [!trap] Alert on symptoms, not on every cause
         > Paging on each task retry trains people to ignore pages. Page when an SLO is at risk
@@ -188,6 +274,12 @@ export const track: Track = {
         > [!senior] Error budgets for data
         > If the SLO allows 1 late day per quarter and you have used it, pause risky migrations on
         > that pipeline. Using the language of error budgets shows you run data like a product.
+
+        ## In one breath
+
+        Tests catch what you predicted; observability watches freshness, volume, schema and distribution
+        for everything else. Measure what consumers care about, set a target, and page only when that
+        target is at risk.
       `,
       checks: [
         {
@@ -218,34 +310,58 @@ export const track: Track = {
       slug: 'privacy-and-deletion',
       title: 'Personal data, access and deletion',
       summary: 'Design pipelines that can classify, protect and delete personal data on request.',
-      minutes: 14,
+      minutes: 16,
       body: `
-        Riders, drivers and viewers have legal rights over their data. Under GDPR and similar laws,
-        a deletion request must be honoured within a deadline (one month under GDPR, extendable in
-        some cases), across every copy, including the lake.
+        ## Start with the problem
 
-        ## Classify first
+        A rider writes: "Delete all my data." The app team deletes the row from the users database. Done?
 
-        Tag columns by sensitivity: direct identifiers (name, phone, email), quasi-identifiers
-        (precise location, device id), and non-personal data. Tags drive access policies, masking
-        and retention automatically, instead of relying on people remembering.
+        No. The rider's name, phone and trips are also in the lake's raw files, in three warehouse
+        tables, in a feature store, in last month's backup, and in the old snapshots of every lakehouse
+        table. Under GDPR and similar laws, a deletion request must be honoured within a deadline (one
+        month under GDPR, extendable in some cases), across every copy, including the lake.
 
-        ## Protect
+        Riders, drivers and viewers have legal rights over their data. This lesson is how to make that
+        possible at lake scale.
+
+        ## Idea 1: classify first
+
+        You cannot protect what you have not labelled. Tag columns by sensitivity:
+
+        - **Direct identifiers:** name, phone, email.
+        - **Quasi-identifiers:** precise location, device id. Not a name, but enough to find a person.
+        - **Non-personal data.**
+
+        Tags then drive access policies, masking and retention automatically, instead of relying on
+        people remembering. Like coloured labels on medicine bottles: the label decides who may open it.
+
+        ## Idea 2: protect, four habits
 
         - **Minimize:** do not copy personal fields into tables that do not need them.
-        - **Pseudonymize:** replace identifiers with a token or a keyed hash, and keep the mapping in one controlled place.
-        - **Control access:** column-level security and masking (BigQuery policy tags, row access policies).
+        - **Pseudonymize:** replace identifiers with a token or a keyed hash, and keep the mapping in one
+          controlled place.
+        - **Control access:** column-level security and masking (BigQuery policy tags, row access
+          policies).
         - **Retain less:** expire raw data that holds identifiers after a fixed period.
 
-        ## Delete at lake scale
+        ## Idea 3: delete at lake scale
 
-        Deleting one user from petabytes of immutable files is expensive. Common designs:
+        Deleting one user from petabytes of immutable files is expensive. Three common designs:
 
-        | Approach | How it works | Trade-off |
-        |---|---|---|
-        | Row deletes in a table format | Batch requests, then delete with merge-on-read and compact | Correct and simple; must also expire snapshots so old files go |
-        | Crypto-shredding | Encrypt each user's personal fields with a per-user key; delete the key | Deletion is instant everywhere; key management is harder |
-        | Tokenized identities | Facts hold only a token; the token-to-person map lives in one table | Delete one mapping row; facts stay useful for aggregates |
+        - **Row deletes in a table format.** Batch the requests, then delete with merge-on-read and
+          compact. Correct and simple, but you must also expire snapshots, so the old files go.
+        - **Crypto-shredding.** Encrypt each user's personal fields with a per-user key, and delete the
+          key. Deletion is instant everywhere, but key management is harder. Like burning the only key to
+          a locked box: the box still exists, but nobody can ever open it.
+        - **Tokenized identities.** Facts hold only a token; the token-to-person map lives in one table.
+          Delete one mapping row, and the facts stay useful for aggregates.
+
+        ## Now say it like a senior engineer
+
+        Classify columns and let tags drive masking, access and retention. Minimize and pseudonymize
+        personal data. Delete with batched table-format deletes plus snapshot expiry, crypto-shredding or
+        a single token map, and run deletion as a verified pipeline across every system that lineage
+        finds.
 
         > [!trap] Time travel keeps deleted rows
         > A delete in Iceberg or Delta creates a new snapshot. The old files, with the person's
@@ -255,6 +371,12 @@ export const track: Track = {
         > [!senior] Make deletion a pipeline
         > Treat deletion requests as a stream: collect them, fan out to every system that holds the
         > user (found through lineage and tags), apply in batches, verify, and record proof.
+
+        ## In one breath
+
+        Label personal data, copy less of it, and keep identities in one place. To delete a person, batch
+        table-format deletes and expire old snapshots, or delete their key or their token row, and run it
+        as a pipeline that proves it reached every copy.
       `,
       checks: [
         {
@@ -286,28 +408,53 @@ export const track: Track = {
       slug: 'data-incidents',
       title: 'Running a data incident',
       summary: 'Contain, fix, backfill and learn from a data incident like a senior owner.',
-      minutes: 12,
+      minutes: 14,
       body: `
-        A data incident is any time people may be acting on wrong, late or missing data. The
-        technical fix is often the easy part. Seniors are judged on containment and communication.
+        ## Start with the problem
 
-        ## The sequence
+        At 10:00 a finance analyst messages: "Revenue on the exec dashboard looks low for the last three
+        days." A junior engineer finds a bug, fixes it, reruns one day, and replies "fixed". At 14:00 the
+        CFO presents the other two wrong days to the board. Meanwhile a pricing model trained on the bad
+        data all morning.
 
-        - **Detect and declare.** Name an owner and a channel. Say what you know and what you do not.
-        - **Contain.** Pause the broken pipeline and stop downstream jobs from consuming bad data.
-          Mark affected dashboards as stale.
-        - **Assess the blast radius.** Use lineage to list affected tables, dashboards, models and
-          external exports, and the date range.
-        - **Fix forward or roll back.** Roll back to a good snapshot when you can; fix the code when you must.
-        - **Backfill.** Re-run affected dates in dependency order. This is only safe if jobs are idempotent.
-        - **Verify.** Reconcile against a trusted source before you announce recovery.
-        - **Learn.** Write a blameless postmortem with a timeline and actions that prevent the class of failure.
+        A **data incident** is any time people may be acting on wrong, late or missing data. The
+        technical fix is often the easy part. Seniors are judged on **containment and communication**.
 
-        ## Communicating
+        ## Idea 1: the sequence, like a kitchen fire
 
-        Update affected teams on a fixed rhythm, even when nothing changed. Lead with impact
-        ("revenue in the exec dashboard is understated by about 8% for 3 to 5 November"), then the
-        next update time.
+        When a pan catches fire, you do not start by asking why. You cover it, get people out of the way,
+        check what else is burning, put it out, clean up, and only then ask how to stop it happening
+        again. A data incident has the same order.
+
+        1. **Detect and declare.** Name an owner and a channel. Say what you know and what you do not.
+        2. **Contain.** Pause the broken pipeline and stop downstream jobs from consuming bad data. Mark
+           affected dashboards as stale.
+        3. **Assess the blast radius.** Use lineage to list affected tables, dashboards, models and
+           external exports, and the date range.
+        4. **Fix forward or roll back.** Roll back to a good snapshot when you can; fix the code when you
+           must.
+        5. **Backfill.** Re-run affected dates in dependency order. This is only safe if jobs are
+           idempotent.
+        6. **Verify.** Reconcile against a trusted source before you announce recovery.
+        7. **Learn.** Write a blameless postmortem with a timeline, and actions that prevent the class of
+           failure.
+
+        In the story, steps 2 and 3 were skipped. A stale banner on the dashboard and a lineage check
+        would have stopped the board slide and the model training.
+
+        ## Idea 2: communicating
+
+        Update affected teams on a **fixed rhythm**, even when nothing changed. Silence feels like
+        nothing is happening.
+
+        Lead with impact, then the next update time. For example: "Revenue in the exec dashboard is
+        understated by about 8% for 3 to 5 November. Next update at 12:00."
+
+        ## Now say it like a senior engineer
+
+        Declare an owner, contain by pausing pipelines and marking consumers stale, size the blast radius
+        with lineage, roll back or fix, backfill idempotently, verify against a trusted source, and write
+        a blameless postmortem whose actions prevent the whole class of failure.
 
         > [!example] A postmortem action that matters
         > "Be more careful with schema changes" changes nothing. "Add a CI check that blocks
@@ -316,6 +463,12 @@ export const track: Track = {
         > [!senior] Fix the class, not the instance
         > Interviewers listen for whether you prevent the next incident of the same kind: a
         > contract check, a write-audit-publish gate, or an SLO alert that would have fired earlier.
+
+        ## In one breath
+
+        In a data incident, contain first: stop the bad data spreading and tell people, then find
+        everything it touched, fix, backfill and verify. Finish with a postmortem action that makes this
+        kind of failure impossible next time.
       `,
       checks: [
         {
@@ -347,38 +500,57 @@ export const track: Track = {
       title: 'Anomaly detection for data pipelines',
       summary:
         'Catch silent data problems with seasonal baselines and robust statistics, and tune alerts so on-call trusts them.',
-      minutes: 15,
+      minutes: 17,
       body: `
-        Rule-based tests catch what you predicted: nulls, duplicates, broken keys. The worst
-        incidents are the ones nobody predicted: a mobile release that halves events from Android,
-        or a currency field that silently switches from dollars to cents. **Anomaly detection**
-        watches metrics about the data and flags values that do not fit their history.
+        ## Start with the problem
 
-        ## What to monitor
+        Rule-based tests catch what you predicted: nulls, duplicates, broken keys. The worst incidents are
+        the ones nobody predicted: a mobile release that halves events from Android, or a currency field
+        that silently switches from dollars to cents. Every test passes, and the numbers are wrong.
 
-        | Metric | Catches |
-        |---|---|
-        | **Volume:** rows per load, per day, per segment | Lost partitions, a dead source, duplicate loads |
-        | **Freshness:** time since the latest event | Stalled pipelines |
-        | **Distribution:** null rate, distinct count, mean, percentiles of key columns | Unit changes, broken mappings, default values |
-        | **Schema:** columns added, removed, retyped | Upstream changes |
-        | **Business KPIs:** orders, revenue, conversion | Problems that pass every technical check |
+        **Anomaly detection** watches metrics about the data and flags values that do not fit their
+        history. It is how you catch the problem you did not know to write a test for.
 
-        Segment the metric. Total orders can look normal while one city drops to zero, because
+        ## Idea 1: what to watch
+
+        Think of a doctor's routine check: weight, pulse, blood pressure, temperature. None names a
+        disease, but a strange value says "look closer".
+
+        - **Volume:** rows per load, per day, per segment. Catches lost partitions, a dead source,
+          duplicate loads.
+        - **Freshness:** time since the latest event. Catches stalled pipelines.
+        - **Distribution:** null rate, distinct count, mean and percentiles of key columns. Catches unit
+          changes, broken mappings, default values.
+        - **Schema:** columns added, removed, retyped. Catches upstream changes.
+        - **Business KPIs:** orders, revenue, conversion. Catches problems that pass every technical
+          check.
+
+        **Segment the metric.** Total orders can look normal while one city drops to zero, because
         another city grew.
 
-        ## Baselines: compare like with like
+        ## Idea 2: compare like with like
 
-        Most data has **weekly seasonality**: Saturday is not Tuesday. Compare a day with the same
-        weekday over the last several weeks, not with yesterday. Mark holidays and known events, or
-        the detector learns them as normal one week and alerts the next.
+        Most data has **weekly seasonality**: Saturday is not Tuesday. A restaurant does not panic
+        because Monday is quieter than Saturday. It compares this Monday with past Mondays.
 
-        ## Robust scores
+        So compare a day with the same weekday over the last several weeks, not with yesterday. Mark
+        holidays and known events, or the detector learns them as normal one week and alerts the next.
 
-        A plain z-score uses the mean and standard deviation, and one past outage inflates both.
+        ## Idea 3: robust scores, so one bad day does not blind you
+
+        A plain z-score uses the mean and the standard deviation, and one past outage inflates both.
+        After that, real problems look small.
+
         The **median** and the **median absolute deviation (MAD)** ignore a few bad points.
-        «robust_z = (value - median) / (1.4826 × MAD)». The constant makes MAD comparable to a
-        standard deviation for normal data. A threshold of about 3.5 to 4 is a common start.
+
+        «robust_z = (value - median) / (1.4826 × MAD)»
+
+        The constant makes MAD comparable to a standard deviation for normal data. A threshold of about
+        3.5 to 4 is a common start.
+
+        Tiny example. Past Mondays had 1,000, 1,020, 980, 1,010 and 100 orders (the last was an outage).
+        The median is 1,000 and the MAD is 20, so the outage barely moves them. Today's Monday has 600
+        orders: (600 - 1,000) / (1.4826 × 20) is about -13.5. That is far past 4, so it alerts.
 
         ~~~sql
         WITH daily AS (
@@ -415,26 +587,37 @@ export const track: Track = {
         ORDER BY d, city;
         ~~~
 
-        The «greatest(..., 0.02 * base)» floor stops a very stable series (MAD near zero) from
-        alerting on a tiny change. «weeks >= 4» skips series without enough history.
+        Two guards in that query:
 
-        ## Beyond simple statistics
+        - The «greatest(..., 0.02 * base)» floor stops a very stable series (MAD near zero) from alerting
+          on a tiny change.
+        - «weeks >= 4» skips series without enough history.
 
-        - **Seasonal decomposition (STL)** or forecasting models (Prophet-style, ARIMA) for series
-          with trend and several seasons.
-        - **Tools:** Elementary and dbt packages for tests in the warehouse; Monte Carlo, Anomalo,
-          Bigeye and the native monitors in Databricks and BigQuery for managed detection.
+        ## Idea 4: beyond simple statistics
+
+        - **Seasonal decomposition (STL)** or forecasting models (Prophet-style, ARIMA) for series with
+          trend and several seasons.
+        - **Tools:** Elementary and dbt packages for tests in the warehouse; Monte Carlo, Anomalo, Bigeye
+          and the native monitors in Databricks and BigQuery for managed detection.
 
         The method matters less than the next part.
 
-        ## Make alerts trustworthy
+        ## Idea 5: make alerts trustworthy
+
+        A smoke alarm that goes off every time you make toast gets its battery removed.
 
         - **Route by owner and severity.** A gold revenue table pages; a sandbox table posts a message.
         - **Alert on the cause once,** not on 40 downstream tables. Use lineage to group them.
-        - **Track precision.** Ask on-call to label each alert useful or noise, and tune thresholds
-          per metric. Under about 50 percent useful, people stop reading alerts.
-        - **Block or warn:** stop publishing a gold table on a severe anomaly (circuit breaker), and
-          let warnings through with a note on the dashboard.
+        - **Track precision.** Ask on-call to label each alert useful or noise, and tune thresholds per
+          metric. Under about 50 percent useful, people stop reading alerts.
+        - **Block or warn.** Stop publishing a gold table on a severe anomaly (a circuit breaker), and let
+          warnings through with a note on the dashboard.
+
+        ## Now say it like a senior engineer
+
+        Monitor volume, freshness, distribution, schema and business KPIs per key segment, against
+        same-weekday baselines with robust median and MAD scores. Route alerts by owner and severity,
+        group them by lineage, measure their precision, and let severe anomalies hold the gold publish.
 
         > [!trap] Detecting on the totals only
         > A total hides a segment that went to zero. Monitor key segments (platform, country,
@@ -444,6 +627,12 @@ export const track: Track = {
         > "Contracts and tests stop what we can name. Seasonal, segmented anomaly checks catch what we
         > did not foresee. Severe ones hold the gold publish; the rest alert the owner with lineage
         > context." That puts detection in a system, not a tool list.
+
+        ## In one breath
+
+        Anomaly detection catches the problems you did not predict, by comparing each segment with the
+        same weekday in past weeks using a median-based score. It is only useful if alerts are rare,
+        routed to an owner, and trusted.
       `,
       checks: [
         {
