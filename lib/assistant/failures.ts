@@ -3,12 +3,19 @@
  * the doubt helper's route and the notes formatter's route.
  */
 
-export type ModelFailure = 'not_configured' | 'out_of_credits' | 'busy' | 'upstream';
+export type ModelFailure =
+  'not_configured' | 'model_blocked' | 'out_of_credits' | 'busy' | 'upstream';
 
 export const MODEL_FAILURES: Readonly<Record<ModelFailure, { status: number; message: string }>> = {
   not_configured: {
     status: 503,
     message: 'The assistant is not set up yet. The OpenRouter key is missing or was refused.',
+  },
+  // OpenRouter answers 403 when the key works but this one model is blocked
+  // for the account, for example "Model ... is banned". Other models still work.
+  model_blocked: {
+    status: 503,
+    message: 'This model is not available on the OpenRouter account right now. Pick another model.',
   },
   out_of_credits: {
     status: 402,

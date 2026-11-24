@@ -160,6 +160,7 @@ describe('streamAnswer', () => {
 
   it.each([
     [401, 'not_configured'],
+    [403, 'model_blocked'],
     [402, 'out_of_credits'],
     [429, 'busy'],
     [500, 'upstream'],
