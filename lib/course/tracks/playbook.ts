@@ -13,52 +13,73 @@ export const track: Track = {
       slug: 'how-loops-work',
       title: 'How a senior loop is scored',
       summary: 'Know who decides, what they write down, and why each round needs clear evidence.',
-      minutes: 10,
+      minutes: 12,
       body: `
-        A senior data engineering loop is not one test. It is five or six separate samples of your
-        work, each scored by a different person against a written rubric. Somebody who was not in
-        the room makes the decision from those notes. At Google that is a hiring committee. At Uber
-        it is a debrief led by the hiring manager. Either way, **what gets written down is what
-        counts.**
+        ## Start with the problem
 
-        ## The usual shape
+        A candidate leaves an onsite sure it went well. Every interviewer smiled, and no round felt like a
+        disaster. A week later: no offer. What happened? Nobody in the room made the decision. A group that
+        only read the notes did, and the notes said "did fine" four times and "needed hints" once.
 
-        | Stage | Typical length | What it filters for |
-        |---|---|---|
-        | Recruiter screen | 30 min | Level, scope, motivation, logistics |
-        | Technical screen | 45 to 60 min | SQL and coding fluency under time pressure |
-        | Onsite (often virtual) | 4 to 6 rounds | Coding, SQL and modeling, system design, behavioral |
-        | Debrief or committee | after the loop | Consistent evidence for one level |
-        | Team match and offer | days to weeks | Fit with a specific team |
+        A senior data engineering loop is not one test. It is five or six separate samples of your work,
+        each scored by a different person against a written rubric. Somebody who was not in the room makes
+        the decision from those notes. At Google that is a hiring committee. At Uber it is a debrief led by
+        the hiring manager. Either way, **what gets written down is what counts.**
 
-        ## What an interviewer writes
+        ## Idea 1: the usual shape
 
-        Most rubrics ask the interviewer for the same four things, in different words:
+        Think of a job application that passes through five gates. Each gate filters for something
+        different:
 
-        - **Problem solving:** did you understand the problem, choose a reasonable approach and adapt
-          when new information arrived?
-        - **Technical depth:** was the solution correct, and did you know why it works and when it
-          breaks?
+        - **Recruiter screen** (30 min). Filters for level, scope, motivation and logistics.
+        - **Technical screen** (45 to 60 min). Filters for SQL and coding fluency under time pressure.
+        - **Onsite, often virtual** (4 to 6 rounds). Filters for coding, SQL and modeling, system design,
+          and behavioral.
+        - **Debrief or committee** (after the loop). Looks for consistent evidence for one level.
+        - **Team match and offer** (days to weeks). Checks fit with a specific team.
+
+        ## Idea 2: what an interviewer writes
+
+        Think of the interviewer as a court reporter. They can only write down what you said out loud.
+        Most rubrics ask them for the same four things, in different words:
+
+        - **Problem solving:** did you understand the problem, choose a reasonable approach and adapt when
+          new information arrived?
+        - **Technical depth:** was the solution correct, and did you know why it works and when it breaks?
         - **Communication:** could they follow your reasoning without pulling it out of you?
-        - **Level signal:** did you behave like the level you applied for? For senior, that means
-          you led the conversation, made trade-offs explicit and thought about operating the system.
+        - **Level signal:** did you behave like the level you applied for? For senior, that means you led
+          the conversation, made trade-offs explicit and thought about operating the system.
+
+        ## Idea 3: why "mostly good" can fail
+
+        A committee looks for **consistent** evidence at your level. One weak round with clear notes
+        ("needed hints to write a window function") can outweigh three rounds of polite, vague notes
+        ("did fine"). A specific weakness beats a vague strength on paper.
+
+        That is why this course drills the fundamentals until they are automatic, so you have room to show
+        seniority on top of them.
+
+        ## Now say it like a senior engineer
+
+        A loop is several independent samples, each written up against a rubric for problem solving,
+        depth, communication and level, and judged later by people who were not there. Give consistent,
+        quotable evidence in every round, because one clear weakness outweighs several vague passes.
 
         > [!senior] Make the note easy to write
         > End each part of an answer with one sentence the interviewer can copy into their notes:
         > "So the trade-off is freshness against cost, and I chose a 15-minute micro-batch because
         > the consumers are dashboards." That sentence is evidence.
 
-        ## Why "mostly good" can fail
-
-        A committee looks for **consistent** evidence at your level. One weak round with clear notes
-        ("needed hints to write a window function") can outweigh three rounds of polite, vague notes
-        ("did fine"). That is why this course drills the fundamentals until they are automatic, so
-        you have room to show seniority on top of them.
-
         > [!tip] Ask the recruiter three questions
         > Which job family and level is this? Which rounds will I have, and in which language can I
         > code? Is there a data modeling round separate from system design? The answers change how
         > you split your study time.
+
+        ## In one breath
+
+        You are judged from written notes by people who were not in the room, so every round must leave
+        clear, consistent evidence at your level: say your reasoning and trade-offs in sentences a
+        note-taker can copy.
       `,
       checks: [
         {
@@ -80,23 +101,36 @@ export const track: Track = {
       title: 'What senior signal sounds like',
       summary:
         'Recognise the behaviours that separate a senior answer from a correct mid-level one.',
-      minutes: 12,
+      minutes: 14,
       body: `
-        A mid-level engineer answers the question they were asked. A senior engineer answers the
-        question the business needs answered, and says what they are trading away. Interviewers
-        listen for specific behaviours, not for seniority as a feeling.
+        ## Start with the problem
 
-        ## Mid-level versus senior, side by side
+        Two candidates get "Design a pipeline for ride events". The first one draws Kafka, Spark and a
+        warehouse in a minute, and it works. The second one asks three questions, picks a daily batch for
+        most of it, and explains how it reruns safely. The second one is levelled senior. Both designs
+        would run.
 
-        | Situation | Mid-level answer | Senior answer |
-        |---|---|---|
-        | Vague prompt | Starts drawing boxes | Asks about consumers, freshness, scale and correctness first |
-        | Choosing a tool | "We use Kafka" | "Kafka, because we need replay and many consumers; Pub/Sub would also work if..." |
-        | Pipeline design | Happy path only | Late data, retries, backfills, schema change, on-call |
-        | SQL | Correct result on the sample | Correct on duplicates, NULLs and time zones; mentions cost |
-        | Behavioral | "We did X" | "I noticed X, I proposed Y, I convinced Z, and here is the measured result" |
+        A mid-level engineer answers the question they were asked. A senior engineer answers the question
+        the business needs answered, and says what they are trading away. Interviewers listen for specific
+        behaviours, not for seniority as a feeling.
 
-        ## The five behaviours to show on purpose
+        ## Idea 1: mid-level versus senior, situation by situation
+
+        Think of a cook and a chef. The cook makes the dish on the ticket. The chef asks who is eating,
+        plans for the rush, and knows what happens when an ingredient runs out.
+
+        - **Vague prompt.** Mid-level starts drawing boxes. Senior asks about consumers, freshness, scale
+          and correctness first.
+        - **Choosing a tool.** Mid-level: "We use Kafka". Senior: "Kafka, because we need replay and many
+          consumers; Pub/Sub would also work if..."
+        - **Pipeline design.** Mid-level covers the happy path only. Senior covers late data, retries,
+          backfills, schema change and on-call.
+        - **SQL.** Mid-level gets the correct result on the sample. Senior is correct on duplicates, NULLs
+          and time zones, and mentions cost.
+        - **Behavioral.** Mid-level: "We did X". Senior: "I noticed X, I proposed Y, I convinced Z, and
+          here is the measured result."
+
+        ## Idea 2: the five behaviours to show on purpose
 
         1. **Clarify before you build.** Two or three sharp questions, then state your assumptions.
         2. **Quantify.** Rows per day, bytes per row, peak versus average. A rough number beats none.
@@ -104,19 +138,32 @@ export const track: Track = {
         4. **Design for operations.** Monitoring, alerting, idempotent reruns, backfills, ownership.
         5. **Own outcomes.** In stories, the result is measured, and you were the person who moved it.
 
+        These are behaviours, not talents. You can practise each one on purpose until it is a habit.
+
+        ## Idea 3: staff signal, briefly
+
+        If you are interviewing above senior, the bar shifts from "built it well" to "changed how many
+        teams build". Expect questions about platforms, standards, migrations across teams, and decisions
+        you made with incomplete information that turned out right or wrong.
+
+        ## Now say it like a senior engineer
+
+        Senior signal is a set of visible behaviours: clarify first, quantify, name the trade-off, design
+        for operations, and own a measured outcome. Choose one tool for a stated reason and name the
+        rejected alternative. Above senior, show how you changed the way many teams build.
+
         > [!trap] Seniority is not vocabulary
         > Listing every tool you know reads as noise. One tool, chosen for a stated reason, with the
         > alternative you rejected, reads as judgement.
 
-        ## Staff signal, briefly
-
-        If you are interviewing above senior, the bar shifts from "built it well" to "changed how
-        many teams build". Expect questions about platforms, standards, migrations across teams,
-        and decisions you made with incomplete information that turned out right or wrong.
-
         > [!senior] Say what you would not build
         > "I would not add streaming here; a daily batch meets the SLA at a tenth of the cost" is one
         > of the strongest sentences in a design round. Restraint is a senior skill.
+
+        ## In one breath
+
+        Seniority is behaviour you can show: ask before building, put numbers on it, name what you trade
+        away, plan for operations, own the result, and say what you would not build.
       `,
       checks: [
         {
@@ -138,48 +185,74 @@ export const track: Track = {
       title: 'Running a round out loud',
       summary:
         'A repeatable structure for coding, SQL and design rounds that keeps you in control.',
-      minutes: 11,
+      minutes: 13,
       body: `
-        Silence is the most expensive thing in an interview. The interviewer cannot score what they
-        cannot hear. Use the same four-step rhythm in every technical round so your thinking is
-        always visible.
+        ## Start with the problem
 
-        ## The four steps
+        A candidate reads the SQL question, goes quiet, and types for twelve minutes. The final query is
+        almost right. The interviewer's notes say: "Unclear how they approached it. Could not assess
+        reasoning." Twelve minutes of good thinking scored as nothing.
 
-        1. **Restate and clarify (2 to 5 min).** Say the problem back in your words. Ask about input
-           size, edge cases and what "correct" means. Write the assumptions down where both of you
-           can see them.
+        Silence is the most expensive thing in an interview. The interviewer cannot score what they cannot
+        hear. Use the same four-step rhythm in every technical round so your thinking is always visible.
+
+        ## Idea 1: the four steps
+
+        Think of a satnav. It tells you the route before you start, speaks at every turn, and confirms when
+        you arrive. You never wonder what it is doing.
+
+        1. **Restate and clarify (2 to 5 min).** Say the problem back in your words. Ask about input size,
+           edge cases and what "correct" means. Write the assumptions down where both of you can see them.
         2. **Plan out loud (3 to 5 min).** Describe the approach before you code or draw. Give the
            complexity or the cost. Ask: "Does this direction make sense before I write it?"
-        3. **Build and narrate.** Talk about decisions, not keystrokes. "I am using a dictionary here
-           so lookups are constant time."
-        4. **Test and summarise.** Walk one normal example and one edge case through your solution.
-           Then summarise the trade-offs and what you would do with more time.
+        3. **Build and narrate.** Talk about decisions, not keystrokes. "I am using a dictionary here so
+           lookups are constant time."
+        4. **Test and summarise.** Walk one normal example and one edge case through your solution. Then
+           summarise the trade-offs and what you would do with more time.
 
-        ## When you get stuck
+        ## Idea 2: when you get stuck
 
-        - Say what you know and what is blocking you. "I can get the sessions; I am unsure how to
-          merge overlapping ones."
+        - Say what you know and what is blocking you. "I can get the sessions; I am unsure how to merge
+          overlapping ones."
         - Solve a smaller version first, for example one user instead of all users.
         - Take a hint gracefully and use it fully. Needing one hint is normal. Ignoring it is not.
+
+        ## Idea 3: time boxes for a 45-minute round
+
+        For a **coding or SQL** round:
+
+        - Clarify: 3 min.
+        - Plan: 5 min.
+        - Build: 25 min.
+        - Test and wrap up: 7 min.
+        - Your questions: 5 min.
+
+        For a **system design** round:
+
+        - Clarify: 5 to 8 min.
+        - Plan: 5 min, with a high-level diagram.
+        - Build: 20 min of deep dives.
+        - Test and wrap up: 7 min on failure modes and trade-offs.
+        - Your questions: 5 min.
+
+        ## Now say it like a senior engineer
+
+        Run every round on the same rhythm: restate and clarify, plan out loud and check the direction,
+        build while narrating decisions, then test a normal and an edge case and summarise trade-offs.
+        When stuck, say what blocks you, shrink the problem, and use hints fully. Keep to the time boxes.
 
         > [!trap] Do not optimise in silence
         > Spending ten quiet minutes polishing an approach the interviewer would have accepted in
         > its simple form loses time and signal. Ship the simple version, then improve it out loud.
 
-        ## Time boxes for a 45-minute round
-
-        | Phase | Coding or SQL | System design |
-        |---|---|---|
-        | Clarify | 3 min | 5 to 8 min |
-        | Plan | 5 min | 5 min (high-level diagram) |
-        | Build | 25 min | 20 min (deep dives) |
-        | Test and wrap up | 7 min | 7 min (failure modes, trade-offs) |
-        | Your questions | 5 min | 5 min |
-
         > [!senior] Steer the deep dive
         > In a design round, offer the deep dive yourself: "The interesting part is late data and
         > deduplication. Shall I go deep there?" Choosing what matters is the skill being tested.
+
+        ## In one breath
+
+        Think out loud on a fixed rhythm (clarify, plan, build, test), say what blocks you when stuck,
+        ship the simple version first, and steer the deep dive to what matters.
       `,
       checks: [
         {
@@ -199,43 +272,75 @@ export const track: Track = {
       slug: 'estimation-numbers',
       title: 'Numbers to estimate with',
       summary: 'Size a pipeline in two minutes with a handful of round numbers you know by heart.',
-      minutes: 13,
+      minutes: 14,
       body: `
-        Estimation is not about the exact answer. It shows that you reason from requirements to
-        capacity, and it decides your architecture: 10 GB a day and 10 TB a day are different systems.
+        ## Start with the problem
 
-        ## Round numbers worth memorising
+        "How much data is that per day?" The candidate says, "A lot, so we will use Spark." The interviewer
+        cannot tell whether that means 10 GB or 10 TB, and neither can the candidate.
 
-        | Quantity | Round value |
-        |---|---|
-        | Seconds in a day | about 86,400, use 100,000 for quick maths |
-        | Seconds in a month | about 2.6 million |
-        | One event as JSON | 0.5 to 2 KB |
-        | Same event in Parquet with compression | often 5 to 10 times smaller |
-        | Sequential disk or object store read per worker | hundreds of MB per second |
-        | Kafka partition throughput | often quoted around 10 MB/s per partition, plan conservatively |
-        | Network inside a cloud region | about 1 ms round trip |
+        Estimation is not about the exact answer. It shows that you reason from requirements to capacity,
+        and it decides your architecture: 10 GB a day and 10 TB a day are different systems.
 
-        These are rules of thumb. Say "roughly" and keep going. Interviewers care that your numbers
-        are the right order of magnitude and that you use them to decide something.
+        ## Idea 1: round numbers worth memorising
 
-        ## A worked example
+        Think of a builder who knows a bag of cement covers about one square metre. They do not measure
+        every bag; they know the rough number and plan the job in their head.
 
-        "Uber-like: 20 million trips a day, each trip emits about 200 events (GPS pings, state
-        changes), each event is 1 KB."
+        - **Seconds in a day:** about 86,400. Use 100,000 for quick maths.
+        - **Seconds in a month:** about 2.6 million.
+        - **One event as JSON:** 0.5 to 2 KB.
+        - **The same event in Parquet with compression:** often 5 to 10 times smaller.
+        - **Sequential disk or object store read per worker:** hundreds of MB per second.
+        - **Kafka partition throughput:** often quoted around 10 MB/s per partition. Plan conservatively.
+        - **Network inside a cloud region:** about 1 ms round trip.
+
+        These are rules of thumb. Say "roughly" and keep going. Interviewers care that your numbers are
+        the right order of magnitude and that you use them to decide something.
+
+        ## Idea 2: a worked example
+
+        "Uber-like: 20 million trips a day, each trip emits about 200 events (GPS pings, state changes),
+        each event is 1 KB."
+
+        Go one line at a time:
 
         ~~~text
-        events/day   = 20M × 200          = 4 billion
-        bytes/day    = 4B × 1 KB          = 4 TB raw JSON
-        per second   = 4B / 100k s        ≈ 40,000 events/s average
-        peak         ≈ 3 × average        ≈ 120,000 events/s
-        stored       ≈ 4 TB / 7 (Parquet) ≈ 600 GB/day, ≈ 200 TB/year
-        partitions   ≈ 120 MB/s peak / 10 MB/s ≈ 12, round up to 32 or 64 for headroom
+        events/day
+          20M x 200 = 4 billion
+
+        bytes/day
+          4B x 1 KB = 4 TB raw JSON
+
+        per second (average)
+          4B / 100k s = 40,000/s
+
+        peak (3 x average)
+          = 120,000 events/s
+
+        stored (Parquet, /7)
+          4 TB / 7 = 600 GB/day
+          = about 200 TB/year
+
+        Kafka partitions
+          120 MB/s / 10 MB/s = 12
+          round up to 32 or 64
         ~~~
 
-        Now the numbers drive choices: 120,000 events a second rules out a single database insert
-        path, 200 TB a year means you need partitioning and a retention policy, and the partition
-        count tells you how many consumers can work in parallel.
+        ## Idea 3: let the numbers decide
+
+        Now the numbers drive choices:
+
+        - 120,000 events a second rules out a single database insert path.
+        - 200 TB a year means you need partitioning and a retention policy.
+        - The partition count tells you how many consumers can work in parallel.
+
+        An estimate that does not change a decision was wasted time.
+
+        ## Now say it like a senior engineer
+
+        Carry a handful of round numbers, multiply from the requirement to events, bytes, rate, peak and
+        storage in two minutes, say "roughly", and then use each number to make a design choice.
 
         > [!senior] Peak, not average
         > Systems fail at peak. Friday night in a big city, New Year's Eve, a cricket final. Always
@@ -244,6 +349,11 @@ export const track: Track = {
         > [!trap] Do not spend ten minutes on arithmetic
         > Two minutes, round numbers, then move on. If a number turns out to matter, you can refine
         > it during the deep dive.
+
+        ## In one breath
+
+        Know a few round numbers, go from trips to events to bytes to peak rate to storage in two minutes,
+        design for the peak, and let every number decide something.
       `,
       checks: [
         {
