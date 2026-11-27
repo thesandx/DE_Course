@@ -3,6 +3,7 @@
  * One lab per station. The shape and the rules are in `../README.md`.
  */
 
+import { LABS as ML_LABS } from '@/lib/course/gcp/labs/analysis-ml';
 import type { GcpLab } from '@/types/gcp';
 
 const FAQ = `id,question
@@ -443,4 +444,5 @@ SELECT COUNT(*) AS rows_seen_by_partner FROM lab43_linked.daily_city;`,
 curl -s -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "x-goog-user-project: $PROJECT_ID" \\
   "https://analyticshub.googleapis.com/v1/projects/$PROJECT_ID/locations/us-central1/dataExchanges" | jq '.dataExchanges // "No exchanges left"'`,
   },
+  ...ML_LABS,
 ];

@@ -1,0 +1,251 @@
+{
+  "station": "ml-fundamentals",
+  "chapters": [
+    {
+      "title": "The mission",
+      "beats": [
+        {
+          "say": "The churn model scored ninety nine percent in the notebook. In production, seventy.",
+          "device": "card",
+          "label": "The problem",
+          "head": "99% in the notebook, 70% in production",
+          "headmark": "70% in production",
+          "headmark_at": "seventy"
+        },
+        {
+          "say": "The exam loves this story. Today you learn why it happens, and how to fix it.",
+          "device": "card",
+          "label": "Station 4.4 · ML fundamentals",
+          "head": "Why it happens, and the fix",
+          "headmark": "the fix",
+          "headmark_at": "fix"
+        }
+      ]
+    },
+    {
+      "title": "Three splits",
+      "check": {
+        "prompt": "You forecast sales from three years of data. How do you split it?",
+        "options": [
+          "At random, 80/20",
+          "By time: past to train, recent to test",
+          "No split, use all of it"
+        ],
+        "answer": 1,
+        "why": "A random split lets the model see the future."
+      },
+      "beats": [
+        {
+          "say": "First, split your data three ways. Each part has one job.",
+          "device": "big",
+          "text": "Three splits, three jobs"
+        },
+        {
+          "say": "Training teaches the weights. Validation picks the settings. The test set gives the honest score, once.",
+          "device": "list",
+          "label": "Split the data",
+          "items": [
+            "Training: learn the weights",
+            "Validation: tune the settings",
+            "Test: the honest score, once"
+          ],
+          "items_at": ["training", "validation", "test"]
+        },
+        {
+          "say": "For time series, split by time. A random split lets the model see the future.",
+          "device": "card",
+          "label": "Time series",
+          "head": "Train on the past, test on the future",
+          "headmark": "test on the future",
+          "headmark_at": "future"
+        },
+        {
+          "say": "And watch for leakage: a feature you only know after the outcome.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "A feature known only after the outcome",
+          "mark": "after the outcome",
+          "mark_at": "after"
+        }
+      ]
+    },
+    {
+      "title": "Read the gap",
+      "beats": [
+        {
+          "say": "Now compare two scores: training and validation.",
+          "device": "big",
+          "text": "Training against validation"
+        },
+        {
+          "say": "High on training, low on validation, is overfitting. The model memorized the rows.",
+          "device": "card",
+          "label": "Overfitting",
+          "head": "Great on training, poor on new data",
+          "headmark": "poor on new data",
+          "headmark_at": "low"
+        },
+        {
+          "say": "Low on both is underfitting. The model is too simple. Give it more features or more power.",
+          "device": "card",
+          "label": "Underfitting",
+          "head": "Poor on both: too simple",
+          "headmark": "too simple",
+          "headmark_at": "simple"
+        }
+      ]
+    },
+    {
+      "title": "Fix overfitting",
+      "check": {
+        "prompt": "A deep network with many layers fits training data but fails on new data. The fix?",
+        "options": ["Threading", "Dropout", "Serialization"],
+        "answer": 1,
+        "why": "Dropout stops a big network from memorizing. Threading and serialization only change speed and storage."
+      },
+      "beats": [
+        {
+          "say": "Four tools stop a model from memorizing.",
+          "device": "big",
+          "text": "Four ways to stop memorizing"
+        },
+        {
+          "say": "Dropout. During training, it switches off random neurons at every step.",
+          "device": "card",
+          "label": "Dropout",
+          "head": "Random neurons off, every training step",
+          "headmark": "Random neurons off",
+          "headmark_at": "random"
+        },
+        {
+          "say": "No neuron can lean on another, so the network learns general patterns. At prediction, all neurons are on.",
+          "device": "card",
+          "label": "Why it works",
+          "head": "No neuron can lean on another",
+          "headmark": "lean on another",
+          "headmark_at": "lean"
+        },
+        {
+          "say": "L one pushes weak features to zero. L two keeps every weight small. Early stopping ends at the best epoch.",
+          "device": "list",
+          "label": "The other three",
+          "items": [
+            "L1: weak features go to zero",
+            "L2: all weights stay small",
+            "Early stopping: best epoch"
+          ],
+          "items_at": ["one", "two", "early"]
+        },
+        {
+          "say": "The trap: more layers or more epochs. They make overfitting worse.",
+          "device": "card",
+          "label": "Exam trap",
+          "text": "More layers, more epochs: worse overfitting",
+          "mark": "worse",
+          "mark_at": "worse"
+        }
+      ]
+    },
+    {
+      "title": "Metrics",
+      "check": {
+        "prompt": "Fraud is one in a thousand. Which metric should you watch?",
+        "options": ["Accuracy", "Precision, recall or PR AUC", "RMSE"],
+        "answer": 1,
+        "why": "Saying never fraud is 99.9% accurate and catches nothing."
+      },
+      "beats": [
+        {
+          "say": "Next, pick the metric that matches the cost of a mistake.",
+          "device": "big",
+          "text": "Match the cost of a mistake"
+        },
+        {
+          "say": "If a miss is costly, like a disease, use recall. If a false alarm is costly, use precision.",
+          "device": "list",
+          "label": "Classification",
+          "items": ["A miss is costly: recall", "A false alarm is costly: precision"],
+          "items_at": ["miss", "false"]
+        },
+        {
+          "say": "Lower the threshold for more recall. Raise it for more precision. No retraining.",
+          "device": "card",
+          "label": "The threshold",
+          "head": "Move the threshold, not the model",
+          "headmark": "threshold",
+          "headmark_at": "threshold"
+        },
+        {
+          "say": "With rare cases, like fraud, accuracy lies. Use PR AUC.",
+          "device": "card",
+          "label": "Rare positives",
+          "head": "Accuracy lies. Use PR AUC.",
+          "headmark": "Accuracy lies.",
+          "headmark_at": "accuracy"
+        }
+      ]
+    },
+    {
+      "title": "Feature engineering",
+      "beats": [
+        {
+          "say": "Last, features. They matter more than the algorithm.",
+          "device": "big",
+          "text": "Features beat algorithms"
+        },
+        {
+          "say": "Scale your numbers. One hot small categories. Embed huge ones.",
+          "device": "list",
+          "label": "The toolkit",
+          "items": ["Scale numbers", "One-hot small categories", "Embed huge categories"],
+          "items_at": ["scale", "hot", "embed"]
+        },
+        {
+          "say": "And cross features that work together, like latitude and longitude.",
+          "device": "card",
+          "label": "Feature cross",
+          "head": "Latitude × longitude = a place",
+          "headmark": "a place",
+          "headmark_at": "cross"
+        },
+        {
+          "say": "Put these steps in the transform clause, so prediction repeats them exactly.",
+          "device": "card",
+          "label": "BigQuery ML",
+          "head": "Keep them in TRANSFORM",
+          "headmark": "TRANSFORM",
+          "headmark_at": "transform"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Recap.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "Split honestly. Read the gap. Dropout for big networks. Pick the metric by the cost of a mistake.",
+          "device": "list",
+          "label": "Station 4.4",
+          "items": [
+            "Split honestly",
+            "Read the gap",
+            "Dropout for big networks",
+            "Metric by cost of a mistake"
+          ],
+          "items_at": ["split", "read", "dropout", "metric"]
+        },
+        {
+          "say": "Try the checkpoint below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Pass the checkpoint below.",
+          "submark": "checkpoint"
+        }
+      ]
+    }
+  ]
+}

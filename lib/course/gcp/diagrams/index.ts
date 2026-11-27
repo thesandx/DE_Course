@@ -4,6 +4,7 @@
  */
 
 import { DIAGRAMS as analysis } from '@/lib/course/gcp/diagrams/analysis';
+import { DIAGRAMS as analysisMl } from '@/lib/course/gcp/diagrams/analysis-ml';
 import { DIAGRAMS as design } from '@/lib/course/gcp/diagrams/design';
 import { DIAGRAMS as ingest } from '@/lib/course/gcp/diagrams/ingest';
 import { DIAGRAMS as operations } from '@/lib/course/gcp/diagrams/operations';
@@ -15,6 +16,7 @@ export const DIAGRAMS: Readonly<Record<string, readonly GcpDiagram[]>> = {
   ...ingest,
   ...storage,
   ...analysis,
+  ...analysisMl,
   ...operations,
 };
 

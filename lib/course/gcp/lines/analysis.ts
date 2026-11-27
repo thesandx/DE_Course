@@ -5,6 +5,7 @@
  * text here; see lib/course/gcp/README.md for the rules.
  */
 
+import { ML_STATIONS } from '@/lib/course/gcp/lines/analysis-ml';
 import type { GcpLine } from '@/types/gcp';
 
 export const line: GcpLine = {
@@ -15,7 +16,7 @@ export const line: GcpLine = {
   weight: 15,
   hue: 7,
   intro:
-    'BI connections and query performance, masking and DLP for consumers, ML feature preparation in BigQuery ML, embeddings/RAG data prep, and sharing data with Analytics Hub. Older questions also test general ML concepts (overfitting, supervised vs unsupervised).',
+    'BI connections and query performance, masking and DLP for consumers, ML feature preparation in BigQuery ML, embeddings/RAG data prep, and sharing data with Analytics Hub. Stations 4.4 and 4.5 go beyond the guide: the practice banks still ask classic ML (overfitting, dropout, L1/L2, metrics, feature engineering) and Vertex AI, so they teach it from first principles.',
   boss: {
     title: 'The Dashboard Rush',
     story:
@@ -126,7 +127,7 @@ export const line: GcpLine = {
         },
         {
           title: 'ML fundamentals the exam still asks',
-          body: "- **Supervised** (labelled data: classification, regression), **unsupervised** (no labels: clustering, anomaly detection), **reinforcement** (agent + reward; rarely the answer for tabular data).\n- **Overfitting** (great on training, poor on new data): add **regularisation** (L1/L2), **dropout** for neural nets, more data, early stopping, simpler model, fewer features. **Underfitting**: more features, more complex model, less regularisation.\n- **Feature selection**: drop irrelevant or redundant features; combine highly co-dependent features into one. Never remove features because they correlate strongly with the label (those are the useful ones).\n- **Anomaly detection unsupervised** fits when anomalies are rare and future anomalies may look different from past ones.\n- **Imbalanced classes**: accuracy is misleading — use precision/recall/F1, PR-AUC; resample or weight classes.\n- Metrics: regression → RMSE/MAE; classification → precision (few false positives), recall (few false negatives), ROC-AUC.\n- **Changing behaviour over time** (drift): retrain continuously on **existing + new data** (or a sliding window), monitor for drift.\n- Resource-constrained environment → simple models like **linear regression**.\n- Build vs buy: pre-trained API → AutoML → custom training, in order of effort.\n\n> [!trap] Exam traps\n> Retraining only on new data (forgets general patterns).\n>\n> Choosing reinforcement learning to predict a value from historical data.\n\n### Keyword signals\n\n| When the question says | Think |\n|---|---|\n| 'fits training data, poor on new data, deep net' | Dropout / regularisation |\n| 'thousands of features, faster training, minimal accuracy loss' | Combine co-dependent features (or PCA) |",
+          body: "- **Supervised** (labelled data: classification, regression), **unsupervised** (no labels: clustering, anomaly detection), **reinforcement** (agent + reward; rarely the answer for tabular data).\n- **Overfitting** (great on training, poor on new data): add **regularisation** (L1/L2), **dropout** for neural nets, more data, early stopping, simpler model, fewer features. **Underfitting**: more features, more complex model, less regularisation.\n- **Feature selection**: drop irrelevant or redundant features; combine highly co-dependent features into one. Never remove features because they correlate strongly with the label (those are the useful ones).\n- **Anomaly detection unsupervised** fits when anomalies are rare and future anomalies may look different from past ones.\n- **Imbalanced classes**: accuracy is misleading — use precision/recall/F1, PR-AUC; resample or weight classes.\n- Metrics: regression → RMSE/MAE; classification → precision (few false positives), recall (few false negatives), ROC-AUC.\n- **Changing behaviour over time** (drift): retrain continuously on **existing + new data** (or a sliding window), monitor for drift.\n- Resource-constrained environment → simple models like **linear regression**.\n- Build vs buy: pre-trained API → AutoML → custom training, in order of effort.\n\n> [!trap] Exam traps\n> Retraining only on new data (forgets general patterns).\n>\n> Choosing reinforcement learning to predict a value from historical data.\n\n### Keyword signals\n\n| When the question says | Think |\n|---|---|\n| 'fits training data, poor on new data, deep net' | Dropout / regularisation |\n| 'thousands of features, faster training, minimal accuracy loss' | Combine co-dependent features (or PCA) |\n\n> [!tip] Go deeper\n> This is the summary. Station 4.4 explains overfitting, dropout, L1 and L2, metrics and feature engineering step by step. Station 4.5 covers the pre-trained APIs, AutoML and Vertex AI.",
         },
         {
           title: 'Unstructured data, embeddings and RAG',
@@ -217,5 +218,6 @@ export const line: GcpLine = {
         },
       ],
     },
+    ...ML_STATIONS,
   ],
 };

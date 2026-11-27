@@ -4986,4 +4986,549 @@ export const VIDEO_TIMINGS: Readonly<Record<string, CourseVideo>> = {
       },
     ],
   },
+  'ml-fundamentals': {
+    slug: 'ml-fundamentals',
+    duration: 121.01,
+    chapters: [
+      {
+        title: 'The mission',
+        start: 0.33,
+      },
+      {
+        title: 'Three splits',
+        start: 10.87,
+      },
+      {
+        title: 'Read the gap',
+        start: 30.92,
+      },
+      {
+        title: 'Fix overfitting',
+        start: 46.01,
+      },
+      {
+        title: 'Metrics',
+        start: 72.23,
+      },
+      {
+        title: 'Feature engineering',
+        start: 92.73,
+      },
+      {
+        title: 'Recap',
+        start: 110.19,
+      },
+    ],
+    cues: [
+      {
+        start: 0.49,
+        end: 3.56,
+        text: 'The churn model scored ninety nine percent in the notebook.',
+      },
+      {
+        start: 3.58,
+        end: 5.75,
+        text: 'In production, seventy.',
+      },
+      {
+        start: 5.78,
+        end: 7.5,
+        text: 'The exam loves this story.',
+      },
+      {
+        start: 7.53,
+        end: 11.01,
+        text: 'Today you learn why it happens, and how to fix it.',
+      },
+      {
+        start: 11.03,
+        end: 12.96,
+        text: 'First, split your data three ways.',
+      },
+      {
+        start: 12.97,
+        end: 14.99,
+        text: 'Each part has one job.',
+      },
+      {
+        start: 15.01,
+        end: 16.55,
+        text: 'Training teaches the weights.',
+      },
+      {
+        start: 16.57,
+        end: 18.41,
+        text: 'Validation picks the settings.',
+      },
+      {
+        start: 18.43,
+        end: 21.27,
+        text: 'The test set gives the honest score, once.',
+      },
+      {
+        start: 21.3,
+        end: 23.54,
+        text: 'For time series, split by time.',
+      },
+      {
+        start: 23.56,
+        end: 26.56,
+        text: 'A random split lets the model see the future.',
+      },
+      {
+        start: 26.58,
+        end: 31.06,
+        text: 'And watch for leakage: a feature you only know after the outcome.',
+      },
+      {
+        start: 31.08,
+        end: 34.45,
+        text: 'Now compare two scores: training and validation.',
+      },
+      {
+        start: 34.47,
+        end: 37.59,
+        text: 'High on training, low on validation, is overfitting.',
+      },
+      {
+        start: 37.62,
+        end: 39.83,
+        text: 'The model memorized the rows.',
+      },
+      {
+        start: 39.85,
+        end: 41.63,
+        text: 'Low on both is underfitting.',
+      },
+      {
+        start: 41.65,
+        end: 43.13,
+        text: 'The model is too simple.',
+      },
+      {
+        start: 43.15,
+        end: 46.16,
+        text: 'Give it more features or more power.',
+      },
+      {
+        start: 46.17,
+        end: 49.06,
+        text: 'Four tools stop a model from memorizing.',
+      },
+      {
+        start: 49.09,
+        end: 49.88,
+        text: 'Dropout.',
+      },
+      {
+        start: 49.9,
+        end: 53.73,
+        text: 'During training, it switches off random neurons at every step.',
+      },
+      {
+        start: 53.74,
+        end: 57.8,
+        text: 'No neuron can lean on another, so the network learns general patterns.',
+      },
+      {
+        start: 57.82,
+        end: 60.51,
+        text: 'At prediction, all neurons are on.',
+      },
+      {
+        start: 60.53,
+        end: 62.85,
+        text: 'L one pushes weak features to zero.',
+      },
+      {
+        start: 62.87,
+        end: 65.02,
+        text: 'L two keeps every weight small.',
+      },
+      {
+        start: 65.04,
+        end: 67.72,
+        text: 'Early stopping ends at the best epoch.',
+      },
+      {
+        start: 67.74,
+        end: 69.92,
+        text: 'The trap: more layers or more epochs.',
+      },
+      {
+        start: 69.94,
+        end: 72.37,
+        text: 'They make overfitting worse.',
+      },
+      {
+        start: 72.39,
+        end: 76.08,
+        text: 'Next, pick the metric that matches the cost of a mistake.',
+      },
+      {
+        start: 76.1,
+        end: 79.36,
+        text: 'If a miss is costly, like a disease, use recall.',
+      },
+      {
+        start: 79.38,
+        end: 82.44,
+        text: 'If a false alarm is costly, use precision.',
+      },
+      {
+        start: 82.46,
+        end: 84.5,
+        text: 'Lower the threshold for more recall.',
+      },
+      {
+        start: 84.52,
+        end: 86.1,
+        text: 'Raise it for more precision.',
+      },
+      {
+        start: 86.12,
+        end: 87.67,
+        text: 'No retraining.',
+      },
+      {
+        start: 87.69,
+        end: 90.39,
+        text: 'With rare cases, like fraud, accuracy lies.',
+      },
+      {
+        start: 90.41,
+        end: 92.88,
+        text: 'Use PR AUC.',
+      },
+      {
+        start: 92.89,
+        end: 94.03,
+        text: 'Last, features.',
+      },
+      {
+        start: 94.05,
+        end: 96.19,
+        text: 'They matter more than the algorithm.',
+      },
+      {
+        start: 96.2,
+        end: 97.27,
+        text: 'Scale your numbers.',
+      },
+      {
+        start: 97.29,
+        end: 98.94,
+        text: 'One hot small categories.',
+      },
+      {
+        start: 98.95,
+        end: 100.64,
+        text: 'Embed huge ones.',
+      },
+      {
+        start: 100.67,
+        end: 104.98,
+        text: 'And cross features that work together, like latitude and longitude.',
+      },
+      {
+        start: 105.0,
+        end: 110.33,
+        text: 'Put these steps in the transform clause, so prediction repeats them exactly.',
+      },
+      {
+        start: 110.35,
+        end: 111.59,
+        text: 'Recap.',
+      },
+      {
+        start: 111.61,
+        end: 112.68,
+        text: 'Split honestly.',
+      },
+      {
+        start: 112.7,
+        end: 113.7,
+        text: 'Read the gap.',
+      },
+      {
+        start: 113.72,
+        end: 115.34,
+        text: 'Dropout for big networks.',
+      },
+      {
+        start: 115.36,
+        end: 118.0,
+        text: 'Pick the metric by the cost of a mistake.',
+      },
+      {
+        start: 118.02,
+        end: 120.8,
+        text: 'Try the checkpoint below.',
+      },
+    ],
+    checks: [
+      {
+        at: 30.62,
+        prompt: 'You forecast sales from three years of data. How do you split it?',
+        options: [
+          'At random, 80/20',
+          'By time: past to train, recent to test',
+          'No split, use all of it',
+        ],
+        answers: [1],
+        why: 'A random split lets the model see the future.',
+      },
+      {
+        at: 71.93,
+        prompt:
+          'A deep network with many layers fits training data but fails on new data. The fix?',
+        options: ['Threading', 'Dropout', 'Serialization'],
+        answers: [1],
+        why: 'Dropout stops a big network from memorizing. Threading and serialization only change speed and storage.',
+      },
+      {
+        at: 92.43,
+        prompt: 'Fraud is one in a thousand. Which metric should you watch?',
+        options: ['Accuracy', 'Precision, recall or PR AUC', 'RMSE'],
+        answers: [1],
+        why: 'Saying never fraud is 99.9% accurate and catches nothing.',
+      },
+    ],
+  },
+  'vertex-ai': {
+    slug: 'vertex-ai',
+    duration: 95.44,
+    chapters: [
+      {
+        title: 'The mission',
+        start: 0.33,
+      },
+      {
+        title: 'Pick the tool',
+        start: 8.76,
+      },
+      {
+        title: 'Train and tune',
+        start: 30.52,
+      },
+      {
+        title: 'Serve',
+        start: 55.35,
+      },
+      {
+        title: 'Monitor and retrain',
+        start: 69.49,
+      },
+      {
+        title: 'Recap',
+        start: 84.44,
+      },
+    ],
+    cues: [
+      {
+        start: 0.49,
+        end: 3.31,
+        text: 'Five teams want machine learning this quarter.',
+      },
+      {
+        start: 3.33,
+        end: 5.0,
+        text: 'Pick the right tool for each,',
+      },
+      {
+        start: 5.03,
+        end: 8.9,
+        text: 'then put one model into production and keep it healthy.',
+      },
+      {
+        start: 8.93,
+        end: 11.84,
+        text: 'The rule: the least effort that meets the need.',
+      },
+      {
+        start: 11.86,
+        end: 15.13,
+        text: 'If Google already solves the task, call the API.',
+      },
+      {
+        start: 15.15,
+        end: 19.57,
+        text: 'Vision, Natural Language, Speech, Translation, Document AI.',
+      },
+      {
+        start: 19.59,
+        end: 21.45,
+        text: 'Your own labels and no coders?',
+      },
+      {
+        start: 21.47,
+        end: 22.39,
+        text: 'AutoML.',
+      },
+      {
+        start: 22.41,
+        end: 24.55,
+        text: 'Data in BigQuery and a SQL team?',
+      },
+      {
+        start: 24.57,
+        end: 26.23,
+        text: 'BigQuery ML.',
+      },
+      {
+        start: 26.25,
+        end: 27.66,
+        text: 'Full control of the model?',
+      },
+      {
+        start: 27.68,
+        end: 30.66,
+        text: 'Custom training on Vertex AI.',
+      },
+      {
+        start: 30.68,
+        end: 31.82,
+        text: 'Training hardware.',
+      },
+      {
+        start: 31.84,
+        end: 33.65,
+        text: 'CPUs for small models.',
+      },
+      {
+        start: 33.67,
+        end: 36.05,
+        text: 'GPUs for most deep learning.',
+      },
+      {
+        start: 36.06,
+        end: 42.05,
+        text: 'TPUs for huge models full of matrix multiplications, with no custom operations.',
+      },
+      {
+        start: 42.08,
+        end: 45.29,
+        text: 'If the GPUs sit idle, fix the input pipeline.',
+      },
+      {
+        start: 45.31,
+        end: 47.97,
+        text: 'TFRecord files and prefetching.',
+      },
+      {
+        start: 47.98,
+        end: 52.59,
+        text: 'To tune hyperparameters, Vertex AI uses Bayesian optimization.',
+      },
+      {
+        start: 52.61,
+        end: 55.49,
+        text: 'Fewer trials than a grid search.',
+      },
+      {
+        start: 55.51,
+        end: 58.85,
+        text: 'An online endpoint answers one request in milliseconds.',
+      },
+      {
+        start: 58.87,
+        end: 60.65,
+        text: 'You pay while it runs.',
+      },
+      {
+        start: 60.67,
+        end: 64.66,
+        text: 'Batch prediction scores millions of rows offline, then stops.',
+      },
+      {
+        start: 64.68,
+        end: 67.8,
+        text: 'A feature store gives training and serving the same features.',
+      },
+      {
+        start: 67.82,
+        end: 69.64,
+        text: 'No skew.',
+      },
+      {
+        start: 69.66,
+        end: 72.5,
+        text: 'Models get worse as the world changes.',
+      },
+      {
+        start: 72.52,
+        end: 75.25,
+        text: 'Skew: serving data differs from training data.',
+      },
+      {
+        start: 75.27,
+        end: 78.41,
+        text: 'Drift: serving data changes over time.',
+      },
+      {
+        start: 78.42,
+        end: 81.13,
+        text: 'A pipeline retrains on old and new data,',
+      },
+      {
+        start: 81.15,
+        end: 84.58,
+        text: 'and deploys only if the new model is better.',
+      },
+      {
+        start: 84.6,
+        end: 85.84,
+        text: 'Recap.',
+      },
+      {
+        start: 85.86,
+        end: 87.08,
+        text: 'Least effort wins.',
+      },
+      {
+        start: 87.1,
+        end: 88.93,
+        text: 'TPUs for huge models.',
+      },
+      {
+        start: 88.95,
+        end: 90.38,
+        text: 'Batch when nobody waits.',
+      },
+      {
+        start: 90.4,
+        end: 92.42,
+        text: 'Monitor, then retrain.',
+      },
+      {
+        start: 92.44,
+        end: 95.22,
+        text: 'Try the checkpoint below.',
+      },
+    ],
+    checks: [
+      {
+        at: 30.22,
+        prompt: 'You need fields from scanned invoices. No labels, no ML team. Which tool?',
+        options: ['AutoML', 'Document AI', 'Custom training'],
+        answers: [1],
+        why: 'Invoice parsing is already solved by a pre-trained API.',
+      },
+      {
+        at: 55.05,
+        prompt:
+          'A huge TensorFlow model of matrix multiplications takes weeks on GPUs. What helps most?',
+        options: ['TPUs', 'More CPUs', 'Fewer epochs'],
+        answers: [0],
+        why: 'TPUs are built for large matrix multiplications.',
+      },
+      {
+        at: 69.19,
+        prompt: 'You score forty million customers every night. How?',
+        options: ['An online endpoint', 'Batch prediction', 'A Cloud Run function'],
+        answers: [1],
+        why: 'Nobody waits for the answer, so no endpoint needs to run all day.',
+      },
+    ],
+  },
 };

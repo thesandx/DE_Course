@@ -48,9 +48,9 @@ describe('GCP catalogue integrity', () => {
     expect(LINES.map((line) => line.number)).toEqual([1, 2, 3, 4, 5]);
   });
 
-  it('has 19 stations with unique, URL-safe slugs, none named "boss"', () => {
+  it('has 21 stations with unique, URL-safe slugs, none named "boss"', () => {
     const slugs = allStations().map((ref) => ref.station.slug);
-    expect(slugs).toHaveLength(19);
+    expect(slugs).toHaveLength(21);
     expect(new Set(slugs).size).toBe(slugs.length);
     for (const slug of slugs) {
       expect(slug).toMatch(SLUG);
@@ -85,7 +85,7 @@ describe('GCP catalogue integrity', () => {
   });
 
   it('has bank questions that name a real station and a real answer', () => {
-    expect(QUESTIONS.length).toBe(139);
+    expect(QUESTIONS.length).toBe(176);
     for (const question of QUESTIONS) {
       expect(lineOfStation(question.station), question.prompt).toBeDefined();
       expect(question.answers.length).toBeGreaterThan(0);
@@ -99,7 +99,7 @@ describe('GCP catalogue integrity', () => {
   });
 
   it('has flashcards and sprint rounds for real lines with distinct options', () => {
-    expect(CARDS.length).toBe(79);
+    expect(CARDS.length).toBe(103);
     for (const card of CARDS) expect(getLine(card.line), card.front).toBeDefined();
     for (const round of SPRINT) {
       const options = [round.answer, ...round.distractors];

@@ -78,7 +78,7 @@ export const COURSES: readonly CourseInfo[] = [
     href: '/gcp',
     learn: { href: '/gcp/lines', label: 'Lines' },
     practice: { href: '/gcp/practice', label: 'Drills' },
-    facts: ['5 lines', '19 stations', '139 exam questions'],
+    facts: ['5 lines', '21 stations', '176 exam questions'],
   },
   {
     slug: 'k8s',

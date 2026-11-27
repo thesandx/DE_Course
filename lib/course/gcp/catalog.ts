@@ -74,8 +74,8 @@ export interface Rank {
 }
 
 /**
- * The lab's ranks, scaled to this course's XP (about 2,100 without the
- * hands-on labs, which add 950 more as a bonus), so the
+ * The lab's ranks, scaled to this course's XP (about 2,300 without the
+ * hands-on labs, which add 1,050 more as a bonus), so the
  * top rank needs nearly everything: every station, boss and the mock exam.
  */
 const RANKS: ReadonlyArray<{ title: string; from: number }> = [

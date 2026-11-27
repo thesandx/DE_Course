@@ -20,6 +20,8 @@ The content comes from the owner's PDE Exam Lab module. A one-time script conver
 | `diagrams/<line>.ts` | The concept diagrams of one line, keyed by station slug.                            |
 | `diagrams/index.ts`  | All diagrams, and the lookup for one concept.                                       |
 
+Stations 4.4 and 4.5 are outside the current exam guide. The practice exams still ask classic ML and Vertex AI questions, so these stations teach that material. Their content is in separate files: `lines/analysis-ml.ts`, `diagrams/analysis-ml.ts`, `labs/analysis-ml.ts` and `questions-ml.ts`. Line 4 and the indexes include them.
+
 The types are in [`types/gcp.ts`](../../../types/gcp.ts).
 
 ## Rules for content
@@ -51,7 +53,7 @@ Do not rename a slug after release, and do not reorder `cards.ts`. A card id is 
 - The sprint gives 60 seconds. The targets are 10 and 20 correct answers.
 - The daily goal is 100 XP. The streak counts days with at least one finished item.
 - Exam readiness is the progress of each line, weighted by the exam weight of its domain.
-- The ranks go from Trainee (0 XP) to Exam-ready (2,000 XP). The course has about 2,100 XP without the labs. The 19 labs add 950 XP as a bonus.
+- The ranks go from Trainee (0 XP) to Exam-ready (2,000 XP). The course has about 2,300 XP without the labs. The 21 labs add 1,050 XP as a bonus.
 - A lab opens when its station is done. Labs do not count toward exam readiness.
 
 ## Hands-on labs

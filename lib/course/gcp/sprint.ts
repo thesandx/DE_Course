@@ -268,4 +268,44 @@ export const SPRINT: readonly SprintRound[] = [
     answer: 'VECTOR_SEARCH',
     distractors: ['Search index', 'LIKE filter', 'Wildcard table'],
   },
+  {
+    scenario: 'Fields from scanned invoices, no training',
+    answer: 'Document AI',
+    distractors: ['AutoML', 'Vision API', 'BigQuery ML'],
+  },
+  {
+    scenario: 'Your own product photo categories, no ML coders',
+    answer: 'AutoML',
+    distractors: ['Vision API', 'Document AI', 'Dialogflow CX'],
+  },
+  {
+    scenario: 'Sentiment of customer reviews today',
+    answer: 'Natural Language API',
+    distractors: ['AutoML', 'Translation API', 'Speech-to-Text'],
+  },
+  {
+    scenario: 'Multi-turn support chatbot',
+    answer: 'Dialogflow CX',
+    distractors: ['Natural Language API', 'Speech-to-Text', 'Document AI'],
+  },
+  {
+    scenario: 'Huge matrix-heavy TensorFlow training',
+    answer: 'TPU',
+    distractors: ['GPU', 'CPU', 'Dataproc'],
+  },
+  {
+    scenario: 'Score 40M rows nightly from a Vertex AI model',
+    answer: 'Batch prediction',
+    distractors: ['Online endpoint', 'Cloud Run', 'Feature Store'],
+  },
+  {
+    scenario: 'Same features in training and online serving',
+    answer: 'Vertex AI Feature Store',
+    distractors: ['Model Registry', 'Model Monitoring', 'Vertex AI Pipelines'],
+  },
+  {
+    scenario: 'Deep network overfits the training data',
+    answer: 'Dropout',
+    distractors: ['More layers', 'More epochs', 'Threading'],
+  },
 ];

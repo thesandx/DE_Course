@@ -47,7 +47,7 @@ describe('GcpDashboard', () => {
   it("counts today's XP, bosses and stations from the GCP tracker", () => {
     renderDashboard(DESIGN_DONE);
     expect(screen.getByText('1 / 5')).toBeInTheDocument();
-    expect(screen.getByText('4 / 19')).toBeInTheDocument();
+    expect(screen.getByText('4 / 21')).toBeInTheDocument();
     expect(screen.getAllByText(/Daily goal met|of 100 XP today/).length).toBeGreaterThan(0);
     expect(screen.getByText('Passed · replay any time')).toBeInTheDocument();
   });

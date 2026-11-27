@@ -1,0 +1,194 @@
+{
+  "station": "vertex-ai",
+  "chapters": [
+    {
+      "title": "The mission",
+      "beats": [
+        {
+          "say": "Five teams want machine learning this quarter.",
+          "device": "big",
+          "text": "Five teams want ML"
+        },
+        {
+          "say": "Pick the right tool for each, then put one model into production and keep it healthy.",
+          "device": "card",
+          "label": "Station 4.5 · ML on Google Cloud",
+          "head": "Pick, train, serve, monitor",
+          "headmark": "Pick",
+          "headmark_at": "pick"
+        }
+      ]
+    },
+    {
+      "title": "Pick the tool",
+      "check": {
+        "prompt": "You need fields from scanned invoices. No labels, no ML team. Which tool?",
+        "options": ["AutoML", "Document AI", "Custom training"],
+        "answer": 1,
+        "why": "Invoice parsing is already solved by a pre-trained API."
+      },
+      "beats": [
+        {
+          "say": "The rule: the least effort that meets the need.",
+          "device": "big",
+          "text": "Least effort wins"
+        },
+        {
+          "say": "If Google already solves the task, call the API. Vision, Natural Language, Speech, Translation, Document AI.",
+          "device": "card",
+          "label": "Step one",
+          "head": "A pre-trained API",
+          "headmark": "pre-trained API",
+          "headmark_at": "API"
+        },
+        {
+          "say": "Your own labels and no coders? AutoML. Data in BigQuery and a SQL team? BigQuery ML.",
+          "device": "list",
+          "label": "Then",
+          "items": ["Your own labels: AutoML", "SQL team: BigQuery ML"],
+          "items_at": ["labels", "SQL"]
+        },
+        {
+          "say": "Full control of the model? Custom training on Vertex AI.",
+          "device": "card",
+          "label": "Last",
+          "head": "Custom training",
+          "text": "TensorFlow, PyTorch or XGBoost on Vertex AI",
+          "headmark": "Custom",
+          "headmark_at": "custom"
+        }
+      ]
+    },
+    {
+      "title": "Train and tune",
+      "check": {
+        "prompt": "A huge TensorFlow model of matrix multiplications takes weeks on GPUs. What helps most?",
+        "options": ["TPUs", "More CPUs", "Fewer epochs"],
+        "answer": 0,
+        "why": "TPUs are built for large matrix multiplications."
+      },
+      "beats": [
+        {
+          "say": "Training hardware. CPUs for small models. GPUs for most deep learning.",
+          "device": "list",
+          "label": "Hardware",
+          "items": ["CPU: small models", "GPU: most deep learning"],
+          "items_at": ["CPUs", "GPUs"]
+        },
+        {
+          "say": "TPUs for huge models full of matrix multiplications, with no custom operations.",
+          "device": "card",
+          "label": "TPU",
+          "head": "Huge, matrix-heavy models",
+          "headmark": "matrix-heavy",
+          "headmark_at": "matrix"
+        },
+        {
+          "say": "If the GPUs sit idle, fix the input pipeline. TFRecord files and prefetching.",
+          "device": "card",
+          "label": "Idle accelerators",
+          "head": "Fix the input pipeline",
+          "headmark": "input pipeline",
+          "headmark_at": "input"
+        },
+        {
+          "say": "To tune hyperparameters, Vertex AI uses Bayesian optimization. Fewer trials than a grid search.",
+          "device": "card",
+          "label": "Hyperparameter tuning",
+          "head": "Smarter than a grid search",
+          "headmark": "Smarter",
+          "headmark_at": "Bayesian"
+        }
+      ]
+    },
+    {
+      "title": "Serve",
+      "check": {
+        "prompt": "You score forty million customers every night. How?",
+        "options": ["An online endpoint", "Batch prediction", "A Cloud Run function"],
+        "answer": 1,
+        "why": "Nobody waits for the answer, so no endpoint needs to run all day."
+      },
+      "beats": [
+        {
+          "say": "An online endpoint answers one request in milliseconds. You pay while it runs.",
+          "device": "card",
+          "label": "Online",
+          "head": "An endpoint: milliseconds",
+          "headmark": "milliseconds",
+          "headmark_at": "milliseconds"
+        },
+        {
+          "say": "Batch prediction scores millions of rows offline, then stops.",
+          "device": "card",
+          "label": "Batch",
+          "head": "Batch: millions of rows, then stop",
+          "headmark": "then stop",
+          "headmark_at": "stops"
+        },
+        {
+          "say": "A feature store gives training and serving the same features. No skew.",
+          "device": "card",
+          "label": "Feature Store",
+          "head": "Same features, no skew",
+          "headmark": "no skew",
+          "headmark_at": "skew"
+        }
+      ]
+    },
+    {
+      "title": "Monitor and retrain",
+      "beats": [
+        {
+          "say": "Models get worse as the world changes.",
+          "device": "big",
+          "text": "The world keeps changing"
+        },
+        {
+          "say": "Skew: serving data differs from training data. Drift: serving data changes over time.",
+          "device": "list",
+          "label": "Model Monitoring",
+          "items": ["Skew: serving differs from training", "Drift: serving changes over time"],
+          "items_at": ["skew", "drift"]
+        },
+        {
+          "say": "A pipeline retrains on old and new data, and deploys only if the new model is better.",
+          "device": "card",
+          "label": "Vertex AI Pipelines",
+          "head": "Retrain on old + new data",
+          "headmark": "old + new",
+          "headmark_at": "old"
+        }
+      ]
+    },
+    {
+      "title": "Recap",
+      "beats": [
+        {
+          "say": "Recap.",
+          "device": "big",
+          "text": "Recap: what to remember"
+        },
+        {
+          "say": "Least effort wins. TPUs for huge models. Batch when nobody waits. Monitor, then retrain.",
+          "device": "list",
+          "label": "Station 4.5",
+          "items": [
+            "Least effort wins",
+            "TPUs for huge models",
+            "Batch when nobody waits",
+            "Monitor, then retrain"
+          ],
+          "items_at": ["least", "TPUs", "batch", "monitor"]
+        },
+        {
+          "say": "Try the checkpoint below.",
+          "device": "big",
+          "text": "Now your turn",
+          "sub": "Pass the checkpoint below.",
+          "submark": "checkpoint"
+        }
+      ]
+    }
+  ]
+}

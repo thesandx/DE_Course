@@ -403,4 +403,124 @@ export const CARDS: readonly Flashcard[] = [
     front: 'Undo a bad UPDATE in BigQuery from an hour ago',
     back: 'Query/restore with FOR SYSTEM_TIME AS OF (time travel).',
   },
+  {
+    line: 'analysis',
+    front: 'What dropout does',
+    back: "During training only, it switches off a random 20 to 50% of a layer's neurons each step, so a big network cannot memorise. At prediction every neuron is on. The fix for an overfitting deep network.",
+  },
+  {
+    line: 'analysis',
+    front: 'L1 vs L2 regularisation',
+    back: 'L1 (lasso): absolute weights in the loss, weak features go to exactly zero, so it selects features. L2 (ridge): squared weights, all weights stay small, every feature kept.',
+  },
+  {
+    line: 'analysis',
+    front: 'Early stopping',
+    back: 'Stop training when the validation loss stops improving, and keep the best weights. The fix when validation loss rises after epoch N.',
+  },
+  {
+    line: 'analysis',
+    front: 'Overfitting vs underfitting from two scores',
+    back: 'Training high, validation much lower: overfitting (high variance). Both low: underfitting (high bias), so add features or a more complex model.',
+  },
+  {
+    line: 'analysis',
+    front: 'Training, validation and test sets',
+    back: 'Train the weights on training, tune hyperparameters on validation, report once on test. Split time series by time, never at random.',
+  },
+  {
+    line: 'analysis',
+    front: 'Data leakage',
+    back: 'A feature only known after the outcome (refund issued, account closed). Great test score, useless model. Remove it.',
+  },
+  {
+    line: 'analysis',
+    front: 'Loss jumps around and never settles',
+    back: 'Learning rate too high. Lower it.',
+  },
+  {
+    line: 'analysis',
+    front: 'Precision vs recall',
+    back: 'Precision = TP / (TP + FP): use when a false alarm is costly. Recall = TP / (TP + FN): use when a miss is costly.',
+  },
+  {
+    line: 'analysis',
+    front: 'Rare positives (fraud at 0.1%): which metric?',
+    back: 'PR AUC, precision and recall. Accuracy and ROC AUC look too good.',
+  },
+  {
+    line: 'analysis',
+    front: 'Raise or lower the classification threshold?',
+    back: 'Lower it for more recall (more alarms). Raise it for more precision (fewer alarms). No retraining needed.',
+  },
+  {
+    line: 'analysis',
+    front: 'RMSE vs MAE',
+    back: 'RMSE punishes big errors more (squares them). MAE treats every unit of error the same and is easier to explain.',
+  },
+  {
+    line: 'analysis',
+    front: 'Feature cross',
+    back: 'Combine features that matter together (bucketised latitude x longitude, day x hour) so a linear model learns the interaction. ML.FEATURE_CROSS.',
+  },
+  {
+    line: 'analysis',
+    front: 'Category with millions of values',
+    back: 'An embedding (or hash buckets), not one-hot.',
+  },
+  {
+    line: 'analysis',
+    front: 'Numeric features on very different scales',
+    back: 'Standardise or min-max scale them so gradient descent converges. Log-transform skewed values first.',
+  },
+  {
+    line: 'analysis',
+    front: 'Wide and deep',
+    back: 'Wide linear part memorises frequent sparse crosses, deep part generalises. Classic for recommendations.',
+  },
+  {
+    line: 'analysis',
+    front: 'Pre-trained API vs AutoML vs BigQuery ML vs custom',
+    back: 'General task: API. Your own labels, no code: AutoML. Data in BigQuery and SQL team: BigQuery ML. Full control: custom training on Vertex AI.',
+  },
+  {
+    line: 'analysis',
+    front: 'CPU vs GPU vs TPU',
+    back: 'CPU: small or linear models. GPU: most deep learning and custom ops. TPU: huge matrix-heavy models, weeks of training, no custom CPU ops.',
+  },
+  {
+    line: 'analysis',
+    front: 'GPUs idle during training',
+    back: 'The input pipeline is the bottleneck: TFRecord files, tf.data with parallel reads and prefetch.',
+  },
+  {
+    line: 'analysis',
+    front: 'Vertex AI hyperparameter tuning',
+    back: 'Vizier with Bayesian optimisation: fewer trials than grid search. Set the metric, ranges, trial count and parallel trials. BigQuery ML: NUM_TRIALS + ML.TRIAL_INFO.',
+  },
+  {
+    line: 'analysis',
+    front: 'Online endpoint vs batch prediction',
+    back: 'Endpoint: live requests in milliseconds, paid while deployed, traffic split for canary. Batch prediction: millions of rows offline, no endpoint.',
+  },
+  {
+    line: 'analysis',
+    front: 'Vertex AI Feature Store',
+    back: 'Same feature values for training (point-in-time) and online serving. Removes training-serving skew and lets teams reuse features.',
+  },
+  {
+    line: 'analysis',
+    front: 'Training-serving skew vs drift',
+    back: 'Skew: serving data differs from training data. Drift: serving data changes over time. Vertex AI Model Monitoring detects both.',
+  },
+  {
+    line: 'analysis',
+    front: 'Vertex AI Pipelines',
+    back: 'Repeatable ML workflows (Kubeflow Pipelines or TFX) with lineage: validate, train, evaluate, deploy only if better.',
+  },
+  {
+    line: 'analysis',
+    front: 'Cloud ML Engine / AI Platform',
+    back: 'Old names for Vertex AI training and prediction.',
+  },
 ];

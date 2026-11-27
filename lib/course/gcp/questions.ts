@@ -5,6 +5,7 @@
  * text here; see lib/course/gcp/README.md for the rules.
  */
 
+import { ML_QUESTIONS } from '@/lib/course/gcp/questions-ml';
 import type { BankQuestion } from '@/types/gcp';
 
 export const QUESTIONS: readonly BankQuestion[] = [
@@ -1780,4 +1781,5 @@ export const QUESTIONS: readonly BankQuestion[] = [
     answers: [0],
     why: "Dual-region with turbo replication gives a 15-minute RPO behind the same bucket names, so applications don't change. Default replication has no RPO guarantee, dual writes are an application change, and a daily copy can lose a day of data.",
   },
+  ...ML_QUESTIONS,
 ];

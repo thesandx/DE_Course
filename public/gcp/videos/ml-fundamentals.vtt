@@ -1,0 +1,197 @@
+WEBVTT
+
+1
+00:00:00.490 --> 00:00:03.557
+The churn model scored ninety nine percent in the notebook.
+
+2
+00:00:03.577 --> 00:00:05.755
+In production, seventy.
+
+3
+00:00:05.775 --> 00:00:07.505
+The exam loves this story.
+
+4
+00:00:07.525 --> 00:00:11.005
+Today you learn why it happens, and how to fix it.
+
+5
+00:00:11.025 --> 00:00:12.955
+First, split your data three ways.
+
+6
+00:00:12.975 --> 00:00:14.990
+Each part has one job.
+
+7
+00:00:15.010 --> 00:00:16.553
+Training teaches the weights.
+
+8
+00:00:16.573 --> 00:00:18.415
+Validation picks the settings.
+
+9
+00:00:18.435 --> 00:00:21.275
+The test set gives the honest score, once.
+
+10
+00:00:21.295 --> 00:00:23.538
+For time series, split by time.
+
+11
+00:00:23.558 --> 00:00:26.560
+A random split lets the model see the future.
+
+12
+00:00:26.580 --> 00:00:31.060
+And watch for leakage: a feature you only know after the outcome.
+
+13
+00:00:31.080 --> 00:00:34.445
+Now compare two scores: training and validation.
+
+14
+00:00:34.465 --> 00:00:37.595
+High on training, low on validation, is overfitting.
+
+15
+00:00:37.615 --> 00:00:39.830
+The model memorized the rows.
+
+16
+00:00:39.850 --> 00:00:41.630
+Low on both is underfitting.
+
+17
+00:00:41.650 --> 00:00:43.130
+The model is too simple.
+
+18
+00:00:43.150 --> 00:00:46.155
+Give it more features or more power.
+
+19
+00:00:46.175 --> 00:00:49.065
+Four tools stop a model from memorizing.
+
+20
+00:00:49.085 --> 00:00:49.878
+Dropout.
+
+21
+00:00:49.898 --> 00:00:53.725
+During training, it switches off random neurons at every step.
+
+22
+00:00:53.745 --> 00:00:57.800
+No neuron can lean on another, so the network learns general patterns.
+
+23
+00:00:57.820 --> 00:01:00.510
+At prediction, all neurons are on.
+
+24
+00:01:00.530 --> 00:01:02.847
+L one pushes weak features to zero.
+
+25
+00:01:02.867 --> 00:01:05.022
+L two keeps every weight small.
+
+26
+00:01:05.042 --> 00:01:07.720
+Early stopping ends at the best epoch.
+
+27
+00:01:07.740 --> 00:01:09.920
+The trap: more layers or more epochs.
+
+28
+00:01:09.940 --> 00:01:12.370
+They make overfitting worse.
+
+29
+00:01:12.390 --> 00:01:16.080
+Next, pick the metric that matches the cost of a mistake.
+
+30
+00:01:16.100 --> 00:01:19.355
+If a miss is costly, like a disease, use recall.
+
+31
+00:01:19.375 --> 00:01:22.440
+If a false alarm is costly, use precision.
+
+32
+00:01:22.460 --> 00:01:24.503
+Lower the threshold for more recall.
+
+33
+00:01:24.523 --> 00:01:26.102
+Raise it for more precision.
+
+34
+00:01:26.122 --> 00:01:27.675
+No retraining.
+
+35
+00:01:27.695 --> 00:01:30.387
+With rare cases, like fraud, accuracy lies.
+
+36
+00:01:30.407 --> 00:01:32.875
+Use PR AUC.
+
+37
+00:01:32.895 --> 00:01:34.025
+Last, features.
+
+38
+00:01:34.045 --> 00:01:36.185
+They matter more than the algorithm.
+
+39
+00:01:36.205 --> 00:01:37.272
+Scale your numbers.
+
+40
+00:01:37.292 --> 00:01:38.935
+One hot small categories.
+
+41
+00:01:38.955 --> 00:01:40.645
+Embed huge ones.
+
+42
+00:01:40.665 --> 00:01:44.980
+And cross features that work together, like latitude and longitude.
+
+43
+00:01:45.000 --> 00:01:50.330
+Put these steps in the transform clause, so prediction repeats them exactly.
+
+44
+00:01:50.350 --> 00:01:51.590
+Recap.
+
+45
+00:01:51.610 --> 00:01:52.677
+Split honestly.
+
+46
+00:01:52.697 --> 00:01:53.702
+Read the gap.
+
+47
+00:01:53.722 --> 00:01:55.340
+Dropout for big networks.
+
+48
+00:01:55.360 --> 00:01:58.000
+Pick the metric by the cost of a mistake.
+
+49
+00:01:58.020 --> 00:02:00.795
+Try the checkpoint below.
