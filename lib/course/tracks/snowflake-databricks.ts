@@ -1857,7 +1857,7 @@ export const problems: Problem[] = [
     answer: `
       Deduplicate before you flatten, or one order's items get counted once per version.
 
-      ~~~sql
+      ~~~snowflake
       WITH latest AS (
         SELECT payload
         FROM raw.orders
@@ -1895,6 +1895,10 @@ export const problems: Problem[] = [
       - «QUALIFY» filters on a window result without another subquery.
       - For a big table, promote «order_id», «city», «status» and «updated_at» into typed
         columns in staging, so the deduplication can prune.
+
+      The editor runs PostgreSQL, where «payload->>'sku'» reads a field as text,
+      «jsonb_array_elements(payload->'items')» flattens the array, and a subquery with a row
+      number replaces «QUALIFY». The steps stay the same.
     `,
     signals: [
       'Deduplicates to the latest order version before flattening',

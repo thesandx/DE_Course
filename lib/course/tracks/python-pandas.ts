@@ -403,15 +403,19 @@ export const pandasProblems: readonly Problem[] = [
       ~~~python
       import numpy as np
 
-      payments["fee"] = np.select(
-          [payments["method"] == "CARD", payments["method"] == "UPI"],
-          [payments["amount"] * 0.02, 0.0],
-          default=5.0,
-      )
+
+      def add_fees(payments):
+          payments = payments.copy()
+          payments["fee"] = np.select(
+              [payments["method"] == "CARD", payments["method"] == "UPI"],
+              [payments["amount"] * 0.02, 0.0],
+              default=5.0,
+          )
+          return payments
       ~~~
 
       «np.select» takes the conditions in order, the value for each one, and a default. It is
-      a «CASE WHEN».
+      a «CASE WHEN». The «copy()» keeps the caller's DataFrame unchanged.
 
       Why it is faster: «apply(axis=1)» builds a row object and calls a Python function 20
       million times. The vectorised form runs three comparisons and one multiplication, each
@@ -451,18 +455,20 @@ export const pandasProblems: readonly Problem[] = [
       ~~~python
       import pandas as pd
 
-      parts = []
-      reader = pd.read_csv(payments_path,
-                           usecols=["customer_id", "amount"],
-                           dtype={"customer_id": "int64", "amount": "float64"},
-                           chunksize=5_000_000)
-      for chunk in reader:
-          parts.append(chunk.groupby("customer_id")["amount"].agg(["sum", "count"]))
 
-      totals = (pd.concat(parts)
-                .groupby(level=0)
-                .sum()
-                .rename(columns={"sum": "total_amount", "count": "payments"}))
+      def totals_by_customer(source):
+          parts = []
+          reader = pd.read_csv(source,
+                               usecols=["customer_id", "amount"],
+                               dtype={"customer_id": "int64", "amount": "float64"},
+                               chunksize=5_000_000)
+          for chunk in reader:
+              parts.append(chunk.groupby("customer_id")["amount"].agg(["sum", "count"]))
+
+          return (pd.concat(parts)
+                  .groupby(level=0)
+                  .sum()
+                  .rename(columns={"sum": "total_amount", "count": "payments"}))
       ~~~
 
       - «usecols» and «dtype» cut the memory for each chunk to two numeric columns.

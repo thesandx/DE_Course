@@ -1049,10 +1049,10 @@ export const problems: Problem[] = [
                   errors[endpoint] += 1
           rates = {ep: (total[ep], errors[ep] / total[ep]) for ep in total}
           return rates, skipped
-
-      with open("access.log", encoding="utf-8") as handle:
-          rates, skipped = error_rates(handle)
       ~~~
+
+      Pass it an open file, «error_rates(open("access.log", encoding="utf-8"))». The loop reads
+      one line at a time, so a file of any size fits.
 
       O(n) time, memory proportional to the number of endpoints. Mention that paths with ids
       («/v1/trips/123») should be normalised to a route template first, or the dictionary grows
@@ -1691,61 +1691,65 @@ export const problems: Problem[] = [
       'How do you stay under 100 a minute without waiting for 429s?',
     ],
     answer: `
+      Pass the API, the storage, the clock and «sleep» in as arguments. The code is the same in
+      production, and a test runs it on a fake clock in milliseconds.
+
       ~~~python
       import random
-      import time
-      from datetime import datetime, timedelta, timezone
+      from datetime import datetime, timedelta
 
-      import requests
-
-      URL = "https://api.example.com/v1/charges"
-      MIN_INTERVAL = 60 / 90  # stay at 90 requests a minute, under the limit of 100
+      MIN_INTERVAL = 60 / 90  # 90 requests a minute, under the limit of 100
       OVERLAP = timedelta(minutes=5)
 
 
-      def fetch(session: requests.Session, params: dict) -> dict:
+      def get_page(fetch, params, sleep):
           for attempt in range(8):
               try:
-                  response = session.get(URL, params=params, timeout=(5, 30))
-              except (requests.ConnectionError, requests.Timeout):
-                  time.sleep(random.uniform(0, 2**attempt))
+                  response = fetch(params)
+              except (ConnectionError, TimeoutError):
+                  sleep(random.uniform(0, 2 ** attempt))
                   continue
               if response.status_code == 429:
-                  time.sleep(float(response.headers.get("Retry-After", "60")))
+                  sleep(float(response.headers.get("Retry-After", "60")))
                   continue
               if response.status_code >= 500:
-                  time.sleep(random.uniform(0, 2**attempt))
+                  sleep(random.uniform(0, 2 ** attempt))
                   continue
-              response.raise_for_status()
+              if response.status_code >= 400:
+                  raise RuntimeError(f"HTTP {response.status_code}: the request is wrong, so a retry will not help")
               return response.json()
-          raise RuntimeError("API still failing after 8 attempts")
+          raise RuntimeError("the API still fails after 8 attempts")
 
 
-      def extract(session: requests.Session, run_id: str) -> None:
-          state = load_state()
+      def extract(fetch, store, run_id, now, sleep, clock):
+          state = store.load_state()
           if state.get("cursor"):  # resume an interrupted run
               params = {"cursor": state["cursor"]}
               page_no = state["page_no"]
               started = state["started"]
           else:
               since = datetime.fromisoformat(state["watermark"]) - OVERLAP
-              started = datetime.now(timezone.utc).isoformat()
+              started = now().isoformat()
               params = {"updated_since": since.isoformat()}
               page_no = 0
           while True:
-              began = time.monotonic()
-              body = fetch(session, params)
-              write_page(run_id, page_no, body["data"])  # land raw first
+              began = clock()
+              body = get_page(fetch, params, sleep)
+              store.write_page(run_id, page_no, body["data"])  # land the page first
               page_no += 1
               cursor = body.get("next_cursor")
               if not cursor:
-                  save_state({"watermark": started, "cursor": None, "page_no": 0, "started": None})
+                  store.save_state({"watermark": started, "cursor": None, "page_no": 0, "started": None})
                   return
-              save_state({"watermark": state.get("watermark"), "cursor": cursor,
-                          "page_no": page_no, "started": started})
+              store.save_state({"watermark": state["watermark"], "cursor": cursor,
+                                "page_no": page_no, "started": started})
               params = {"cursor": cursor}
-              time.sleep(max(0.0, MIN_INTERVAL - (time.monotonic() - began)))
+              sleep(max(0.0, MIN_INTERVAL - (clock() - began)))
       ~~~
+
+      In production, «fetch» wraps «session.get(URL, params=params, timeout=(5, 30))» and turns
+      «requests.ConnectionError» and «requests.Timeout» into the built-in errors. «sleep» is
+      «time.sleep», «clock» is «time.monotonic», and «now» returns «datetime.now(timezone.utc)».
 
       How it meets each requirement:
 

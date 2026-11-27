@@ -4,14 +4,16 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { RUNNABLES } from '@/lib/course/runnables';
 import { TEST_ANSWERS } from '@/lib/course/runnables/test-answers';
+import { SQL_FENCES, writtenAnswerBlocks } from '@/lib/course/runnables/written-answers';
 import { pgliteEngine } from '@/lib/runner/pglite-engine';
 import { judgeSql, type SqlEngine } from '@/lib/runner/sql-judge';
 import type { CaseResult, RunnableSpec } from '@/types/runner';
 
 /**
  * Runs every SQL spec on PostgreSQL 18 (PGlite, the same engine the browser
- * loads): the reference solution passes, the starter does not, other correct
- * answers pass and the usual mistakes fail.
+ * loads): the reference solution passes, the starter does not, each SQL
+ * block of the written model answer passes, other correct answers pass and
+ * the usual mistakes fail.
  */
 
 let engine: SqlEngine;
@@ -57,6 +59,14 @@ describe.each(SQL_SPECS)('runnable SQL problem %s', (slug, spec) => {
     const results = await judge(slug, spec, spec.starter);
     expect(results.every((result) => result.passed)).toBe(false);
   });
+
+  it.each(writtenAnswerBlocks(slug, SQL_FENCES).map((code, index) => [index + 1, code] as const))(
+    'accepts SQL block %i of the written model answer',
+    TIMEOUT,
+    async (_, code) => {
+      expect(failures(await judge(slug, spec, code))).toEqual([]);
+    },
+  );
 
   const answers = TEST_ANSWERS[slug] ?? {};
   it.each((answers.pass ?? []).map((code, index) => [index + 1, code] as const))(

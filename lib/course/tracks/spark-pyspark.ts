@@ -712,12 +712,12 @@ export const pysparkProblems: readonly Problem[] = [
                .select("order_id", "order_date", "item.sku",
                        (F.col("item.qty") * F.col("item.price")).alias("line_amount")))
 
-      revenue = (lines
-                 .join(F.broadcast(products), "sku", "left")
-                 .withColumn("category", F.coalesce("category", F.lit("UNKNOWN")))
-                 .groupBy("category", "order_date")
-                 .agg(F.round(F.sum("line_amount"), 2).alias("revenue"),
-                      F.countDistinct("order_id").alias("orders")))
+      result = (lines
+                .join(F.broadcast(products), "sku", "left")
+                .withColumn("category", F.coalesce("category", F.lit("UNKNOWN")))
+                .groupBy("category", "order_date")
+                .agg(F.round(F.sum("line_amount"), 2).alias("revenue"),
+                     F.countDistinct("order_id").alias("orders")))
       ~~~
 
       Why each choice:
@@ -769,9 +769,10 @@ export const pysparkProblems: readonly Problem[] = [
 
       by_category = Window.partitionBy("category").orderBy(F.desc("total"), "sku")
 
-      top3 = (totals
-              .withColumn("position", F.row_number().over(by_category))
-              .filter(F.col("position") <= 3))
+      result = (totals
+                .withColumn("position", F.row_number().over(by_category))
+                .filter(F.col("position") <= 3)
+                .drop("position"))
       ~~~
 
       - «row_number» returns **exactly 3 rows** for each category. The second order column,
@@ -818,9 +819,8 @@ export const pysparkProblems: readonly Problem[] = [
                      .orderBy(F.datediff("order_date", F.lit("1970-01-01")))
                      .rangeBetween(-6, 0))
 
-      rolling = (daily
-                 .withColumn("orders_7d", F.sum("orders").over(last_7_days))
-                 .withColumn("avg_7d", F.round(F.col("orders_7d") / 7, 2)))
+      result = daily.withColumn(
+          "avg_7d", F.round(F.sum("orders").over(last_7_days) / 7, 2))
       ~~~
 
       Divide the 7-day sum by 7, not by the number of rows in the frame. «F.avg» over the
@@ -869,7 +869,7 @@ export const pysparkProblems: readonly Problem[] = [
                  .groupBy("user_id", "island")
                  .agg(F.count("*").alias("streak")))
 
-      longest = streaks.groupBy("user_id").agg(F.max("streak").alias("longest_streak"))
+      result = streaks.groupBy("user_id").agg(F.max("streak").alias("longest_streak"))
       ~~~
 
       The «distinct» matters: two logins on one day would give two row numbers for one date
@@ -910,15 +910,15 @@ export const pysparkProblems: readonly Problem[] = [
       same = (F.col("s.amount").eqNullSafe(F.col("t.amount"))
               & F.col("s.status").eqNullSafe(F.col("t.status")))
 
-      diff = (s.join(t, F.col("s.txn_id") == F.col("t.txn_id"), "full")
-              .withColumn("issue",
-                          F.when(F.col("t.txn_id").isNull(), "MISSING_IN_TARGET")
-                           .when(F.col("s.txn_id").isNull(), "MISSING_IN_SOURCE")
-                           .when(~same, "MISMATCH"))
-              .filter(F.col("issue").isNotNull())
-              .select(F.coalesce("s.txn_id", "t.txn_id").alias("txn_id"), "issue",
-                      F.col("s.amount").alias("source_amount"),
-                      F.col("t.amount").alias("target_amount")))
+      result = (s.join(t, F.col("s.txn_id") == F.col("t.txn_id"), "full")
+                .withColumn("issue",
+                            F.when(F.col("t.txn_id").isNull(), "MISSING_IN_TARGET")
+                             .when(F.col("s.txn_id").isNull(), "MISSING_IN_SOURCE")
+                             .when(~same, "MISMATCH"))
+                .filter(F.col("issue").isNotNull())
+                .select(F.coalesce("s.txn_id", "t.txn_id").alias("txn_id"), "issue",
+                        F.col("s.amount").alias("source_amount"),
+                        F.col("t.amount").alias("target_amount")))
       ~~~
 
       With plain «==», a row that has a null status on both sides compares as null and is
@@ -956,11 +956,11 @@ export const pysparkProblems: readonly Problem[] = [
       ~~~python
       statuses = ["PLACED", "DELIVERED", "CANCELLED"]
 
-      by_status = (orders
-                   .groupBy("order_date")
-                   .pivot("status", statuses)
-                   .count()
-                   .na.fill(0, statuses))
+      result = (orders
+                .groupBy("order_date")
+                .pivot("status", statuses)
+                .count()
+                .na.fill(0, statuses))
       ~~~
 
       Pass the list for three reasons:
@@ -1005,15 +1005,21 @@ export const pysparkProblems: readonly Problem[] = [
 
       by_device = Window.partitionBy("device_id").orderBy("event_at")
 
-      changes = (heartbeats
-                 .withColumn("previous", F.lag("status").over(by_device))
-                 .filter(~F.col("status").eqNullSafe(F.col("previous")))
-                 .drop("previous"))
+      result = (heartbeats
+                .withColumn("previous", F.lag("status").over(by_device))
+                .withColumn("position", F.row_number().over(by_device))
+                .filter((F.col("position") == 1)
+                        | ~F.col("status").eqNullSafe(F.col("previous")))
+                .drop("previous", "position"))
       ~~~
 
-      The first row of a device has a null «previous». With «status != previous» the
-      comparison is null and the filter drops the row. The null-safe form treats "null
-      against a value" as different, so the first row stays.
+      With «status != previous», a change to or from null compares as null, and the filter
+      drops it. «eqNullSafe» treats null as a value, so a change from «UP» to null counts.
+
+      The first row of a device needs its own test. Its «previous» is null, so when its own
+      status is null too, «eqNullSafe» says "no change" and the row is lost. «row_number»
+      marks the first row. A window function cannot go inside «filter», so compute it in a
+      column first.
 
       This turns a stream of 1,440 rows a day for each device into a handful of rows. Add
       «F.lead("event_at")» over the same window to the result and you have the start and end
@@ -1021,7 +1027,7 @@ export const pysparkProblems: readonly Problem[] = [
     `,
     signals: [
       'Uses lag over a window by device',
-      'Handles the first row with a null-safe comparison',
+      'Compares with eqNullSafe and keeps the first row even when its status is null',
       'Sees the link to state intervals and SCD type 2',
     ],
     followUps: ['Two heartbeats share the same timestamp. What can go wrong?'],
@@ -1057,7 +1063,7 @@ export const pysparkProblems: readonly Problem[] = [
       ~~~python
       from pyspark.sql import functions as F
 
-      masked = users.withColumn(
+      result = users.withColumn(
           "email_masked",
           F.when(
               F.col("email").contains("@"),
@@ -1116,32 +1122,34 @@ export const pysparkProblems: readonly Problem[] = [
       ~~~python
       from pyspark.sql import functions as F
 
-      current = dim.filter(F.col("is_current"))
-      history = dim.filter(~F.col("is_current"))
 
-      changed = (updates.alias("u")
-                 .join(current.alias("d"), "customer_id", "left")
-                 .filter(F.col("d.valid_from").isNull()
-                         | ~F.col("u.city").eqNullSafe(F.col("d.city")))
-                 .select("customer_id", F.col("u.city").alias("city"), "updated_at"))
+      def apply_changes(dim, updates):
+          current = dim.filter(F.col("is_current"))
+          history = dim.filter(~F.col("is_current"))
 
-      closed = (current
-                .join(changed.select("customer_id", "updated_at"), "customer_id")
-                .withColumn("valid_to", F.col("updated_at"))
-                .withColumn("is_current", F.lit(False))
-                .drop("updated_at"))
+          changed = (updates.alias("u")
+                     .join(current.alias("d"), "customer_id", "left")
+                     .filter(F.col("d.valid_from").isNull()
+                             | ~F.col("u.city").eqNullSafe(F.col("d.city")))
+                     .select("customer_id", F.col("u.city").alias("city"), "updated_at"))
 
-      unchanged = current.join(changed, "customer_id", "left_anti")
+          closed = (current
+                    .join(changed.select("customer_id", "updated_at"), "customer_id")
+                    .withColumn("valid_to", F.col("updated_at"))
+                    .withColumn("is_current", F.lit(False))
+                    .drop("updated_at"))
 
-      added = changed.select(
-          "customer_id", "city",
-          F.col("updated_at").alias("valid_from"),
-          F.lit(None).cast("timestamp").alias("valid_to"),
-          F.lit(True).alias("is_current"))
+          unchanged = current.join(changed, "customer_id", "left_anti")
 
-      new_dim = (history.unionByName(unchanged)
-                 .unionByName(closed)
-                 .unionByName(added))
+          added = changed.select(
+              "customer_id", "city",
+              F.col("updated_at").alias("valid_from"),
+              F.lit(None).cast("timestamp").alias("valid_to"),
+              F.lit(True).alias("is_current"))
+
+          return (history.unionByName(unchanged)
+                  .unionByName(closed)
+                  .unionByName(added))
       ~~~
 
       - An update with the **same city** is not a change, so it creates no row.
@@ -1149,7 +1157,7 @@ export const pysparkProblems: readonly Problem[] = [
         «closed», and appears once in «added».
       - «unionByName» matches columns by name, so a different column order cannot swap values.
 
-      Write «new_dim» to a new location and swap, or use «MERGE INTO» on Delta or Iceberg,
+      Write the new dimension to a new location and swap, or use «MERGE INTO» on Delta or Iceberg,
       which does the close and the insert in one atomic commit. Running the job twice with the
       same updates changes nothing, because the second run finds no real change.
     `,
@@ -1185,14 +1193,14 @@ export const pysparkProblems: readonly Problem[] = [
       Overwrite only the partitions that the batch contains.
 
       ~~~python
-      spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic")
-
-      (batch
-       .repartition("event_date")
-       .write
-       .mode("overwrite")
-       .partitionBy("event_date")
-       .parquet(table_path))
+      def load_day(batch, path):
+          spark.conf.set("spark.sql.sources.partitionOverwriteMode", "dynamic")
+          (batch
+           .repartition("event_date")
+           .write
+           .mode("overwrite")
+           .partitionBy("event_date")
+           .parquet(path))
       ~~~
 
       With the default «static» mode, «overwrite» deletes **every** partition of the table.

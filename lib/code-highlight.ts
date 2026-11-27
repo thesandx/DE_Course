@@ -29,7 +29,7 @@ const SQL_KEYWORDS = new Set(
   else end except exists explain extract filter first following for foreign from full function grant group grouping
   having if ilike in index inner insert intersect interval into is join key language last lateral left like limit
   local materialized matched merge natural not nothing nulls of offset on only or order outer over partition
-  preceding primary procedure range recursive references refresh replace returning returns right rollback rollup
+  preceding primary procedure qualify range recursive references refresh replace returning returns right rollback rollup
   row rows savepoint schema select sequence set sets similar some table temp temporary then to transaction trigger
   truncate unbounded union unique unlogged update using vacuum values view when where window with within without
   bigint boolean char date decimal double float int integer jsonb json numeric precision real serial smallint text

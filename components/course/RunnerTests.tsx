@@ -1,3 +1,4 @@
+import { InlineText } from '@/components/course/InlineText';
 import { RunnerOutput } from '@/components/course/RunnerOutput';
 import { Badge } from '@/components/ui/Badge';
 import { Progress } from '@/components/ui/Progress';
@@ -99,7 +100,9 @@ export function RunnerTests({ cases, results, running }: RunnerTestsProps) {
                     <span className="sr-only">{STATE_WORDS[state]}</span>
                   </p>
                   {runCase.note !== undefined && runCase.note !== '' ? (
-                    <p className="text-small text-ink-soft">{runCase.note}</p>
+                    <p className="text-small text-ink-soft">
+                      <InlineText text={runCase.note} />
+                    </p>
                   ) : null}
                 </div>
                 {result !== undefined ? (

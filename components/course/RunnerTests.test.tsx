@@ -7,7 +7,7 @@ import { RunnerTests } from './RunnerTests';
 
 const CASES: RunCase[] = [
   { name: 'Sample' },
-  { name: 'Ties', note: 'Two runs of the same length.' },
+  { name: 'Ties', note: 'Two runs of the same length. Order by «run_id».' },
   { name: 'Big fleet', hidden: true },
 ];
 
@@ -21,7 +21,9 @@ describe('RunnerTests', () => {
     expect(screen.getByText(/Submit runs all 3 tests/)).toBeInTheDocument();
     expect(screen.getAllByText('Not run yet')).toHaveLength(3);
     expect(screen.getByText('Hidden')).toBeInTheDocument();
-    expect(screen.getByText('Two runs of the same length.')).toBeInTheDocument();
+    expect(screen.getByText(/Two runs of the same length/)).toBeInTheDocument();
+    // A note's «code» run shows as code, not with the guillemets.
+    expect(screen.getByText('run_id').tagName).toBe('CODE');
   });
 
   it('shows the tests still running', () => {

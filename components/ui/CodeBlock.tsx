@@ -27,16 +27,31 @@ export function CodeTokens({ tokens }: { tokens: readonly Token[] }) {
   );
 }
 
-const HIGHLIGHTED = new Set<string>(['sql', 'python', 'pyspark']);
-
-function codeLanguage(lang: string): CodeLanguage | null {
-  if (!HIGHLIGHTED.has(lang)) return null;
-  return lang === 'sql' ? 'sql' : 'python';
+interface Fence {
+  language: CodeLanguage;
+  caption: string;
 }
+
+/**
+ * The fences that get syntax colours. `sql` is PostgreSQL, the dialect the
+ * runnable editor runs. A warehouse dialect has its own fence, so a reader
+ * sees which engine an answer is for, and a test runs only the `sql` blocks.
+ */
+const FENCES: Readonly<Record<string, Fence>> = {
+  sql: { language: 'sql', caption: 'SQL' },
+  bigquery: { language: 'sql', caption: 'BIGQUERY SQL' },
+  snowflake: { language: 'sql', caption: 'SNOWFLAKE SQL' },
+  dbt: { language: 'sql', caption: 'DBT SQL' },
+  python: { language: 'python', caption: 'PYTHON' },
+  pyspark: { language: 'python', caption: 'PYSPARK' },
+};
 
 export interface CodeBlockProps {
   code: string;
-  /** `sql`, `python` or `pyspark` get syntax colours; anything else shows as plain text. */
+  /**
+   * `sql`, `bigquery`, `snowflake`, `dbt`, `python` or `pyspark` get syntax
+   * colours; anything else shows as plain text.
+   */
   lang: string;
   /** Shown in the title bar. Default: the language, unless it is `text`. */
   title?: string;
@@ -49,8 +64,9 @@ export interface CodeBlockProps {
  * runnable editor's sample inputs use it, so code looks the same everywhere.
  */
 export function CodeBlock({ code, lang, title, className }: CodeBlockProps) {
-  const language = codeLanguage(lang);
-  const caption = title ?? (lang === 'text' ? '' : lang.toUpperCase());
+  const fence = Object.hasOwn(FENCES, lang) ? FENCES[lang] : undefined;
+  const language = fence?.language ?? null;
+  const caption = title ?? fence?.caption ?? (lang === 'text' ? '' : lang.toUpperCase());
   return (
     <figure
       className={cn('bg-night-deep rounded-card flex min-w-0 flex-col overflow-hidden', className)}

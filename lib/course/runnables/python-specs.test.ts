@@ -7,14 +7,15 @@ import { describe, expect, it } from 'vitest';
 
 import { RUNNABLES } from '@/lib/course/runnables';
 import { TEST_ANSWERS } from '@/lib/course/runnables/test-answers';
+import { PYTHON_FENCES, writtenAnswerBlocks } from '@/lib/course/runnables/written-answers';
 import { pythonJob } from '@/lib/runner/data';
 import type { CaseResult, RunnableSpec } from '@/types/runner';
 
 /**
  * Runs every Python and PySpark spec through the same `harness.py` and
  * `pyspark_shim.py` the browser runs, on the local CPython: the reference
- * solution passes, the starter does not, other correct answers pass and the
- * usual mistakes fail.
+ * solution passes, the starter does not, the code of the written model
+ * answer passes, other correct answers pass and the usual mistakes fail.
  *
  * It needs `python3` with duckdb and pandas (`pip install duckdb==1.5.1
  * pandas==3.0.2`, the versions Pyodide ships). Without them it skips; CI
@@ -54,9 +55,14 @@ interface Program {
 
 function programs(slug: string, spec: RunnableSpec): Program[] {
   const answers = TEST_ANSWERS[slug] ?? {};
+  // The blocks of a written answer build on each other, so they run as one program.
+  const written = writtenAnswerBlocks(slug, PYTHON_FENCES).join('\n\n');
   return [
     { slug, label: 'the reference solution', expect: 'pass', code: spec.solution },
     { slug, label: 'the starter code', expect: 'fail', code: spec.starter },
+    ...(written === ''
+      ? []
+      : [{ slug, label: 'the written model answer', expect: 'pass' as const, code: written }]),
     ...(answers.pass ?? []).map((code, index) => ({
       slug,
       label: `correct answer ${index + 1}`,
