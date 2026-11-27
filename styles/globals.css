@@ -107,6 +107,20 @@
   --color-danger: #fde7ec;
   --color-success: #e2f6ee;
 
+  /* Code — syntax colours. Code always sits on `night-deep`, which is dark in
+     both modes, so one set serves both. Each is 4.5:1 or more on night-deep. */
+  --color-code-keyword: #ff8fb0;
+  --color-code-function: #8cb8ff;
+  --color-code-string: #93e2a8;
+  --color-code-number: #ffcf66;
+  --color-code-constant: #ffad7a;
+  --color-code-comment: #9a96b8;
+  --color-code-operator: #cfc9ec;
+  --color-code-decorator: #c3b2ff;
+  --color-code-gutter: #6f6a93; /* line numbers: quiet, never read as code */
+  --color-code-selection: rgb(140 184 255 / 0.3);
+  --color-code-error: rgb(229 72 106 / 0.22); /* the line an error points at */
+
   /* Type. The font variables come from next/font/local in app/layout.tsx. */
   --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-sans:
@@ -611,6 +625,102 @@
   /* !important: base rules lose to utilities such as `contents` otherwise. */
   body:has([data-app-shell]) [data-site-chrome] {
     display: none !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Code editor (components/ui/CodeEditor.tsx). A transparent textarea  */
+/* lies exactly over a highlighted copy of its text, so both must use  */
+/* the same font, size, padding and wrapping. Line numbers are CSS     */
+/* counters, so a wrapped line keeps one number.                       */
+/* ------------------------------------------------------------------ */
+
+@layer components {
+  .code-editor {
+    position: relative;
+    font-family: var(--font-mono);
+    /* 16px on touch screens: below that, iOS zooms the page into the field. */
+    font-size: 1rem;
+    line-height: 1.6;
+    tab-size: 4;
+    font-variant-ligatures: none;
+  }
+
+  @media (pointer: fine) {
+    .code-editor {
+      font-size: var(--text-small);
+    }
+  }
+
+  .code-editor-view,
+  .code-editor-input {
+    margin: 0;
+    padding: 0.75rem 1rem 0.75rem 0;
+    font: inherit;
+    letter-spacing: normal;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+  .code-editor-view {
+    counter-reset: code-line;
+    color: var(--color-on-night);
+    pointer-events: none;
+  }
+
+  .code-editor-line {
+    position: relative;
+    padding-left: 3rem;
+    counter-increment: code-line;
+  }
+
+  .code-editor-line::before {
+    content: counter(code-line);
+    position: absolute;
+    left: 0;
+    width: 2.1rem;
+    text-align: right;
+    color: var(--color-code-gutter);
+    user-select: none;
+  }
+
+  .code-editor-line[data-error] {
+    background-color: var(--color-code-error);
+  }
+
+  .code-editor-line[data-error]::before {
+    color: var(--color-hard-bar);
+  }
+
+  /* Rows below the code, up to the minimum height: no number. */
+  .code-editor-filler {
+    padding-left: 3rem;
+  }
+
+  .code-editor-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding-left: 3rem;
+    resize: none;
+    overflow: hidden;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    caret-color: var(--color-on-night);
+  }
+
+  .code-editor-input::selection {
+    background-color: var(--color-code-selection);
+  }
+
+  .code-editor:focus-within {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
   }
 }
 

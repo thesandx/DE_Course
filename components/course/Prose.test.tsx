@@ -31,7 +31,9 @@ describe('Prose', () => {
     expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Keys and partitions');
     expect(screen.getByText('trip_id').tagName).toBe('STRONG');
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
-    expect(screen.getByText('SELECT 1;')).toBeInTheDocument();
+    // The code block colours its tokens, so the text spans several elements.
+    expect(screen.getByText('SELECT')).toHaveClass('text-code-keyword');
+    expect(screen.getByText('SELECT').closest('code')).toHaveTextContent('SELECT 1;');
     expect(screen.getByText('SQL')).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Setting' })).toBeInTheDocument();
     expect(screen.getByText(/Tie the key to ordering/)).toBeInTheDocument();
