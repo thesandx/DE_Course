@@ -93,7 +93,7 @@ function hasBlockChild(element: Element): boolean {
   return Array.from(element.children).some((child) => BLOCK_TAGS.has(child.tagName));
 }
 
-/** The nearest of the four highlight colours to a CSS colour, or null for none. */
+/** The nearest of the five highlight colours to a CSS colour, or null for none. */
 export function colorFromCss(css: string): HighlightColor | null {
   const value = css.trim().toLowerCase();
   if (value === '' || value === 'transparent' || value === 'initial' || value === 'inherit') {
@@ -125,6 +125,8 @@ export function colorFromCss(css: string): HighlightColor | null {
   else if (max === g) hue = (2 + (b - r) / (max - min)) * 60;
   else hue = (4 + (r - g) / (max - min)) * 60;
   if (hue < 0) hue += 360;
+  // A saturated, bright yellow (#ffff00, the Google Docs marker) is neon; a pale one is yellow.
+  if (hue >= 45 && hue < 75 && max >= 220 && min < 110) return 'neon';
   if (hue >= 30 && hue < 75) return 'yellow';
   if (hue >= 75 && hue < 190) return 'green';
   if (hue >= 190 && hue < 290) return 'purple';

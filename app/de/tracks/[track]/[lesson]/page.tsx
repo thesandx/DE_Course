@@ -7,6 +7,7 @@ import { Prose } from '@/components/course/Prose';
 import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/layout/Icon';
 import { ChapterNotes } from '@/components/notes/ChapterNotes';
+import { TextHighlighter } from '@/components/notes/TextHighlighter';
 import { ToolIcon } from '@/components/notes/ToolIcon';
 import { buttonStyles } from '@/components/ui/Button';
 import { getLesson } from '@/lib/course/catalog';
@@ -94,7 +95,9 @@ export default async function LessonPage({ params }: Props) {
               </dl>
             </header>
 
-            <Prose source={lesson.body} sectioned />
+            <TextHighlighter noteKey={noteKey} scope="body">
+              <Prose source={lesson.body} sectioned />
+            </TextHighlighter>
 
             <ChapterNotes
               noteKey={noteKey}

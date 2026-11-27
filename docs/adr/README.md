@@ -48,3 +48,4 @@ Do **not** write one for a routine choice with an obvious answer. An ADR per pul
 | [0013](./0013-make-station-videos-with-simcraft-and-keep-them-in-the-bucket.md) | Make station videos with simcraft, and keep the files in the bucket             | Accepted |
 | [0014](./0014-send-images-to-the-ai-helper-inline.md)                           | Send images to the AI helper inline, not through the bucket                     | Accepted |
 | [0015](./0015-keep-note-images-in-the-bucket-through-the-server.md)             | Keep note images in the bucket, and send them through the server                | Accepted |
+| [0016](./0016-highlight-course-text-with-the-css-highlight-api.md)              | Highlight the course text with the CSS Highlight API, and keep text quotes      | Accepted |

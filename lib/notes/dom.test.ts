@@ -62,6 +62,8 @@ describe('domToMarkdown', () => {
 describe('colorFromCss', () => {
   it('maps a colour to the nearest highlight', () => {
     expect(colorFromCss('rgb(255, 233, 168)')).toBe('yellow');
+    expect(colorFromCss('rgb(255, 255, 0)')).toBe('neon');
+    expect(colorFromCss('#ffff00')).toBe('neon');
     expect(colorFromCss('#ccefe5')).toBe('green');
     expect(colorFromCss('rgb(227, 221, 255)')).toBe('purple');
     expect(colorFromCss('rgb(255, 228, 236)')).toBe('pink');

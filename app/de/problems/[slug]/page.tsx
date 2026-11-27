@@ -7,6 +7,7 @@ import { ProblemWorkspace } from '@/components/course/ProblemWorkspace';
 import { Prose } from '@/components/course/Prose';
 import { AppShell } from '@/components/layout/AppShell';
 import { ChapterNotes } from '@/components/notes/ChapterNotes';
+import { TextHighlighter } from '@/components/notes/TextHighlighter';
 import { COMPANY_NAMES, getProblem, getTrack, KIND_LABELS } from '@/lib/course/catalog';
 import { PROBLEM_XP, problemId } from '@/lib/course/progress';
 import { env } from '@/lib/env';
@@ -106,7 +107,9 @@ export default async function ProblemPage({ params }: Props) {
               <h2 id="prompt-heading" className="text-title">
                 The question
               </h2>
-              <Prose source={problem.prompt} />
+              <TextHighlighter noteKey={noteKey} scope="prompt">
+                <Prose source={problem.prompt} />
+              </TextHighlighter>
             </section>
           </div>
           <div className="flex min-w-0 flex-col gap-4">
@@ -118,7 +121,11 @@ export default async function ProblemPage({ params }: Props) {
               hints={problem.hints}
               signals={problem.signals}
               followUps={problem.followUps}
-              answer={<Prose source={problem.answer} />}
+              answer={
+                <TextHighlighter noteKey={noteKey} scope="answer">
+                  <Prose source={problem.answer} />
+                </TextHighlighter>
+              }
             />
             <ChapterNotes
               noteKey={noteKey}

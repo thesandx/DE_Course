@@ -17,7 +17,7 @@
  *   - It is readable as plain text in the "download my notes" file.
  *
  * Standard Markdown has no underline and no highlight, so the dialect adds
- * `++underline++` and `==highlight==` (with `=={green}colour==`). Checklists
+ * `++underline++` and `==highlight==` (with `=={green}colour==` or `=={neon}colour==`). Checklists
  * are GitHub style: `- [ ] item` and `- [x] item`.
  *
  * Images are one line each: `![caption](/api/notes/images/<id>)`. Only that
@@ -28,7 +28,7 @@
  * Pure: no DOM, no I/O. The editor's DOM reader lives in `lib/notes/dom.ts`.
  */
 
-export const HIGHLIGHT_COLORS = ['yellow', 'green', 'pink', 'purple'] as const;
+export const HIGHLIGHT_COLORS = ['yellow', 'neon', 'green', 'pink', 'purple'] as const;
 export type HighlightColor = (typeof HIGHLIGHT_COLORS)[number];
 
 export type Inline =

@@ -10,6 +10,7 @@ import { LabStepCard } from '@/components/gcp/LabStepCard';
 import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/layout/Icon';
 import { ChapterNotes } from '@/components/notes/ChapterNotes';
+import { TextHighlighter } from '@/components/notes/TextHighlighter';
 import { buttonStyles } from '@/components/ui/Button';
 import { Tabs } from '@/components/ui/Tabs';
 import { allStations, getLab, LAB_XP, labId, stationId } from '@/lib/course/gcp/catalog';
@@ -220,20 +221,24 @@ export default async function GcpLabPage({ params }: Props) {
           <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-6 px-4 py-6 sm:px-8 md:py-8 lg:grid-cols-12 lg:items-start lg:gap-8">
             <article className="flex min-w-0 flex-col gap-4 lg:col-span-8">
               {header}
-              {briefing}
+              <TextHighlighter noteKey={noteKey} scope="briefing">
+                {briefing}
+              </TextHighlighter>
 
               <h2 className="text-title pt-2">Steps</h2>
-              {plan.steps.map((step, index) => (
-                <LabStepCard
-                  key={ticks.steps[index]}
-                  id={ticks.steps[index] ?? `step-${index + 1}`}
-                  badge={String(index + 1)}
-                  eyebrow={`Step ${index + 1} of ${plan.steps.length}`}
-                  step={step}
-                  concepts={conceptTitles(step)}
-                  fill={hue.fill}
-                />
-              ))}
+              <TextHighlighter noteKey={noteKey} scope="steps" className="flex flex-col gap-4">
+                {plan.steps.map((step, index) => (
+                  <LabStepCard
+                    key={ticks.steps[index]}
+                    id={ticks.steps[index] ?? `step-${index + 1}`}
+                    badge={String(index + 1)}
+                    eyebrow={`Step ${index + 1} of ${plan.steps.length}`}
+                    step={step}
+                    concepts={conceptTitles(step)}
+                    fill={hue.fill}
+                  />
+                ))}
+              </TextHighlighter>
 
               <section
                 id="cleanup"

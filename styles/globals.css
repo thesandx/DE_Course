@@ -100,6 +100,11 @@
   --color-grape: #e3ddff;
   --color-peach: #ffdcc8;
 
+  /* Neon highlighter — a classic marker yellow for note highlights.  */
+  /* It stays the same in dark mode and always carries dark text.     */
+  --color-neon: #ffff00;
+  --color-on-neon: #1a1500;
+
   /* Face details */
   --color-blush: #ff9db8;
 
@@ -683,6 +688,19 @@
     box-decoration-break: clone;
   }
 
+  /* Neon is bright in both modes, so its text is always dark. */
+  .note-doc mark[data-color='neon'] {
+    color: var(--color-on-neon);
+    background-color: var(--color-neon);
+  }
+
+  /* Code keeps its frame but drops the sunken fill, which is dark in dark mode. */
+  .note-doc mark[data-color='neon'] code {
+    color: var(--color-on-neon);
+    background-color: transparent;
+    border-color: var(--color-on-neon);
+  }
+
   .note-doc mark[data-color='green'] {
     background-color: var(--color-soda);
   }
@@ -692,6 +710,29 @@
   }
 
   .note-doc mark[data-color='purple'] {
+    background-color: var(--color-grape);
+  }
+
+  /* Highlights on the course text, drawn by components/notes/TextHighlighter.tsx */
+  /* with the CSS Custom Highlight API. The tokens match the note highlights. */
+  ::highlight(text-hl-neon) {
+    color: var(--color-on-neon);
+    background-color: var(--color-neon);
+  }
+
+  ::highlight(text-hl-yellow) {
+    background-color: var(--color-butter);
+  }
+
+  ::highlight(text-hl-green) {
+    background-color: var(--color-soda);
+  }
+
+  ::highlight(text-hl-pink) {
+    background-color: var(--color-brand-soft);
+  }
+
+  ::highlight(text-hl-purple) {
     background-color: var(--color-grape);
   }
 

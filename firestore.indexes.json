@@ -97,6 +97,11 @@
       "collectionGroup": "notes",
       "fieldPath": "markdown",
       "indexes": []
+    },
+    {
+      "collectionGroup": "highlights",
+      "fieldPath": "items",
+      "indexes": []
     }
   ]
 }

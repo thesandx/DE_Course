@@ -10,6 +10,7 @@ import { StationChecks } from '@/components/gcp/StationChecks';
 import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/layout/Icon';
 import { ChapterNotes } from '@/components/notes/ChapterNotes';
+import { TextHighlighter } from '@/components/notes/TextHighlighter';
 import { buttonStyles } from '@/components/ui/Button';
 import { getLab, getStation, LAB_XP, labId, stationId, stationXp } from '@/lib/course/gcp/catalog';
 import { conceptDiagrams } from '@/lib/course/gcp/diagrams';
@@ -142,7 +143,9 @@ export default async function GcpStationPage({ params }: Props) {
                     id={`concept-${conceptIndex + 1}-diagram-${diagramIndex + 1}`}
                   />
                 ))}
-                <Prose source={concept.body} />
+                <TextHighlighter noteKey={noteKey} scope={`concept-${conceptIndex + 1}`}>
+                  <Prose source={concept.body} />
+                </TextHighlighter>
               </section>
             ))}
 
@@ -155,20 +158,22 @@ export default async function GcpStationPage({ params }: Props) {
                 <h2 id="key-points-heading" className="text-title">
                   Key points
                 </h2>
-                <ol className="flex flex-col gap-4">
-                  {station.keyPoints.map((point, pointIndex) => (
-                    <li
-                      key={point.point}
-                      className={cn('flex flex-col gap-2 border-l-4 pl-4', hue.rail)}
-                    >
-                      <p className="text-body font-semibold">
-                        <span className="text-ink-faint font-mono">{pointIndex + 1}. </span>
-                        <InlineText text={point.point} />
-                      </p>
-                      {point.more !== undefined && <Prose source={point.more} />}
-                    </li>
-                  ))}
-                </ol>
+                <TextHighlighter noteKey={noteKey} scope="key-points">
+                  <ol className="flex flex-col gap-4">
+                    {station.keyPoints.map((point, pointIndex) => (
+                      <li
+                        key={point.point}
+                        className={cn('flex flex-col gap-2 border-l-4 pl-4', hue.rail)}
+                      >
+                        <p className="text-body font-semibold">
+                          <span className="text-ink-faint font-mono">{pointIndex + 1}. </span>
+                          <InlineText text={point.point} />
+                        </p>
+                        {point.more !== undefined && <Prose source={point.more} />}
+                      </li>
+                    ))}
+                  </ol>
+                </TextHighlighter>
               </section>
             )}
 

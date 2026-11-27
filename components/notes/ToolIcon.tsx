@@ -38,6 +38,7 @@ export type ToolIconName =
 /** The fill for each highlight colour. The same tokens as `mark` in the note text. */
 export const HIGHLIGHT_SWATCH: Readonly<Record<HighlightColor, string>> = {
   yellow: 'bg-butter',
+  neon: 'bg-neon',
   green: 'bg-soda',
   pink: 'bg-brand-soft',
   purple: 'bg-grape',
