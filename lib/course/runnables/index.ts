@@ -1,4 +1,5 @@
 import { DSA_RUNNABLES } from '@/lib/course/runnables/dsa';
+import { ORCHESTRATION_RUNNABLES } from '@/lib/course/runnables/orchestration';
 import { PYTHON_RUNNABLES } from '@/lib/course/runnables/python';
 import { SPARK_RUNNABLES } from '@/lib/course/runnables/spark';
 import { SQL_RUNNABLES } from '@/lib/course/runnables/sql';
@@ -15,6 +16,7 @@ export const RUNNABLES: Readonly<Record<string, RunnableSpec>> = {
   ...DSA_RUNNABLES,
   ...SPARK_RUNNABLES,
   ...PYTHON_RUNNABLES,
+  ...ORCHESTRATION_RUNNABLES,
 };
 
 export function getRunnable(slug: string): RunnableSpec | undefined {

@@ -1,3 +1,4 @@
+import { SPARK_PYSPARK_ANSWERS } from '@/lib/course/runnables/spark-pyspark-answers';
 import type { SpecAnswers } from '@/lib/course/runnables/test-answers';
 
 /** Other answers for the Spark track's runnable problems. See `test-answers.ts`. */
@@ -21,4 +22,5 @@ result = updates.join(latest, ["order_id", "updated_at"]).select("order_id", "st
 `,
     ],
   },
+  ...SPARK_PYSPARK_ANSWERS,
 };

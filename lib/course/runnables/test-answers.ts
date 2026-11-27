@@ -1,4 +1,5 @@
 import { DSA_ANSWERS } from '@/lib/course/runnables/dsa-answers';
+import { ORCHESTRATION_ANSWERS } from '@/lib/course/runnables/orchestration-answers';
 import { PYTHON_ANSWERS } from '@/lib/course/runnables/python-answers';
 import { SPARK_ANSWERS } from '@/lib/course/runnables/spark-answers';
 import { SQL_ANSWERS } from '@/lib/course/runnables/sql-answers';
@@ -22,4 +23,5 @@ export const TEST_ANSWERS: Readonly<Record<string, SpecAnswers>> = {
   ...DSA_ANSWERS,
   ...SPARK_ANSWERS,
   ...PYTHON_ANSWERS,
+  ...ORCHESTRATION_ANSWERS,
 };

@@ -53,7 +53,7 @@ class ParseException(AnalysisException):
 # State: one DuckDB connection per run
 # --------------------------------------------------------------------------
 
-_state = {"con": None, "session": None, "udfs": 0, "udf_used": False}
+_state = {"con": None, "session": None, "udfs": 0, "udf_used": False, "udf_names": set()}
 _ids = _it.count(1)
 
 
@@ -73,6 +73,7 @@ def _reset():
     _state["con"] = None
     _state["session"] = None
     _state["udf_used"] = False
+    _state["udf_names"] = set()
 
 
 def _fresh(prefix="t"):
@@ -93,6 +94,17 @@ def _sql_error(error, sql=None):
         return ArithmeticException(message[message.index("[DIVIDE_BY_ZERO]") :])
     if "[PYTHON_UDF_FAILED]" in message:
         return PySparkException(message[message.index("[PYTHON_UDF_FAILED]") :])
+    # Spark refuses these too, with a message that names the fix.
+    if "WHERE clause cannot contain window functions" in message:
+        return AnalysisException(
+            "[UNSUPPORTED_EXPR_FOR_OPERATOR] A window function cannot go inside filter() or "
+            "where(). Add it as a column with withColumn, then filter on that column."
+        )
+    if "WHERE clause cannot contain aggregates" in message:
+        return AnalysisException(
+            "[UNSUPPORTED_EXPR_FOR_OPERATOR] An aggregate function cannot go inside filter() or "
+            "where(). Aggregate with groupBy(...).agg(...), then filter the result."
+        )
     return AnalysisException(message)
 
 
@@ -579,8 +591,9 @@ def _insert_json(table, names, types, rows):
         ]
     except _NotJson:
         return False
-    path = _os.path.join(_tempfile.gettempdir(), "%s.json" % table)
-    with open(path, "w", encoding="utf-8") as handle:
+    # A unique file: the native tests run several of these processes at once.
+    handle_id, path = _tempfile.mkstemp(prefix="%s_" % table, suffix=".json")
+    with _os.fdopen(handle_id, "w", encoding="utf-8") as handle:
         handle.write("\n".join(lines))
     columns = ", ".join(
         "'%s': '%s'" % (name.replace("'", "''"), kind._duck().replace("'", "''"))
@@ -762,10 +775,17 @@ class Column:
         self._refs = frozenset(refs)
         self._sort = sort
         self._generator = generator
+        self._conjuncts = None
+        # How the column renders under OVER, when that differs from the aggregate form.
+        self._window_render = None
 
     # -- helpers -----------------------------------------------------------
     def _sql(self, ctx):
         return self._render(ctx)
+
+    def _parts(self):
+        """The conditions joined by AND, so a filter can push each one down on its own."""
+        return list(self._conjuncts) if self._conjuncts else [self]
 
     def _derive(self, render, name, *others, agg=None, sort=None, generator=None):
         refs = set(self._refs)
@@ -877,7 +897,9 @@ class Column:
 
     # -- logic -------------------------------------------------------------
     def __and__(self, other):
-        return self._binary(other, "AND")
+        combined = self._binary(other, "AND")
+        combined._conjuncts = self._parts() + _to_col(other, literal=True)._parts()
+        return combined
 
     def __rand__(self, other):
         return self._binary(other, "AND", reverse=True)
@@ -1135,7 +1157,8 @@ class Column:
         spec = window if window is not None else WindowSpec()
 
         def render(ctx):
-            return "%s OVER (%s)" % (self._sql(ctx), spec._sql(ctx, self))
+            inner = self._window_render(ctx) if self._window_render is not None else self._sql(ctx)
+            return "%s OVER (%s)" % (inner, spec._sql(ctx, self))
 
         return Column(
             render,
@@ -1526,6 +1549,16 @@ class _Plan:
         return found
 
 
+def _with_node(plan, old, new):
+    """A copy of plan with the node old replaced by new; untouched branches are shared."""
+    if plan is old:
+        return new
+    children = [_with_node(child, old, new) for child in plan.children]
+    if _b.all(a is b for a, b in zip(children, plan.children)):
+        return plan
+    return _Plan(plan.op, plan.detail, children, scan=plan.scan)
+
+
 class _Scan:
     def __init__(self, table, partition_cols, all_partitions):
         self.table = table
@@ -1878,21 +1911,35 @@ class DataFrame:
         child = self._plan
         if column._udf:
             child = _Plan("BatchEvalPython", "[%s]" % column._name, [child])
+        lineages = []
+        for scan, node in self._scan_lineage or ():
+            pushed = self._push_filter(scan, column, ctx)
+            if pushed is not scan:
+                # A new node on a copied path: other DataFrames share the old plan.
+                fresh = _Plan(node.op, node.detail, node.children, scan=pushed)
+                child = _with_node(child, node, fresh)
+                scan, node = pushed, fresh
+            lineages.append((scan, node))
         plan = _Plan("Filter", column._name, [child])
-        lineage = self._scan_lineage
-        if lineage is not None:
-            lineage = self._push_filter(lineage, column, ctx)
-        return self._new(sql, fields, plan, self._order, lineage)
+        return self._new(sql, fields, plan, self._order, tuple(lineages) or None)
 
     where = filter
 
-    def _push_filter(self, lineage, column, ctx):
-        scan, plan_node = lineage
+    def _push_filter(self, scan, column, ctx):
+        """The scan with the parts of the condition it can use, like Catalyst's pushdown."""
         new_scan = scan.copy()
-        refs = {ref.lower() for ref in column._refs}
         partition_cols = {name.lower() for name in scan.partition_cols}
-        if not column._udf and refs and refs <= partition_cols:
-            new_scan.partition_filters.append(column._name)
+        on_partitions = []
+        for part in column._parts():
+            refs = {ref.lower() for ref in part._refs}
+            if part._udf:
+                continue
+            if refs and refs <= partition_cols:
+                new_scan.partition_filters.append(part._name)
+                on_partitions.append(part)
+            else:
+                new_scan.data_filters.append(part._name)
+        if on_partitions:
             try:
                 read = _run(
                     "SELECT count(*) FROM (SELECT DISTINCT %s FROM (%s) AS %s WHERE %s) AS x"
@@ -1900,16 +1947,15 @@ class DataFrame:
                         ", ".join(_q(name) for name in scan.partition_cols),
                         self._sql_text,
                         ctx.sources[0][0],
-                        column._sql(ctx),
+                        " AND ".join(part._sql(ctx) for part in on_partitions),
                     )
                 ).fetchone()[0]
                 new_scan.partitions_read = _b.min(new_scan.partitions_read, read)
             except AnalysisException:
                 new_scan.partitions_read = scan.partitions_read
-        elif not column._udf:
-            new_scan.data_filters.append(column._name)
-        plan_node.scan = new_scan
-        return (new_scan, plan_node)
+        if not on_partitions and new_scan.data_filters == scan.data_filters:
+            return scan
+        return new_scan
 
     def limit(self, n):
         alias = self._alias()
@@ -2187,8 +2233,19 @@ class DataFrame:
             on_sql,
         )
         detail = "%s, %s" % (kind.title(), ("[%s]" % ", ".join(using)) if using else condition)
-        plan = _Plan("Join", detail, [self._plan, other._plan])
-        return self._new(sql, fields, plan)
+        op = "Join"
+        if getattr(other, "_broadcast", False):
+            op, detail = "BroadcastHashJoin", detail + ", BuildRight"
+        elif getattr(self, "_broadcast", False) and kind in ("INNER", "RIGHT"):
+            op, detail = "BroadcastHashJoin", detail + ", BuildLeft"
+        plan = _Plan(op, detail, [self._plan, other._plan])
+        # Catalyst pushes a filter below a join to the side whose rows it keeps.
+        lineage = ()
+        if kind in ("INNER", "LEFT", "CROSS"):
+            lineage += tuple(self._scan_lineage or ())
+        if kind in ("INNER", "RIGHT", "CROSS"):
+            lineage += tuple(other._scan_lineage or ())
+        return self._new(sql, fields, plan, None, lineage or None)
 
     def _find(self, fields, key, side):
         matches = [field for field in fields if field.name.lower() == key.lower()]
@@ -2350,7 +2407,9 @@ class DataFrame:
     def transform(self, func, *args, **kwargs):
         return func(self, *args, **kwargs)
 
-    def hint(self, *args, **kwargs):
+    def hint(self, name=None, *args, **kwargs):
+        if isinstance(name, str) and name.lower() in ("broadcast", "broadcastjoin", "mapjoin"):
+            return broadcast(self)
         return self
 
     def repartition(self, *args, **kwargs):
@@ -3039,16 +3098,326 @@ def _from_pandas(value):
     return value
 
 
+def _quote_end(text, start):
+    """The index just after the quoted string that starts at text[start]."""
+    quote = text[start]
+    index = start + 1
+    while index < len(text):
+        if text[index] == quote:
+            if index + 1 < len(text) and text[index + 1] == quote:
+                index += 2
+                continue
+            return index + 1
+        index += 1
+    return len(text)
+
+
+def _closing_paren(text, start):
+    """The index of the parenthesis that closes the one at text[start], or -1."""
+    depth = 0
+    index = start
+    while index < len(text):
+        char = text[index]
+        if char in "'\"`":
+            index = _quote_end(text, index)
+            continue
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth == 0:
+                return index
+        index += 1
+    return -1
+
+
+def _split_sql_args(text):
+    """The arguments of a SQL call, split at the commas that are not nested."""
+    args, depth, start, index = [], 0, 0, 0
+    while index < len(text):
+        char = text[index]
+        if char in "'\"`":
+            index = _quote_end(text, index)
+            continue
+        if char in "([":
+            depth += 1
+        elif char in ")]":
+            depth -= 1
+        elif char == "," and depth == 0:
+            args.append(text[start:index].strip())
+            start = index + 1
+        index += 1
+    tail = text[start:].strip()
+    if tail or args:
+        args.append(tail)
+    return args
+
+
+def _sql_string(arg):
+    """The value of a SQL string literal, or None when the argument is not one."""
+    arg = arg.strip()
+    if len(arg) >= 2 and arg[0] == arg[-1] == "'":
+        return arg[1:-1].replace("''", "'")
+    return None
+
+
+def _sql_format(arg):
+    """A Java date pattern literal as a strftime literal, or None."""
+    text = _sql_string(arg)
+    return None if text is None else _lit_sql(_java_to_strftime(text))
+
+
+def _sql_unit(arg):
+    text = _sql_string(arg)
+    return None if text is None else _TRUNC_UNITS.get(text.lower(), text.lower())
+
+
+def _sql_to_date(args):
+    if len(args) == 1:
+        return "TRY_CAST(TRY_CAST(%s AS TIMESTAMP) AS DATE)" % args[0]
+    fmt = _sql_format(args[1])
+    return None if fmt is None else "CAST(try_strptime(%s, %s) AS DATE)" % (args[0], fmt)
+
+
+def _sql_to_timestamp(args):
+    if len(args) == 1:
+        return "TRY_CAST(replace(replace(CAST(%s AS VARCHAR), 'T', ' '), 'Z', '') AS TIMESTAMP)" % args[0]
+    fmt = _sql_format(args[1])
+    return None if fmt is None else "CAST(try_strptime(%s, %s) AS TIMESTAMP)" % (args[0], fmt)
+
+
+def _sql_unix_timestamp(args):
+    if not args:
+        return "CAST(epoch(current_timestamp) AS BIGINT)"
+    if len(args) == 1:
+        return "CAST(epoch(CAST(%s AS TIMESTAMP)) AS BIGINT)" % args[0]
+    fmt = _sql_format(args[1])
+    return None if fmt is None else "CAST(epoch(try_strptime(%s, %s)) AS BIGINT)" % (args[0], fmt)
+
+
+def _sql_from_unixtime(args):
+    fmt = _sql_format(args[1]) if len(args) > 1 else "'%Y-%m-%d %H:%M:%S'"
+    return None if fmt is None else "strftime(CAST(to_timestamp(%s) AS TIMESTAMP), %s)" % (args[0], fmt)
+
+
+def _sql_date_format(args):
+    fmt = _sql_format(args[1]) if len(args) == 2 else None
+    return None if fmt is None else "strftime(CAST(%s AS TIMESTAMP), %s)" % (args[0], fmt)
+
+
+def _sql_trunc(args):
+    unit = _sql_unit(args[1]) if len(args) == 2 else None
+    return None if unit is None else "CAST(date_trunc('%s', CAST(%s AS DATE)) AS DATE)" % (unit, args[0])
+
+
+def _sql_date_trunc(args):
+    unit = _sql_unit(args[0]) if len(args) == 2 else None
+    return None if unit is None else "CAST(date_trunc('%s', CAST(%s AS TIMESTAMP)) AS TIMESTAMP)" % (unit, args[1])
+
+
+def _sql_regexp_replace(args):
+    if len(args) != 3:
+        return None
+    replacement = _sql_string(args[2])
+    if replacement is not None:
+        args = args[:2] + [_lit_sql(_re.sub(r"\$(\d)", r"\\\1", replacement))]
+    return "regexp_replace(%s, %s, %s, 'g')" % tuple(args)
+
+
+def _sql_concat(args):
+    # Spark's concat is null when any part is null; DuckDB's concat skips nulls, || does not.
+    return "(" + " || ".join("CAST(%s AS VARCHAR)" % arg for arg in args) + ")" if args else "''"
+
+
+def _sql_explode_outer(args):
+    return "unnest(CASE WHEN %s IS NULL OR len(%s) = 0 THEN [NULL] ELSE %s END)" % (args[0], args[0], args[0])
+
+
+def _sql_split(args):
+    pattern = _sql_string(args[1]) if len(args) >= 2 else None
+    if pattern is None:
+        return "str_split_regex(%s, %s)" % (args[0], args[1]) if len(args) == 2 else None
+    limit = int(args[2]) if len(args) == 3 and _re.fullmatch(r"-?\d+", args[2].strip()) else -1
+    return _split_sql(args[0], pattern, limit)
+
+
+def _sql_substring_index(args):
+    if len(args) != 3 or not _re.fullmatch(r"-?\d+", args[2].strip()):
+        return None
+    count = int(args[2])
+    parts = "string_split(%s, %s)" % (args[0], args[1])
+    if count > 0:
+        return "array_to_string(%s[1:%d], %s)" % (parts, count, args[1])
+    return "array_to_string(%s[%d:], %s)" % (parts, count, args[1])
+
+
+def _sql_inline(args):
+    raise PySparkException("inline is not available in this sandbox. Use explode, then select col.*.")
+
+
+def _sql_nvl2(args):
+    return "(CASE WHEN %s IS NOT NULL THEN %s ELSE %s END)" % tuple(args) if len(args) == 3 else None
+
+
+def _sql_sha2(args):
+    bits = args[1].strip() if len(args) == 2 else "256"
+    return "sha256(CAST(%s AS VARCHAR))" % args[0] if bits in ("0", "256") else None
+
+
+_SQL_CALLS = {
+    "to_date": _sql_to_date,
+    "date": lambda args: "TRY_CAST(TRY_CAST(%s AS TIMESTAMP) AS DATE)" % args[0] if len(args) == 1 else None,
+    "to_timestamp": _sql_to_timestamp,
+    "timestamp": lambda args: _sql_to_timestamp(args) if len(args) == 1 else None,
+    "unix_timestamp": _sql_unix_timestamp,
+    "from_unixtime": _sql_from_unixtime,
+    "date_format": _sql_date_format,
+    "datediff": lambda args: "date_diff('day', CAST(%s AS DATE), CAST(%s AS DATE))" % (args[1], args[0])
+    if len(args) == 2
+    else None,
+    "date_add": lambda args: "CAST(CAST(%s AS DATE) + CAST(%s AS INTEGER) AS DATE)" % tuple(args)
+    if len(args) == 2
+    else None,
+    "dateadd": lambda args: "CAST(CAST(%s AS DATE) + CAST(%s AS INTEGER) AS DATE)" % tuple(args)
+    if len(args) == 2
+    else None,
+    "date_sub": lambda args: "CAST(CAST(%s AS DATE) - CAST(%s AS INTEGER) AS DATE)" % tuple(args)
+    if len(args) == 2
+    else None,
+    "add_months": lambda args: "CAST(CAST(%s AS DATE) + to_months(CAST(%s AS INTEGER)) AS DATE)" % tuple(args)
+    if len(args) == 2
+    else None,
+    "months_between": lambda args: "round(date_diff('day', CAST(%s AS DATE), CAST(%s AS DATE)) / 31.0, 8)"
+    % (args[1], args[0])
+    if len(args) >= 2
+    else None,
+    "trunc": _sql_trunc,
+    "date_trunc": _sql_date_trunc,
+    "dayofweek": lambda args: "(dayofweek(%s) + 1)" % args[0] if len(args) == 1 else None,
+    "current_timestamp": lambda args: "CAST(current_timestamp AS TIMESTAMP)" if not args else None,
+    "now": lambda args: "CAST(current_timestamp AS TIMESTAMP)" if not args else None,
+    "collect_list": lambda args: "COALESCE(list(%s) FILTER (WHERE %s IS NOT NULL), [])" % (args[0], args[0])
+    if len(args) == 1
+    else None,
+    "collect_set": lambda args: "COALESCE(list(DISTINCT %s) FILTER (WHERE %s IS NOT NULL), [])" % (args[0], args[0])
+    if len(args) == 1
+    else None,
+    "size": lambda args: "len(%s)" % args[0] if len(args) == 1 else None,
+    "nvl": lambda args: "coalesce(%s)" % ", ".join(args),
+    "nvl2": _sql_nvl2,
+    "isnull": lambda args: "(%s IS NULL)" % args[0] if len(args) == 1 else None,
+    "isnotnull": lambda args: "(%s IS NOT NULL)" % args[0] if len(args) == 1 else None,
+    "percentile_approx": lambda args: "approx_quantile(%s, %s)" % (args[0], args[1]) if len(args) >= 2 else None,
+    "approx_percentile": lambda args: "approx_quantile(%s, %s)" % (args[0], args[1]) if len(args) >= 2 else None,
+    "percentile": lambda args: "quantile_cont(%s, %s)" % (args[0], args[1]) if len(args) == 2 else None,
+    "explode": lambda args: "unnest(%s)" % args[0] if len(args) == 1 else None,
+    "explode_outer": lambda args: _sql_explode_outer(args) if len(args) == 1 else None,
+    "inline": _sql_inline,
+    "array": lambda args: "list_value(%s)" % ", ".join(args),
+    "split": _sql_split,
+    "substring_index": _sql_substring_index,
+    "regexp_replace": _sql_regexp_replace,
+    "concat": _sql_concat,
+    "sha2": _sql_sha2,
+}
+
+
+def _translate_calls(text):
+    """Rewrites the Spark SQL functions DuckDB lacks or runs differently, inside out."""
+    out, index, size = [], 0, len(text)
+    while index < size:
+        char = text[index]
+        if char in "'\"`":
+            end = _quote_end(text, index)
+            out.append(text[index:end])
+            index = end
+            continue
+        if char.isalpha() or char == "_":
+            end = index
+            while end < size and (text[end].isalnum() or text[end] == "_"):
+                end += 1
+            word = text[index:end]
+            paren = end
+            while paren < size and text[paren].isspace():
+                paren += 1
+            after_dot = index > 0 and text[index - 1] == "."
+            translate = _SQL_CALLS.get(word.lower())
+            if translate is not None and not after_dot and paren < size and text[paren] == "(":
+                close = _closing_paren(text, paren)
+                if close != -1:
+                    inner = text[paren + 1 : close]
+                    args = [_translate_calls(arg) for arg in _split_sql_args(inner)] if inner.strip() else []
+                    replaced = translate(args)
+                    if replaced is None:
+                        replaced = "%s(%s)" % (word, ", ".join(args))
+                    index = close + 1
+                    if word.lower() == "split":
+                        # Spark arrays count from 0 and DuckDB lists from 1.
+                        match = _re.match(r"\s*\[\s*(\d+)\s*\]", text[index:])
+                        if match:
+                            replaced += "[%d]" % (int(match.group(1)) + 1)
+                            index += match.end()
+                    out.append(replaced)
+                    continue
+            out.append(word)
+            index = end
+            continue
+        out.append(char)
+        index += 1
+    return "".join(out)
+
+
+def _outside_quotes(text, change):
+    """Applies change() to the parts of text that are not quoted."""
+    parts, index, start = [], 0, 0
+    while index < len(text):
+        if text[index] in "'\"`":
+            parts.append(change(text[start:index]))
+            end = _quote_end(text, index)
+            parts.append(text[index:end])
+            start = index = end
+            continue
+        index += 1
+    parts.append(change(text[start:]))
+    return "".join(parts)
+
+
+def _translate_operators(text):
+    out = _outside_quotes(text, lambda part: part.replace("<=>", " IS NOT DISTINCT FROM "))
+    return _re.sub(
+        r"((?:[\w.]+(?:\([^()']*\))?))\s+(NOT\s+)?(?:RLIKE|REGEXP)\s+('(?:[^']|'')*')",
+        lambda m: "%sregexp_matches(%s, %s)" % ("NOT " if m.group(2) else "", m.group(1), m.group(3)),
+        out,
+        flags=_re.I,
+    )
+
+
+def _translate_lateral_views(text):
+    """LATERAL VIEW [OUTER] explode(x) t AS c becomes a DuckDB lateral join on unnest."""
+    pattern = _re.compile(r"\bLATERAL\s+VIEW\s+(OUTER\s+)?unnest\s*\(", _re.I)
+    while True:
+        match = pattern.search(text)
+        if match is None:
+            return text
+        close = _closing_paren(text, match.end() - 1)
+        if close == -1:
+            return text
+        arg = text[match.end() : close]
+        names = _re.match(r"\s+(\w+)\s+AS\s+(\w+)", text[close + 1 :], _re.I)
+        if names is None:
+            return text
+        table, column = names.group(1), names.group(2)
+        if match.group(1):
+            joined = " LEFT JOIN LATERAL (SELECT unnest(%s) AS %s) AS %s ON TRUE" % (arg, column, table)
+        else:
+            joined = " CROSS JOIN LATERAL (SELECT unnest(%s) AS %s) AS %s" % (arg, column, table)
+        text = text[: match.start()] + joined + text[close + 1 + names.end() :]
+
+
 def _translate_spark_sql(text):
-    """Small Spark SQL to DuckDB fixes for the common interview queries."""
-    out = text
-    out = _re.sub(r"\bdatediff\s*\(", "__spark_datediff(", out, flags=_re.I)
-    out = _re.sub(r"\bcollect_list\s*\(", "list(", out, flags=_re.I)
-    out = _re.sub(r"\bcollect_set\s*\(", "__spark_collect_set(", out, flags=_re.I)
-    out = _re.sub(r"\bsize\s*\(", "len(", out, flags=_re.I)
-    out = _re.sub(r"\bnvl\s*\(", "coalesce(", out, flags=_re.I)
-    out = _re.sub(r"`([^`]*)`", lambda m: _q(m.group(1)), out)
-    return out
+    """Spark SQL to DuckDB: the functions and operators that differ, for expr, selectExpr and spark.sql."""
+    out = _translate_lateral_views(_translate_operators(_translate_calls(text)))
+    return _re.sub(r"`([^`]*)`", lambda m: _q(m.group(1)), out)
 
 
 class _Catalog:
@@ -3156,7 +3525,7 @@ def _scan_stored(session, stored):
     fields = [_Field(name, name) for name in names]
     sql = "SELECT %s FROM %s" % (", ".join(_q(name) for name in names), stored.table)
     df = DataFrame(session, sql, fields, plan)
-    df._scan_lineage = (scan, plan)
+    df._scan_lineage = ((scan, plan),)
     return df
 
 
@@ -3386,6 +3755,7 @@ def _udf_wrap(function, return_type):
                     side_effects=False,
                 )
                 registered[key] = function_name
+                _state["udf_names"].add(function_name)
             return "%s(%s)" % (registered[key], ", ".join(arg_sql))
 
         label = "%s(%s)" % (getattr(function, "__name__", "udf"), ", ".join(column._name for column in columns))
@@ -3396,6 +3766,12 @@ def _udf_wrap(function, return_type):
     make.__name__ = getattr(function, "__name__", "udf")
     make.asNondeterministic = lambda: make
     return make
+
+
+def _uses_udf(df):
+    """True when the query behind df calls a Python UDF. The graders use it."""
+    text = df._sql_text
+    return _b.any(name + "(" in text for name in _state["udf_names"])
 
 
 def _duck_type_object(text):
@@ -3493,7 +3869,7 @@ def expr(text):
     if isinstance(text, Column):
         return text
     translated = _translate_spark_sql(text)
-    tokens = set(_re.findall(r"[A-Za-z_][A-Za-z0-9_]*", text))
+    tokens = _sql_refs(text)
     is_agg = bool(
         _re.search(
             r"\b(sum|count|avg|min|max|collect_list|collect_set|first|last|mean|stddev)\s*\(",
@@ -3503,10 +3879,7 @@ def expr(text):
     ) and not _re.search(r"\bover\s*\(", text, _re.I)
 
     def render(ctx):
-        out = translated
-        names = sorted(
-            {field.name for _, field in ctx._visible()}, key=len, reverse=True
-        )
+        out = _resolve_qualified(translated, ctx)
         if len(ctx.sources) == 1:
             alias = ctx.sources[0][0]
             for field in ctx.sources[0][1]:
@@ -3516,6 +3889,17 @@ def expr(text):
                         "%s.%s" % (alias, _q(field.internal)),
                         out,
                     )
+
+        def cast_long(match):
+            # Spark casts a timestamp to its epoch seconds; DuckDB refuses the cast.
+            kind = ctx.type_of(match.group(1)).upper()
+            if kind.startswith("TIMESTAMP"):
+                return "CAST(epoch(%s) AS BIGINT)" % match.group(1)
+            return match.group(0)
+
+        out = _re.sub(
+            r'(?i)\bcast\s*\(\s*([A-Za-z_][\w."]*)\s+as\s+(?:long|bigint)\s*\)', cast_long, out
+        )
         return "(%s)" % out
 
     name = text
@@ -3526,12 +3910,110 @@ def expr(text):
         body = " as ".join(inner_text[:-1])
         inner = expr(body)
         return inner.alias(alias_name)
-    return Column(render, name, agg=is_agg, refs=tokens)
+    column = Column(render, name, agg=is_agg, refs=tokens)
+    pieces = _sql_conjuncts(text)
+    if len(pieces) > 1:
+        column._conjuncts = [expr(piece) for piece in pieces]
+    return column
+
+
+_CHAIN = _re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)+")
+
+
+def _resolve_qualified(text, ctx):
+    """alias.column references in SQL text, as column SQL: DuckDB knows no DataFrame alias."""
+    heads = {name.lower() for _, field in ctx._visible() for name in field.aliases}
+    if not heads:
+        return text
+    out, index = [], 0
+    while index < len(text):
+        char = text[index]
+        if char in "'\"`":
+            end = _quote_end(text, index)
+            out.append(text[index:end])
+            index = end
+            continue
+        match = _CHAIN.match(text, index)
+        if match is None or (index > 0 and (text[index - 1].isalnum() or text[index - 1] in "_.")):
+            out.append(char)
+            index += 1
+            continue
+        chain = match.group(0)
+        sql = chain
+        if chain.split(".")[0].lower() in heads and not text[match.end() :].lstrip().startswith("("):
+            try:
+                sql = ctx.resolve(chain)
+            except AnalysisException:
+                sql = chain
+        out.append(sql)
+        index = match.end()
+    return "".join(out)
+
+
+_SQL_WORDS = frozenset(
+    """and or not in is null like ilike rlike regexp between true false case when then else end as
+    date timestamp interval cast distinct over partition by order asc desc rows range unbounded
+    preceding following current row filter where exists any all some escape nulls first last
+    day days hour hours minute minutes second seconds month months year years week weeks string
+    int integer bigint long double float boolean decimal varchar smallint tinyint""".split()
+)
+
+
+def _sql_refs(text):
+    """The column names a SQL expression reads: no literals, keywords or function names."""
+    bare = _re.sub(r"'(?:[^']|'')*'|\"(?:[^\"]|\"\")*\"", " ", text)
+    bare = _re.sub(r"`([^`]*)`", lambda m: " " + _re.sub(r"\W", "_", m.group(1)) + " ", bare)
+    refs = set()
+    for match in _re.finditer(r"([A-Za-z_][A-Za-z0-9_]*)(?:\.[A-Za-z_][A-Za-z0-9_]*)*(\s*\()?", bare):
+        word = match.group(1)
+        if match.group(2) or word.lower() in _SQL_WORDS:
+            continue
+        if match.start() > 0 and bare[match.start() - 1].isdigit():
+            continue
+        refs.add(word)
+    return refs
+
+
+def _sql_conjuncts(text):
+    """A condition split at its top-level ANDs; the AND of a BETWEEN stays inside its part."""
+    pieces, depth, start, between, index = [], 0, 0, 0, 0
+    while index < len(text):
+        char = text[index]
+        if char in "'\"`":
+            index = _quote_end(text, index)
+            continue
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+        elif depth == 0 and (char.isalpha() or char == "_") and (index == 0 or not (text[index - 1].isalnum() or text[index - 1] == "_")):
+            end = index
+            while end < len(text) and (text[end].isalnum() or text[end] == "_"):
+                end += 1
+            word = text[index:end].lower()
+            if word == "between":
+                between += 1
+            elif word == "and":
+                if between:
+                    between -= 1
+                else:
+                    pieces.append(text[start:index].strip())
+                    start = end
+            elif word == "or":
+                return [text.strip()]
+            index = end
+            continue
+        index += 1
+    pieces.append(text[start:].strip())
+    return [piece for piece in pieces if piece]
 
 
 @_fn()
 def broadcast(df):
-    return df
+    """Marks a DataFrame for a broadcast join; explain() then shows BroadcastHashJoin."""
+    marked = df._new(df._sql_text, [field.copy() for field in df._fields], df._plan, df._order, df._scan_lineage)
+    marked._broadcast = True
+    return marked
 
 
 @_fn("asc")
@@ -3660,7 +4142,10 @@ def first(column, ignorenulls=False):
             return text
         return "first(%s)%s" % (inner, ctx.agg_filter_sql())
 
-    return column._derive(render, "first(%s)" % column._name, agg=True)
+    result = column._derive(render, "first(%s)" % column._name, agg=True)
+    if ignorenulls:
+        result._window_render = lambda ctx: "first_value(%s IGNORE NULLS)" % column._sql(ctx)
+    return result
 
 
 @_fn()
@@ -3673,7 +4158,10 @@ def last(column, ignorenulls=False):
             return "last(%s) FILTER (WHERE %s IS NOT NULL)" % (inner, inner)
         return "last(%s)%s" % (inner, ctx.agg_filter_sql())
 
-    return column._derive(render, "last(%s)" % column._name, agg=True)
+    result = column._derive(render, "last(%s)" % column._name, agg=True)
+    if ignorenulls:
+        result._window_render = lambda ctx: "last_value(%s IGNORE NULLS)" % column._sql(ctx)
+    return result
 
 
 _F["any_value"] = _F["first"]
@@ -4157,11 +4645,21 @@ def substring_index(column, delim, count):
     return column._derive(render, "substring_index(%s, %s, %d)" % (column._name, delim, count))
 
 
+def _split_sql(inner, pattern, limit=-1):
+    """Spark's split: a regex, and with limit > 0 at most limit parts, the last one the rest."""
+    whole = "string_split_regex(%s, %s)" % (inner, _lit_sql(pattern))
+    if not isinstance(limit, int) or limit <= 1 or limit > 10:
+        return "[%s]" % inner if limit == 1 else whole
+    full = "(?s)^" + "(.*?)(?:%s)" % pattern * (limit - 1) + "(.*)$"
+    groups = ", ".join("regexp_extract(%s, %s, %d)" % (inner, _lit_sql(full), n) for n in range(1, limit + 1))
+    return "CASE WHEN regexp_matches(%s, %s) THEN [%s] ELSE %s END" % (inner, _lit_sql(full), groups, whole)
+
+
 @_fn()
 def split(column, pattern, limit=-1):
     column = _to_col(column)
     return column._derive(
-        lambda ctx: "string_split_regex(%s, %s)" % (column._sql(ctx), _lit_sql(pattern)),
+        lambda ctx: _split_sql(column._sql(ctx), pattern, limit),
         "split(%s, %s, %d)" % (column._name, pattern, limit),
     )
 
@@ -4893,6 +5391,15 @@ def _module(name, attrs):
     return module
 
 
+def _missing_function(name):
+    if name.startswith("__"):
+        raise AttributeError(name)
+    raise AttributeError(
+        "module 'pyspark.sql.functions' has no attribute '%s'. The browser PySpark has the common "
+        "functions but not this one: build it from others, or write it in F.expr(...) as Spark SQL." % name
+    )
+
+
 def _install():
     """Register pyspark, pyspark.sql and friends in sys.modules."""
     type_names = [
@@ -4921,6 +5428,7 @@ def _install():
     types_module = _module("pyspark.sql.types", {name: here[name] for name in type_names})
     functions_module = _module("pyspark.sql.functions", dict(_F))
     functions_module.__dict__["Column"] = Column
+    functions_module.__dict__["__getattr__"] = _missing_function
     window_module = _module("pyspark.sql.window", {"Window": Window, "WindowSpec": WindowSpec})
     errors = {
         "AnalysisException": AnalysisException,
