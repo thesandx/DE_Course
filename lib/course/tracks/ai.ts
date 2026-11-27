@@ -1613,7 +1613,7 @@ export const problems: readonly Problem[] = [
               piece = " ".join(words[start : start + max_words])
               if not piece:
                   break
-              digest = hashlib.sha256(f"{model_version}\n{piece}".encode()).hexdigest()
+              digest = hashlib.sha256(f"{model_version}\\n{piece}".encode()).hexdigest()
               yield Chunk(
                   chunk_id=f"{doc_id}:{position}",
                   doc_id=doc_id,

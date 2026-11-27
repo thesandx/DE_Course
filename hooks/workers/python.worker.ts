@@ -58,6 +58,7 @@ const SOURCES = {
   pyspark_shim: new URL('./python/pyspark_shim.py', import.meta.url),
   prefect: new URL('./python/prefect_sandbox.py', import.meta.url),
   airflow: new URL('./python/airflow_sandbox.py', import.meta.url),
+  pytest: new URL('./python/pytest_sandbox.py', import.meta.url),
 } as const;
 
 let engine: Promise<{ pyodide: Pyodide; harness: Harness }> | null = null;

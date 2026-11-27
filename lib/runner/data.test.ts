@@ -174,6 +174,24 @@ describe('pythonJob', () => {
     expect(jobSource(check)).toContain('result = sum(xs)');
   });
 
+  it('leaves the imports of a sandbox module out of the source it scans', () => {
+    const code = 'import prefect\nfrom prefect import flow\n  import pandas as pd\nimport prefects';
+    const job = pythonJob({ id: 1, action: 'run', key: 'k', code, spec });
+    const source = jobSource(job);
+    expect(source).not.toContain('import prefect\n');
+    expect(source).not.toContain('from prefect import flow');
+    expect(source).toContain('import pandas as pd');
+    expect(source).toContain('import prefects');
+    const plain = pythonJob({
+      id: 1,
+      action: 'run',
+      key: 'k',
+      code,
+      spec: { ...spec, modules: [] },
+    });
+    expect(jobSource(plain)).toContain('from prefect import flow');
+  });
+
   it('refuses a SQL spec', () => {
     expect(() => pythonJob({ id: 1, action: 'run', key: 'k', code: '', spec: sqlSpec })).toThrow();
   });

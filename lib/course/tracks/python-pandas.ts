@@ -309,11 +309,12 @@ export const pandasProblems: readonly Problem[] = [
       ~~~python
       ranked = orders.assign(
           position=orders.groupby("city")["amount"].rank(method="dense", ascending=False))
-      top2_with_ties = ranked[ranked["position"] <= 2]
+      top2_with_ties = ranked[ranked["position"] <= 2].drop(columns="position")
       ~~~
 
-      Do not use «groupby("city").apply(lambda g: g.nlargest(2, "amount"))». It gives the same
-      rows, but it calls Python once for each group and is slow with many groups.
+      Do not use «groupby("city").apply(lambda g: g.nlargest(2, "amount"))». It calls Python
+      once for each group, so it is slow with many groups. On a tie, «nlargest» also keeps the
+      rows it meets first, not the smaller «order_id».
     `,
     signals: [
       'Uses sort_values with groupby().head()',
@@ -331,9 +332,9 @@ export const pandasProblems: readonly Problem[] = [
     difficulty: 'medium',
     companies: PANDAS_LOOPS,
     prompt: `
-      «orders(customer_id, ordered_at, amount)» has «ordered_at» as a datetime. Add three
-      columns: the order number of each customer, the running spend of the customer, and the
-      days since the customer's previous order.
+      «orders(customer_id, ordered_at, amount)» has «ordered_at» as a datetime. Sort the orders
+      by customer and time, and add three columns: the order number of each customer, the
+      running spend of the customer, and the whole days since the customer's previous order.
     `,
     hints: [
       'Sort by customer and time first.',
@@ -342,13 +343,13 @@ export const pandasProblems: readonly Problem[] = [
     ],
     answer: `
       ~~~python
-      orders = orders.sort_values(["customer_id", "ordered_at"])
-      by_customer = orders.groupby("customer_id")
+      ordered = orders.sort_values(["customer_id", "ordered_at"])
+      by_customer = ordered.groupby("customer_id")
 
-      orders = orders.assign(
+      result = ordered.assign(
           order_number=by_customer.cumcount() + 1,
           running_spend=by_customer["amount"].cumsum(),
-          days_since_previous=(orders["ordered_at"]
+          days_since_previous=(ordered["ordered_at"]
                                - by_customer["ordered_at"].shift(1)).dt.days,
       )
       ~~~

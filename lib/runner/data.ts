@@ -256,13 +256,23 @@ export function pythonJob(request: RunRequest): PythonJob {
   };
 }
 
-/** The Python source a job runs, for working out which packages to load. */
+/**
+ * The Python source a job runs, for working out which packages to load. An
+ * import of a sandbox module is left out: the harness provides that module,
+ * and Pyodide must not download the real package of the same name.
+ */
 export function jobSource(job: PythonJob): string {
-  return [
+  const source = [
     job.code,
     job.solution,
     ...job.cases.flatMap((runCase) => [runCase.prelude, runCase.setup, runCase.check]),
   ].join('\n');
+  if (job.modules.length === 0) return source;
+  const sandboxImport = new RegExp(
+    `^[ \\t]*(?:import|from)[ \\t]+(?:${job.modules.join('|')})\\b.*$`,
+    'gm',
+  );
+  return source.replace(sandboxImport, '');
 }
 
 /**

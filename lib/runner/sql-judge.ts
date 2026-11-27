@@ -145,7 +145,7 @@ async function judgeCase(
   const { engine, cache } = options;
   const now = options.now ?? (() => performance.now());
   const setup = sqlSetup(request.spec, runCase);
-  const repeat = Math.max(1, request.spec.repeat ?? 1);
+  const repeat = Math.max(1, runCase.repeat ?? request.spec.repeat ?? 1);
   const result = emptyResult(runCase);
 
   let got: Program;

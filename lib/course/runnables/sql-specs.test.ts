@@ -35,17 +35,25 @@ function failures(results: readonly CaseResult[]): string[] {
     .map((result) => `${result.name}: ${result.message}`);
 }
 
+/** Big hidden cases run in the browser too: the reference must stay quick there. */
+const REFERENCE_BUDGET_MS = 3000;
+const TIMEOUT = { timeout: 60_000 };
+
 describe.each(SQL_SPECS)('runnable SQL problem %s', (slug, spec) => {
-  it('passes every case with the reference solution, on real data', async () => {
+  it('passes every case with the reference solution, on real data, quickly', TIMEOUT, async () => {
     const results = await judge(slug, spec, spec.solution);
     expect(failures(results)).toEqual([]);
     const rows = results.map((result) =>
       result.expected?.kind === 'table' ? result.expected.total : 0,
     );
     expect(Math.max(...rows), 'every case expects an empty result').toBeGreaterThan(0);
+    const ms = results.reduce((sum, result) => sum + result.ms, 0);
+    expect(ms, 'the reference solution is too slow for a browser').toBeLessThan(
+      REFERENCE_BUDGET_MS,
+    );
   });
 
-  it('does not pass with the starter code', async () => {
+  it('does not pass with the starter code', TIMEOUT, async () => {
     const results = await judge(slug, spec, spec.starter);
     expect(results.every((result) => result.passed)).toBe(false);
   });
@@ -53,12 +61,14 @@ describe.each(SQL_SPECS)('runnable SQL problem %s', (slug, spec) => {
   const answers = TEST_ANSWERS[slug] ?? {};
   it.each((answers.pass ?? []).map((code, index) => [index + 1, code] as const))(
     'accepts correct answer %i',
+    TIMEOUT,
     async (_, code) => {
       expect(failures(await judge(slug, spec, code))).toEqual([]);
     },
   );
   it.each((answers.fail ?? []).map((code, index) => [index + 1, code] as const))(
     'rejects wrong answer %i',
+    TIMEOUT,
     async (_, code) => {
       expect(failures(await judge(slug, spec, code)).length).toBeGreaterThan(0);
     },

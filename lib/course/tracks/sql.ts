@@ -1321,8 +1321,7 @@ export const problems: Problem[] = [
       ),
       numbered AS (
         SELECT user_id, event_time,
-               SUM(new_session) OVER (PARTITION BY user_id ORDER BY event_time
-                                      ROWS UNBOUNDED PRECEDING) AS session_id
+               SUM(new_session) OVER (PARTITION BY user_id ORDER BY event_time) AS session_id
         FROM gaps
       )
       SELECT
@@ -1335,9 +1334,11 @@ export const problems: Problem[] = [
       GROUP BY user_id, session_id;
       ~~~
 
-      The first event has a NULL gap, which falls to «ELSE 1» and starts session 1. Point out that
-      a single-event session has duration 0, and discuss whether to add a fixed tail (for example
-      30 seconds) for analytics.
+      The first event has a NULL gap, which falls to «ELSE 1» and starts session 1. Keep the
+      running sum's default frame: two events in the same second are peers and get the same sum.
+      With «ROWS UNBOUNDED PRECEDING», the order of tied rows is arbitrary, so a tie can split a
+      session at random. Point out that a single-event session has duration 0, and discuss whether
+      to add a fixed tail (for example 30 seconds) for analytics.
     `,
     signals: [
       'Uses the flag and running-sum pattern',
@@ -1427,25 +1428,25 @@ export const problems: Problem[] = [
           MIN(CASE WHEN status = 'picked_up' THEN event_ts END) AS t_pick,
           MIN(CASE WHEN status = 'completed' THEN event_ts END) AS t_done
         FROM trip_events
-        WHERE event_ts >= DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '7 days'
-          AND event_ts <  DATE_TRUNC('week', CURRENT_DATE)
         GROUP BY trip_id, city_id
       )
       SELECT
         city_id,
-        COUNT(t_req) AS requested,
+        COUNT(*) AS requested,
         AVG(CASE WHEN t_acc  > t_req  THEN 1.0 ELSE 0 END) AS accept_rate,
         AVG(CASE WHEN t_pick > t_acc  AND t_acc > t_req THEN 1.0 ELSE 0 END) AS pickup_rate,
         AVG(CASE WHEN t_done > t_pick AND t_pick > t_acc AND t_acc > t_req THEN 1.0 ELSE 0 END)
           AS completion_rate
       FROM per_trip
-      WHERE t_req IS NOT NULL
+      WHERE t_req >= DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '7 days'
+        AND t_req <  DATE_TRUNC('week', CURRENT_DATE)
       GROUP BY city_id;
       ~~~
 
-      Raise the edge cases: a trip requested late on Sunday and completed on Monday is cut by the
-      time filter (filter on the request time only, and allow later events), and a re-dispatched
-      trip can be accepted twice.
+      The week filter is on the request time only. Filter the events instead, and a trip requested
+      late on Sunday and completed on Monday loses its last stages. In production, scan only a few
+      days past the week end, so the pivot does not read the whole table. «MIN» takes the first
+      time of each status, so a re-dispatched trip that is accepted twice counts once.
     `,
     signals: [
       'Pivots with conditional aggregation in one pass',

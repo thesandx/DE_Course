@@ -65,6 +65,8 @@ export interface RunCase {
   slowHint?: string;
   /** A hidden case runs on Submit only, and its data is not shown up front. */
   hidden?: boolean;
+  /** SQL: how many times the code runs before the check. Default: the spec's `repeat`. */
+  repeat?: number;
 }
 
 /** Everything a problem needs for the runnable editor. */
@@ -88,13 +90,13 @@ export interface RunnableSpec {
   solution: string;
   /** At least one. The first one is the sample that Run uses. */
   cases: readonly RunCase[];
-  /** Small fake libraries the Python harness installs: a Prefect or an Airflow look-alike. */
+  /** Small fake libraries the Python harness installs: a Prefect, Airflow or pytest look-alike. */
   modules?: readonly SandboxModule[];
   /** SQL: run the learner's code this many times in a row, to prove a rerun is safe. */
   repeat?: number;
 }
 
-export type SandboxModule = 'prefect' | 'airflow';
+export type SandboxModule = 'prefect' | 'airflow' | 'pytest';
 
 /** A result the page can show: a table, or text such as a Python value. */
 export type RunOutput =

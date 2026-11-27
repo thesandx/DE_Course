@@ -168,9 +168,14 @@ describe('judgeSql', () => {
       runs += 1;
       return runs === 2 ? new Error('duplicate key') : [NO_TABLE];
     });
-    const spec = { ...SPEC, repeat: 2 };
-    const [result] = await judgeSql(request(code, 'run', spec), { engine, cache: new Map() });
-    expect(result?.message).toBe('Run 2 of 2 failed: duplicate key');
+    const spec = { ...SPEC, repeat: 2, cases: [{ name: 'Twice' }, { name: 'Once', repeat: 1 }] };
+    const [twice, once] = await judgeSql(request(code, 'check', spec), {
+      engine,
+      cache: new Map(),
+    });
+    expect(twice?.message).toBe('Run 2 of 2 failed: duplicate key');
+    // A case can run the code once, whatever the spec says.
+    expect(once?.error).toBeUndefined();
   });
 
   it('reads the final state with the check query', async () => {

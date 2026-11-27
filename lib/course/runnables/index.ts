@@ -1,6 +1,8 @@
 import { DSA_RUNNABLES } from '@/lib/course/runnables/dsa';
+import { PYTHON_RUNNABLES } from '@/lib/course/runnables/python';
 import { SPARK_RUNNABLES } from '@/lib/course/runnables/spark';
 import { SQL_RUNNABLES } from '@/lib/course/runnables/sql';
+import { WAREHOUSE_SQL_RUNNABLES } from '@/lib/course/runnables/warehouse-sql';
 import type { RunnableSpec } from '@/types/runner';
 
 /**
@@ -9,8 +11,10 @@ import type { RunnableSpec } from '@/types/runner';
  */
 export const RUNNABLES: Readonly<Record<string, RunnableSpec>> = {
   ...SQL_RUNNABLES,
+  ...WAREHOUSE_SQL_RUNNABLES,
   ...DSA_RUNNABLES,
   ...SPARK_RUNNABLES,
+  ...PYTHON_RUNNABLES,
 };
 
 export function getRunnable(slug: string): RunnableSpec | undefined {

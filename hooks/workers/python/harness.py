@@ -11,13 +11,24 @@ and the time limit. The result is {"cases": [CaseResult, ...]}, the shape of
 
 The expected result of each case is cached by (key, case index). The key holds
 a hash of the spec, so an edited spec never compares against a stale result.
+
+The check reads the case's inputs as the setup made them. Before the learner's
+code runs, the harness copies the plain data the check names (lists, dicts,
+sets, tuples and pandas objects) and puts the copies back before the check. So
+a function that changes its input, a print of the sample, or the learner's own
+test data cannot change what the test passes in. A problem that tests a change
+in place calls the function on fresh data inside a helper.
 """
 
+import ast as _ast
+import collections.abc as _abc
 import contextlib as _contextlib
+import copy as _copy
 import datetime as _dt
 import decimal as _dec
 import io as _io
 import json as _json
+import linecache as _linecache
 import math as _math
 import pprint as _pprint
 import sys as _sys
@@ -29,6 +40,8 @@ _EXPECTED = {}
 _MISSING = object()
 _MAX_OUTPUT = 20000
 _MAX_ROWS = 50
+_MAX_ITEMS = 200
+_ATOMS = frozenset((type(None), bool, int, float, complex, str, bytes))
 
 
 class Verdict:
@@ -128,6 +141,8 @@ def _canon(value):
         return sorted(items, key=_sort_key)
     if isinstance(value, (list, tuple)):
         return [_canon(item) for item in value]
+    if isinstance(value, (_abc.KeysView, _abc.ValuesView, _abc.ItemsView)):
+        return [_canon(item) for item in value]
     if hasattr(value, "__iter__") and hasattr(value, "__next__"):
         items = []
         for item in value:
@@ -145,34 +160,44 @@ def _key(value):
     return _json.dumps(canon, sort_keys=True, default=str)
 
 
+def _flat_index(frame):
+    """A pandas frame without its row index: named levels become columns, unnamed ones go.
+
+    A named index is data, such as the key of a groupby, so groupby("city").sum()
+    and groupby("city", as_index=False).sum() compare the same. An unnamed index
+    is row numbers left over from a filter or a sort, and it is not part of the answer.
+    """
+    names = list(frame.index.names)
+    taken = {str(column) for column in frame.columns}
+    keep = [name for name in names if name is not None and str(name) not in taken]
+    if keep:
+        frame = frame.reset_index(level=keep)
+    return frame.reset_index(drop=True)
+
+
 def _frame_from_dataframe(frame):
     # A Spark DataFrame (the sandbox one) collects into rows.
     if hasattr(frame, "collect") and hasattr(frame, "sparkSession"):
         rows = frame.collect()
         return _Frame(frame.columns, [[_canon(item) for item in row] for row in rows])
-    # pandas: a meaningful index becomes columns, so groupby output compares either way.
-    try:
-        import pandas as pd
-
-        index = frame.index
-        if not (isinstance(index, pd.RangeIndex) and index.start == 0 and index.step == 1):
-            if not (index.name is None and getattr(index, "nlevels", 1) == 1 and list(index) == list(range(len(index)))):
-                frame = frame.reset_index()
-        columns = [str(name) if not isinstance(name, tuple) else "_".join(str(p) for p in name if p != "") for name in frame.columns]
-        rows = [[_canon(item) for item in row] for row in frame.itertuples(index=False, name=None)]
-        return _Frame(columns, rows)
-    except ImportError:
-        return _Frame([], [])
+    frame = _flat_index(frame)
+    columns = [
+        str(name) if not isinstance(name, tuple) else "_".join(str(part) for part in name if part != "")
+        for name in frame.columns
+    ]
+    rows = [[_canon(item) for item in row] for row in frame.itertuples(index=False, name=None)]
+    return _Frame(columns, rows)
 
 
 def _frame_from_series(series):
-    import pandas as pd
-
+    """A named index makes a table; row numbers make a list; other labels make a dict."""
     index = series.index
-    default = isinstance(index, pd.RangeIndex) and index.start == 0 and index.step == 1
-    if default:
+    if any(name is not None for name in index.names):
+        name = series.name if series.name is not None and series.name not in index.names else "value"
+        return _frame_from_dataframe(series.to_frame(name=name))
+    if getattr(index.dtype, "kind", "O") in "iu":
         return [_canon(item) for item in series.tolist()]
-    return _frame_from_dataframe(series.reset_index())
+    return {_key(label): _canon(item) for label, item in series.items()}
 
 
 def _sort_key(value):
@@ -233,7 +258,7 @@ def _short(value, limit=160):
     if isinstance(value, _Frame):
         text = "a table with %d rows" % len(value.rows)
     else:
-        text = repr(value)
+        text = repr(_clip(value))
     return text if len(text) <= limit else text[: limit - 3] + "..."
 
 
@@ -283,6 +308,39 @@ def _explain_rows(got, expected, tol):
 # --------------------------------------------------------------------------
 
 
+class _More:
+    """Stands in for the items a long value hides, so a display stays fast and short."""
+
+    def __init__(self, count):
+        self.count = count
+
+    def __repr__(self):
+        return "... %d more" % self.count
+
+
+def _clip(value, depth=0):
+    """A shortened copy of a big list, tuple, set or dict. Formatting a million items takes seconds."""
+    if depth > 8:
+        return value
+    if isinstance(value, (list, tuple)) and type(value) in (list, tuple):
+        items = [_clip(item, depth + 1) for item in value[:_MAX_ITEMS]]
+        if len(value) > _MAX_ITEMS:
+            items.append(_More(len(value) - _MAX_ITEMS))
+        return items if type(value) is list else tuple(items)
+    if isinstance(value, (set, frozenset)) and len(value) > _MAX_ITEMS:
+        items = sorted(value, key=_sort_key)[:_MAX_ITEMS]
+        return items + [_More(len(value) - _MAX_ITEMS)]
+    if type(value) is dict and len(value) > _MAX_ITEMS:
+        clipped = {}
+        for index, (key, item) in enumerate(value.items()):
+            if index == _MAX_ITEMS:
+                break
+            clipped[key] = _clip(item, depth + 1)
+        clipped["..."] = "%d more" % (len(value) - _MAX_ITEMS)
+        return clipped
+    return value
+
+
 def _cell(value):
     if value is None:
         return "NULL"
@@ -307,7 +365,7 @@ def _display(value, raw=_MISSING):
             "rows": [[_cell(item) for item in row] for row in value.rows[:_MAX_ROWS]],
             "total": len(value.rows),
         }
-    shown = raw if raw is not _MISSING else value
+    shown = _clip(raw if raw is not _MISSING else value)
     try:
         text = _pprint.pformat(shown, width=64, sort_dicts=False)
     except Exception:  # noqa: BLE001 - a display must not fail the run
@@ -328,11 +386,18 @@ def _format_error(error, label):
         lineno = error.lineno
         detail = "%s: %s" % (type(error).__name__, error.msg)
     else:
-        for frame in _traceback.extract_tb(error.__traceback__):
+        frames = _traceback.extract_tb(error.__traceback__)
+        for frame in frames:
             if frame.filename == label:
                 lineno = frame.lineno
         message = str(error)
         detail = "%s: %s" % (type(error).__name__, message) if message else type(error).__name__
+        name = getattr(error, "name", None)
+        if isinstance(error, NameError) and name and frames and frames[-1].filename == "<check>":
+            detail = (
+                "The tests call %s, but your code does not define it. "
+                "Keep the name from the starter code." % name
+            )
     if len(detail) > 1500:
         detail = detail[:1500] + "..."
     return {"message": detail, "line": lineno}
@@ -360,6 +425,44 @@ def register_module(name, source):
     _sys.modules.pop(name, None)
 
 
+def _check_names(check):
+    """The names a check expression reads."""
+    try:
+        tree = _ast.parse(check, mode="eval")
+    except SyntaxError:
+        return set()
+    return {node.id for node in _ast.walk(tree) if isinstance(node, _ast.Name)}
+
+
+def _copy_data(value):
+    """A deep copy of plain test data, quick for the flat lists and grids most tests use."""
+    if type(value) is list:
+        if all(type(item) in _ATOMS for item in value):
+            return list(value)
+        if all(type(row) is list and all(type(item) in _ATOMS for item in row) for row in value):
+            return [list(row) for row in value]
+    if (_is_frame(value) or _is_series(value)) and not hasattr(value, "sparkSession"):
+        return value.copy(deep=True)
+    if isinstance(value, (list, dict, set, tuple, bytearray)):
+        return _copy.deepcopy(value)
+    return _MISSING
+
+
+def _save_inputs(namespace, check):
+    """Copies of the data a check reads, taken before the learner's code can change it."""
+    saved = {}
+    for name in _check_names(check):
+        if name not in namespace:
+            continue
+        try:
+            copy = _copy_data(namespace[name])
+        except Exception:  # noqa: BLE001 - data that will not copy is left as it is
+            continue
+        if copy is not _MISSING:
+            saved[name] = copy
+    return saved
+
+
 def _evaluate(source, label, language, case):
     """Run one program against one case. Returns (canonical, raw, stdout, error, seconds)."""
     if language == "pyspark":
@@ -374,20 +477,24 @@ def _evaluate(source, label, language, case):
             exec(compile(case.get("prelude") or "", "<setup>", "exec"), namespace)
             if case.get("setup"):
                 exec(compile(case["setup"], "<setup>", "exec"), namespace)
+            check = case.get("check") or ""
+            inputs = _save_inputs(namespace, check) if check else {}
+            _linecache.cache[label] = (len(source), None, source.splitlines(True), label)
             started = _time.perf_counter()
             try:
                 exec(compile(source, label, "exec"), namespace)
-                check = case.get("check") or ""
+                namespace.update(inputs)
                 if check:
                     raw = eval(compile(check, "<check>", "eval"), namespace)
                 else:
                     raw = namespace.get("result", _MISSING)
-                if raw is not _MISSING and not isinstance(raw, Verdict):
-                    value = _canon(raw)
-                elif isinstance(raw, Verdict):
-                    value = raw
             finally:
                 elapsed = _time.perf_counter() - started
+            # Turning a big result into plain data takes time that is not the learner's.
+            if raw is not _MISSING and not isinstance(raw, Verdict):
+                value = _canon(raw)
+            elif isinstance(raw, Verdict):
+                value = raw
     except SystemExit:
         error = {"message": "Your code called exit(). Remove it and return a value instead.", "line": None}
     except RecursionError:

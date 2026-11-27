@@ -1,5 +1,6 @@
 // @vitest-environment node
-import { execFileSync, spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { availableParallelism } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
@@ -18,6 +19,9 @@ import type { CaseResult, RunnableSpec } from '@/types/runner';
  * It needs `python3` with duckdb and pandas (`pip install duckdb==1.5.1
  * pandas==3.0.2`, the versions Pyodide ships). Without them it skips; CI
  * installs them, so the check always runs there.
+ *
+ * The programs run in up to four Python processes at once. A brute force
+ * spends seconds in its speed test, so one process would take minutes.
  */
 
 const PYTHON_DIR = fileURLToPath(new URL('../../../hooks/workers/python/', import.meta.url));
@@ -26,7 +30,8 @@ const DRIVER = `
 import json, sys
 sys.path.insert(0, sys.argv[1])
 import harness
-for name, file in (("prefect", "prefect_sandbox.py"), ("airflow", "airflow_sandbox.py")):
+for name in ("prefect", "airflow", "pytest"):
+    file = name + "_sandbox.py"
     with open(sys.argv[1] + file, encoding="utf-8") as handle:
         harness.register_module(name, handle.read())
 jobs = json.load(sys.stdin)
@@ -67,32 +72,68 @@ function programs(slug: string, spec: RunnableSpec): Program[] {
   ];
 }
 
-/** Runs every program of every spec in one Python process, so start-up is paid once. */
-function runAll(): Map<string, readonly CaseResult[]> {
-  const all = PYTHON_SPECS.flatMap(([slug, spec]) => programs(slug, spec));
-  const jobs = all.map((program) =>
-    pythonJob({
-      id: 1,
-      action: 'check',
-      key: `${program.slug}:test`,
-      code: program.code,
-      spec: RUNNABLES[program.slug] as RunnableSpec,
-    }),
-  );
-  const output = execFileSync('python3', ['-c', DRIVER, PYTHON_DIR], {
-    input: JSON.stringify(jobs),
-    encoding: 'utf8',
-    maxBuffer: 256 * 1024 * 1024,
-    timeout: 600_000,
+const TIMEOUT_MS = 600_000;
+
+/** Runs a batch of jobs in one Python process, so start-up is paid once per batch. */
+function runBatch(jobs: readonly unknown[]): Promise<CaseResult[][]> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('python3', ['-c', DRIVER, PYTHON_DIR], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    let output = '';
+    let errors = '';
+    const timer = setTimeout(() => child.kill(), TIMEOUT_MS);
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (chunk: string) => {
+      output += chunk;
+    });
+    child.stderr.on('data', (chunk: string) => {
+      errors += chunk;
+    });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      clearTimeout(timer);
+      if (code === 0) resolve(JSON.parse(output) as CaseResult[][]);
+      else reject(new Error(`python3 exited with ${String(code)}: ${errors.slice(-2000)}`));
+    });
+    child.stdin.end(JSON.stringify(jobs));
   });
-  const results = JSON.parse(output) as CaseResult[][];
-  return new Map(
-    all.map((program, index) => [`${program.slug}|${program.label}`, results[index] ?? []]),
+}
+
+/** Runs every program of every spec, the specs spread over a few processes. */
+async function runAll(): Promise<Map<string, readonly CaseResult[]>> {
+  const lanes = Math.max(1, Math.min(4, availableParallelism()));
+  const batches: Program[][] = Array.from({ length: lanes }, () => []);
+  PYTHON_SPECS.forEach(([slug, spec], index) => {
+    batches[index % lanes]?.push(...programs(slug, spec));
+  });
+  const outputs = await Promise.all(
+    batches.map((batch) =>
+      runBatch(
+        batch.map((program) =>
+          pythonJob({
+            id: 1,
+            action: 'check',
+            key: `${program.slug}:test`,
+            code: program.code,
+            spec: RUNNABLES[program.slug] as RunnableSpec,
+          }),
+        ),
+      ),
+    ),
   );
+  const results = new Map<string, readonly CaseResult[]>();
+  batches.forEach((batch, lane) => {
+    batch.forEach((program, index) => {
+      results.set(`${program.slug}|${program.label}`, outputs[lane]?.[index] ?? []);
+    });
+  });
+  return results;
 }
 
 const ready = pythonReady();
-const results = ready ? runAll() : new Map<string, readonly CaseResult[]>();
+const results = ready ? await runAll() : new Map<string, readonly CaseResult[]>();
 
 describe.skipIf(!ready).each(PYTHON_SPECS)('runnable %s problem', (slug, spec) => {
   it.each(programs(slug, spec).map((program) => [program.label, program] as const))(
