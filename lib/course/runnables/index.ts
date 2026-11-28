@@ -4,6 +4,7 @@ import { ORCHESTRATION_RUNNABLES } from '@/lib/course/runnables/orchestration';
 import { PYTHON_RUNNABLES } from '@/lib/course/runnables/python';
 import { SPARK_RUNNABLES } from '@/lib/course/runnables/spark';
 import { SQL_RUNNABLES } from '@/lib/course/runnables/sql';
+import { SQL_HARD_RUNNABLES } from '@/lib/course/runnables/sql-hard';
 import { WAREHOUSE_SQL_RUNNABLES } from '@/lib/course/runnables/warehouse-sql';
 import type { RunnableSpec } from '@/types/runner';
 
@@ -13,6 +14,7 @@ import type { RunnableSpec } from '@/types/runner';
  */
 export const RUNNABLES: Readonly<Record<string, RunnableSpec>> = {
   ...SQL_RUNNABLES,
+  ...SQL_HARD_RUNNABLES,
   ...WAREHOUSE_SQL_RUNNABLES,
   ...MODELING_SQL_RUNNABLES,
   ...DSA_RUNNABLES,

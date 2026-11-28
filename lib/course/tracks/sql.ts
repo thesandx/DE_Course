@@ -1,3 +1,4 @@
+import { hardSqlProblems } from '@/lib/course/tracks/sql-hard';
 import type { Problem, Track } from '@/types/course';
 
 export const track: Track = {
@@ -1868,4 +1869,5 @@ export const problems: Problem[] = [
     ],
     followUps: ['How would you add a test so an exploding join is caught before release?'],
   },
+  ...hardSqlProblems,
 ];
