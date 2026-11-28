@@ -1,3 +1,4 @@
+import { MOCK } from '@/lib/course/mock-slots';
 import type { CompanyGuide } from '@/types/course';
 
 /**
@@ -58,6 +59,7 @@ export const BIG_TECH_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'SQL queries and one Python task, plus two Leadership Principle questions. The screen already scores stories.',
         tracks: ['sql', 'python', 'behavioral'],
+        mock: [MOCK.sql, MOCK.python, MOCK.behavioral],
       },
       {
         name: 'Onsite: SQL',
@@ -65,6 +67,7 @@ export const BIG_TECH_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Four to six queries of rising difficulty on one schema. Window functions, self joins and edge cases with NULL. Then two story questions.',
         tracks: ['sql', 'behavioral'],
+        mock: [MOCK.sql, MOCK.sql, MOCK.behavioral],
       },
       {
         name: 'Onsite: data modeling',
@@ -72,6 +75,7 @@ export const BIG_TECH_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Model a retail or media process. Grain, facts, dimensions, history. Then query your own model. Then two story questions.',
         tracks: ['modeling', 'databases', 'behavioral'],
+        mock: [MOCK.modeling, MOCK.behavioral],
       },
       {
         name: 'Onsite: ETL and system design',
@@ -79,6 +83,7 @@ export const BIG_TECH_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Design a batch or streaming pipeline on AWS. Idempotency, backfills, data quality and cost. Then two story questions.',
         tracks: ['system-design', 'cloud', 'orchestration', 'quality', 'spark'],
+        mock: [MOCK.design, MOCK.behavioral],
       },
       {
         name: 'Onsite: coding',
@@ -86,6 +91,7 @@ export const BIG_TECH_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'A Python problem on strings, hash maps or intervals. Some teams ask a classic data structures question at medium level.',
         tracks: ['python', 'dsa'],
+        mock: [MOCK.coding, MOCK.behavioral],
       },
       {
         name: 'Onsite: Bar Raiser',
@@ -93,6 +99,7 @@ export const BIG_TECH_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Mostly Leadership Principles, with deep follow-ups. Sometimes a design discussion. The Bar Raiser can veto the hire.',
         tracks: ['behavioral', 'staff'],
+        mock: [MOCK.leadership, MOCK.leadership],
       },
     ],
     weights: {
@@ -164,6 +171,7 @@ export const BIG_TECH_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Two coding problems on a test platform for many teams, then a call about level, team and location.',
         tracks: ['dsa', 'python', 'playbook'],
+        mock: [MOCK.dsa, MOCK.dsa],
       },
       {
         name: 'Onsite: coding 1',
@@ -171,6 +179,7 @@ export const BIG_TECH_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'A data structures problem at medium level. State the brute force, improve it, give complexity, then test with edge cases.',
         tracks: ['dsa', 'python'],
+        mock: [MOCK.dsa],
       },
       {
         name: 'Onsite: coding 2 with SQL',
@@ -178,6 +187,7 @@ export const BIG_TECH_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'A second coding problem, often with a SQL or PySpark part: top N per group, sessions or a running total.',
         tracks: ['dsa', 'sql', 'spark'],
+        mock: [MOCK.spark, MOCK.sql],
       },
       {
         name: 'Onsite: data system design',
@@ -192,6 +202,7 @@ export const BIG_TECH_COMPANIES: readonly CompanyGuide[] = [
           'cloud',
           'streaming',
         ],
+        mock: [MOCK.design],
       },
       {
         name: 'Onsite: as appropriate (AA)',
@@ -199,6 +210,7 @@ export const BIG_TECH_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'A senior leader checks design judgement, growth mindset and scope. Bring one deep project and one failure story.',
         tracks: ['behavioral', 'staff', 'architecture'],
+        mock: [MOCK.architecture, MOCK.leadership],
       },
     ],
     weights: {
@@ -272,6 +284,7 @@ export const BIG_TECH_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'About five SQL and five Python questions in a shared editor that does not run code. Accuracy at speed.',
         tracks: ['sql', 'python'],
+        mock: [MOCK.sql, MOCK.sql, MOCK.python],
       },
       {
         name: 'Onsite: product sense and data modeling',
@@ -279,6 +292,7 @@ export const BIG_TECH_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Pick metrics for a product, design the tables that serve them, and write the SQL for one metric.',
         tracks: ['playbook', 'modeling', 'sql'],
+        mock: [MOCK.modeling, MOCK.sql],
       },
       {
         name: 'Onsite: ETL round 1',
@@ -286,6 +300,7 @@ export const BIG_TECH_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'One scenario from model to SQL to a Python transform. Incremental loads, late data and data quality checks.',
         tracks: ['modeling', 'sql', 'python', 'quality'],
+        mock: [MOCK.sql, MOCK.python],
       },
       {
         name: 'Onsite: ETL round 2',
@@ -293,6 +308,7 @@ export const BIG_TECH_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'A second scenario, usually harder: streaming aggregates, sessions or a recommendation dataset.',
         tracks: ['sql', 'python', 'streaming', 'orchestration'],
+        mock: [MOCK.sql, MOCK.pipeline],
       },
       {
         name: 'Onsite: behavioral (ownership)',
@@ -300,6 +316,7 @@ export const BIG_TECH_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Conflict, feedback, cross-functional influence and impact. Meta scores how you work with partners who are not engineers.',
         tracks: ['behavioral', 'staff'],
+        mock: [MOCK.behavioral, MOCK.leadership],
       },
     ],
     weights: {

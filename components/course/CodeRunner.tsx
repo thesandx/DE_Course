@@ -24,6 +24,12 @@ export interface CodeRunnerProps {
   task: React.ReactNode;
   /** Called when a Submit passes every test. */
   onAccepted?: () => void;
+  /** Called when a Submit finishes, with the tests that passed. */
+  onChecked?: (passed: number, total: number) => void;
+  /** Where this browser keeps the code. Default: one entry per problem. */
+  storageKey?: string;
+  /** What to do after every test passes. Default: mark it solved, then read the answer. */
+  acceptedNote?: string;
 }
 
 type Panel = 'result' | 'tests' | 'data';
@@ -159,7 +165,16 @@ function ResultPanel({ state }: { state: RunnerState }) {
  *
  * The code stays in this browser (localStorage), like the written drafts.
  */
-export function CodeRunner({ slug, spec, runKey, task, onAccepted }: CodeRunnerProps) {
+export function CodeRunner({
+  slug,
+  spec,
+  runKey,
+  task,
+  onAccepted,
+  onChecked,
+  storageKey = codeKey(slug),
+  acceptedNote = 'The hidden tests pass too. Mark the problem solved below, then compare with the model answer.',
+}: CodeRunnerProps) {
   const [code, setCode] = useState(spec.starter);
   const [beforeReset, setBeforeReset] = useState<string | null>(null);
   const [panel, setPanel] = useState<Panel>('data');
@@ -171,7 +186,7 @@ export function CodeRunner({ slug, spec, runKey, task, onAccepted }: CodeRunnerP
 
   useEffect(() => {
     try {
-      const saved = window.localStorage.getItem(codeKey(slug));
+      const saved = window.localStorage.getItem(storageKey);
       // Reading browser storage is only possible after hydration.
       // eslint-disable-next-line react-hooks/set-state-in-effect -- restores saved code once, on mount
       if (saved !== null && saved.trim() !== '') setCode(saved);
@@ -179,16 +194,24 @@ export function CodeRunner({ slug, spec, runKey, task, onAccepted }: CodeRunnerP
       // Storage can be blocked (private mode). The code then lives in memory only.
       return;
     }
-  }, [slug]);
+  }, [storageKey]);
 
   useEffect(() => {
     if (accepted) onAccepted?.();
   }, [accepted, onAccepted]);
 
+  const checkedCount =
+    state.action === 'check' && state.phase === 'done'
+      ? state.cases.filter((result) => result?.passed === true).length
+      : null;
+  useEffect(() => {
+    if (checkedCount !== null) onChecked?.(checkedCount, spec.cases.length);
+  }, [checkedCount, onChecked, spec.cases.length]);
+
   function save(value: string): void {
     setCode(value);
     try {
-      window.localStorage.setItem(codeKey(slug), value);
+      window.localStorage.setItem(storageKey, value);
     } catch {
       // Storage can be blocked or full. The code stays in memory.
       return;
@@ -292,8 +315,7 @@ export function CodeRunner({ slug, spec, runKey, task, onAccepted }: CodeRunnerP
 
       {accepted ? (
         <Alert tone="success" title={`Accepted. All ${spec.cases.length} tests pass.`}>
-          The hidden tests pass too. Mark the problem solved below, then compare with the model
-          answer.
+          {acceptedNote}
         </Alert>
       ) : null}
 

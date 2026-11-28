@@ -197,6 +197,20 @@ Name the file `*.emulator.test.ts`, give each run a fresh collection (`notes_${D
 
 Test the path and validation logic (pure, above), and leave the signing and the moving to the dev bucket. The parts worth automating are already the pure ones.
 
+## The runnable problems
+
+The specs of the runnable editor have their own suites in `lib/course/runnables/`. [ADR-0016](./adr/0016-run-learner-code-in-the-browser.md) explains the editor.
+
+- `sql-specs.test.ts` runs each SQL spec on PGlite from `node_modules`. It needs nothing more.
+- `python-specs.test.ts` runs each Python and PySpark spec through `hooks/workers/python/harness.py` on a local CPython. It skips when Python 3, `duckdb` or `pandas` is missing.
+
+**The skip is not permission to ignore the Python suite.** CI installs Python 3.13 with `duckdb==1.5.1` and `pandas==3.0.2`, the versions that Pyodide ships, and runs it inside the `validate` job. Install the same before you change a spec, the harness, the PySpark module or a look-alike library:
+
+```bash
+python3 -m pip install duckdb==1.5.1 pandas==3.0.2
+pnpm test lib/course/runnables
+```
+
 ## Route handlers
 
 Route handlers are plain functions — call them directly.

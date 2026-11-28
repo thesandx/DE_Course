@@ -12,28 +12,31 @@ A learner joins each course separately. Each course keeps its own tracker in `le
 
 ## Files
 
-| File                                                                            | What it holds                                                                   |
-| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `tracks/<slug>.ts`                                                              | One track. It exports `track` (the lessons) and `problems`.                     |
-| `tracks/spark-pyspark.ts`, `tracks/python-pandas.ts`, `tracks/company-loops.ts` | More lessons and problems that a track module spreads into its own lists.       |
-| `catalog.ts`                                                                    | The study order, the lookups, XP per item, track progress and loop readiness.   |
-| `companies.ts`                                                                  | Every loop guide, in page order, and the Uber and Google guides.                |
-| `companies-big-tech.ts`                                                         | The Amazon, Microsoft and Meta loop guides.                                     |
-| `companies-india.ts`                                                            | The Flipkart, Walmart Global Tech, PhonePe and Swiggy loop guides.              |
-| `company-meta.ts`                                                               | The name, card surface and dial colour of each company. No course content.      |
-| `markdown.ts`                                                                   | The parser for the prose dialect below.                                         |
-| `progress.ts`                                                                   | Item ids, XP values, levels, streaks, the activity grid and the learner record. |
-| `courses.ts`                                                                    | The course list: slugs, names, hues and links. Safe for client components.      |
-| `rules.ts`                                                                      | The item check and the XP table of each course.                                 |
-| `hub.ts`                                                                        | The numbers on each course card of the hub.                                     |
-| `shell-stats.ts`                                                                | The streak and XP that the app shell shows for the current course.              |
-| `search-index.ts`                                                               | The search index of each course: its entries, examples and browse list.         |
-| `search.ts`                                                                     | Search matching and ranking. Safe for client components.                        |
-| `gcp/`                                                                          | The GCP course. See [`gcp/README.md`](./gcp/README.md).                         |
-| `k8s/`                                                                          | The Kubernetes course. See [`k8s/README.md`](./k8s/README.md).                  |
-| `videos/`                                                                       | The explainer videos of the courses. See [Explainer videos](#explainer-videos). |
-| `story-bank.ts`                                                                 | The schema of a behavioral story, shared by the API route and the editor.       |
-| `story-bank-themes.ts`                                                          | The story themes, the STAR fields and the strength checks. No zod.              |
+| File                                                                            | What it holds                                                                                      |
+| ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `tracks/<slug>.ts`                                                              | One track. It exports `track` (the lessons) and `problems`.                                        |
+| `tracks/spark-pyspark.ts`, `tracks/python-pandas.ts`, `tracks/company-loops.ts` | More lessons and problems that a track module spreads into its own lists.                          |
+| `catalog.ts`                                                                    | The study order, the lookups, XP per item, track progress and loop readiness.                      |
+| `companies.ts`                                                                  | Every loop guide, in page order, and the Uber and Google guides.                                   |
+| `companies-big-tech.ts`                                                         | The Amazon, Microsoft and Meta loop guides.                                                        |
+| `companies-india.ts`                                                            | The Flipkart, Walmart Global Tech, PhonePe and Swiggy loop guides.                                 |
+| `company-meta.ts`                                                               | The name, card surface and dial colour of each company. No course content.                         |
+| `markdown.ts`                                                                   | The parser for the prose dialect below.                                                            |
+| `progress.ts`                                                                   | Item ids, XP values, levels, streaks, the activity grid and the learner record.                    |
+| `courses.ts`                                                                    | The course list: slugs, names, hues and links. Safe for client components.                         |
+| `rules.ts`                                                                      | The item check and the XP table of each course.                                                    |
+| `hub.ts`                                                                        | The numbers on each course card of the hub.                                                        |
+| `shell-stats.ts`                                                                | The streak and XP that the app shell shows for the current course.                                 |
+| `search-index.ts`                                                               | The search index of each course: its entries, examples and browse list.                            |
+| `search.ts`                                                                     | Search matching and ranking. Safe for client components.                                           |
+| `gcp/`                                                                          | The GCP course. See [`gcp/README.md`](./gcp/README.md).                                            |
+| `k8s/`                                                                          | The Kubernetes course. See [`k8s/README.md`](./k8s/README.md).                                     |
+| `videos/`                                                                       | The explainer videos of the courses. See [Explainer videos](#explainer-videos).                    |
+| `story-bank.ts`                                                                 | The schema of a behavioral story, shared by the API route and the editor.                          |
+| `story-bank-themes.ts`                                                          | The story themes, the STAR fields and the strength checks. No zod.                                 |
+| `runnables/`                                                                    | The runnable editor of each SQL and coding problem. See [Runnable problems](#runnable-problems).   |
+| `mock.ts`, `mock-slots.ts`                                                      | The timed mock loops and the questions each round asks. See [Timed mock loops](#timed-mock-loops). |
+| `mock-score.ts`, `mock-session.ts`                                              | Mock scores and verdicts, and the mock session as pure steps.                                      |
 
 The types are in [`types/course.ts`](../../types/course.ts).
 
@@ -71,6 +74,7 @@ Write short sentences in plain English. Explain each term before you use it. On 
 3. Order `hints` from weakest to strongest.
 4. Write `answer` as a strong answer, not the only answer.
 5. Write three to six `signals` and one or two `followUps`.
+6. Give a `sql` or `coding` problem a runnable spec. A test fails without one. See [Runnable problems](#runnable-problems).
 
 ## Add a track
 
@@ -87,6 +91,70 @@ Write short sentences in plain English. Explain each term before you use it. On 
 3. Add the guide to one of the company files, in the same order. Give it at least four rounds and a weight for every track.
 4. Add the slug to the `companies` of the problems its loop asks. A guide needs at least 20 problems.
 5. Write only what candidates commonly report, and tell the learner to confirm the rounds with the recruiter.
+
+## Runnable problems
+
+Each problem of kind `sql` or `coding` has a runnable editor. The learner runs code on sample data and submits it to tests. The code runs in the browser: SQL on PostgreSQL 18 (PGlite), Python on CPython 3.14 (Pyodide) and PySpark on a small PySpark that runs on DuckDB. [ADR-0016](../../docs/adr/0016-run-learner-code-in-the-browser.md) gives the reasons.
+
+| File                             | What it holds                                                                             |
+| -------------------------------- | ----------------------------------------------------------------------------------------- |
+| `runnables/<area>.ts`            | The specs of one area, by problem slug, such as `sql.ts` or `spark-pyspark.ts`.           |
+| `runnables/<area>-answers.ts`    | For each spec: answers that must pass, and usual mistakes that must fail.                 |
+| `runnables/index.ts`             | Every spec, by slug, and `getRunnable`.                                                   |
+| `runnables/written-answers.ts`   | Reads the code blocks of a problem's written model answer, for the tests.                 |
+| `runnables/sql-specs.test.ts`    | Runs every SQL spec on PGlite.                                                            |
+| `runnables/python-specs.test.ts` | Runs every Python and PySpark spec on CPython. It skips without Python, DuckDB or pandas. |
+| `runnables/coverage.test.ts`     | Fails when a problem has no spec, or a spec has no hidden case or no wrong answer.        |
+
+`types/runner.ts` explains each field of a spec. The engines are in `hooks/workers/` and `lib/runner/`.
+
+### Add a spec
+
+1. Add the spec to the area file. Use the problem's slug as the key.
+2. Write `task` as a contract: the exact columns or return value, the row order, and the edge cases. The learner sees it above the editor.
+3. Make the first case the sample. Run uses it. Add at least one hidden case. Submit runs every case.
+4. Add right answers and wrong answers to the answers file. Make each wrong answer a mistake that candidates make. At least one case must catch it.
+5. Make the problem's written model answer pass. The `python` and `pyspark` blocks of the answer run together as one program. Each `sql` block must pass alone. Put SQL in another dialect in its own fence (`bigquery`, `snowflake` or `dbt`). The tests do not run those fences, and the caption names the dialect.
+6. Run `pnpm test lib/course/runnables`. For the Python specs, install Python 3.13 with `duckdb==1.5.1` and `pandas==3.0.2`, the versions that Pyodide ships.
+
+### Rules for a spec
+
+- **Fresh inputs.** Before the learner's code runs, the harness copies the plain data that the check names: lists, dicts, sets, tuples and pandas objects. It puts the copies back before the check. So a check reads a new name, such as `result`, or calls the learner's function. For a problem that changes data in place, a helper calls the function on fresh data.
+- **Speed cases.** Size a speed case so that the reference takes about 20 ms on a laptop, which is about 0.3 s on a slow phone. The usual slow answer must take 1.8 s or more. Set `limitS: 1`. Put a big input under a `big_*` name, so a learner who prints the sample data does not print it. Where you can, check something that does not depend on the device: the calls to a function, the reads of a list, or the memory held.
+- **pandas results.** A named index is data, so it becomes columns. Thus `groupby("city").sum()` and `groupby("city", as_index=False).sum()` compare the same. An unnamed index is row numbers, and the harness drops it. Two frames compare by their rows, with columns in order. The column names do not count.
+- **Checks that explain.** A helper can return `verdict(passed, message)`. A verdict ends the case, and the learner sees the message. Any other value is compared with the value of the same check on the reference.
+- **Look-alike libraries.** `modules: ['prefect']`, `['airflow']` or `['pytest']` installs a small look-alike of that library. The Prefect and Airflow look-alikes run on a simulated clock, so a check counts retries, waits and calls at the same time in no real time. The pytest look-alike collects the learner's `test_*` functions. A check runs them against the right code and against broken copies of it, and each broken copy must fail a test.
+
+### The PySpark module
+
+`hooks/workers/python/pyspark_shim.py` runs the common DataFrame API on DuckDB. It is not a cluster:
+
+- It has no partitions, shuffles or RDDs. `explain()` prints a small plan.
+- `saveAsTable(..., partitionBy=...)` keeps the partitions, so a check can count the partitions that a query reads. A frame from `spark.sql(...)` does not record what it reads, so a check for partition pruning asks for the DataFrame API.
+- DuckDB can order rows with equal sort keys differently from Spark. Where the order of equal keys changes a window's result, use data with no equal keys.
+- A function that it does not have raises an error that suggests `F.expr`.
+- `SPARK_HELPERS` in `runnables/spark-pyspark.ts` gives `answer(...)`. It checks that `result` is a DataFrame with the named columns before the rows are compared, and says what is wrong.
+
+## Timed mock loops
+
+`/de/mock` runs a whole interview loop on the clock: rounds with their own timers, questions from the catalogue, the runnable editors, a review after each round and a scorecard with a hiring verdict. The state stays in the browser. [ADR-0017](../../docs/adr/0017-keep-mock-loops-in-browser-storage.md) gives the reasons.
+
+| File              | What it holds                                                               |
+| ----------------- | --------------------------------------------------------------------------- |
+| `mock.ts`         | The loops and `planMock`, which draws the questions for a seed.             |
+| `mock-slots.ts`   | The slots: the kinds and tracks that one question of a round can come from. |
+| `mock-score.ts`   | The score of a question, a round and a loop, the verdict, and time formats. |
+| `mock-session.ts` | The mock as pure steps, its stored schema, and the history of scorecards.   |
+
+- There are three general loops (a one-hour loop, a senior loop and a staff loop) and one loop for each company guide.
+- A company loop asks what the guide's rounds ask. The `mock` of a round lists its slots, such as `[MOCK.sql, MOCK.python]`. A round with no `mock`, such as a recruiter screen, is not in the mock.
+- A seed picks the questions, and the same seed always picks the same ones. A loop does not ask a problem twice while a slot has others. Medium and hard problems come three times as often as easy ones. Questions from the same slot come easiest first.
+- Without a seed, the page tries 16 random seeds, takes the one with the most problems that the learner has not solved, and redirects to it.
+- A question with tests scores 70% from its best Submit and 30% from the signals that the learner ticks. Any other question scores from its signals. Each hint takes 10% off, down to half the score. The loop score is the average of the rounds.
+- The verdict is Strong hire from 85%, Hire from 70%, Lean hire from 55% and Lean no hire from 40%. Below that, it is No hire. A round under 30% holds the verdict at Lean no hire or below.
+- A mock does not change progress or XP.
+
+To add a company loop, give the guide's rounds a `mock`. To add a general loop, add it to `GENERAL_LOOPS` in `mock.ts`, then update the loop count in the facts of the DE course in `courses.ts`. A test checks the count.
 
 ## The prose dialect
 

@@ -76,6 +76,18 @@ export interface Track {
   lessons: readonly Lesson[];
 }
 
+/**
+ * One question of a timed mock round: a problem of one of `kinds`, drawn from
+ * `tracks`. See `lib/course/mock.ts`.
+ */
+export interface MockSlot {
+  /** What the slot asks, in a word or two: "SQL", "System design". */
+  label: string;
+  kinds: readonly ProblemKind[];
+  /** The tracks to draw from. Default: the round's tracks. */
+  tracks?: readonly string[];
+}
+
 /** A round in a company's interview loop. */
 export interface LoopRound {
   name: string;
@@ -84,6 +96,11 @@ export interface LoopRound {
   focus: string;
   /** Track slugs that prepare for the round. */
   tracks: readonly string[];
+  /**
+   * The questions a timed mock of the round asks, sharing its minutes. A round
+   * without them, such as a recruiter screen, is left out of the mock loop.
+   */
+  mock?: readonly MockSlot[];
 }
 
 export interface CompanyGuide {

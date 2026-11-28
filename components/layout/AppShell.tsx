@@ -48,6 +48,7 @@ export interface AppShellProps {
 const FOOTER_LINKS = [
   { href: '/', label: 'All courses' },
   { href: '/de/companies/uber', label: 'Uber loop guide' },
+  { href: '/de/mock', label: 'Timed mock loops' },
   { href: '/gcp/practice/mock', label: 'GCP mock exam' },
   { href: '/k8s/practice/cheatsheet', label: 'kubectl cheatsheet' },
   { href: '/design', label: 'Design system' },

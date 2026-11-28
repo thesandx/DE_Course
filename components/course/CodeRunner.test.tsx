@@ -188,6 +188,50 @@ describe('CodeRunner', () => {
     expect(screen.getByText(/PostgreSQL 18 · 8 ms/)).toBeInTheDocument();
   });
 
+  it('reports each finished Submit, and can keep its code and note elsewhere', () => {
+    window.localStorage.setItem('mock:senior:7:code:drivers', 'SELECT 9;');
+    const onChecked = vi.fn();
+    withState({
+      phase: 'done',
+      action: 'check',
+      total: 2,
+      cases: [passing('Sample'), { ...passing('Hidden one'), hidden: true, passed: false }],
+    });
+    const { rerender } = render(
+      <CodeRunner
+        slug="drivers"
+        spec={SPEC}
+        runKey="drivers:abc"
+        task={<p>Return each driver.</p>}
+        onChecked={onChecked}
+        storageKey="mock:senior:7:code:drivers"
+        acceptedNote="Move on to the next question."
+      />,
+    );
+    expect(screen.getByRole('textbox', { name: 'SQL editor' })).toHaveValue('SELECT 9;');
+    expect(onChecked).toHaveBeenCalledWith(1, 2);
+    withState({
+      phase: 'done',
+      action: 'check',
+      total: 2,
+      cases: [passing('Sample'), { ...passing('Hidden one'), hidden: true }],
+    });
+    rerender(
+      <CodeRunner
+        slug="drivers"
+        spec={SPEC}
+        runKey="drivers:abc"
+        task={<p>Return each driver.</p>}
+        onChecked={onChecked}
+        storageKey="mock:senior:7:code:drivers"
+        acceptedNote="Move on to the next question."
+      />,
+    );
+    expect(onChecked).toHaveBeenLastCalledWith(2, 2);
+    expect(screen.getByText('Move on to the next question.')).toBeInTheDocument();
+    expect(window.localStorage.getItem('code:drivers')).toBeNull();
+  });
+
   it('does not accept a Run, even when the sample passes', () => {
     const onAccepted = vi.fn();
     withState({ phase: 'done', action: 'run', total: 1, cases: [passing('Sample')] });
