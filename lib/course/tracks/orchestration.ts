@@ -166,13 +166,13 @@ export const track: Track = {
 
         ## Idea 2: a run is named after the day it covers
 
-        Here is the confusing part, made simple.
+        Here is the confusing part, made simple. It also changed in Airflow 3, so learn both forms.
 
         A newspaper is printed on the morning of 1 November, and it reports the news of 31 October.
         You cannot print the news of a day before the day is over.
 
-        A daily DAG works the same way. The run for the interval **2026-10-31 00:00 to 2026-11-01
-        00:00**:
+        An **interval timetable** («CronDataIntervalTimetable») works the same way. The run for the
+        interval **2026-10-31 00:00 to 2026-11-01 00:00**:
 
         - **starts after the interval ends**, on 1 November;
         - has a «logical_date» (formerly «execution_date») equal to the **start** of the interval:
@@ -180,11 +180,32 @@ export const track: Track = {
 
         So the run named 31 October, which ran on 1 November, loads 31 October. That is correct.
 
-        In your queries, use «data_interval_start» and «data_interval_end». Then each run processes
-        exactly its own slice, no more and no less.
+        Now the change. In **Airflow 3**, a cron string such as «schedule="@daily"» uses a **trigger
+        timetable** («CronTriggerTimetable») by default, because the setting
+        «[scheduler] create_cron_data_intervals» is now «False». A trigger timetable has no interval
+        at all: «data_interval_start», «data_interval_end» and «logical_date» are all the moment the
+        run fires, 1 November 00:00. Airflow 2 used the interval timetable for the same string.
+
+        So a window query on the interval selects **zero rows** on Airflow 3 defaults. Choose one of
+        two fixes, and say which one you use:
+
+        - Ask for the interval: «schedule=CronDataIntervalTimetable("0 0 * * *", timezone="UTC")», or
+          set «create_cron_data_intervals = True» for the whole deployment.
+        - Keep the trigger timetable and derive the window from «logical_date»: the day before it.
+
+        ~~~python
+        from airflow.timetables.interval import CronDataIntervalTimetable
+
+        @dag(schedule=CronDataIntervalTimetable("0 0 * * *", timezone="UTC"), catchup=False)
+        def daily_trips():
+            ...
+        ~~~
+
+        With an interval timetable, use «data_interval_start» and «data_interval_end» in your queries.
+        Then each run processes exactly its own slice, no more and no less.
 
         ~~~sql
-        -- In a templated task
+        -- In a templated task, on an interval timetable
         SELECT * FROM events
         WHERE event_ts >= '{{ data_interval_start }}'
           AND event_ts <  '{{ data_interval_end }}'
@@ -210,6 +231,9 @@ export const track: Track = {
           You get five runs, one per missed day.
         - With «catchup=False», **only the latest** interval runs. The five missed days are skipped.
 
+        In Airflow 3, «catchup» is «False» by default («[scheduler] catchup_by_default»). In Airflow 2
+        it was «True». Set it on every DAG, so nobody has to remember the default.
+
         A **backfill** is different: you choose historical intervals on purpose and rerun them, for
         example after a bug fix.
 
@@ -226,29 +250,33 @@ export const track: Track = {
         ## Now say it like a senior engineer
 
         The scheduler creates runs and queues tasks, the executor places them, workers run them, and the
-        metadata database holds all state. A run starts after its data interval closes, and its
-        logical date is the start of that interval. Every query is templated on the interval, so
-        retries and backfills are correct.
+        metadata database holds all state. On an interval timetable, a run starts after its data
+        interval closes, and its logical date is the start of that interval. On Airflow 3, a cron
+        string gets a trigger timetable instead, with no interval, so I ask for the interval timetable
+        when a job loads a window. Every query is templated on the run, never on the clock, so retries
+        and backfills are correct.
 
         > [!trap] Never use now() in a task
         > A task that queries "yesterday" relative to the wall clock processes the wrong day when
         > it is retried or backfilled. Always derive the window from the run's data interval.
 
         > [!senior] Airflow 3 changes worth knowing
-        > Airflow 3 (2025) introduced DAG versioning, an API server that isolates task execution
-        > from the metadata database, and asset-driven (data-aware) scheduling as a first-class
-        > idea. Mentioning that you know the direction of the project is a good signal.
+        > The change that breaks old DAGs first: a cron string now means a trigger timetable, with
+        > no data interval, and «catchup» is off by default. Airflow 3 (2025) also introduced DAG
+        > versioning, an API server that isolates task execution from the metadata database, and
+        > asset-driven (data-aware) scheduling as a first-class idea.
 
         ## In one breath
 
-        Airflow is a planner, a dispatcher, workers and a logbook, and a run is named after the day it
-        covers, like a newspaper printed the next morning. Take every window from the data interval,
-        never from the clock, and hand long waits to the triggerer.
+        Airflow is a planner, a dispatcher, workers and a logbook. On an interval timetable a run is
+        named after the day it covers, like a newspaper printed the next morning; on Airflow 3 a cron
+        string has no interval unless you ask for one. Take every window from the run, never from the
+        clock, and hand long waits to the triggerer.
       `,
       checks: [
         {
           question:
-            'A daily DAG run has logical_date 2026-10-31. When does it typically start, and which data should it process?',
+            'A daily DAG on an interval timetable (CronDataIntervalTimetable) has a run with logical_date 2026-10-31. When does it start, and which data should it process?',
           options: [
             'On 31 October, processing 30 October',
             'After the interval ends (1 November), processing 31 October',
@@ -256,7 +284,19 @@ export const track: Track = {
             'Whenever it is triggered, processing everything new',
           ],
           answer: 1,
-          why: 'The run starts after its data interval closes, and the logical date names the start of that interval.',
+          why: 'On an interval timetable, the run starts after its data interval closes, and the logical date names the start of that interval.',
+        },
+        {
+          question:
+            'On Airflow 3 with default settings, a DAG has schedule="@daily". Its task filters event_ts >= data_interval_start AND event_ts < data_interval_end. What does it load?',
+          options: [
+            'The previous day',
+            'Nothing: a cron string gets a trigger timetable, so the interval start and end are the same moment',
+            'The current day so far',
+            'Every day since start_date',
+          ],
+          answer: 1,
+          why: 'Airflow 3 sets create_cron_data_intervals to False, so a cron string uses CronTriggerTimetable. Its data interval has zero width. Ask for CronDataIntervalTimetable, or derive the window from logical_date.',
         },
       ],
     },
@@ -675,10 +715,12 @@ export const track: Track = {
         ~~~python
         import pendulum
         from airflow.sdk import dag, task
+        from airflow.timetables.interval import CronDataIntervalTimetable
 
 
         @dag(
-            schedule="@daily",
+            # Ask for the interval: on Airflow 3, "@daily" alone has none, and ds is the run day.
+            schedule=CronDataIntervalTimetable("0 0 * * *", timezone="UTC"),
             start_date=pendulum.datetime(2026, 1, 1, tz="UTC"),
             catchup=False,
             max_active_runs=1,

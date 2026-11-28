@@ -177,7 +177,8 @@ export const track: Track = {
         MERGE INTO dim_driver d
         USING staging_driver s
           ON d.driver_id = s.driver_id AND d.is_current
-        WHEN MATCHED AND (d.city_id <> s.city_id OR d.vehicle_type <> s.vehicle_type) THEN
+        WHEN MATCHED AND (d.city_id IS DISTINCT FROM s.city_id
+                       OR d.vehicle_type IS DISTINCT FROM s.vehicle_type) THEN
           UPDATE SET valid_to = s.changed_at, is_current = FALSE;
 
         -- 2. Insert new and changed drivers as current rows
@@ -192,8 +193,9 @@ export const track: Track = {
         «next_sk()» stands for your key generator.
 
         > [!trap] NULLs hide changes
-        > «d.city_id <> s.city_id» is unknown when either side is NULL, so a change from NULL to a
-        > value is missed. Use «IS DISTINCT FROM», or compare hashes of the tracked columns.
+        > The code above uses «IS DISTINCT FROM» on purpose. «d.city_id <> s.city_id» is unknown when
+        > either side is NULL, so a change from NULL to a value is missed. Use «IS DISTINCT FROM», or
+        > compare hashes of the tracked columns.
 
         ## Now say it like a senior engineer
 
