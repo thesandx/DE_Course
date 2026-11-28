@@ -1,4 +1,5 @@
 import { pysparkLessons, pysparkProblems } from '@/lib/course/tracks/spark-pyspark';
+import { spark4Lessons } from '@/lib/course/tracks/spark4-databricks';
 import type { Problem, Track } from '@/types/course';
 
 export const track: Track = {
@@ -222,8 +223,12 @@ export const track: Track = {
         is 200, **whatever the data size**. 200 pieces of 10 TB is 50 GB each: too big. 200 pieces of
         100 MB is 500 KB each: too small.
 
-        Aim for shuffle partitions of roughly 100 to 200 MB. With AQE on, Spark merges small shuffle
-        partitions automatically, which removes most of this tuning.
+        Aim for shuffle partitions of roughly 100 to 200 MB. AQE fixes only half of this. It **merges**
+        small shuffle partitions, so 200 tiny pieces become a few right-sized ones. It never splits a
+        big piece, except a skewed one in a join. It merges down from
+        «spark.sql.adaptive.coalescePartitions.initialPartitionNum», which defaults to
+        «spark.sql.shuffle.partitions». So for 10 TB, start high, for example 20,000, and let AQE
+        merge down.
 
         ## Idea 2: repartition or coalesce
 
@@ -622,6 +627,7 @@ export const track: Track = {
       ],
     },
     ...pysparkLessons,
+    ...spark4Lessons,
   ],
 };
 

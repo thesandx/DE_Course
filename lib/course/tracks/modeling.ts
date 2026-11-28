@@ -1,3 +1,4 @@
+import { modelingDepthLessons, modelingDepthProblems } from '@/lib/course/tracks/modeling-depth';
 import type { Problem, Track } from '@/types/course';
 
 export const track: Track = {
@@ -177,7 +178,8 @@ export const track: Track = {
         MERGE INTO dim_driver d
         USING staging_driver s
           ON d.driver_id = s.driver_id AND d.is_current
-        WHEN MATCHED AND (d.city_id <> s.city_id OR d.vehicle_type <> s.vehicle_type) THEN
+        WHEN MATCHED AND (d.city_id IS DISTINCT FROM s.city_id
+                       OR d.vehicle_type IS DISTINCT FROM s.vehicle_type) THEN
           UPDATE SET valid_to = s.changed_at, is_current = FALSE;
 
         -- 2. Insert new and changed drivers as current rows
@@ -192,8 +194,9 @@ export const track: Track = {
         «next_sk()» stands for your key generator.
 
         > [!trap] NULLs hide changes
-        > «d.city_id <> s.city_id» is unknown when either side is NULL, so a change from NULL to a
-        > value is missed. Use «IS DISTINCT FROM», or compare hashes of the tracked columns.
+        > The code above uses «IS DISTINCT FROM» on purpose. «d.city_id <> s.city_id» is unknown when
+        > either side is NULL, so a change from NULL to a value is missed. Use «IS DISTINCT FROM», or
+        > compare hashes of the tracked columns.
 
         ## Now say it like a senior engineer
 
@@ -218,6 +221,7 @@ export const track: Track = {
         },
       ],
     },
+    ...modelingDepthLessons,
     {
       slug: 'layouts-star-to-obt',
       title: 'Star, snowflake, wide tables and nested data',
@@ -811,7 +815,8 @@ export const problems: Problem[] = [
       FROM stg_driver s
       WHERE d.driver_id = s.driver_id
         AND d.is_current
-        AND d.city_id IS DISTINCT FROM s.city_id;
+        AND d.city_id IS DISTINCT FROM s.city_id
+        AND s.updated_at > d.valid_from;  -- a stale snapshot row changes nothing
 
       -- Insert a current version for new drivers and drivers just closed
       INSERT INTO dim_driver (driver_sk, driver_id, city_id, valid_from, valid_to, is_current)
@@ -824,10 +829,12 @@ export const problems: Problem[] = [
       Rerun safety: on a second run nothing differs from the current rows, so the update touches
       nothing and every driver already has a current row, so the insert adds nothing. Run both
       statements in one transaction so a failure between them cannot leave drivers with no
-      current row.
+      current row. The «updated_at > valid_from» guard ignores a stale snapshot row, such as a
+      replayed old file, which would otherwise close a version before it began.
     `,
     signals: [
       'Uses a NULL-safe comparison',
+      'Ignores a stale or replayed snapshot row',
       'Explains why the load is idempotent',
       'Wraps both steps in one transaction',
       'Mentions drivers deleted at the source',
@@ -1150,4 +1157,5 @@ export const problems: Problem[] = [
     ],
     followUps: ['A new flag arrives. What happens to the junk dimension and the existing facts?'],
   },
+  ...modelingDepthProblems,
 ];

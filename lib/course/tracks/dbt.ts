@@ -486,16 +486,22 @@ export const track: Track = {
 
         A snapshot sees the table **only when it runs**. Photos do not show what happened between them.
 
-        - A driver changes city at 09:00 and back at 15:00. A daily snapshot at midnight sees Pune both
-          times. It records **no change** at all.
-        - It also cannot tell you **when** a change happened, only when the snapshot saw it. A change
-          at 09:00 shows up as "valid from midnight".
+        - A driver moves from Pune to Mumbai at 09:00 and back to Pune at 15:00. The source row now says
+          Pune, with «updated_at» 15:00. The midnight snapshot never sees Mumbai.
+        - With «timestamp», «updated_at» is newer, so dbt closes the old row and opens a new Pune row
+          valid from 15:00. You get one new version, and the Mumbai stay is lost.
+        - With «check» on «city», the city is the same, so dbt records **no change** at all.
+        - The time in «dbt_valid_from» depends on the strategy. With «timestamp», it is the source's
+          «updated_at», so a 09:00 change shows as "valid from 09:00". With «check», it is the time
+          of the snapshot run, unless you also set «updated_at». Then a 09:00 change shows as "valid
+          from midnight".
 
         ## Now say it like a senior engineer
 
         A snapshot builds type 2 history by comparing state at each run, with the timestamp or check
-        strategy. It misses changes between runs and records detection time, not change time, so
-        audit-grade history needs CDC.
+        strategy. It misses changes between runs. The timestamp strategy dates a version by the
+        source's «updated_at»; the check strategy dates it by the run, unless «updated_at» is set.
+        Audit-grade history, with every change, needs CDC.
 
         > [!senior] Snapshot or CDC
         > For audit-grade history, read the database log with CDC (such as Debezium into Kafka) and
@@ -516,10 +522,15 @@ export const track: Track = {
       checks: [
         {
           question:
-            'A driver changes city at 09:00 and back at 15:00. A snapshot runs at midnight. What does it record?',
-          options: ['Two changes', 'One change', 'No change', 'An error'],
-          answer: 2,
-          why: 'The snapshot compares states at run time. Both states it sees are the same.',
+            'A snapshot uses strategy timestamp on updated_at. A driver moves from Pune to Mumbai at 09:00 and back to Pune at 15:00, and updated_at becomes 15:00. The snapshot runs at midnight. What does it record?',
+          options: [
+            'Two changes: Mumbai from 09:00, then Pune from 15:00',
+            'One new Pune version valid from 15:00; the Mumbai stay is lost',
+            'No change, because the city is the same',
+            'An error',
+          ],
+          answer: 1,
+          why: 'The timestamp strategy sees a newer updated_at, so it closes the old row and opens a new one dated by updated_at. It never saw Mumbai. With the check strategy on city, it would record no change.',
         },
       ],
     },

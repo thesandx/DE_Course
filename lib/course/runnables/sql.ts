@@ -260,6 +260,23 @@ WINDOW w AS (PARTITION BY city_id ORDER BY month);
         ],
       },
       {
+        name: 'A month of net refunds',
+        hidden: true,
+        note: 'City 5 refunds more than it earns in January. February still compares with it: growth_pct is NULL only when the previous revenue is exactly 0.',
+        tables: [
+          {
+            name: 'payments',
+            columns: PAYMENT_COLUMNS,
+            rows: [
+              [1, 5, 30.0, '2024-01-04 10:00:00'],
+              [2, 5, -80.0, '2024-01-20 16:00:00'],
+              [3, 5, 100.0, '2024-02-02 11:00:00'],
+              [4, 5, 120.0, '2024-03-05 13:00:00'],
+            ],
+          },
+        ],
+      },
+      {
         name: 'Forty cities over eighteen months',
         hidden: true,
         note: 'Every city skips some months.',
@@ -570,7 +587,7 @@ INSERT INTO video_views SELECT * FROM video_views WHERE view_id % 11 = 0;`,
   },
   'trip-funnel-by-city': {
     language: 'sql',
-    task: `Report the week of Monday 3 June 2024: from «2024-06-03 00:00» up to, but not including, «2024-06-10 00:00». A trip is in the week when its first «requested» event is; its later events count even after the week ends. Return «city_id, requested, accept_rate, pickup_rate, completion_rate» for each city with trips in the week. A stage counts only when it comes after the stage before it, in the order requested, accepted, picked_up, completed, using each status's first time. Each rate is a share of the city's requested trips, rounded to 4 decimal places. Row order does not matter.`,
+    task: `Report the week of Monday 3 June 2024: from «2024-06-03 00:00» up to, but not including, «2024-06-10 00:00». A trip is in the week when its first «requested» event is; its later events count even after the week ends. Return «city_id, requested, accept_rate, pickup_rate, completion_rate» for each city with trips in the week. A stage counts only when it comes strictly after the stage before it, in the order requested, accepted, picked_up, completed, using each status's first time. Each rate is a share of the city's requested trips, rounded to 4 decimal places. Row order does not matter.`,
     tables: [
       {
         name: 'trip_events',
@@ -661,6 +678,25 @@ GROUP BY city_id;
         ],
       },
       {
+        name: 'Two stages at the same second',
+        hidden: true,
+        note: 'Bad data: t12 is accepted and picked up at the same second. A stage counts only when it comes strictly after the stage before it.',
+        tables: [
+          {
+            name: 'trip_events',
+            columns: FUNNEL_COLUMNS,
+            rows: [
+              ['t12', 5, 'requested', '2024-06-06 07:00:00'],
+              ['t12', 5, 'accepted', '2024-06-06 07:02:00'],
+              ['t12', 5, 'picked_up', '2024-06-06 07:02:00'],
+              ['t12', 5, 'completed', '2024-06-06 07:20:00'],
+              ['t13', 5, 'requested', '2024-06-06 08:00:00'],
+              ['t13', 5, 'accepted', '2024-06-06 08:00:00'],
+            ],
+          },
+        ],
+      },
+      {
         name: 'Three weeks of trips in ten cities',
         hidden: true,
         note: 'Trips on both sides of the week boundaries.',
@@ -676,6 +712,14 @@ WHERE s.step <= (t * 13) % 5;`,
   },
   'median-trip-duration': {
     language: 'sql',
+    rules: [
+      {
+        kind: 'forbid',
+        pattern: '\\b(percentile_cont|percentile_disc|median)\\s*\\(',
+        message:
+          'This round bans PERCENTILE_CONT, PERCENTILE_DISC and MEDIAN. Number the rows with ROW_NUMBER() and COUNT(*) OVER, then average the one or two middle rows.',
+      },
+    ],
     task: `Return «city_id, median_s»: the median «duration_s» of each city. Leave out NULL durations, and cities with no durations at all. For an even count, the median is the mean of the two middle values. Solve it with window functions: in this round, «PERCENTILE_CONT» and «MEDIAN» are off limits. Row order does not matter.`,
     tables: [
       {

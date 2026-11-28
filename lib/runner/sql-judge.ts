@@ -1,3 +1,4 @@
+import { ruleViolation } from '@/lib/runner/code-rules';
 import { compareTables, type SqlTable, tableOutput } from '@/lib/runner/compare';
 import { sqlSetup } from '@/lib/runner/data';
 import type { CaseResult, RunCase, RunError, RunRequest } from '@/types/runner';
@@ -205,9 +206,13 @@ export async function judgeSql(
   options: JudgeOptions,
 ): Promise<readonly CaseResult[]> {
   const cases = request.action === 'run' ? request.spec.cases.slice(0, 1) : request.spec.cases;
+  const violation = ruleViolation(request.spec, request.code);
   const results: CaseResult[] = [];
   for (const [index, runCase] of cases.entries()) {
-    const result = await judgeCase(request, runCase, index, options);
+    const result =
+      violation === null
+        ? await judgeCase(request, runCase, index, options)
+        : { ...emptyResult(runCase), message: violation };
     results.push(result);
     options.onCase?.(index, result);
   }

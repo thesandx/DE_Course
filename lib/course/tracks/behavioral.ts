@@ -1,3 +1,4 @@
+import { behavioralDepthProblems } from '@/lib/course/tracks/behavioral-depth';
 import { behavioralLoopLessons, behavioralLoopProblems } from '@/lib/course/tracks/company-loops';
 import type { Problem, Track } from '@/types/course';
 
@@ -774,4 +775,5 @@ export const problems: Problem[] = [
     followUps: ['What would you want to work on in your first six months?'],
   },
   ...behavioralLoopProblems,
+  ...behavioralDepthProblems,
 ];

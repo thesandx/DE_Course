@@ -197,11 +197,24 @@ for _ in range(3000):
 
   'rolling-rate-limiter': {
     language: 'python',
-    task: `Write a class «Limiter(limit=100, window_s=60)» with «allow(user_id, ts)». It returns «True» and counts the request when the user has fewer than «limit» allowed requests in the last «window_s» seconds, and «False» otherwise. A request allowed at time «t» stops counting at «t + window_s». Rejected requests do not count. Each user has their own limit, and «ts» never goes down. Each call must be fast however long the limiter runs.`,
+    task: `Write a class «Limiter(limit=100, window_s=60)» with «allow(user_id, ts)». It returns «True» and counts the request when the user has fewer than «limit» allowed requests in the last «window_s» seconds, and «False» otherwise. A request allowed at time «t» stops counting at «t + window_s». Rejected requests do not count. Each user has their own limit, and «ts» never goes down. Each call must be fast however long the limiter runs, and memory must stay in proportion to the requests of the last «window_s» seconds: forget a user whose requests have all left the window, even if that user never calls again.`,
     setup: `events = [("ana", 0), ("ana", 1), ("ana", 2), ("ana", 3), ("ana", 10), ("ana", 11), ("ana", 12)]`,
     helpers: `def replay(events, **settings):
     limiter = Limiter(**settings)
-    return [limiter.allow(user, ts) for user, ts in events]`,
+    return [limiter.allow(user, ts) for user, ts in events]
+
+
+def check_idle_users(cls):
+    import tracemalloc
+    limiter = cls(limit=5, window_s=60)
+    tracemalloc.start()
+    for i in range(50_000):
+        limiter.allow("user-%d" % i, i)
+    held, _ = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    if held > 2_000_000:
+        return verdict(False, "50,000 users sent one request each, one a second, and your limiter now holds %.1f MB. Only the last 60 seconds count: forget a user once their last request leaves the window. Keep one queue of (ts, user) for every accepted request, and drop expired entries from it on each call." % (held / 1_000_000))
+    return verdict(True)`,
     starter: `from collections import defaultdict, deque
 
 
@@ -217,21 +230,30 @@ class Limiter:
 limiter = Limiter(limit=3, window_s=10)
 print([limiter.allow(user, ts) for user, ts in events])
 `,
-    solution: `from collections import defaultdict, deque
+    solution: `from collections import deque
 
 
 class Limiter:
     def __init__(self, limit=100, window_s=60):
         self.limit = limit
         self.window_s = window_s
-        self.accepted = defaultdict(deque)
+        self.accepted = {}      # user -> deque of accepted times, oldest first
+        self.order = deque()    # (ts, user) of every accepted request, oldest first
 
     def allow(self, user_id, ts):
-        times = self.accepted[user_id]
-        while times and times[0] <= ts - self.window_s:
+        # Expire old requests of every user, so idle users are forgotten too.
+        while self.order and self.order[0][0] <= ts - self.window_s:
+            _, user = self.order.popleft()
+            times = self.accepted[user]
             times.popleft()
+            if not times:
+                del self.accepted[user]
+        times = self.accepted.get(user_id)
+        if times is None:
+            times = self.accepted[user_id] = deque()
         if len(times) < self.limit:
             times.append(ts)
+            self.order.append((ts, user_id))
             return True
         return False
 `,
@@ -285,6 +307,12 @@ for _ in range(5000):
         limitS: 1,
         slowHint:
           'Drop the timestamps that left the window, oldest first, so each call looks at no more than limit entries.',
+      },
+      {
+        name: 'Fifty thousand users come and go',
+        hidden: true,
+        note: 'Each user sends one request and never comes back. Memory must not grow with every user ever seen.',
+        check: 'check_idle_users(Limiter)',
       },
     ],
   },

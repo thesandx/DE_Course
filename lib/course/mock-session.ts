@@ -13,11 +13,30 @@ import { z } from 'zod';
 export const PACES = [1, 1.5] as const;
 export type Pace = (typeof PACES)[number];
 
+/**
+ * Pip's grade of a written answer. When it is there, `covered` holds Pip's
+ * signals and the learner can no longer tick them: the score of a written
+ * round comes from evidence, not from the learner's own opinion.
+ */
+const pipGradeSchema = z.object({
+  covered: z.array(z.object({ signal: z.number().int().min(0), evidence: z.string() })),
+  followUp: z.string(),
+  summary: z.string(),
+  /** The learner answered Pip's follow-up, and this grade includes the reply. */
+  replied: z.boolean(),
+  /** The follow-up the learner answered, kept for the review. */
+  question: z.string().optional(),
+  reply: z.string().optional(),
+});
+
+export type PipGrade = z.infer<typeof pipGradeSchema>;
+
 const problemRecordSchema = z.object({
   slug: z.string(),
   hints: z.number().int().min(0),
   tests: z.object({ passed: z.number().int().min(0), total: z.number().int().min(1) }).nullable(),
   covered: z.array(z.number().int().min(0)),
+  pip: pipGradeSchema.optional(),
 });
 
 const roundRecordSchema = z.object({
@@ -208,6 +227,27 @@ export function recordTests(
   }));
 }
 
+/**
+ * Stores Pip's grade for a problem in the review of a round that has ended.
+ * Pip's signals replace the learner's ticks. A first grade can be followed by
+ * one graded reply to the follow-up; nothing after that.
+ */
+export function setPipGrade(
+  session: MockSession,
+  roundIndex: number,
+  problemIndex: number,
+  grade: PipGrade,
+): MockSession {
+  const round = session.rounds[roundIndex];
+  const before = round?.problems[problemIndex];
+  if (round === undefined || round.endedAt === null || before === undefined) return session;
+  if (before.pip?.replied === true || (before.pip !== undefined && !grade.replied)) return session;
+  return mapProblem(session, roundIndex, problemIndex, (problem) => {
+    const covered = [...new Set(grade.covered.map((item) => item.signal))].sort((a, b) => a - b);
+    return { ...problem, covered, pip: grade };
+  });
+}
+
 /** Ticks or clears a senior signal, in the review of a round that has ended. */
 export function setCovered(
   session: MockSession,
@@ -218,6 +258,8 @@ export function setCovered(
 ): MockSession {
   const round = session.rounds[roundIndex];
   if (round === undefined || round.endedAt === null) return session;
+  // Pip graded it: the ticks are Pip's.
+  if (round.problems[problemIndex]?.pip !== undefined) return session;
   return mapProblem(session, roundIndex, problemIndex, (problem) => {
     const rest = problem.covered.filter((index) => index !== signal);
     return { ...problem, covered: covered ? [...rest, signal].sort((a, b) => a - b) : rest };

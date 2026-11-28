@@ -1,3 +1,4 @@
+import { streamingCodingProblems } from '@/lib/course/tracks/streaming-coding';
 import type { Problem, Track } from '@/types/course';
 
 export const track: Track = {
@@ -1527,4 +1528,5 @@ export const problems: Problem[] = [
     ],
     followUps: ['How do you prove the features in the stream match the features used in training?'],
   },
+  ...streamingCodingProblems,
 ];

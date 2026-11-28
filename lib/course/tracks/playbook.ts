@@ -1,4 +1,5 @@
 import { playbookLoopLessons, playbookLoopProblems } from '@/lib/course/tracks/company-loops';
+import { productSenseProblems } from '@/lib/course/tracks/product-sense-cases';
 import type { Problem, Track } from '@/types/course';
 
 export const track: Track = {
@@ -531,4 +532,5 @@ export const problems: Problem[] = [
     followUps: ['Tell me about a decision that affected teams outside your own.'],
   },
   ...playbookLoopProblems,
+  ...productSenseProblems,
 ];

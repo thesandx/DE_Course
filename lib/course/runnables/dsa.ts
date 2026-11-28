@@ -948,7 +948,22 @@ def two_trackers(cls):
     for value in [1, 9, 2, 8]:
         out.append(("first", first.add(value)))
         out.append(("second", second.add(value * 100)))
-    return out`,
+    return out
+
+
+def replay_within(cls, values, limit_s):
+    import time
+    tracker = cls()
+    start = time.perf_counter()
+    last = []
+    for index, value in enumerate(values):
+        last.append(tracker.add(value))
+        if index % 5_000 == 0 and time.perf_counter() - start > limit_s:
+            return verdict(False, "Too slow: after %d s only %d of %d adds were done. A sorted list with bisect.insort moves every later value, so each add is O(n). Keep a max-heap of the low half and a min-heap of the high half: O(log n) per add." % (limit_s, index, len(values)))
+    elapsed = time.perf_counter() - start
+    if elapsed > limit_s:
+        return verdict(False, "Too slow: %d adds took %.2f s and the limit is %.2f s. Keep a max-heap of the low half and a min-heap of the high half: O(log n) per add." % (len(values), elapsed, limit_s))
+    return verdict(True)`,
     starter: `class RunningMedian:
     def __init__(self):
         ...
@@ -1022,6 +1037,15 @@ times = [rng.randint(5, 120) for _ in range(1_000)]`,
         limitS: 1,
         slowHint:
           'Sorting every time on each add is O(n log n) per value. Keep a max-heap of the low half and a min-heap of the high half: O(log n) per add.',
+      },
+      {
+        name: 'Four hundred thousand deliveries',
+        hidden: true,
+        note: 'A sorted list with bisect.insort is O(n) per add: each insert moves half the list. Heaps stay O(log n).',
+        setup: `import random
+rng = random.Random(29)
+huge_times = [rng.randint(1, 1_000_000) for _ in range(400_000)]`,
+        check: 'replay_within(RunningMedian, huge_times, 2.5)',
       },
     ],
   },

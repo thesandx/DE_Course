@@ -476,6 +476,7 @@ Recorded in [`docs/adr/`](./docs/adr/). Read before proposing a change to any of
 | [0016](./docs/adr/0016-run-learner-code-in-the-browser.md)                               | Learner code runs in the browser on PGlite, Pyodide and a PySpark module, loaded from a CDN — over a code-execution server |
 | [0017](./docs/adr/0017-keep-mock-loops-in-browser-storage.md)                            | Timed mock loops keep their state in the browser's storage — over a Firestore collection                                   |
 | [0018](./docs/adr/0018-highlight-course-text-with-the-css-highlight-api.md)              | Course-text highlights drawn with the CSS Highlight API and stored as text quotes — over `<mark>` wrappers                 |
+| [0019](./docs/adr/0019-grade-written-mock-answers-with-pip.md)                           | Pip grades written mock answers and credits only signals it can quote from the answer — over self-grading                  |
 
 Add an ADR when a decision is expensive to reverse, affects how everyone works, or rejects an obvious alternative. Never edit an accepted ADR to change its decision — write a new one that supersedes it, and link both ways.
 

@@ -49,6 +49,11 @@ FROM (
 ) t;`,
     ],
     fail: [
+      // NULL whenever the previous month is not positive, not only at 0.
+      `WITH m AS (SELECT city_id, DATE_TRUNC('month', paid_at) AS month, SUM(amount_usd) AS revenue FROM payments GROUP BY 1, 2)
+SELECT city_id, month, revenue,
+       CASE WHEN p > 0 THEN ROUND(100.0 * (revenue - p) / p, 2) END AS growth_pct
+FROM (SELECT m.*, LAG(revenue) OVER (PARTITION BY city_id ORDER BY month) AS p FROM m) x;`,
       // LAG without PARTITION BY compares a city's first month with another city.
       `WITH monthly AS (
   SELECT city_id, DATE_TRUNC('month', paid_at) AS month, SUM(amount_usd) AS revenue
@@ -212,6 +217,20 @@ WHERE r >= '2024-06-03' AND r < '2024-06-10'
 GROUP BY city_id;`,
     ],
     fail: [
+      // >= counts a stage at the same second as the one before it.
+      `WITH p AS (
+  SELECT trip_id, city_id,
+         MIN(event_ts) FILTER (WHERE status = 'requested') AS r,
+         MIN(event_ts) FILTER (WHERE status = 'accepted') AS a,
+         MIN(event_ts) FILTER (WHERE status = 'picked_up') AS k,
+         MIN(event_ts) FILTER (WHERE status = 'completed') AS c
+  FROM trip_events GROUP BY 1, 2
+)
+SELECT city_id, COUNT(*) AS requested,
+       ROUND(AVG(CASE WHEN a >= r THEN 1.0 ELSE 0 END), 4) AS accept_rate,
+       ROUND(AVG(CASE WHEN k >= a AND a >= r THEN 1.0 ELSE 0 END), 4) AS pickup_rate,
+       ROUND(AVG(CASE WHEN c >= k AND k >= a AND a >= r THEN 1.0 ELSE 0 END), 4) AS completion_rate
+FROM p WHERE r >= '2024-06-03' AND r < '2024-06-10' GROUP BY 1;`,
       // Filters every event to the week, so a trip completed on Monday loses its last stages.
       `WITH per_trip AS (
   SELECT trip_id, city_id,
@@ -246,10 +265,6 @@ FROM t WHERE r >= '2024-06-03' AND r < '2024-06-10' GROUP BY city_id;`,
   },
   'median-trip-duration': {
     pass: [
-      `SELECT city_id, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY duration_s) AS median_s
-FROM trips
-WHERE duration_s IS NOT NULL
-GROUP BY city_id;`,
       `SELECT city_id, AVG(duration_s) AS median_s
 FROM (
   SELECT city_id, duration_s,
@@ -261,6 +276,9 @@ WHERE 2 * rn BETWEEN n AND n + 2
 GROUP BY city_id;`,
     ],
     fail: [
+      // The round bans PERCENTILE_CONT.
+      `SELECT city_id, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY duration_s) AS median_s
+FROM trips WHERE duration_s IS NOT NULL GROUP BY city_id;`,
       // Integer division takes only the lower middle value for an even count.
       `WITH o AS (
   SELECT city_id, duration_s,

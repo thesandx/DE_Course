@@ -16,6 +16,7 @@ import {
 import { formatMinutes } from '@/lib/course/mock-score';
 import { problemId } from '@/lib/course/progress';
 import { getRunnable } from '@/lib/course/runnables';
+import { env } from '@/lib/env';
 import { specHash } from '@/lib/runner/data';
 import { requireDeLearner } from '@/services/learner.service';
 import type { Problem } from '@/types/course';
@@ -116,6 +117,7 @@ export default async function MockLoopPage({ params, searchParams }: Props) {
         }}
         seed={seed}
         rounds={rounds}
+        pipEnabled={env.assistantEnabled}
       />
     </AppShell>
   );

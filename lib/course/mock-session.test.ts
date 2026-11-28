@@ -21,6 +21,7 @@ import {
   sessionKey,
   setCovered,
   setPace,
+  setPipGrade,
   takeHint,
 } from '@/lib/course/mock-session';
 
@@ -99,6 +100,38 @@ describe('a mock session', () => {
     session = setCovered(session, 0, 0, 0, false);
     expect(session.rounds[0]?.problems[0]?.covered).toEqual([2]);
     expect(setCovered(session, 5, 0, 0, true)).toBe(session);
+  });
+
+  it("takes Pip's grade in place of the ticks, and one graded reply after it", () => {
+    const running = started();
+    const first = {
+      covered: [
+        { signal: 2, evidence: 'one row per return line' },
+        { signal: 0, evidence: 'an accumulating snapshot' },
+      ],
+      followUp: 'What if a step is skipped?',
+      summary: 'Good grain.',
+      replied: false,
+    };
+    expect(setPipGrade(running, 0, 0, first)).toBe(running);
+    let session = endRound(running, 2_000, false);
+    session = setCovered(session, 0, 0, 1, true);
+    session = setPipGrade(session, 0, 0, first);
+    expect(session.rounds[0]?.problems[0]?.covered).toEqual([0, 2]);
+    // The learner can no longer tick once Pip graded.
+    expect(setCovered(session, 0, 0, 1, true)).toBe(session);
+    // A second first grade is ignored; a graded reply replaces it.
+    expect(setPipGrade(session, 0, 0, { ...first, covered: [] })).toBe(session);
+    const reply = {
+      ...first,
+      covered: [...first.covered, { signal: 1, evidence: 'NULL lags' }],
+      replied: true,
+    };
+    session = setPipGrade(session, 0, 0, reply);
+    expect(session.rounds[0]?.problems[0]?.covered).toEqual([0, 1, 2]);
+    expect(setPipGrade(session, 0, 0, { ...reply, covered: [] })).toBe(session);
+    // The grade survives a reload.
+    expect(parseSession(JSON.stringify(session))?.rounds[0]?.problems[0]?.pip?.replied).toBe(true);
   });
 
   it('moves round by round to the scorecard', () => {

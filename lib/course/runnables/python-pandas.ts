@@ -356,7 +356,16 @@ orders = pd.DataFrame({
 
   'pandas-vectorise-apply': {
     language: 'python',
-    task: `Rewrite «add_fees(payments)» without «apply». It returns the payments with a «fee» column: 2% of «amount» for «CARD», 0.0 for «UPI» and 5.0 for any other method, a missing one included. It must handle 500,000 payments in well under a second.`,
+    rules: [
+      {
+        kind: 'forbid',
+        pattern:
+          '\\.apply\\(|\\biterrows\\b|\\bitertuples\\b|\\bvectorize\\b|\\bfor\\b|\\bmap\\(\\s*lambda',
+        message:
+          'This rewrite must work on whole columns. A for loop, a comprehension, iterrows, itertuples, apply, map(lambda) or np.vectorize still calls Python once per row. Use np.select, np.where, or .loc with a mask.',
+      },
+    ],
+    task: `Rewrite «add_fees(payments)» without «apply» or any other Python loop over the rows: no «for», comprehension, «iterrows» or «np.vectorize». It returns the payments with a «fee» column: 2% of «amount» for «CARD», 0.0 for «UPI» and 5.0 for any other method, a missing one included. It must handle 500,000 payments in well under a second.`,
     tables: [
       {
         name: 'payments',

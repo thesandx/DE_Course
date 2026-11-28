@@ -12,12 +12,14 @@ import {
   type Pace,
   parseSession,
   pause,
+  type PipGrade,
   type PlanSlugs,
   recordTests,
   resume,
   sessionKey,
   setCovered,
   setPace,
+  setPipGrade,
   takeHint,
 } from '@/lib/course/mock-session';
 
@@ -31,6 +33,7 @@ type Action =
   | { type: 'hint'; problem: number }
   | { type: 'tests'; problem: number; passed: number; total: number }
   | { type: 'cover'; round: number; problem: number; signal: number; covered: boolean }
+  | { type: 'grade'; round: number; problem: number; grade: PipGrade }
   | { type: 'restart'; session: MockSession };
 
 function reduce(session: MockSession, action: Action): MockSession {
@@ -54,6 +57,8 @@ function reduce(session: MockSession, action: Action): MockSession {
       return recordTests(session, action.problem, action.passed, action.total);
     case 'cover':
       return setCovered(session, action.round, action.problem, action.signal, action.covered);
+    case 'grade':
+      return setPipGrade(session, action.round, action.problem, action.grade);
   }
 }
 
@@ -88,6 +93,8 @@ export interface MockSessionApi {
   hint: (problem: number) => void;
   tests: (problem: number, passed: number, total: number) => void;
   cover: (round: number, problem: number, signal: number, covered: boolean) => void;
+  /** Stores Pip's grade of a written answer. Pip's signals replace the ticks. */
+  grade: (round: number, problem: number, grade: PipGrade) => void;
   /** Starts the same questions again, from the briefing, with fresh code and drafts. */
   restart: () => void;
 }
@@ -168,6 +175,11 @@ export function useMockSession(
     cover: useCallback(
       (round: number, problem: number, signal: number, covered: boolean) =>
         dispatch({ type: 'cover', round, problem, signal, covered }),
+      [],
+    ),
+    grade: useCallback(
+      (round: number, problem: number, grade: PipGrade) =>
+        dispatch({ type: 'grade', round, problem, grade }),
       [],
     ),
     restart: useCallback(() => {
