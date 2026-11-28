@@ -5,6 +5,7 @@ import { PYTHON_ANSWERS } from '@/lib/course/runnables/python-answers';
 import { SPARK_ANSWERS } from '@/lib/course/runnables/spark-answers';
 import { SQL_ANSWERS } from '@/lib/course/runnables/sql-answers';
 import { SQL_HARD_ANSWERS } from '@/lib/course/runnables/sql-hard-answers';
+import { STREAMING_ANSWERS } from '@/lib/course/runnables/streaming-answers';
 import { WAREHOUSE_SQL_ANSWERS } from '@/lib/course/runnables/warehouse-sql-answers';
 
 /**
@@ -28,4 +29,5 @@ export const TEST_ANSWERS: Readonly<Record<string, SpecAnswers>> = {
   ...SPARK_ANSWERS,
   ...PYTHON_ANSWERS,
   ...ORCHESTRATION_ANSWERS,
+  ...STREAMING_ANSWERS,
 };

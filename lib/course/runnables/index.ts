@@ -5,6 +5,7 @@ import { PYTHON_RUNNABLES } from '@/lib/course/runnables/python';
 import { SPARK_RUNNABLES } from '@/lib/course/runnables/spark';
 import { SQL_RUNNABLES } from '@/lib/course/runnables/sql';
 import { SQL_HARD_RUNNABLES } from '@/lib/course/runnables/sql-hard';
+import { STREAMING_RUNNABLES } from '@/lib/course/runnables/streaming';
 import { WAREHOUSE_SQL_RUNNABLES } from '@/lib/course/runnables/warehouse-sql';
 import type { RunnableSpec } from '@/types/runner';
 
@@ -21,6 +22,7 @@ export const RUNNABLES: Readonly<Record<string, RunnableSpec>> = {
   ...SPARK_RUNNABLES,
   ...PYTHON_RUNNABLES,
   ...ORCHESTRATION_RUNNABLES,
+  ...STREAMING_RUNNABLES,
 };
 
 export function getRunnable(slug: string): RunnableSpec | undefined {
