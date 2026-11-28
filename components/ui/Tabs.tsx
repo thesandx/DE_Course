@@ -17,6 +17,8 @@ export interface TabsProps {
   items: readonly TabItem[];
   /** The tab open on first render. Default: the first item. */
   defaultTab?: string;
+  /** The open tab, when the parent decides it. Pair it with `onChange`. */
+  value?: string;
   onChange?: (id: string) => void;
   className?: string;
 }
@@ -38,9 +40,10 @@ interface IndicatorBox {
  * A client component because selection is state. Pass server-rendered
  * content through `items`; only the tab strip ships as JavaScript.
  */
-export function Tabs({ label, items, defaultTab, onChange, className }: TabsProps) {
+export function Tabs({ label, items, defaultTab, value, onChange, className }: TabsProps) {
   const baseId = useId();
-  const [selected, setSelected] = useState(defaultTab ?? items[0]?.id);
+  const [own, setOwn] = useState(defaultTab ?? items[0]?.id);
+  const selected = value ?? own;
   const [indicator, setIndicator] = useState<IndicatorBox | null>(null);
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -56,7 +59,7 @@ export function Tabs({ label, items, defaultTab, onChange, className }: TabsProp
   function select(index: number) {
     const item = items[index];
     if (!item) return;
-    setSelected(item.id);
+    setOwn(item.id);
     onChange?.(item.id);
     tabRefs.current[index]?.focus();
   }

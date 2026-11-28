@@ -44,6 +44,20 @@ describe('Tabs', () => {
     expect(screen.getByText('The rules')).toBeVisible();
   });
 
+  it('follows the parent when it holds the open tab', () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <Tabs label="Game views" items={ITEMS} value="players" onChange={onChange} />,
+    );
+    expect(screen.getByText('The players')).toBeVisible();
+    fireEvent.click(screen.getByRole('tab', { name: 'Rules' }));
+    expect(onChange).toHaveBeenCalledWith('rules');
+    // The parent did not change the value, so the open tab stays.
+    expect(screen.getByText('The players')).toBeVisible();
+    rerender(<Tabs label="Game views" items={ITEMS} value="rules" onChange={onChange} />);
+    expect(screen.getByText('The rules')).toBeVisible();
+  });
+
   it('labels each panel with its tab', () => {
     render(<Tabs label="Game views" items={ITEMS} />);
     expect(screen.getByRole('tabpanel', { name: 'Board' })).toBeInTheDocument();

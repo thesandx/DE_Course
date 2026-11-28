@@ -1049,10 +1049,10 @@ export const problems: Problem[] = [
                   errors[endpoint] += 1
           rates = {ep: (total[ep], errors[ep] / total[ep]) for ep in total}
           return rates, skipped
-
-      with open("access.log", encoding="utf-8") as handle:
-          rates, skipped = error_rates(handle)
       ~~~
+
+      Pass it an open file, «error_rates(open("access.log", encoding="utf-8"))». The loop reads
+      one line at a time, so a file of any size fits.
 
       O(n) time, memory proportional to the number of endpoints. Mention that paths with ids
       («/v1/trips/123») should be normalised to a route template first, or the dictionary grows
@@ -1074,7 +1074,7 @@ export const problems: Problem[] = [
     companies: ['uber', 'amazon', 'meta', 'microsoft'],
     prompt: `
       Given a list of «(user_id, start_ts, end_ts)» tuples, unsorted, return per user the merged
-      sessions: sessions that overlap or are less than 5 minutes (300 s) apart become one.
+      sessions: sessions that overlap or are at most 5 minutes (300 s) apart become one.
     `,
     hints: [
       'Group by user first.',
@@ -1179,12 +1179,13 @@ export const problems: Problem[] = [
     companies: ['google', 'amazon', 'meta', 'microsoft'],
     prompt: `
       You receive a stream of search terms. At any time, «top(k)» must return the k most frequent
-      terms seen so far. Implement «add(term)» and «top(k)». Discuss complexity, and what you
-      would do if distinct terms do not fit in memory.
+      terms seen so far, as «(term, count)» pairs: the highest count first, and terms with the
+      same count in alphabetical order. Implement «add(term)» and «top(k)». Discuss complexity,
+      and what you would do if distinct terms do not fit in memory.
     `,
     hints: [
       'A Counter makes add O(1).',
-      'heapq.nlargest over the counter items gives top k.',
+      'heapq.nsmallest with the key (-count, term) gives top k with the tie rule.',
       'For huge cardinality, think sketches.',
     ],
     answer: `
@@ -1200,10 +1201,13 @@ export const problems: Problem[] = [
               self.counts[term] += 1
 
           def top(self, k):
-              return heapq.nlargest(k, self.counts.items(), key=lambda kv: (kv[1], kv[0]))
+              # The highest count first; a tie goes to the term that sorts first.
+              return heapq.nsmallest(k, self.counts.items(), key=lambda item: (-item[1], item[0]))
       ~~~
 
-      «add» is O(1); «top» is O(d log k) for d distinct terms. If «top» is called far more often
+      «add» is O(1); «top» is O(d log k) for d distinct terms. The key «(-count, term)» puts
+      the tie rule in one place: «nlargest» with «(count, term)» would put «#rain» before
+      «#ipl» on a tie. If «top» is called far more often
       than «add», maintain a sorted structure instead.
 
       When distinct terms do not fit: a **Count-Min Sketch** estimates counts in fixed memory,
@@ -1282,7 +1286,8 @@ export const problems: Problem[] = [
     companies: ['google', 'amazon', 'meta', 'microsoft'],
     prompt: `
       You have k files, each sorted by timestamp, each too large for memory together. Produce one
-      output stream sorted by timestamp. Each line starts with an ISO timestamp.
+      output stream sorted by timestamp. Each line starts with an ISO timestamp. Lines with the
+      same timestamp keep the order of their files.
     `,
     hints: [
       'Hold one line per file at a time.',
@@ -1292,35 +1297,39 @@ export const problems: Problem[] = [
     answer: `
       ~~~python
       import heapq
+      from contextlib import ExitStack
 
-      def merge_sorted(paths, out):
-          handles = [open(p, encoding="utf-8") for p in paths]
-          try:
-              heap = []
-              for index, handle in enumerate(handles):
-                  line = handle.readline()
-                  if line:
-                      heap.append((line[:20], index, line))
-              heapq.heapify(heap)
-              while heap:
-                  _, index, line = heapq.heappop(heap)
-                  out.write(line)
-                  nxt = handles[index].readline()
-                  if nxt:
-                      heapq.heappush(heap, (nxt[:20], index, nxt))
-          finally:
-              for handle in handles:
-                  handle.close()
+      def merge_sorted(files, out):
+          heap = []
+          for index, handle in enumerate(files):
+              line = handle.readline()
+              if line:
+                  heap.append((line[:20], index, line))
+          heapq.heapify(heap)
+          while heap:
+              _, index, line = heapq.heappop(heap)
+              out.write(line)
+              nxt = files[index].readline()
+              if nxt:
+                  heapq.heappush(heap, (nxt[:20], index, nxt))
+
+      def merge_paths(paths, out_path):
+          # ExitStack closes every file that opened, even when a later open fails.
+          with ExitStack() as stack:
+              files = [stack.enter_context(open(p, encoding="utf-8")) for p in paths]
+              out = stack.enter_context(open(out_path, "w", encoding="utf-8"))
+              merge_sorted(files, out)
       ~~~
 
-      O(N log k) time and O(k) memory. The file index in the tuple breaks timestamp ties so
-      Python never compares lines from different files unpredictably. «heapq.merge» does the same
-      thing in one call. This is the merge step of an external sort.
+      O(N log k) time and O(k) memory. The file index in the tuple breaks timestamp ties, so
+      lines with the same timestamp keep the order of their files, and Python never compares
+      two whole lines. «heapq.merge(*files, key=lambda line: line[:20])» does the same thing in
+      one call. This is the merge step of an external sort.
     `,
     signals: [
       'Uses a heap of size k, not a full load',
       'Breaks ties so comparison is well defined',
-      'Closes files in a finally block',
+      'Closes every file, with a finally block or an ExitStack',
       'Names external sort and heapq.merge',
     ],
     followUps: ['k is 10,000 and you can open only 1,000 files. What now?'],
@@ -1393,7 +1402,7 @@ export const problems: Problem[] = [
       ~~~python
       import random, time, uuid
 
-      def pay_with_retries(send, payment, attempts=5):
+      def pay_with_retries(send, payment, attempts=5, sleep=time.sleep):
           key = payment.get("idempotency_key") or str(uuid.uuid4())
           payment = {**payment, "idempotency_key": key}
           for attempt in range(attempts):
@@ -1402,11 +1411,12 @@ export const problems: Problem[] = [
               except TimeoutError:
                   if attempt == attempts - 1:
                       raise
-                  time.sleep(random.uniform(0, min(10, 0.5 * 2 ** attempt)))
+                  sleep(random.uniform(0, min(10, 0.5 * 2 ** attempt)))
       ~~~
 
       The key is generated once, before the first attempt, and reused for every retry. Store it
-      with the payment record so a crash and restart reuses it too.
+      with the payment record so a crash and restart reuses it too. The «sleep» parameter lets a
+      test pass a fake that records the delays, so the test never waits.
     `,
     signals: [
       'Explains that a timeout is an unknown outcome, not a failure',
@@ -1681,61 +1691,65 @@ export const problems: Problem[] = [
       'How do you stay under 100 a minute without waiting for 429s?',
     ],
     answer: `
+      Pass the API, the storage, the clock and «sleep» in as arguments. The code is the same in
+      production, and a test runs it on a fake clock in milliseconds.
+
       ~~~python
       import random
-      import time
-      from datetime import datetime, timedelta, timezone
+      from datetime import datetime, timedelta
 
-      import requests
-
-      URL = "https://api.example.com/v1/charges"
-      MIN_INTERVAL = 60 / 90  # stay at 90 requests a minute, under the limit of 100
+      MIN_INTERVAL = 60 / 90  # 90 requests a minute, under the limit of 100
       OVERLAP = timedelta(minutes=5)
 
 
-      def fetch(session: requests.Session, params: dict) -> dict:
+      def get_page(fetch, params, sleep):
           for attempt in range(8):
               try:
-                  response = session.get(URL, params=params, timeout=(5, 30))
-              except (requests.ConnectionError, requests.Timeout):
-                  time.sleep(random.uniform(0, 2**attempt))
+                  response = fetch(params)
+              except (ConnectionError, TimeoutError):
+                  sleep(random.uniform(0, 2 ** attempt))
                   continue
               if response.status_code == 429:
-                  time.sleep(float(response.headers.get("Retry-After", "60")))
+                  sleep(float(response.headers.get("Retry-After", "60")))
                   continue
               if response.status_code >= 500:
-                  time.sleep(random.uniform(0, 2**attempt))
+                  sleep(random.uniform(0, 2 ** attempt))
                   continue
-              response.raise_for_status()
+              if response.status_code >= 400:
+                  raise RuntimeError(f"HTTP {response.status_code}: the request is wrong, so a retry will not help")
               return response.json()
-          raise RuntimeError("API still failing after 8 attempts")
+          raise RuntimeError("the API still fails after 8 attempts")
 
 
-      def extract(session: requests.Session, run_id: str) -> None:
-          state = load_state()
+      def extract(fetch, store, run_id, now, sleep, clock):
+          state = store.load_state()
           if state.get("cursor"):  # resume an interrupted run
               params = {"cursor": state["cursor"]}
               page_no = state["page_no"]
               started = state["started"]
           else:
               since = datetime.fromisoformat(state["watermark"]) - OVERLAP
-              started = datetime.now(timezone.utc).isoformat()
+              started = now().isoformat()
               params = {"updated_since": since.isoformat()}
               page_no = 0
           while True:
-              began = time.monotonic()
-              body = fetch(session, params)
-              write_page(run_id, page_no, body["data"])  # land raw first
+              began = clock()
+              body = get_page(fetch, params, sleep)
+              store.write_page(run_id, page_no, body["data"])  # land the page first
               page_no += 1
               cursor = body.get("next_cursor")
               if not cursor:
-                  save_state({"watermark": started, "cursor": None, "page_no": 0, "started": None})
+                  store.save_state({"watermark": started, "cursor": None, "page_no": 0, "started": None})
                   return
-              save_state({"watermark": state.get("watermark"), "cursor": cursor,
-                          "page_no": page_no, "started": started})
+              store.save_state({"watermark": state["watermark"], "cursor": cursor,
+                                "page_no": page_no, "started": started})
               params = {"cursor": cursor}
-              time.sleep(max(0.0, MIN_INTERVAL - (time.monotonic() - began)))
+              sleep(max(0.0, MIN_INTERVAL - (clock() - began)))
       ~~~
+
+      In production, «fetch» wraps «session.get(URL, params=params, timeout=(5, 30))» and turns
+      «requests.ConnectionError» and «requests.Timeout» into the built-in errors. «sleep» is
+      «time.sleep», «clock» is «time.monotonic», and «now» returns «datetime.now(timezone.utc)».
 
       How it meets each requirement:
 

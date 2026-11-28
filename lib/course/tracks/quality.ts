@@ -685,7 +685,7 @@ export const problems: Problem[] = [
       'Use a LEFT JOIN to find orphans.',
     ],
     answer: `
-      ~~~sql
+      ~~~bigquery
       WITH today AS (
         SELECT * FROM fct_trips WHERE trip_date = @run_date
       ),
@@ -724,6 +724,10 @@ export const problems: Problem[] = [
 
       An empty result means the partition may publish. The orchestrator runs this after the write
       and before the publish step, and fails the run on any row.
+
+      This is BigQuery, with the run date as the query parameter «@run_date». The editor runs
+      PostgreSQL, which has no «IF()»: write «CASE WHEN … THEN 1 ELSE 0 END», and subtract days
+      with «DATE '2024-10-08' - 7».
     `,
     signals: [
       'Returns rows only on failure, so the gate is a simple "empty or not"',

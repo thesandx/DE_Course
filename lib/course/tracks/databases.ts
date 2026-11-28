@@ -1100,25 +1100,33 @@ export const problems: Problem[] = [
       check in the application, and both write 20. The ledger records two debits, but the balance
       shows only one.
 
-      **Fix 1: one atomic, conditional statement.**
+      **Fix 1: one atomic, conditional statement.** The check and the write are the same
+      statement, and the ledger row is written only when the debit happened.
 
       ~~~sql
-      UPDATE wallets
-      SET balance = balance - 80
-      WHERE wallet_id = 42 AND balance >= 80
-      RETURNING balance;
-      -- 0 rows returned → insufficient funds, roll back
+      WITH debit AS (
+        UPDATE wallets
+        SET balance = balance - 80
+        WHERE wallet_id = 42
+          AND balance >= 80
+          AND NOT EXISTS (SELECT 1 FROM ledger WHERE request_id = 'w-1001')
+        RETURNING wallet_id
+      )
+      INSERT INTO ledger (request_id, wallet_id, amount)
+      SELECT 'w-1001', wallet_id, -80 FROM debit;
+      -- 0 rows inserted: not enough money, or this request was already applied
       ~~~
 
       The second update waits for the row lock, then re-checks «balance >= 80» on the new value
-      (20) and updates nothing.
+      (20) and updates nothing. The «request_id» is an **idempotency key**: a client retry finds
+      its ledger row and debits nothing. A unique constraint on «ledger.request_id» backs it up:
+      if two copies of one request race, the second insert fails and its transaction rolls back
+      the debit.
 
       **Fix 2: lock the row you read.** «SELECT balance … FOR UPDATE» makes the second transaction
       wait until the first commits, then read 20.
 
       Optionally run at «REPEATABLE READ» or «SERIALIZABLE» and retry on serialization errors.
-      In all cases, give each withdrawal an **idempotency key** with a unique constraint in the
-      ledger, so a client retry does not debit twice.
     `,
     signals: [
       'Names the lost update anomaly',

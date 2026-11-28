@@ -9,8 +9,10 @@ import { AppShell } from '@/components/layout/AppShell';
 import { ChapterNotes } from '@/components/notes/ChapterNotes';
 import { COMPANY_NAMES, getProblem, getTrack, KIND_LABELS } from '@/lib/course/catalog';
 import { PROBLEM_XP, problemId } from '@/lib/course/progress';
+import { getRunnable } from '@/lib/course/runnables';
 import { env } from '@/lib/env';
 import { noteKeys } from '@/lib/notes/targets';
+import { specHash } from '@/lib/runner/data';
 import { requireDeLearner } from '@/services/learner.service';
 import { getNoteOrNull } from '@/services/notes.service';
 import type { Company } from '@/types/course';
@@ -48,6 +50,7 @@ export default async function ProblemPage({ params }: Props) {
   const note = await getNoteOrNull(user.uid, noteKey);
   const track = getTrack(problem.track);
   const itemId = problemId(slug);
+  const runnable = getRunnable(slug);
 
   return (
     <AppShell
@@ -119,6 +122,15 @@ export default async function ProblemPage({ params }: Props) {
               signals={problem.signals}
               followUps={problem.followUps}
               answer={<Prose source={problem.answer} />}
+              {...(runnable !== undefined
+                ? {
+                    runner: {
+                      spec: runnable,
+                      runKey: `${slug}:${specHash(runnable)}`,
+                      task: <Prose source={runnable.task} />,
+                    },
+                  }
+                : {})}
             />
             <ChapterNotes
               noteKey={noteKey}

@@ -1137,13 +1137,14 @@ export const problems: Problem[] = [
         city_id,
         month,
         revenue,
-        100.0 * (revenue - LAG(revenue) OVER w) / NULLIF(LAG(revenue) OVER w, 0) AS growth_pct
+        ROUND(100.0 * (revenue - LAG(revenue) OVER w) / NULLIF(LAG(revenue) OVER w, 0), 2) AS growth_pct
       FROM monthly
       WINDOW w AS (PARTITION BY city_id ORDER BY month)
       ORDER BY city_id, month;
       ~~~
 
-      «100.0» forces decimal division and «NULLIF» turns a zero denominator into NULL. If a city
+      «100.0» forces decimal division and «NULLIF» turns a zero denominator into NULL. Round
+      only the final value, never the revenue before the division. If a city
       skips a month, LAG compares against the last month with data. Say so, and offer a calendar
       spine (generate months, left join) if a missing month should count as zero.
     `,
@@ -1321,8 +1322,7 @@ export const problems: Problem[] = [
       ),
       numbered AS (
         SELECT user_id, event_time,
-               SUM(new_session) OVER (PARTITION BY user_id ORDER BY event_time
-                                      ROWS UNBOUNDED PRECEDING) AS session_id
+               SUM(new_session) OVER (PARTITION BY user_id ORDER BY event_time) AS session_id
         FROM gaps
       )
       SELECT
@@ -1335,9 +1335,11 @@ export const problems: Problem[] = [
       GROUP BY user_id, session_id;
       ~~~
 
-      The first event has a NULL gap, which falls to «ELSE 1» and starts session 1. Point out that
-      a single-event session has duration 0, and discuss whether to add a fixed tail (for example
-      30 seconds) for analytics.
+      The first event has a NULL gap, which falls to «ELSE 1» and starts session 1. Keep the
+      running sum's default frame: two events in the same second are peers and get the same sum.
+      With «ROWS UNBOUNDED PRECEDING», the order of tied rows is arbitrary, so a tie can split a
+      session at random. Point out that a single-event session has duration 0, and discuss whether
+      to add a fixed tail (for example 30 seconds) for analytics.
     `,
     signals: [
       'Uses the flag and running-sum pattern',
@@ -1427,25 +1429,28 @@ export const problems: Problem[] = [
           MIN(CASE WHEN status = 'picked_up' THEN event_ts END) AS t_pick,
           MIN(CASE WHEN status = 'completed' THEN event_ts END) AS t_done
         FROM trip_events
-        WHERE event_ts >= DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '7 days'
-          AND event_ts <  DATE_TRUNC('week', CURRENT_DATE)
         GROUP BY trip_id, city_id
       )
       SELECT
         city_id,
-        COUNT(t_req) AS requested,
-        AVG(CASE WHEN t_acc  > t_req  THEN 1.0 ELSE 0 END) AS accept_rate,
-        AVG(CASE WHEN t_pick > t_acc  AND t_acc > t_req THEN 1.0 ELSE 0 END) AS pickup_rate,
-        AVG(CASE WHEN t_done > t_pick AND t_pick > t_acc AND t_acc > t_req THEN 1.0 ELSE 0 END)
+        COUNT(*) AS requested,
+        ROUND(AVG(CASE WHEN t_acc  > t_req  THEN 1.0 ELSE 0 END), 4) AS accept_rate,
+        ROUND(AVG(CASE WHEN t_pick > t_acc  AND t_acc > t_req THEN 1.0 ELSE 0 END), 4) AS pickup_rate,
+        ROUND(AVG(CASE WHEN t_done > t_pick AND t_pick > t_acc AND t_acc > t_req THEN 1.0 ELSE 0 END), 4)
           AS completion_rate
       FROM per_trip
-      WHERE t_req IS NOT NULL
+      WHERE t_req >= TIMESTAMP '2024-06-03 00:00:00'  -- the week of Monday 3 June 2024
+        AND t_req <  TIMESTAMP '2024-06-10 00:00:00'
       GROUP BY city_id;
       ~~~
 
-      Raise the edge cases: a trip requested late on Sunday and completed on Monday is cut by the
-      time filter (filter on the request time only, and allow later events), and a re-dispatched
-      trip can be accepted twice.
+      For "last week" in a scheduled job, the bounds are
+      «DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '7 days'» and «DATE_TRUNC('week', CURRENT_DATE)».
+      A fixed week makes the query repeatable for a backfill. The week filter is on the request
+      time only. Filter the events instead, and a trip requested
+      late on Sunday and completed on Monday loses its last stages. In production, scan only a few
+      days past the week end, so the pivot does not read the whole table. «MIN» takes the first
+      time of each status, so a re-dispatched trip that is accepted twice counts once.
     `,
     signals: [
       'Pivots with conditional aggregation in one pass',
@@ -1546,12 +1551,13 @@ export const problems: Problem[] = [
       FROM grid g
       LEFT JOIN activity a
         ON a.cohort_week = g.cohort_week AND a.week_number = g.week_number
-      WHERE g.cohort_week + g.week_number * INTERVAL '7 days' <= CURRENT_DATE
+      WHERE g.cohort_week + g.week_number * INTERVAL '7 days' <= DATE '2024-03-20'  -- today
       ORDER BY 1, 2;
       ~~~
 
       The last filter drops weeks that have not happened yet, so new cohorts do not show false
-      zeros. «generate_series» is Postgres; in BigQuery use «UNNEST(GENERATE_ARRAY(0, 8))».
+      zeros. In a scheduled job, «today» is «CURRENT_DATE», or better the run's date, so a
+      backfill gives the same answer as the first run. «generate_series» is Postgres; in BigQuery use «UNNEST(GENERATE_ARRAY(0, 8))».
     `,
     signals: [
       'Takes cohort size from the users table, so inactive users count in the denominator',
@@ -1595,7 +1601,7 @@ export const problems: Problem[] = [
         i.ad_id,
         COUNT(*) AS impressions,
         COUNT(v.imp_id) AS clicked_impressions,
-        COUNT(v.imp_id) * 1.0 / COUNT(*) AS ctr
+        ROUND(COUNT(v.imp_id) * 1.0 / COUNT(*), 4) AS ctr
       FROM impressions i
       LEFT JOIN valid_clicks v ON v.imp_id = i.imp_id
       GROUP BY 1, 2;

@@ -720,7 +720,7 @@ export const problems: Problem[] = [
       from pyspark.sql import Window, functions as F
 
       w = Window.partitionBy("order_id").orderBy(F.desc("updated_at"), F.desc("offset"))
-      latest = (updates
+      result = (updates
                 .withColumn("rn", F.row_number().over(w))
                 .filter("rn = 1")
                 .drop("rn"))
@@ -730,7 +730,7 @@ export const problems: Problem[] = [
       ordering columns. Structs compare field by field:
 
       ~~~python
-      latest = (updates
+      result = (updates
                 .groupBy("order_id")
                 .agg(F.max(F.struct("updated_at", "offset", "status")).alias("s"))
                 .select("order_id", "s.status", "s.updated_at", "s.offset"))
@@ -835,12 +835,17 @@ export const problems: Problem[] = [
       w = Window.partitionBy("user_id").orderBy("ts")
       gap_s = F.col("ts").cast("long") - F.lag("ts").over(w).cast("long")
 
-      sessions = (events
+      result = (events
         .withColumn("new_session", F.when(gap_s.isNull() | (gap_s > 1800), 1).otherwise(0))
         .withColumn("session_no", F.sum("new_session").over(
             w.rowsBetween(Window.unboundedPreceding, Window.currentRow)))
-        .withColumn("session_id", F.concat_ws("-", "user_id", "session_no")))
+        .withColumn("session_id", F.concat_ws("-", "user_id", "session_no"))
+        .drop("new_session", "session_no"))
       ~~~
+
+      «gap_s > 1800» keeps a gap of exactly 30 minutes in the session. The «-» in «concat_ws»
+      matters: without a separator, user «u1» with session 12 and user «u11» with session 2
+      both give «u112».
 
       The window partitions by user, so one heavy user (a bot) lands on one task. Filter bots
       first. Spark 3.2 also offers «session_window(ts, "30 minutes")» in «groupBy», which is the

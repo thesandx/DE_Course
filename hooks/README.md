@@ -1,6 +1,6 @@
 # `hooks/`
 
-Reusable React hooks. Intentionally empty in the template.
+Reusable React hooks.
 
 ## Rules
 
@@ -10,6 +10,10 @@ Reusable React hooks. Intentionally empty in the template.
 4. **Memoise what you return.** Wrap returned callbacks in `useCallback` and derived objects in `useMemo` so consumers do not re-render on every parent render.
 5. **No fetching business data here by default.** Server Components fetch; hooks handle interaction, subscriptions, and browser APIs. If a project really needs client-side fetching, standardise on one library (TanStack Query) and wrap it here instead of writing `useEffect` fetches by hand.
 6. **Clean up.** Every subscription, timer, and listener gets a teardown in the effect return.
+
+## Workers
+
+`workers/` holds Web Worker entry files, not hooks. `useCodeRunner` starts them, and they run the learner's code off the main thread: `sql.worker.ts` on PGlite, `python.worker.ts` on Pyodide. The Python files in `workers/python/` are bundled as static assets and loaded by the Python worker. [ADR-0016](../docs/adr/0016-run-learner-code-in-the-browser.md) explains the design.
 
 ## Template
 

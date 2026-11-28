@@ -1460,8 +1460,11 @@ export const problems: Problem[] = [
       MERGE INTO core.drivers AS t
       USING (
         SELECT driver_id, name, city_id, op, changed_at
-        FROM staging.driver_changes
-        QUALIFY ROW_NUMBER() OVER (PARTITION BY driver_id ORDER BY changed_at DESC) = 1
+        FROM (
+          SELECT c.*, ROW_NUMBER() OVER (PARTITION BY driver_id ORDER BY changed_at DESC) AS rn
+          FROM staging.driver_changes c
+        ) newest
+        WHERE rn = 1
       ) AS s
       ON t.driver_id = s.driver_id
       WHEN MATCHED AND s.op = 'd' AND s.changed_at >= t.changed_at THEN
@@ -1473,8 +1476,9 @@ export const problems: Problem[] = [
         VALUES (s.driver_id, s.name, s.city_id, s.changed_at);
       ~~~
 
-      - «QUALIFY» keeps the newest event per driver, so the source has one row per key and MERGE
-        cannot hit "multiple source rows matched".
+      - The row number keeps the newest event per driver, so the source has one row per key and
+        MERGE cannot hit "multiple source rows matched". On Databricks or Snowflake,
+        «QUALIFY ROW_NUMBER() OVER (...) = 1» does the same without the subquery.
       - The «changed_at» guards make replays and out-of-order batches safe: running the same
         batch twice changes nothing.
       - A delete for an unknown driver is ignored rather than inserted.

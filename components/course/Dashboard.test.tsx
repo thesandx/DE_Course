@@ -50,4 +50,15 @@ describe('Dashboard', () => {
       '/de/tracks/playbook/india-senior-loops',
     );
   });
+
+  it('links the readiness band to the timed mocks', () => {
+    renderDashboard(EMPTY_PROGRESS);
+    expect(screen.getByRole('link', { name: 'Run a timed mock' })).toHaveAttribute(
+      'href',
+      '/de/mock',
+    );
+    const mocks = screen.getAllByRole('link', { name: 'Mock this loop →' });
+    expect(mocks.length).toBeGreaterThan(1);
+    expect(mocks.map((link) => link.getAttribute('href'))).toContain('/de/mock/uber');
+  });
 });

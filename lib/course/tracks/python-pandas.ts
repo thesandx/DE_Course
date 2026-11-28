@@ -309,11 +309,12 @@ export const pandasProblems: readonly Problem[] = [
       ~~~python
       ranked = orders.assign(
           position=orders.groupby("city")["amount"].rank(method="dense", ascending=False))
-      top2_with_ties = ranked[ranked["position"] <= 2]
+      top2_with_ties = ranked[ranked["position"] <= 2].drop(columns="position")
       ~~~
 
-      Do not use «groupby("city").apply(lambda g: g.nlargest(2, "amount"))». It gives the same
-      rows, but it calls Python once for each group and is slow with many groups.
+      Do not use «groupby("city").apply(lambda g: g.nlargest(2, "amount"))». It calls Python
+      once for each group, so it is slow with many groups. On a tie, «nlargest» also keeps the
+      rows it meets first, not the smaller «order_id».
     `,
     signals: [
       'Uses sort_values with groupby().head()',
@@ -331,9 +332,9 @@ export const pandasProblems: readonly Problem[] = [
     difficulty: 'medium',
     companies: PANDAS_LOOPS,
     prompt: `
-      «orders(customer_id, ordered_at, amount)» has «ordered_at» as a datetime. Add three
-      columns: the order number of each customer, the running spend of the customer, and the
-      days since the customer's previous order.
+      «orders(customer_id, ordered_at, amount)» has «ordered_at» as a datetime. Sort the orders
+      by customer and time, and add three columns: the order number of each customer, the
+      running spend of the customer, and the whole days since the customer's previous order.
     `,
     hints: [
       'Sort by customer and time first.',
@@ -342,13 +343,13 @@ export const pandasProblems: readonly Problem[] = [
     ],
     answer: `
       ~~~python
-      orders = orders.sort_values(["customer_id", "ordered_at"])
-      by_customer = orders.groupby("customer_id")
+      ordered = orders.sort_values(["customer_id", "ordered_at"])
+      by_customer = ordered.groupby("customer_id")
 
-      orders = orders.assign(
+      result = ordered.assign(
           order_number=by_customer.cumcount() + 1,
           running_spend=by_customer["amount"].cumsum(),
-          days_since_previous=(orders["ordered_at"]
+          days_since_previous=(ordered["ordered_at"]
                                - by_customer["ordered_at"].shift(1)).dt.days,
       )
       ~~~
@@ -402,15 +403,19 @@ export const pandasProblems: readonly Problem[] = [
       ~~~python
       import numpy as np
 
-      payments["fee"] = np.select(
-          [payments["method"] == "CARD", payments["method"] == "UPI"],
-          [payments["amount"] * 0.02, 0.0],
-          default=5.0,
-      )
+
+      def add_fees(payments):
+          payments = payments.copy()
+          payments["fee"] = np.select(
+              [payments["method"] == "CARD", payments["method"] == "UPI"],
+              [payments["amount"] * 0.02, 0.0],
+              default=5.0,
+          )
+          return payments
       ~~~
 
       «np.select» takes the conditions in order, the value for each one, and a default. It is
-      a «CASE WHEN».
+      a «CASE WHEN». The «copy()» keeps the caller's DataFrame unchanged.
 
       Why it is faster: «apply(axis=1)» builds a row object and calls a Python function 20
       million times. The vectorised form runs three comparisons and one multiplication, each
@@ -450,18 +455,20 @@ export const pandasProblems: readonly Problem[] = [
       ~~~python
       import pandas as pd
 
-      parts = []
-      reader = pd.read_csv(payments_path,
-                           usecols=["customer_id", "amount"],
-                           dtype={"customer_id": "int64", "amount": "float64"},
-                           chunksize=5_000_000)
-      for chunk in reader:
-          parts.append(chunk.groupby("customer_id")["amount"].agg(["sum", "count"]))
 
-      totals = (pd.concat(parts)
-                .groupby(level=0)
-                .sum()
-                .rename(columns={"sum": "total_amount", "count": "payments"}))
+      def totals_by_customer(source):
+          parts = []
+          reader = pd.read_csv(source,
+                               usecols=["customer_id", "amount"],
+                               dtype={"customer_id": "int64", "amount": "float64"},
+                               chunksize=5_000_000)
+          for chunk in reader:
+              parts.append(chunk.groupby("customer_id")["amount"].agg(["sum", "count"]))
+
+          return (pd.concat(parts)
+                  .groupby(level=0)
+                  .sum()
+                  .rename(columns={"sum": "total_amount", "count": "payments"}))
       ~~~
 
       - «usecols» and «dtype» cut the memory for each chunk to two numeric columns.

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 
+import { CodeEditorDemo } from '@/components/design/CodeEditorDemo';
 import { DialogDemo } from '@/components/design/DialogDemo';
 import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
@@ -11,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Chip } from '@/components/ui/Chip';
+import { CodeBlock } from '@/components/ui/CodeBlock';
 import { ContactLink } from '@/components/ui/ContactLink';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Face } from '@/components/ui/Face';
@@ -48,6 +50,7 @@ const DESIGN_SECTIONS: ReadonlyArray<{ id: string; label: string }> = [
   { id: 'views', label: 'Views' },
   { id: 'nothing-here-yet', label: 'Nothing here yet' },
   { id: 'interruptions', label: 'Interruptions' },
+  { id: 'code', label: 'Code' },
   { id: 'page-chrome', label: 'Page chrome' },
   { id: 'moments', label: 'Moments' },
 ];
@@ -294,6 +297,30 @@ export default function DesignPage() {
             <div>
               <DialogDemo />
             </div>
+          </section>
+
+          <section id="code" className="flex flex-col gap-5">
+            <h2 className="text-title">Code</h2>
+            <p className="text-ink-soft max-w-prose">
+              Code sits on the dark code surface in light and dark mode. A block shows read-only
+              code with its dialect in the title bar. The editor is where a learner types code that
+              runs.
+            </p>
+            <CodeBlock
+              lang="bigquery"
+              code={`SELECT city, APPROX_COUNT_DISTINCT(rider_id) AS riders
+FROM \`rides.trips\`
+WHERE trip_date = CURRENT_DATE()
+GROUP BY city
+QUALIFY ROW_NUMBER() OVER (ORDER BY riders DESC) <= 5;`}
+            />
+            <CodeEditorDemo />
+            <p className="text-small text-ink-soft max-w-prose">
+              A block of <code>sql</code> is PostgreSQL, the dialect the editor runs. Code in
+              another dialect uses its own fence, such as <code>bigquery</code>,{' '}
+              <code>snowflake</code> or <code>dbt</code>, so the caption never claims a dialect the
+              code is not in.
+            </p>
           </section>
 
           <section id="page-chrome" className="flex flex-col gap-5">
