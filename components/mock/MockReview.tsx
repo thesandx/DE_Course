@@ -7,11 +7,12 @@ import { DifficultyTag } from '@/components/course/DifficultyTag';
 import { InlineText } from '@/components/course/InlineText';
 import { ProgressRing } from '@/components/course/ProgressRing';
 import { codeKeyFor, draftKeyFor } from '@/components/mock/MockQuestion';
+import { PipGrader } from '@/components/mock/PipGrader';
 import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { CodeBlock } from '@/components/ui/CodeBlock';
 import { formatClock, percent, problemScore } from '@/lib/course/mock-score';
-import { elapsedMs, type RoundRecord } from '@/lib/course/mock-session';
+import { elapsedMs, type PipGrade, type RoundRecord } from '@/lib/course/mock-session';
 import type { MockQuestionView, MockRoundView } from '@/types/mock';
 
 export interface MockReviewProps {
@@ -23,6 +24,9 @@ export interface MockReviewProps {
   limitMs: number;
   storageKey: string;
   onCover: (question: number, signal: number, covered: boolean) => void;
+  onGrade: (question: number, grade: PipGrade) => void;
+  /** False when the server has no OpenRouter key: the learner ticks the signals alone. */
+  pipEnabled: boolean;
   onNext: () => void;
   headingRef: React.Ref<HTMLHeadingElement>;
 }
@@ -53,15 +57,21 @@ function QuestionReview({
   record,
   storageKey,
   onCover,
+  onGrade,
+  pipEnabled,
 }: {
   question: MockQuestionView;
   number: number;
   record: RoundRecord['problems'][number] | undefined;
   storageKey: string;
   onCover: (signal: number, covered: boolean) => void;
+  onGrade: (grade: PipGrade) => void;
+  pipEnabled: boolean;
 }) {
   const written = useWritten(storageKey, question);
   const covered = new Set(record?.covered ?? []);
+  const pip = record?.pip;
+  const evidence = new Map((pip?.covered ?? []).map((item) => [item.signal, item.evidence]));
   const hints = record?.hints ?? 0;
   const tests = record?.tests ?? null;
   const score = problemScore(
@@ -120,24 +130,65 @@ function QuestionReview({
         {question.answer}
       </section>
 
+      {question.runner === undefined ? (
+        <PipGrader
+          slug={question.slug}
+          answer={written}
+          grade={pip}
+          enabled={pipEnabled}
+          onGrade={onGrade}
+        />
+      ) : null}
+
       <div className="bg-night-glow rounded-card text-on-night flex flex-col gap-4 p-5">
         <p className="eyebrow text-gold">Senior signal</p>
-        <h3 className="text-heading">Score yourself</h3>
-        <p className="text-small text-on-night-soft">
-          Tick each one that your answer covered without a hint. {covered.size} of{' '}
-          {question.signals.length} ticked.
-        </p>
-        <ul className="flex flex-col gap-3">
-          {question.signals.map((signal, at) => (
-            <li key={at}>
-              <Checkbox
-                label={signal}
-                checked={covered.has(at)}
-                onChange={(event) => onCover(at, event.target.checked)}
-              />
-            </li>
-          ))}
-        </ul>
+        {pip === undefined ? (
+          <>
+            <h3 className="text-heading">Score yourself</h3>
+            <p className="text-small text-on-night-soft">
+              Tick each one that your answer covered without a hint. {covered.size} of{' '}
+              {question.signals.length} ticked.
+            </p>
+            <ul className="flex flex-col gap-3">
+              {question.signals.map((signal, at) => (
+                <li key={at}>
+                  <Checkbox
+                    label={signal}
+                    checked={covered.has(at)}
+                    onChange={(event) => onCover(at, event.target.checked)}
+                  />
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <>
+            <h3 className="text-heading">Graded by Pip</h3>
+            <p className="text-small text-on-night-soft">
+              Pip credited {covered.size} of {question.signals.length}, each with a quote from your
+              answer.
+            </p>
+            <ul className="flex flex-col gap-3">
+              {question.signals.map((signal, at) => {
+                const quote = evidence.get(at);
+                return (
+                  <li key={at} className="flex flex-col gap-1">
+                    <p className="text-body font-semibold">
+                      <span aria-hidden="true">{quote === undefined ? '○ ' : '✓ '}</span>
+                      <span className="sr-only">
+                        {quote === undefined ? 'Not shown: ' : 'Shown: '}
+                      </span>
+                      {signal}
+                    </p>
+                    {quote !== undefined ? (
+                      <p className="text-small text-on-night-soft pl-5">“{quote}”</p>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )}
       </div>
 
       {question.followUps.length > 0 ? (
@@ -170,6 +221,8 @@ export function MockReview({
   limitMs,
   storageKey,
   onCover,
+  onGrade,
+  pipEnabled,
   onNext,
   headingRef,
 }: MockReviewProps) {
@@ -190,7 +243,7 @@ export function MockReview({
             {record.timedOut
               ? 'The clock ran out. '
               : `You ended it after ${formatClock(used)} of ${formatClock(limitMs)}. `}
-            Read each model answer, then tick the signals your answer covered.
+            Read each model answer. Let Pip grade a written answer, or tick the signals it covered.
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-4 md:flex-col md:gap-3">
@@ -218,6 +271,8 @@ export function MockReview({
           record={record.problems[at]}
           storageKey={storageKey}
           onCover={(signal, covered) => onCover(at, signal, covered)}
+          onGrade={(grade) => onGrade(at, grade)}
+          pipEnabled={pipEnabled}
         />
       ))}
 

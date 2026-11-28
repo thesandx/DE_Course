@@ -51,3 +51,4 @@ Do **not** write one for a routine choice with an obvious answer. An ADR per pul
 | [0016](./0016-run-learner-code-in-the-browser.md)                               | Run the learner's code in the browser, on engines from a CDN                    | Accepted |
 | [0017](./0017-keep-mock-loops-in-browser-storage.md)                            | Keep timed mock loops in the browser's storage                                  | Accepted |
 | [0018](./0018-highlight-course-text-with-the-css-highlight-api.md)              | Highlight the course text with the CSS Highlight API, and keep text quotes      | Accepted |
+| [0019](./0019-grade-written-mock-answers-with-pip.md)                           | Grade written mock answers with Pip, and credit only quoted evidence            | Accepted |

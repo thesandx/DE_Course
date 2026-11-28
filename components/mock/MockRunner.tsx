@@ -22,6 +22,8 @@ export interface MockRunnerProps {
   loop: MockLoopView;
   seed: number;
   rounds: readonly MockRoundView[];
+  /** False when the server has no OpenRouter key: Pip does not grade. */
+  pipEnabled?: boolean;
 }
 
 /**
@@ -30,7 +32,7 @@ export interface MockRunnerProps {
  * focus to its heading, and writes the finished loop to this browser's
  * history of scorecards.
  */
-export function MockRunner({ loop, seed, rounds }: MockRunnerProps) {
+export function MockRunner({ loop, seed, rounds, pipEnabled = false }: MockRunnerProps) {
   const plan = useMemo(
     () => rounds.map((round) => round.questions.map((question) => question.slug)),
     [rounds],
@@ -150,6 +152,8 @@ export function MockRunner({ loop, seed, rounds }: MockRunnerProps) {
         limitMs={limits[index] ?? 0}
         storageKey={mock.storageKey}
         onCover={(question, signal, covered) => mock.cover(index, question, signal, covered)}
+        onGrade={(question, grade) => mock.grade(index, question, grade)}
+        pipEnabled={pipEnabled}
         onNext={mock.advance}
         headingRef={heading}
       />

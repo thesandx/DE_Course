@@ -146,11 +146,13 @@ Each problem of kind `sql` or `coding` has a runnable editor. The learner runs c
 | `mock-score.ts`   | The score of a question, a round and a loop, the verdict, and time formats. |
 | `mock-session.ts` | The mock as pure steps, its stored schema, and the history of scorecards.   |
 
-- There are three general loops (a one-hour loop, a senior loop and a staff loop) and one loop for each company guide.
+- There are four general loops (a one-hour loop, a senior loop, a staff loop and a speed screen of five SQL and five Python problems) and one loop for each company guide.
+- A slot can name `difficulties`. The speed screen asks only easy and medium problems.
 - A company loop asks what the guide's rounds ask. The `mock` of a round lists its slots, such as `[MOCK.sql, MOCK.python]`. A round with no `mock`, such as a recruiter screen, is not in the mock.
 - A seed picks the questions, and the same seed always picks the same ones. A loop does not ask a problem twice while a slot has others. Medium and hard problems come three times as often as easy ones. Questions from the same slot come easiest first.
 - Without a seed, the page tries 16 random seeds, takes the one with the most problems that the learner has not solved, and redirects to it.
-- A question with tests scores 70% from its best Submit and 30% from the signals that the learner ticks. Any other question scores from its signals. Each hint takes 10% off, down to half the score. The loop score is the average of the rounds.
+- A question with tests scores 70% from its best Submit and 30% from the signals that the learner ticks. Any other question scores from its signals.
+- In the review, Pip can grade a written answer (`POST /api/mock/grade`). Pip credits a signal only with an exact quote from the answer, and asks one follow-up that the learner can answer once. Pip's signals replace the ticks. [ADR-0019](../../docs/adr/0019-grade-written-mock-answers-with-pip.md) gives the reasons. Each hint takes 10% off, down to half the score. The loop score is the average of the rounds.
 - The verdict is Strong hire from 85%, Hire from 70%, Lean hire from 55% and Lean no hire from 40%. Below that, it is No hire. A round under 30% holds the verdict at Lean no hire or below.
 - A mock does not change progress or XP.
 

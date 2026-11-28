@@ -5,7 +5,9 @@
  *
  * A problem with a runnable editor scores mostly on its tests (70%) and the
  * rest on the senior signals the learner ticks: a passing query that nobody
- * explained is not a strong round. Any other problem scores on its signals.
+ * explained is not a strong round. Any other problem scores on its signals:
+ * the ones Pip credited with a quote from the answer, or else the ones the
+ * learner ticked (ADR-0019).
  * Each hint costs a tenth of the problem's score, to at most half.
  */
 
