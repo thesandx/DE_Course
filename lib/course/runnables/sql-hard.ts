@@ -650,7 +650,8 @@ SELECT n, 1 + n % 900, TIMESTAMP '2024-06-01' + ((n * 41) % 700) * INTERVAL '1 h
 FROM generate_series(1, 4000) AS n;
 INSERT INTO clicks
 SELECT n, 1 + (n * 7) % 900, 1 + n % 4, TIMESTAMP '2024-05-25' + ((n * 29) % 860) * INTERVAL '1 hour'
-FROM generate_series(1, 9000) AS n;`,
+FROM generate_series(1, 9000) AS n;
+CREATE INDEX IF NOT EXISTS clicks_by_user_time ON clicks (user_id, clicked_at);`,
       },
     ],
   },
