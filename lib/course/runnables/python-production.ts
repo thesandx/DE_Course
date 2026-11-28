@@ -270,6 +270,8 @@ def pay_with_retries(send, payment, attempts=5, sleep=time.sleep):
 
   'retry-decorator-with-budget': {
     language: 'python',
+    // The written answer tests the decorator with pytest, and learners do the same.
+    modules: ['pytest'],
     task: `Write the decorator factory «retry(*, retry_on, attempts=5, base_s=0.2, cap_s=10.0, budget_s=60.0, sleep=time.sleep, clock=time.monotonic)» and the exception «RetryBudgetExceeded». The wrapped function returns the first successful result. It retries only the exception types in «retry_on»; others reach the caller at once. It calls the function at most «attempts» times, and after the last failure re-raises that error. Before retry «k» (1, 2, ...) it waits a random delay between 0 and «min(cap_s, base_s * 2 ** (k - 1))» with «sleep». The budget starts at each call: when a wait would end more than «budget_s» seconds after the call started, by «clock()», raise «RetryBudgetExceeded» instead, with the last error as its cause («raise ... from error»). Keep the function's name and docstring, and pass every argument through.`,
     setup: `class FakeClock:
     """A clock for tests. sleep moves it forward at once."""

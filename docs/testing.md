@@ -211,6 +211,8 @@ python3 -m pip install duckdb==1.5.1 pandas==3.0.2
 pnpm test lib/course/runnables
 ```
 
+The suite blocks a real `prefect`, `airflow` or `pytest` on your machine. CI has none of them. Thus an import of a look-alike that the spec does not list fails here as it fails in CI.
+
 ## Route handlers
 
 Route handlers are plain functions — call them directly.

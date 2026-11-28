@@ -27,13 +27,27 @@ import type { CaseResult, RunnableSpec } from '@/types/runner';
 
 const PYTHON_DIR = fileURLToPath(new URL('../../../hooks/workers/python/', import.meta.url));
 
+// A real prefect, airflow or pytest on this machine must not answer an import:
+// CI has none of them, so a spec that forgets to list its fake library would
+// pass here and fail there. The finder makes the import fail here too.
 const DRIVER = `
-import json, sys
+import importlib.abc, json, sys
 sys.path.insert(0, sys.argv[1])
 import harness
-for name in ("prefect", "airflow", "pytest"):
-    file = name + "_sandbox.py"
-    with open(sys.argv[1] + file, encoding="utf-8") as handle:
+
+FAKES = ("prefect", "airflow", "pytest")
+
+
+class NoRealLibrary(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname.split(".")[0] in FAKES:
+            raise ModuleNotFoundError("No module named %r" % fullname, name=fullname)
+        return None
+
+
+sys.meta_path.insert(0, NoRealLibrary())
+for name in FAKES:
+    with open(sys.argv[1] + name + "_sandbox.py", encoding="utf-8") as handle:
         harness.register_module(name, handle.read())
 jobs = json.load(sys.stdin)
 print(json.dumps([json.loads(harness.run_job(json.dumps(job)))["cases"] for job in jobs]))

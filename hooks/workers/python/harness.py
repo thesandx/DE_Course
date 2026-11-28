@@ -404,6 +404,18 @@ def _format_error(error, label):
 
 
 def _install_modules(modules):
+    """Puts the fake libraries a job lists in sys.modules, and takes out the others.
+
+    One worker runs every problem of a visit. Without the take-out, a fake
+    library that one problem lists would answer an import in the next problem,
+    so the result of a run would depend on the problems run before it.
+    """
+    wanted = set(modules or [])
+    for loaded in list(_sys.modules):
+        root = loaded.split(".")[0]
+        if root in _MODULE_SOURCES and root not in wanted:
+            if getattr(_sys.modules[loaded], "__sandbox__", False):
+                del _sys.modules[loaded]
     for name in modules or []:
         source = _MODULE_SOURCES.get(name)
         if source is None:
@@ -420,7 +432,7 @@ _MODULE_SOURCES = {}
 
 
 def register_module(name, source):
-    """The worker registers fake libraries (prefect, airflow) before a run."""
+    """The worker registers fake libraries (prefect, airflow, pytest) before a run."""
     _MODULE_SOURCES[name] = source
     _sys.modules.pop(name, None)
 
