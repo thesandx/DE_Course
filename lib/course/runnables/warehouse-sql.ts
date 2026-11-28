@@ -325,6 +325,26 @@ WHERE rn = 1;
         ],
       },
       {
+        name: 'A backfilled feature row',
+        hidden: true,
+        note: 'A backfill loaded an old row for user 30 at 08:00, after the 09:00 row of the day before. The latest row to reach the store wins, whatever time its values describe.',
+        tables: [
+          {
+            name: 'labels',
+            columns: LABEL_COLUMNS,
+            rows: [[8, 30, '2024-05-10 09:00:00', false]],
+          },
+          {
+            name: 'user_features',
+            columns: FEATURE_COLUMNS,
+            rows: [
+              [30, '2024-05-09 09:00:00', 3, 20.0, '2024-05-09 10:00:00'],
+              [30, '2024-05-01 09:00:00', 1, 15.0, '2024-05-10 08:00:00'],
+            ],
+          },
+        ],
+      },
+      {
         name: 'Three thousand orders',
         hidden: true,
         note: 'Feature rows every few hours, loaded 5 to 40 minutes late.',
@@ -343,6 +363,15 @@ WHERE (u + k) % 3 <> 0;`,
   },
   'db-wallet-lost-update': {
     language: 'sql',
+    rules: [
+      {
+        kind: 'require',
+        pattern:
+          'update\\s+wallets(?:\\s+(?:as\\s+)?(\\w+))?\\s+set\\s+balance\\s*=\\s*(?:\\1\\.|wallets\\.)?balance\\s*-',
+        message:
+          'Compute the new balance from the row the UPDATE locks: SET balance = balance - 80. A balance read earlier, by a CTE, a subquery or the app, is a lost update when two requests run at once: both read 100, and the second write overwrites the first. These tests run one request at a time, so only this rule can see it.',
+      },
+    ],
     task: `Write request «w-1001»: withdraw 80 from wallet 42 in one statement. Debit only when the balance covers 80 and the ledger has no row for «w-1001» yet. Write the ledger row («w-1001», 42, -80) only when the debit happened. Two requests at once, or a client retry, must never overdraw the wallet or debit twice. «ledger.request_id» is unique. The tests run your statement twice in a row, like a retry, and then read every wallet with its ledger.`,
     tables: [
       {
@@ -519,6 +548,31 @@ COMMIT;
         check: 'SELECT * FROM fct_driver_daily_earnings',
       },
       {
+        name: 'A late row inside the lookback',
+        hidden: true,
+        note: "Trip t21 landed at 22:00 on 4 August, three hours before the table's latest load. It is inside the 6-hour lookback, so 2 August is rebuilt with it.",
+        tables: [
+          {
+            name: 'fct_driver_daily_earnings',
+            columns: EARNINGS_COLUMNS,
+            rows: [
+              ['d1', '2024-08-02', 1, 10.0, 0.0, '2024-08-03 00:30:00'],
+              ['d2', '2024-08-04', 1, 12.0, 0.0, '2024-08-05 01:00:00'],
+            ],
+          },
+          {
+            name: 'stg_trips',
+            columns: STG_TRIP_COLUMNS,
+            rows: [
+              ['t20', 'd1', '2024-08-02 11:00:00', 10.0, 0.0, 'completed', '2024-08-03 00:30:00'],
+              ['t21', 'd1', '2024-08-02 18:00:00', 15.0, 2.0, 'completed', '2024-08-04 22:00:00'],
+              ['t22', 'd2', '2024-08-04 09:00:00', 12.0, null, 'completed', '2024-08-05 01:00:00'],
+            ],
+          },
+        ],
+        check: 'SELECT * FROM fct_driver_daily_earnings',
+      },
+      {
         name: 'A week of corrections',
         hidden: true,
         note: 'Five hundred trips, late tips and refunds, and old history.',
@@ -645,7 +699,7 @@ FROM generate_series(1, 5000) AS k;`,
   },
   'scd2-driver-city': {
     language: 'sql',
-    task: `Write the daily load of «dim_driver», which keeps the history of «city_id» (SCD type 2), from today's snapshot «stg_driver». When a driver's city differs from their current version (NULL counts as a value), close that version: «valid_to» becomes the snapshot's «updated_at» and «is_current» false. Then give the driver a new current version from «updated_at» to «9999-12-31». A new driver gets a first version the same way. A driver missing from the snapshot keeps their current version. Take each new «driver_sk» from «next_sk()». The tests run your code twice in a row, then read the history and check that every key is unique.`,
+    task: `Write the daily load of «dim_driver», which keeps the history of «city_id» (SCD type 2), from today's snapshot «stg_driver». When a driver's city differs from their current version (NULL counts as a value), close that version: «valid_to» becomes the snapshot's «updated_at» and «is_current» false. Then give the driver a new current version from «updated_at» to «9999-12-31». A new driver gets a first version the same way. A driver missing from the snapshot keeps their current version. A snapshot row whose «updated_at» is not later than the current version's «valid_from» is stale, and changes nothing. Take each new «driver_sk» from «next_sk()». The tests run your code twice in a row, then read the history and check that every key is unique.`,
     tables: [
       {
         name: 'dim_driver',
@@ -685,7 +739,8 @@ SET valid_to = s.updated_at, is_current = FALSE
 FROM stg_driver s
 WHERE d.driver_id = s.driver_id
   AND d.is_current
-  AND d.city_id IS DISTINCT FROM s.city_id;
+  AND d.city_id IS DISTINCT FROM s.city_id
+  AND s.updated_at > d.valid_from;
 
 -- Open a current version for new drivers and for drivers just closed.
 INSERT INTO dim_driver (driver_sk, driver_id, city_id, valid_from, valid_to, is_current)
@@ -714,6 +769,22 @@ COMMIT;
               [101, null, '2024-05-01 06:00:00'],
               [102, 20, '2024-05-01 06:00:00'],
               [103, 30, '2024-05-01 06:00:00'],
+            ],
+          },
+        ],
+        check: SCD2_CHECK,
+      },
+      {
+        name: 'A stale snapshot row',
+        hidden: true,
+        note: 'The row for driver 102 is from 15 February, older than their current version from 1 March. It is stale: nothing changes for 102.',
+        tables: [
+          {
+            name: 'stg_driver',
+            columns: STG_DRIVER_COLUMNS,
+            rows: [
+              [102, 25, '2024-02-15 06:00:00'],
+              [103, 31, '2024-05-01 06:00:00'],
             ],
           },
         ],

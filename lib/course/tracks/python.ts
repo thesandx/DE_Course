@@ -1140,31 +1140,41 @@ export const problems: Problem[] = [
     ],
     answer: `
       ~~~python
-      from collections import defaultdict, deque
+      from collections import deque
 
       class Limiter:
           def __init__(self, limit=100, window_s=60):
               self.limit = limit
               self.window_s = window_s
-              self.accepted = defaultdict(deque)
+              self.accepted = {}    # user -> deque of accepted times
+              self.order = deque()  # (ts, user) of every accepted request
 
           def allow(self, user, ts):
-              q = self.accepted[user]
-              while q and q[0] <= ts - self.window_s:
-                  q.popleft()
+              # Expire old requests of every user, so idle users are forgotten.
+              while self.order and self.order[0][0] <= ts - self.window_s:
+                  _, old_user = self.order.popleft()
+                  times = self.accepted[old_user]
+                  times.popleft()
+                  if not times:
+                      del self.accepted[old_user]
+              q = self.accepted.setdefault(user, deque())
               if len(q) < self.limit:
                   q.append(ts)
+                  self.order.append((ts, user))
                   return True
               return False
       ~~~
 
-      O(1) amortised per call, O(limit) memory per active user. At a million users: evict idle
-      users (or store state in Redis with a TTL), or use a sliding-window counter with two fixed
-      buckets to cut memory to two integers per user, accepting a small approximation.
+      O(1) amortised per call: every accepted request enters and leaves each queue once. Memory
+      is O(requests in the last window), not O(users ever seen), because the shared «order» queue
+      expires users who never call again. A deque per user alone is the usual first answer, and it
+      leaks: at a million users who each call once, it keeps a million deques. At scale, keep the
+      state in Redis with a TTL per key, or use a sliding-window counter with two fixed buckets,
+      two integers per user, accepting a small approximation.
     `,
     signals: [
       'Evicts before deciding and appends only accepted requests',
-      'Gives amortised complexity and memory per user',
+      'Gives amortised complexity, and memory bounded by the window, not by users ever seen',
       'Discusses idle-user eviction and approximate counters',
       'Mentions distributed state when there are many servers',
     ],

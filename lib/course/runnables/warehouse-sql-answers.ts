@@ -63,6 +63,15 @@ LEFT JOIN LATERAL (
 ) f ON TRUE;`,
     ],
     fail: [
+      // Orders by feature_ts: a backfilled old row that landed last is skipped.
+      `SELECT order_id, user_id, ordered_at, orders_7d, avg_basket_usd, is_fraud
+FROM (
+  SELECT l.*, f.orders_7d, f.avg_basket_usd,
+         ROW_NUMBER() OVER (PARTITION BY l.order_id ORDER BY f.feature_ts DESC) AS rn
+  FROM labels l
+  LEFT JOIN user_features f ON f.user_id = l.user_id
+   AND f._loaded_at < l.ordered_at AND f._loaded_at >= l.ordered_at - INTERVAL '30 days'
+) x WHERE rn = 1;`,
       // Joins on feature_ts: a value that landed after the order leaks into training.
       `SELECT DISTINCT ON (l.order_id) l.order_id, l.user_id, l.ordered_at, f.orders_7d, f.avg_basket_usd, l.is_fraud
 FROM labels l
@@ -96,6 +105,16 @@ INSERT INTO ledger (request_id, wallet_id, amount)
 SELECT 'w-1001', 42, -80 FROM debit;`,
     ],
     fail: [
+      // Read-modify-write: the balance comes from a CTE, so two requests at once both write 100 - 80.
+      `WITH cur AS (SELECT balance FROM wallets WHERE wallet_id = 42),
+debit AS (
+  UPDATE wallets w SET balance = cur.balance - 80
+  FROM cur
+  WHERE w.wallet_id = 42 AND cur.balance >= 80
+    AND NOT EXISTS (SELECT 1 FROM ledger WHERE request_id = 'w-1001')
+  RETURNING w.wallet_id
+)
+INSERT INTO ledger (request_id, wallet_id, amount) SELECT 'w-1001', wallet_id, -80 FROM debit;`,
       // Conditional, but not idempotent: a retry with enough money debits again.
       `WITH debit AS (
   UPDATE wallets SET balance = balance - 80 WHERE wallet_id = 42 AND balance >= 80 RETURNING wallet_id
@@ -133,6 +152,15 @@ WHEN NOT MATCHED BY SOURCE AND t.earning_date IN (SELECT earning_date FROM run_d
 COMMIT;`,
     ],
     fail: [
+      // No lookback: a row that landed a few hours before the last load is never picked up.
+      `DROP TABLE IF EXISTS cd;
+CREATE TEMP TABLE cd AS SELECT DISTINCT CAST(completed_at AS DATE) AS d FROM stg_trips
+WHERE _loaded_at > (SELECT MAX(last_loaded_at) FROM fct_driver_daily_earnings);
+DELETE FROM fct_driver_daily_earnings WHERE earning_date IN (SELECT d FROM cd);
+INSERT INTO fct_driver_daily_earnings
+SELECT driver_id, CAST(completed_at AS DATE), COUNT(*), SUM(fare_usd), SUM(COALESCE(tip_usd, 0)), MAX(_loaded_at)
+FROM stg_trips WHERE status = 'completed' AND CAST(completed_at AS DATE) IN (SELECT d FROM cd)
+GROUP BY 1, 2;`,
       // A merge without the delete leaves the row of a driver whose only trip was refunded.
       `MERGE INTO fct_driver_daily_earnings AS t
 USING (
@@ -196,7 +224,8 @@ INSERT INTO moved
 SELECT s.driver_id, s.city_id, s.updated_at
 FROM stg_driver s
 LEFT JOIN dim_driver d ON d.driver_id = s.driver_id AND d.is_current
-WHERE d.driver_id IS NULL OR d.city_id IS DISTINCT FROM s.city_id;
+WHERE d.driver_id IS NULL
+   OR (d.city_id IS DISTINCT FROM s.city_id AND s.updated_at > d.valid_from);
 
 UPDATE dim_driver d SET valid_to = m.updated_at, is_current = FALSE
 FROM moved m WHERE d.driver_id = m.driver_id AND d.is_current;
@@ -206,6 +235,14 @@ SELECT next_sk(), driver_id, city_id, updated_at, '9999-12-31', TRUE FROM moved;
 COMMIT;`,
     ],
     fail: [
+      // No stale-row guard: an old snapshot row closes a version before it began.
+      `UPDATE dim_driver d SET valid_to = s.updated_at, is_current = FALSE
+FROM stg_driver s
+WHERE d.driver_id = s.driver_id AND d.is_current AND d.city_id IS DISTINCT FROM s.city_id;
+INSERT INTO dim_driver (driver_sk, driver_id, city_id, valid_from, valid_to, is_current)
+SELECT next_sk(), s.driver_id, s.city_id, s.updated_at, '9999-12-31', TRUE
+FROM stg_driver s LEFT JOIN dim_driver d ON d.driver_id = s.driver_id AND d.is_current
+WHERE d.driver_id IS NULL;`,
       // "<>" is never true against NULL, so a driver whose city was unknown never moves.
       `UPDATE dim_driver d SET valid_to = s.updated_at, is_current = FALSE
 FROM stg_driver s

@@ -813,7 +813,8 @@ export const problems: Problem[] = [
       FROM stg_driver s
       WHERE d.driver_id = s.driver_id
         AND d.is_current
-        AND d.city_id IS DISTINCT FROM s.city_id;
+        AND d.city_id IS DISTINCT FROM s.city_id
+        AND s.updated_at > d.valid_from;  -- a stale snapshot row changes nothing
 
       -- Insert a current version for new drivers and drivers just closed
       INSERT INTO dim_driver (driver_sk, driver_id, city_id, valid_from, valid_to, is_current)
@@ -826,10 +827,12 @@ export const problems: Problem[] = [
       Rerun safety: on a second run nothing differs from the current rows, so the update touches
       nothing and every driver already has a current row, so the insert adds nothing. Run both
       statements in one transaction so a failure between them cannot leave drivers with no
-      current row.
+      current row. The «updated_at > valid_from» guard ignores a stale snapshot row, such as a
+      replayed old file, which would otherwise close a version before it began.
     `,
     signals: [
       'Uses a NULL-safe comparison',
+      'Ignores a stale or replayed snapshot row',
       'Explains why the load is idempotent',
       'Wraps both steps in one transaction',
       'Mentions drivers deleted at the source',

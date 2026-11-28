@@ -94,6 +94,23 @@ export interface RunnableSpec {
   modules?: readonly SandboxModule[];
   /** SQL: run the learner's code this many times in a row, to prove a rerun is safe. */
   repeat?: number;
+  /**
+   * Rules on the code itself, for what a result cannot show: a banned
+   * function, a loop where the task asks for vectorised code, or a lost
+   * update that only a race would expose. Comments are ignored. A broken
+   * rule fails every case with its message. See `lib/runner/code-rules.ts`.
+   */
+  rules?: readonly CodeRule[];
+}
+
+/** One rule on the learner's code. */
+export interface CodeRule {
+  /** A regular expression, matched without case against the code with its comments removed. */
+  pattern: string;
+  /** `forbid`: the code must not match. `require`: the code must match. */
+  kind: 'forbid' | 'require';
+  /** Why, and what to do instead. Shown on every case. */
+  message: string;
 }
 
 export type SandboxModule = 'prefect' | 'airflow' | 'pytest';

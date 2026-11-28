@@ -275,6 +275,33 @@ def merge_sessions(rows, gap_s=300):
 
   'rolling-rate-limiter': {
     pass: [
+      `from collections import deque
+
+
+class Limiter:
+    def __init__(self, limit=100, window_s=60):
+        self.limit = limit
+        self.window_s = window_s
+        self.recent = {}
+        self.log = deque()
+
+    def allow(self, user_id, ts):
+        cutoff = ts - self.window_s
+        while self.log and self.log[0][0] <= cutoff:
+            _, user = self.log.popleft()
+            recent = self.recent.get(user)
+            if recent is not None and recent[-1] <= cutoff:
+                del self.recent[user]
+        recent = self.recent.setdefault(user_id, deque(maxlen=self.limit))
+        if len(recent) == self.limit and recent[0] > cutoff:
+            return False
+        recent.append(ts)
+        self.log.append((ts, user_id))
+        return True
+`,
+    ],
+    fail: [
+      // Correct counts, but a user who never comes back stays in memory forever.
       `from collections import defaultdict, deque
 
 
@@ -291,27 +318,6 @@ class Limiter:
         recent.append(ts)
         return True
 `,
-      `import bisect
-
-
-class Limiter:
-    def __init__(self, limit=100, window_s=60):
-        self.limit = limit
-        self.window_s = window_s
-        self.times = {}
-
-    def allow(self, user_id, ts):
-        times = self.times.setdefault(user_id, [])
-        first = bisect.bisect_right(times, ts - self.window_s)
-        if first:
-            del times[:first]
-        if len(times) < self.limit:
-            times.append(ts)
-            return True
-        return False
-`,
-    ],
-    fail: [
       // A rejected request still takes a place in the window.
       `from collections import defaultdict, deque
 

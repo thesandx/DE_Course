@@ -528,6 +528,17 @@ def _expected(job, index, case):
 
 
 def _run_case(job, index, case):
+    if job.get("violation"):
+        # The code breaks a rule of the spec, such as a banned loop: no case runs.
+        return {
+            "name": case.get("name", "Case %d" % (index + 1)),
+            "note": case.get("note") or "",
+            "hidden": bool(case.get("hidden")),
+            "stdout": "",
+            "ms": 0,
+            "passed": False,
+            "message": job["violation"],
+        }
     mode = case.get("order") or ("any" if job["language"] == "pyspark" else "exact")
     tol = float(case.get("tolerance") or 1e-6)
     value, raw, stdout, error, elapsed = _evaluate(job["code"], "<code>", job["language"], case)

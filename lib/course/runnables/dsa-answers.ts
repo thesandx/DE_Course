@@ -518,7 +518,29 @@ class KthLargest:
 
   'dsa-running-median': {
     pass: [
-      // O(n) per add because insort shifts the list, but fast enough here.
+      `import heapq
+
+
+class RunningMedian:
+    def __init__(self):
+        self.small, self.large = [], []
+
+    def add(self, value):
+        if self.small and value > -self.small[0]:
+            heapq.heappush(self.large, value)
+        else:
+            heapq.heappush(self.small, -value)
+        if len(self.small) > len(self.large) + 1:
+            heapq.heappush(self.large, -heapq.heappop(self.small))
+        elif len(self.large) > len(self.small):
+            heapq.heappush(self.small, -heapq.heappop(self.large))
+        if len(self.small) > len(self.large):
+            return -self.small[0]
+        return (-self.small[0] + self.large[0]) / 2
+`,
+    ],
+    fail: [
+      // O(n) per add: insort shifts half the list each time, too slow at 400,000 adds.
       `from bisect import insort
 
 
@@ -534,8 +556,6 @@ class RunningMedian:
             return self.values[middle]
         return (self.values[middle - 1] + self.values[middle]) / 2
 `,
-    ],
-    fail: [
       // Never moves values between the heaps.
       `import heapq
 

@@ -211,6 +211,16 @@ def add_fees(payments):
 `,
     ],
     fail: [
+      // A list comprehension over the columns: no apply, but still one Python call per row.
+      `import pandas as pd
+
+
+def add_fees(payments):
+    out = payments.copy()
+    out["fee"] = [a * 0.02 if m == "CARD" else (0.0 if m == "UPI" else 5.0)
+                  for a, m in zip(out["amount"], out["method"])]
+    return out
+`,
       // A Python loop over rows.
       `def add_fees(payments):
     payments = payments.copy()

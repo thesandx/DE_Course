@@ -1,3 +1,4 @@
+import { ruleViolation } from '@/lib/runner/code-rules';
 import type {
   CompareOrder,
   DataCell,
@@ -226,6 +227,8 @@ export interface PythonJob {
   code: string;
   solution: string;
   modules: readonly SandboxModule[];
+  /** The message of a broken code rule. The harness then fails every case with it. */
+  violation: string | null;
   cases: readonly PythonCase[];
 }
 
@@ -241,6 +244,7 @@ export function pythonJob(request: RunRequest): PythonJob {
     code: request.code,
     solution: spec.solution,
     modules: spec.modules ?? [],
+    violation: ruleViolation(spec, request.code),
     cases: cases.map((runCase) => ({
       name: runCase.name,
       note: runCase.note ?? '',
