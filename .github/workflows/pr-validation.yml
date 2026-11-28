@@ -78,7 +78,7 @@ jobs:
         # runs every Python and PySpark spec through hooks/workers/python/ on
         # CPython. Without Python, DuckDB and pandas the suite skips, so these
         # two steps are what make it run here.
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.13"
 
@@ -174,7 +174,7 @@ jobs:
         # The Firestore emulator is a Java process and refuses to start on
         # anything below 21. ubuntu-latest ships an older default JDK, so
         # without this the emulator exits before it binds a port.
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "21"
