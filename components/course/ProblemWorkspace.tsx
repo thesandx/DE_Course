@@ -1,12 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
+import { CodeRunner } from '@/components/course/CodeRunner';
 import { CompleteButton } from '@/components/course/CompleteButton';
 import { InlineText } from '@/components/course/InlineText';
 import { Button } from '@/components/ui/Button';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { Textarea } from '@/components/ui/Textarea';
+import type { RunnableSpec } from '@/types/runner';
+
+/** A coding problem's runnable editor: the spec and its contract, rendered on the server. */
+export interface WorkspaceRunner {
+  spec: RunnableSpec;
+  runKey: string;
+  task: React.ReactNode;
+}
 
 export interface ProblemWorkspaceProps {
   slug: string;
@@ -18,6 +27,8 @@ export interface ProblemWorkspaceProps {
   followUps: readonly string[];
   /** The model answer, rendered on the server and kept hidden until the learner asks. */
   answer: React.ReactNode;
+  /** A coding problem gets a runnable editor in place of the written draft. */
+  runner?: WorkspaceRunner;
 }
 
 const draftKey = (slug: string): string => `draft:${slug}`;
@@ -25,7 +36,8 @@ const draftKey = (slug: string): string => `draft:${slug}`;
 /**
  * Where the learner works a problem the way an interview runs: draft an answer
  * first, take hints one at a time, then compare with the model answer and
- * tick off the signals they covered.
+ * tick off the signals they covered. A coding problem swaps the draft for a
+ * runnable editor, and passing every test also unlocks "Mark solved".
  *
  * The draft stays in this browser only (localStorage), as a convenience. It
  * is not progress: progress is the "Mark solved" record on the server.
@@ -39,8 +51,11 @@ export function ProblemWorkspace({
   signals,
   followUps,
   answer,
+  runner,
 }: ProblemWorkspaceProps) {
   const [draft, setDraft] = useState('');
+  const [accepted, setAccepted] = useState(false);
+  const onAccepted = useCallback(() => setAccepted(true), []);
   const [hintsShown, setHintsShown] = useState(0);
   const [revealed, setRevealed] = useState(done);
   const [covered, setCovered] = useState<Record<number, boolean>>({});
@@ -71,15 +86,25 @@ export function ProblemWorkspace({
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      <div className="bg-surface border-line rounded-card shadow-card flex flex-col gap-4 border p-5 sm:p-6">
-        <Textarea
-          label="Your answer"
-          hint="Write it as you would say it in the interview. It stays in this browser."
-          rows={8}
-          value={draft}
-          onChange={(event) => updateDraft(event.target.value)}
+      {runner !== undefined ? (
+        <CodeRunner
+          slug={slug}
+          spec={runner.spec}
+          runKey={runner.runKey}
+          task={runner.task}
+          onAccepted={onAccepted}
         />
-      </div>
+      ) : (
+        <div className="bg-surface border-line rounded-card shadow-card flex flex-col gap-4 border p-5 sm:p-6">
+          <Textarea
+            label="Your answer"
+            hint="Write it as you would say it in the interview. It stays in this browser."
+            rows={8}
+            value={draft}
+            onChange={(event) => updateDraft(event.target.value)}
+          />
+        </div>
+      )}
 
       {hints.length > 0 ? (
         <section
@@ -174,8 +199,13 @@ export function ProblemWorkspace({
           xp={xp}
           label="Mark solved"
           doneLabel="Problem solved"
-          {...(!revealed && !done
-            ? { blockedReason: 'Compare with the model answer before you mark it solved.' }
+          {...(!revealed && !done && !accepted
+            ? {
+                blockedReason:
+                  runner !== undefined
+                    ? 'Pass every test with Submit, or compare with the model answer, before you mark it solved.'
+                    : 'Compare with the model answer before you mark it solved.',
+              }
             : {})}
         />
       </div>

@@ -457,23 +457,25 @@ Full model in [`SECURITY.md`](./SECURITY.md).
 
 Recorded in [`docs/adr/`](./docs/adr/). Read before proposing a change to any of them.
 
-| ADR                                                                                      | Decision                                                                                                         |
-| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| [0001](./docs/adr/0001-use-cloud-run-for-hosting.md)                                     | Cloud Run for hosting — over Vercel, GKE, App Engine, a VM                                                       |
-| [0002](./docs/adr/0002-use-workload-identity-federation.md)                              | Workload Identity Federation — no service account keys, ever                                                     |
-| [0003](./docs/adr/0003-scope-workload-identity-to-the-github-owner.md)                   | WIF provider scoped to the GitHub owner; the repository pin lives in the IAM binding                             |
-| [0004](./docs/adr/0004-use-firestore-and-cloud-storage.md)                               | Firestore + Cloud Storage — over Cloud SQL, over a per-app project                                               |
-| [0005](./docs/adr/0005-use-firebase-auth-for-sign-in.md)                                 | Firebase Auth with server-side session cookies — over Auth.js, over client-only auth                             |
-| [0007](./docs/adr/0007-adopt-the-loop-ready-visual-language.md)                          | The Loop Ready visual language replaces Mochi — to match the owner's mockups                                     |
-| [0008](./docs/adr/0008-host-several-courses-with-one-learner-document.md)                | Several courses, one `learners/{uid}` document with a tracker per course — over a document per course            |
-| [0009](./docs/adr/0009-answer-learner-doubts-through-openrouter.md)                      | An AI doubt helper through OpenRouter, called only from the server — over a browser call or a vendor SDK         |
-| [0010](./docs/adr/0010-let-the-ai-helper-search-the-web.md)                              | Web search for the AI helper through OpenRouter's Exa plugin, off by default — over native search                |
-| [0011](./docs/adr/0011-keep-chapter-notes-as-markdown-on-the-device-first.md)            | Chapter notes as Markdown in a rich editor, saved on the device first — over a library, over stored HTML         |
-| [0012](./docs/adr/0012-track-study-time-with-a-browser-heartbeat.md)                     | Study time counted in the browser, one `studyTime` map in `learners/{uid}` — over a sessions subcollection       |
-| [0013](./docs/adr/0013-make-station-videos-with-simcraft-and-keep-them-in-the-bucket.md) | Station videos made with simcraft and a local voice, MP4 files in the bucket — over files in Git or a video site |
-| [0014](./docs/adr/0014-send-images-to-the-ai-helper-inline.md)                           | Images in the AI helper's chat go inline as small JPEG data URLs and are never stored — over a bucket upload     |
-| [0015](./docs/adr/0015-keep-note-images-in-the-bucket-through-the-server.md)             | Note images go through the server into the bucket, under the learner's uid — over a signed upload, over base64   |
-| [0016](./docs/adr/0016-highlight-course-text-with-the-css-highlight-api.md)              | Course-text highlights drawn with the CSS Highlight API and stored as text quotes — over `<mark>` wrappers       |
+| ADR                                                                                      | Decision                                                                                                                   |
+| ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| [0001](./docs/adr/0001-use-cloud-run-for-hosting.md)                                     | Cloud Run for hosting — over Vercel, GKE, App Engine, a VM                                                                 |
+| [0002](./docs/adr/0002-use-workload-identity-federation.md)                              | Workload Identity Federation — no service account keys, ever                                                               |
+| [0003](./docs/adr/0003-scope-workload-identity-to-the-github-owner.md)                   | WIF provider scoped to the GitHub owner; the repository pin lives in the IAM binding                                       |
+| [0004](./docs/adr/0004-use-firestore-and-cloud-storage.md)                               | Firestore + Cloud Storage — over Cloud SQL, over a per-app project                                                         |
+| [0005](./docs/adr/0005-use-firebase-auth-for-sign-in.md)                                 | Firebase Auth with server-side session cookies — over Auth.js, over client-only auth                                       |
+| [0007](./docs/adr/0007-adopt-the-loop-ready-visual-language.md)                          | The Loop Ready visual language replaces Mochi — to match the owner's mockups                                               |
+| [0008](./docs/adr/0008-host-several-courses-with-one-learner-document.md)                | Several courses, one `learners/{uid}` document with a tracker per course — over a document per course                      |
+| [0009](./docs/adr/0009-answer-learner-doubts-through-openrouter.md)                      | An AI doubt helper through OpenRouter, called only from the server — over a browser call or a vendor SDK                   |
+| [0010](./docs/adr/0010-let-the-ai-helper-search-the-web.md)                              | Web search for the AI helper through OpenRouter's Exa plugin, off by default — over native search                          |
+| [0011](./docs/adr/0011-keep-chapter-notes-as-markdown-on-the-device-first.md)            | Chapter notes as Markdown in a rich editor, saved on the device first — over a library, over stored HTML                   |
+| [0012](./docs/adr/0012-track-study-time-with-a-browser-heartbeat.md)                     | Study time counted in the browser, one `studyTime` map in `learners/{uid}` — over a sessions subcollection                 |
+| [0013](./docs/adr/0013-make-station-videos-with-simcraft-and-keep-them-in-the-bucket.md) | Station videos made with simcraft and a local voice, MP4 files in the bucket — over files in Git or a video site           |
+| [0014](./docs/adr/0014-send-images-to-the-ai-helper-inline.md)                           | Images in the AI helper's chat go inline as small JPEG data URLs and are never stored — over a bucket upload               |
+| [0015](./docs/adr/0015-keep-note-images-in-the-bucket-through-the-server.md)             | Note images go through the server into the bucket, under the learner's uid — over a signed upload, over base64             |
+| [0016](./docs/adr/0016-run-learner-code-in-the-browser.md)                               | Learner code runs in the browser on PGlite, Pyodide and a PySpark module, loaded from a CDN — over a code-execution server |
+| [0017](./docs/adr/0017-keep-mock-loops-in-browser-storage.md)                            | Timed mock loops keep their state in the browser's storage — over a Firestore collection                                   |
+| [0018](./docs/adr/0018-highlight-course-text-with-the-css-highlight-api.md)              | Course-text highlights drawn with the CSS Highlight API and stored as text quotes — over `<mark>` wrappers                 |
 
 Add an ADR when a decision is expensive to reverse, affects how everyone works, or rejects an obvious alternative. Never edit an accepted ADR to change its decision — write a new one that supersedes it, and link both ways.
 

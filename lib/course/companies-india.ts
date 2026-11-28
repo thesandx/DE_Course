@@ -1,3 +1,4 @@
+import { MOCK } from '@/lib/course/mock-slots';
 import type { CompanyGuide } from '@/types/course';
 
 /**
@@ -48,6 +49,7 @@ export const INDIA_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Two problems on arrays, strings or hash maps at medium level, sometimes with a SQL question.',
         tracks: ['dsa', 'python', 'sql'],
+        mock: [MOCK.dsa, MOCK.dsa],
       },
       {
         name: 'Spark coding',
@@ -55,6 +57,7 @@ export const INDIA_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Write a working Spark program on nested files: parse, join, aggregate. Then tuning, caching and out of memory questions.',
         tracks: ['spark', 'python'],
+        mock: [MOCK.spark, MOCK.spark, MOCK.deepDive],
       },
       {
         name: 'Big data internals and streaming',
@@ -62,6 +65,7 @@ export const INDIA_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Spark execution, Kafka consumption, NoSQL stores and file formats. Each answer gets a "what happens underneath" follow-up.',
         tracks: ['spark', 'streaming', 'databases', 'lakehouse'],
+        mock: [MOCK.deepDive, MOCK.deepDive, MOCK.deepDive],
       },
       {
         name: 'Data design',
@@ -69,6 +73,7 @@ export const INDIA_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Design a pipeline or a model for an e-commerce domain. Scale numbers, failure modes and how the design survives a sale day.',
         tracks: ['system-design', 'modeling', 'architecture', 'quality'],
+        mock: [MOCK.design],
       },
       {
         name: 'Hiring manager',
@@ -76,6 +81,7 @@ export const INDIA_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'A deep dive into one project, then ownership, conflict and why you want to move. Know your numbers.',
         tracks: ['behavioral', 'staff'],
+        mock: [MOCK.behavioral, MOCK.leadership],
       },
     ],
     weights: {
@@ -142,6 +148,7 @@ export const INDIA_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'One or two medium coding problems and a SQL question with a self join or a window function.',
         tracks: ['dsa', 'sql', 'python'],
+        mock: [MOCK.dsa, MOCK.sql],
       },
       {
         name: 'Big data round 1: Spark',
@@ -149,6 +156,7 @@ export const INDIA_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Spark fundamentals, then a PySpark or Scala exercise. Joins, caching, tuning and reading a slow job.',
         tracks: ['spark', 'lakehouse'],
+        mock: [MOCK.deepDive, MOCK.spark],
       },
       {
         name: 'Big data round 2: architecture',
@@ -156,6 +164,7 @@ export const INDIA_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Spark architecture in depth and a Spark-centred design question. Kafka, Hive and Airflow follow-ups.',
         tracks: ['spark', 'streaming', 'orchestration', 'databases'],
+        mock: [MOCK.deepDive, MOCK.design],
       },
       {
         name: 'System design',
@@ -163,6 +172,7 @@ export const INDIA_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'A retail pipeline end to end: ingestion, modeling, serving, quality and cost. You drive the conversation.',
         tracks: ['system-design', 'modeling', 'architecture', 'quality', 'cloud'],
+        mock: [MOCK.design],
       },
       {
         name: 'Hiring manager',
@@ -170,6 +180,7 @@ export const INDIA_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Your projects, how you handle disagreement and delivery pressure, and what you want from the role.',
         tracks: ['behavioral', 'staff'],
+        mock: [MOCK.behavioral, MOCK.leadership],
       },
     ],
     weights: {
@@ -236,6 +247,7 @@ export const INDIA_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'One or two data structures problems, medium to hard. Working code, tests and complexity.',
         tracks: ['dsa', 'python'],
+        mock: [MOCK.dsa, MOCK.dsa],
       },
       {
         name: 'Data pipelines, Spark and SQL',
@@ -243,6 +255,7 @@ export const INDIA_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'SQL on transaction data, a Spark exercise, and questions on how each one runs underneath.',
         tracks: ['sql', 'spark', 'streaming', 'databases'],
+        mock: [MOCK.sql, MOCK.spark],
       },
       {
         name: 'Data system design',
@@ -250,6 +263,7 @@ export const INDIA_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'A pipeline where correctness comes first: payments analytics, reconciliation or fraud signals. Numbers and failure modes.',
         tracks: ['system-design', 'streaming', 'quality', 'architecture'],
+        mock: [MOCK.design],
       },
       {
         name: 'Hiring manager',
@@ -257,6 +271,7 @@ export const INDIA_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Ownership of production systems, incidents you handled, and a deep dive into one project.',
         tracks: ['behavioral', 'staff'],
+        mock: [MOCK.behavioral, MOCK.leadership],
       },
     ],
     weights: {
@@ -328,6 +343,7 @@ export const INDIA_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Two or three SQL problems on order data, then one coding problem. Explain your approach before you write.',
         tracks: ['sql', 'python', 'dsa'],
+        mock: [MOCK.sql, MOCK.coding],
       },
       {
         name: 'Technical 2: modeling and pipeline design',
@@ -335,6 +351,7 @@ export const INDIA_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Model a delivery domain, then design the batch and real-time pipelines that fill it. Spark, Kafka and orchestration follow-ups.',
         tracks: ['modeling', 'system-design', 'streaming', 'spark', 'orchestration', 'dbt'],
+        mock: [MOCK.modeling, MOCK.design],
       },
       {
         name: 'Hiring manager',
@@ -342,6 +359,7 @@ export const INDIA_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Impact, ownership, working with analysts and product managers, and how you handle a data incident.',
         tracks: ['behavioral', 'quality', 'staff'],
+        mock: [MOCK.behavioral, MOCK.leadership],
       },
     ],
     weights: {

@@ -1,5 +1,6 @@
 import { BIG_TECH_COMPANIES } from '@/lib/course/companies-big-tech';
 import { INDIA_COMPANIES } from '@/lib/course/companies-india';
+import { MOCK } from '@/lib/course/mock-slots';
 import type { CompanyGuide } from '@/types/course';
 
 /**
@@ -55,6 +56,7 @@ const FIRST_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'One or two SQL problems with window functions or sessionization, then a Python data-manipulation task. Talk while you type.',
         tracks: ['sql', 'python'],
+        mock: [MOCK.sql, MOCK.python],
       },
       {
         name: 'Onsite: data modeling',
@@ -62,6 +64,7 @@ const FIRST_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Model a marketplace domain such as trips, deliveries or payments. Grain, facts, dimensions, slowly changing attributes and the queries the model must serve.',
         tracks: ['modeling', 'dbt', 'lakehouse'],
+        mock: [MOCK.modeling],
       },
       {
         name: 'Onsite: data system design',
@@ -69,6 +72,7 @@ const FIRST_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Design a pipeline end to end, often real-time: surge signals, trip analytics or event ingestion. Scale numbers, failure modes and trade-offs.',
         tracks: ['system-design', 'databases', 'streaming', 'spark', 'quality', 'ai'],
+        mock: [MOCK.design],
       },
       {
         name: 'Onsite: coding',
@@ -76,6 +80,7 @@ const FIRST_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'A practical problem in Python or another language: parsing, aggregation, intervals or a small streaming algorithm. Clean code and tests matter.',
         tracks: ['python', 'dsa'],
+        mock: [MOCK.python, MOCK.dsa],
       },
       {
         name: 'Onsite: behavioral and leadership',
@@ -83,6 +88,7 @@ const FIRST_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Ownership, conflict, ambiguity and impact at senior scope. Expect follow-ups that test whether you led the work or watched it.',
         tracks: ['behavioral'],
+        mock: [MOCK.behavioral, MOCK.leadership],
       },
     ],
     weights: {
@@ -156,6 +162,7 @@ const FIRST_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'A coding problem in a shared doc with no autocomplete, sometimes plus SQL. Explain complexity and test with examples.',
         tracks: ['dsa', 'python', 'sql'],
+        mock: [MOCK.dsa],
       },
       {
         name: 'Onsite: coding',
@@ -163,6 +170,7 @@ const FIRST_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Data structures and algorithms with a data flavour: hashing, heaps, intervals, streams. Usually two coding rounds.',
         tracks: ['dsa', 'python'],
+        mock: [MOCK.dsa],
       },
       {
         name: 'Onsite: SQL and data modeling',
@@ -170,6 +178,7 @@ const FIRST_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Design a schema for a product such as ads or YouTube, then query it. Grain, keys and BigQuery-friendly layouts.',
         tracks: ['sql', 'modeling', 'dbt', 'lakehouse'],
+        mock: [MOCK.modeling, MOCK.sql],
       },
       {
         name: 'Onsite: data system design',
@@ -185,6 +194,7 @@ const FIRST_COMPANIES: readonly CompanyGuide[] = [
           'quality',
           'ai',
         ],
+        mock: [MOCK.design],
       },
       {
         name: 'Onsite: Googleyness and leadership',
@@ -192,6 +202,7 @@ const FIRST_COMPANIES: readonly CompanyGuide[] = [
         focus:
           'Collaboration, handling ambiguity, doing the right thing and leading without authority. Specific stories, not principles.',
         tracks: ['behavioral'],
+        mock: [MOCK.behavioral, MOCK.behavioral],
       },
     ],
     weights: {

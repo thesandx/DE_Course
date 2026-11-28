@@ -361,6 +361,9 @@ export function Dashboard({ name, progress, summary, today }: DashboardProps) {
               How close you are to the bar each company actually sets.
             </p>
           </div>
+          <Link href="/de/mock" className={buttonStyles({ variant: 'night', size: 'sm' })}>
+            Run a timed mock
+          </Link>
         </div>
         <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {COMPANIES.map((company) => {
@@ -397,12 +400,20 @@ export function Dashboard({ name, progress, summary, today }: DashboardProps) {
                       </li>
                     ))}
                   </ul>
-                  <Link
-                    href={`/de/companies/${company.slug}`}
-                    className="text-small text-brand inline-flex min-h-11 w-fit items-center font-semibold hover:underline md:min-h-0"
-                  >
-                    Read the loop guide →
-                  </Link>
+                  <div className="flex flex-wrap gap-x-4">
+                    <Link
+                      href={`/de/companies/${company.slug}`}
+                      className="text-small text-brand inline-flex min-h-11 w-fit items-center font-semibold hover:underline md:min-h-0"
+                    >
+                      Read the loop guide →
+                    </Link>
+                    <Link
+                      href={`/de/mock/${company.slug}`}
+                      className="text-small text-on-night-soft hover:text-on-night inline-flex min-h-11 w-fit items-center font-semibold hover:underline md:min-h-0"
+                    >
+                      Mock this loop →
+                    </Link>
+                  </div>
                 </div>
               </li>
             );

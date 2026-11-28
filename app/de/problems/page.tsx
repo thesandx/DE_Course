@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 
 import { ProblemTable } from '@/components/course/ProblemTable';
 import { AppShell } from '@/components/layout/AppShell';
@@ -39,7 +40,11 @@ export default async function ProblemsPage({ searchParams }: Props) {
           }
         >
           Each problem is a question as an interviewer asks it, with hints, a model answer and the
-          signals a senior answer covers.
+          signals a senior answer covers. To practise them against the clock, run a{' '}
+          <Link href="/de/mock" className="text-brand-deep font-semibold hover:underline">
+            timed mock loop
+          </Link>
+          .
         </PageHeading>
         <ProblemTable
           key={query}

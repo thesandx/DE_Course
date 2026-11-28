@@ -1,4 +1,4 @@
-# ADR-0016: Highlight the course text with the CSS Highlight API, and keep text quotes
+# ADR-0018: Highlight the course text with the CSS Highlight API, and keep text quotes
 
 - **Status:** Accepted
 - **Date:** 2026-11-27

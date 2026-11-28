@@ -986,24 +986,24 @@ export const problems: Problem[] = [
       'Which days must each run recompute?',
     ],
     answer: `
-      ~~~sql
+      The grain is one row per «(driver_id, earning_date)», but the unit to replace is the
+      **day**: a correction to one trip changes its whole day.
+
+      ~~~dbt
       {{ config(
           materialized='incremental',
-          unique_key=['driver_id', 'earning_date'],
-          incremental_strategy='merge'
+          unique_key='earning_date',
+          incremental_strategy='delete+insert'
       ) }}
 
       with changed_days as (
-          {% if is_incremental() %}
-          -- days touched by any row loaded since the last run, with a safety overlap
           select distinct cast(completed_at as date) as earning_date
           from {{ ref('stg_trips') }}
+          {% if is_incremental() %}
+          -- days touched by any row loaded since the last run, with a safety overlap
           where _loaded_at > (
               select {{ dbt.dateadd('hour', -6, 'max(last_loaded_at)') }} from {{ this }}
           )
-          {% else %}
-          select distinct cast(completed_at as date) as earning_date
-          from {{ ref('stg_trips') }}
           {% endif %}
       )
 
@@ -1022,19 +1022,52 @@ export const problems: Problem[] = [
       ~~~
 
       Each run finds the **days** touched by newly loaded rows, then recomputes those whole days
-      from staging. A correction two days later reloads its trip, which marks its day as changed,
-      and the merge on «(driver_id, earning_date)» replaces the old totals. Rerunning gives the
-      same result.
+      from staging. With «delete+insert» on «earning_date», dbt deletes every row of those days
+      and inserts the fresh totals. A correction two days later reloads its trip, which marks its
+      day as changed. Rerunning gives the same result.
 
-      One gap to name: if a refund turns a driver's only trip on a day into «cancelled», that
-      driver's row is not in the new result, so the merge leaves the old row. Handle it with
-      «delete+insert» on the changed days, or emit zero rows for drivers who had trips that day.
+      Why not «merge» on «(driver_id, earning_date)»: if a refund turns a driver's only trip on a
+      day into «cancelled», that driver has no row in the new result, so a merge leaves the old
+      row. Delete+insert removes it. One case remains: a day with no completed trip left has no
+      row in the result, so dbt deletes nothing for it. A full refresh fixes that rare case.
+
+      In plain SQL, one incremental run does this. The editor runs it on PostgreSQL:
+
+      ~~~sql
+      BEGIN;
+
+      DROP TABLE IF EXISTS changed_days;
+      CREATE TEMP TABLE changed_days AS
+      SELECT DISTINCT CAST(completed_at AS DATE) AS earning_date
+      FROM stg_trips
+      WHERE _loaded_at > (
+        SELECT MAX(last_loaded_at) - INTERVAL '6 hours' FROM fct_driver_daily_earnings
+      );
+
+      DELETE FROM fct_driver_daily_earnings
+      WHERE earning_date IN (SELECT earning_date FROM changed_days);
+
+      INSERT INTO fct_driver_daily_earnings
+        (driver_id, earning_date, trips, fares_usd, tips_usd, last_loaded_at)
+      SELECT t.driver_id, CAST(t.completed_at AS DATE), COUNT(*),
+             SUM(t.fare_usd), SUM(COALESCE(t.tip_usd, 0)), MAX(t._loaded_at)
+      FROM stg_trips t
+      JOIN changed_days d ON CAST(t.completed_at AS DATE) = d.earning_date
+      WHERE t.status = 'completed'
+      GROUP BY 1, 2;
+
+      COMMIT;
+      ~~~
+
+      Here the delete reads «changed_days» itself, so even a day with no completed trip left
+      loses its old rows. The transaction makes the swap all or nothing: a reader never sees a
+      day with its rows deleted and not yet inserted.
     `,
     signals: [
-      'States the grain and uses it as the unique key',
+      'States the grain, and replaces whole days rather than single rows',
       'Recomputes whole affected days instead of adding deltas',
       'Uses load time with an overlap to find changed days',
-      'Spots the deleted-row gap in merge and offers delete+insert',
+      'Explains why merge leaves a stale row and delete+insert does not',
     ],
     followUps: ['How would this model look with the microbatch strategy?'],
   },

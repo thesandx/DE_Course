@@ -5,6 +5,27 @@ import { ProblemWorkspace } from './ProblemWorkspace';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 
+// The runnable editor has its own tests. Here it only reports a passing Submit.
+vi.mock('@/components/course/CodeRunner', () => ({
+  CodeRunner: ({ onAccepted }: { onAccepted?: () => void }) => (
+    <button type="button" onClick={onAccepted}>
+      Pass every test
+    </button>
+  ),
+}));
+
+const RUNNER = {
+  spec: {
+    language: 'sql' as const,
+    task: 'Return 1.',
+    starter: '',
+    solution: 'SELECT 1',
+    cases: [{ name: 'Sample' }],
+  },
+  runKey: 'kafka-key-choice:abc',
+  task: <p>Return 1.</p>,
+};
+
 const props = {
   slug: 'kafka-key-choice',
   itemId: 'problem:kafka-key-choice',
@@ -32,6 +53,15 @@ describe('ProblemWorkspace', () => {
     expect(screen.getByText('Key by trip_id.')).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: 'Ties the key to ordering' })).toBeInTheDocument();
     expect(screen.getByText('How do you grow partitions?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Mark solved/ })).toBeEnabled();
+  });
+
+  it('swaps the draft for the runnable editor on a coding problem', () => {
+    render(<ProblemWorkspace {...props} done={false} runner={RUNNER} />);
+    expect(screen.queryByLabelText('Your answer')).not.toBeInTheDocument();
+    expect(screen.getByText(/Pass every test with Submit/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Mark solved/ })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Pass every test' }));
     expect(screen.getByRole('button', { name: /Mark solved/ })).toBeEnabled();
   });
 

@@ -31,7 +31,7 @@ import { HIGHLIGHT_SWATCH, ToolIcon } from './ToolIcon';
  * (`CSS.highlights` and `::highlight()` in `styles/globals.css`), so the
  * server-rendered lesson is never changed: no `<mark>` is wrapped round
  * React's text nodes. A browser without the API shows the text as before,
- * with no bar. See ADR-0016.
+ * with no bar. See ADR-0018.
  */
 
 export interface TextHighlighterProps {

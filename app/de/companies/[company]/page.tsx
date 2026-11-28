@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { ProgressRing } from '@/components/course/ProgressRing';
 import { Prose } from '@/components/course/Prose';
 import { AppShell } from '@/components/layout/AppShell';
+import { buttonStyles } from '@/components/ui/Button';
 import { getCompany, getTrack, readiness } from '@/lib/course/catalog';
 import { COMPANY_META } from '@/lib/course/company-meta';
 import { trackStyle } from '@/lib/course/track-style';
@@ -53,6 +54,12 @@ export default async function CompanyPage({ params }: Props) {
             <p className="text-micro text-on-night-soft font-mono">
               {company.rounds.length} rounds · about {Math.round(minutes / 60)} hours
             </p>
+            <Link
+              href={`/de/mock/${company.slug}`}
+              className={buttonStyles({ variant: 'primary', className: 'mt-1 self-start' })}
+            >
+              Run a timed mock of this loop
+            </Link>
           </div>
           <div className="flex items-center gap-4 md:flex-col md:items-center">
             <ProgressRing

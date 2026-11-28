@@ -1,4 +1,5 @@
 import { InlineText } from '@/components/course/InlineText';
+import { CodeBlock } from '@/components/ui/CodeBlock';
 import { type Block, type CalloutKind, parseMarkdown } from '@/lib/course/markdown';
 import { sectionAnchor } from '@/lib/course/search';
 import { cn } from '@/lib/utils';
@@ -174,21 +175,7 @@ function BlockView({ block }: { block: Block }) {
       );
     }
     case 'code':
-      return (
-        <figure className="bg-night-deep rounded-card flex min-w-0 flex-col overflow-hidden">
-          <figcaption className="border-night-line text-micro text-on-night-soft flex items-center gap-1.5 border-b px-4 py-2.5 font-mono">
-            <span aria-hidden="true" className="bg-hard-bar size-2.5 rounded-full" />
-            <span aria-hidden="true" className="bg-medium-bar size-2.5 rounded-full" />
-            <span aria-hidden="true" className="bg-easy-bar size-2.5 rounded-full" />
-            {block.lang === 'text' ? null : (
-              <span className="ml-2">{block.lang.toUpperCase()}</span>
-            )}
-          </figcaption>
-          <pre className="text-on-night text-small overflow-x-auto p-4 font-mono leading-relaxed">
-            <code>{block.code.replace(/^\s*\n/, '')}</code>
-          </pre>
-        </figure>
-      );
+      return <CodeBlock code={block.code.replace(/^\s*\n/, '')} lang={block.lang} />;
     case 'table':
       return (
         <div className="border-line rounded-input overflow-x-auto border">

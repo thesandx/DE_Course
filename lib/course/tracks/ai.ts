@@ -1466,19 +1466,24 @@ export const problems: readonly Problem[] = [
           chunk_id,
           rrf_score,
           lists_found_in
-      from fused
-      qualify row_number() over (
-          partition by query_id
-          order by rrf_score desc, chunk_id
-      ) <= 10
+      from (
+          select
+              fused.*,
+              row_number() over (
+                  partition by query_id
+                  order by rrf_score desc, chunk_id
+              ) as position
+          from fused
+      ) as top
+      where position <= 10
       order by query_id, rrf_score desc
       ~~~
 
       Ranking inside each list makes the two scales irrelevant. «union all» keeps one row per
       list, so a chunk found by both lists sums two terms. The «chunk_id» tie-breaker makes the
       result deterministic, which matters when you compare runs in evaluation. Use «1.0» so the
-      division is not integer division. On an engine without «qualify», wrap it in a subquery
-      and filter on the row number.
+      division is not integer division. On BigQuery, Snowflake or Databricks, «qualify
+      row_number() over (...) <= 10» replaces the last subquery.
     `,
     signals: [
       'Ranks within each list instead of mixing raw scores',
@@ -1518,22 +1523,26 @@ export const problems: readonly Problem[] = [
     ],
     answer: `
       ~~~sql
-      select
-          l.order_id,
-          l.user_id,
-          l.ordered_at,
-          f.orders_7d,
-          f.avg_basket_usd,
-          l.is_fraud
-      from labels as l
-      left join user_features as f
-          on f.user_id = l.user_id
-         and f._loaded_at < l.ordered_at
-         and f._loaded_at >= l.ordered_at - interval 30 day
-      qualify row_number() over (
-          partition by l.order_id
-          order by f._loaded_at desc
-      ) = 1
+      select order_id, user_id, ordered_at, orders_7d, avg_basket_usd, is_fraud
+      from (
+          select
+              l.order_id,
+              l.user_id,
+              l.ordered_at,
+              f.orders_7d,
+              f.avg_basket_usd,
+              l.is_fraud,
+              row_number() over (
+                  partition by l.order_id
+                  order by f._loaded_at desc
+              ) as rn
+          from labels as l
+          left join user_features as f
+              on f.user_id = l.user_id
+             and f._loaded_at < l.ordered_at
+             and f._loaded_at >= l.ordered_at - interval '30 days'
+      ) as candidates
+      where rn = 1
       ~~~
 
       - Join on **«_loaded_at»**, the availability time. A row that describes 09:00 but landed
@@ -1544,6 +1553,9 @@ export const problems: readonly Problem[] = [
       - The **left join** keeps orders without features, as in production, where the model
         sees defaults for new users.
       - The 30-day bound matches the online store's time to live.
+      - The row number keeps the newest visible row per order. On BigQuery, Snowflake or
+        Databricks, «qualify» does it without the subquery. Snowflake and DuckDB also have an
+        «ASOF JOIN» for this exact shape.
 
       Then check it: the share of rows with missing features should match the share the
       serving logs show, and a model trained on it should score about the same offline as it
@@ -1613,7 +1625,7 @@ export const problems: readonly Problem[] = [
               piece = " ".join(words[start : start + max_words])
               if not piece:
                   break
-              digest = hashlib.sha256(f"{model_version}\n{piece}".encode()).hexdigest()
+              digest = hashlib.sha256(f"{model_version}\\n{piece}".encode()).hexdigest()
               yield Chunk(
                   chunk_id=f"{doc_id}:{position}",
                   doc_id=doc_id,

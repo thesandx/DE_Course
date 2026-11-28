@@ -73,3 +73,9 @@ ds-bundle/
 .design-sync/.cache/
 .design-sync/learnings/
 .design-sync/node_modules
+
+# Python: the in-browser runner's Python files are tested with a local
+# interpreter (see lib/course/runnables/python-specs.test.ts).
+__pycache__/
+*.pyc
+/.venv/

@@ -1212,31 +1212,45 @@ export const problems: Problem[] = [
       from prefect import flow, task
       from prefect.concurrency.sync import concurrency
 
+      from partner import active_cities, fetch_trips, save_raw, load_raw
+
+
       @task
-      def active_cities(day: str) -> list[str]:
-          ...
+      def cities_for(day):
+          return active_cities(day)  # read the list when the run starts
+
 
       @task(retries=3, retry_delay_seconds=[5, 30, 120])
-      def fetch(city: str, day: str) -> str:
-          with concurrency("partner-api", occupy=1):   # global limit named partner-api, set to 20
-              ...                                       # call the API, write raw JSON to storage
-          return f"s3://raw/partner/{day}/{city}.json"
+      def fetch(city, day):
+          with concurrency("partner-api", occupy=1):  # global limit partner-api, 20 slots
+              rows = fetch_trips(city, day)
+          return save_raw(city, day, rows)  # pass the path on, not the rows
+
 
       @task
-      def load(paths: list[str], day: str) -> None:
-          ...
+      def load(paths, day):
+          return load_raw(paths, day)
+
 
       @flow
-      def partner_daily(day: str) -> None:
-          cities = active_cities(day)
+      def partner_daily(day):
+          cities = cities_for(day)
           futures = fetch.map(cities, day=day)
-          load([f.result() for f in futures], day)
+          load([future.result() for future in futures], day)
       ~~~
 
-      Create the limit once with «prefect gcl create partner-api --limit 20». In Airflow 2.3+,
-      «fetch.expand(city=active_cities())» does the same fan-out, with a pool of 20 slots for the
-      limit. The Prefect version reads as plain Python and runs locally unchanged; Airflow gives
-      one task instance per city in the UI and integrates with existing pools.
+      Create the limit once with «prefect gcl create partner-api --limit 20». The limit lives on
+      the server, so it also holds when two runs overlap. The slot is held only during the API
+      call: saving the file and the wait before a retry do not block other cities.
+
+      The numbers: 600 calls of 2 seconds, 20 at a time, take about 60 seconds. One city at a time
+      takes 20 minutes. Each city retries on its own, with longer waits (5, 30, 120 seconds), so
+      one timeout does not fail or repeat the other 599 cities.
+
+      In Airflow, dynamic task mapping does the same fan-out: «fetch.expand(city=active_cities())»,
+      with a pool of 20 slots as the limit. The Prefect version reads as plain Python and runs
+      locally unchanged. Airflow gives one task instance per city in the UI and works with the
+      pools that the platform already has.
     `,
     signals: [
       'Computes the list at runtime and fans out over it',
@@ -1383,32 +1397,44 @@ export const problems: Problem[] = [
       ~~~python
       import json
       import time
+      import urllib.error
+      import urllib.parse
       import urllib.request
 
       from airflow.sdk import BaseHook, BaseOperator
 
+      import storage
+
 
       class PartnerApiHook(BaseHook):
-          def __init__(self, conn_id: str = "partner_api", timeout_s: int = 30):
+          """Owns the connection and the HTTP details of the partner API."""
+
+          def __init__(self, conn_id="partner_api", timeout_s=30, max_retries=4):
               super().__init__()
               self.conn_id = conn_id
               self.timeout_s = timeout_s
+              self.max_retries = max_retries
 
-          def pages(self, day: str):
+          def _get(self, url, token):
+              request = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+              for attempt in range(self.max_retries + 1):
+                  try:
+                      with urllib.request.urlopen(request, timeout=self.timeout_s) as response:
+                          return json.load(response)
+                  except urllib.error.HTTPError as error:
+                      if error.code < 500 or attempt == self.max_retries:
+                          raise
+                  except (TimeoutError, urllib.error.URLError):
+                      if attempt == self.max_retries:
+                          raise
+                  time.sleep(2 ** attempt)
+
+          def pages(self, day):
               conn = self.get_connection(self.conn_id)
               cursor = ""
               while True:
-                  url = f"https://{conn.host}/v1/trips?day={day}&cursor={cursor}"
-                  request = urllib.request.Request(url, headers={"Authorization": f"Bearer {conn.password}"})
-                  for attempt in range(5):
-                      try:
-                          with urllib.request.urlopen(request, timeout=self.timeout_s) as response:
-                              body = json.load(response)
-                          break
-                      except OSError:
-                          if attempt == 4:
-                              raise
-                          time.sleep(2 ** attempt)
+                  query = urllib.parse.urlencode({"day": day, "cursor": cursor})
+                  body = self._get(f"https://{conn.host}/v1/trips?{query}", conn.password)
                   yield body["items"]
                   cursor = body.get("next_cursor") or ""
                   if not cursor:
@@ -1416,35 +1442,51 @@ export const problems: Problem[] = [
 
 
       class PartnerApiToStorageOperator(BaseOperator):
+          """Writes one day of the partner API to storage as JSON lines, all or nothing."""
+
           template_fields = ("day", "target_uri")
 
-          def __init__(self, *, day: str, target_uri: str, writer, conn_id: str = "partner_api", **kwargs):
+          def __init__(self, *, day, target_uri, conn_id="partner_api", **kwargs):
               super().__init__(**kwargs)
               self.day = day
               self.target_uri = target_uri
-              self.writer = writer  # an object with write_temp(lines) -> uri and promote(temp, final)
               self.conn_id = conn_id
 
           def execute(self, context):
               hook = PartnerApiHook(self.conn_id)
-              lines = (json.dumps(item) for page in hook.pages(self.day) for item in page)
-              temp_uri = self.writer.write_temp(lines)
-              self.writer.promote(temp_uri, self.target_uri)
+              temp_uri = f"{self.target_uri}.tmp-{context['run_id']}"
+              try:
+                  with storage.open(temp_uri, "w") as out:
+                      for page in hook.pages(self.day):
+                          for item in page:
+                              out.write(json.dumps(item) + "\\n")
+                  storage.rename(temp_uri, self.target_uri)
+              finally:
+                  if storage.exists(temp_uri):
+                      storage.delete(temp_uri)
               return self.target_uri
       ~~~
 
       **What makes it safe:**
       - Credentials come from an Airflow connection or secrets backend, never the DAG file.
-      - Every request has a timeout and bounded retries with backoff.
-      - The output is written to a temporary object, then promoted to the final path in one
-        step, so a failure never leaves a partial file and a rerun overwrites the same day.
+      - Every request has a timeout. Only a timeout, a network error or a 5xx answer is
+        retried, up to 4 times, with a longer wait each time. A 4xx answer fails at once: a
+        wrong token or an unknown day does not get better with a retry.
+      - The lines go to a temporary file named after the run. One «rename» then replaces the
+        target, so a failure never leaves a partial file, and a rerun replaces the same day.
+        The «finally» block removes the temporary file when something fails.
       - «day» and «target_uri» are templated, so «day="{{ ds }}"» follows the run’s interval and
         backfills work.
 
-      **Tests:** unit-test the hook against a fake HTTP server (pages, a timeout, a 500 then
-      success); unit-test the operator with a fake writer and assert promote is called only
-      after all pages; one DagBag integrity test per team’s DAG. Ship both in an internal
-      provider package with a version, so a fix reaches all five teams.
+      On S3 or GCS, an object appears only when its upload completes, and a "rename" is a copy
+      and a delete. There, upload the finished file in one step to the final key, or write the
+      parts and then a manifest that readers trust.
+
+      **Tests:** unit-test the hook against a fake HTTP server: three pages, a timeout, a 503
+      and then success, a 404, and a partner that stays down. Unit-test the operator with a
+      fake storage, and assert that the target appears only after the last page. Add one
+      DagBag integrity test per team’s DAG. Ship both in an internal provider package with a
+      version, so a fix reaches all five teams.
     `,
     signals: [
       'Separates the hook (connection, HTTP) from the operator (task contract)',

@@ -73,6 +73,20 @@ jobs:
       - name: Type check
         run: pnpm typecheck
 
+      - name: Set up Python
+        # For the runnable problems: lib/course/runnables/python-specs.test.ts
+        # runs every Python and PySpark spec through hooks/workers/python/ on
+        # CPython. Without Python, DuckDB and pandas the suite skips, so these
+        # two steps are what make it run here.
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install DuckDB and pandas
+        # The versions Pyodide 314.0.7 ships, so CPython and the browser run
+        # the same libraries.
+        run: python -m pip install --quiet duckdb==1.5.1 pandas==3.0.2
+
       - name: Test
         # With coverage, exactly as `pnpm validate` runs it, so the floor in
         # vitest.config.ts fails here the same way it fails locally.
