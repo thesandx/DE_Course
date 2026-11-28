@@ -5,8 +5,8 @@ import type { Company, CompanyGuide, Difficulty, MockSlot, Problem } from '@/typ
 /**
  * Timed mock loops: a run of rounds, each with its own clock and one to three
  * questions drawn from the catalogue. A company loop asks what that company's
- * rounds ask (`LoopRound.mock`). Three general loops cover the usual senior
- * and staff shapes and a one-hour practice.
+ * rounds ask (`LoopRound.mock`). Four general loops cover the usual senior
+ * and staff shapes, a one-hour practice and a speed screen.
  *
  * A seed picks the questions, so one URL always shows the same loop: a refresh
  * keeps the learner's place, and "retry" asks the same questions again.
@@ -173,6 +173,36 @@ const GENERAL_LOOPS: readonly MockLoop[] = [
       },
     ],
   },
+  {
+    slug: 'speed-screen',
+    name: 'Speed screen: 5 SQL and 5 Python',
+    summary:
+      'The fast technical screen that Meta and others use: ten short problems in an hour, where speed and correct edge cases decide.',
+    rounds: [
+      {
+        name: 'SQL',
+        minutes: 30,
+        focus:
+          'Five short SQL problems, about six minutes each. Write the query, run it once, move on. A pass needs four of five correct.',
+        tracks: ['sql'],
+        slots: [MOCK.quickSql, MOCK.quickSql, MOCK.quickSql, MOCK.quickSql, MOCK.quickSql],
+      },
+      {
+        name: 'Python',
+        minutes: 30,
+        focus:
+          'Five short Python problems on dictionaries, lists and strings. No libraries beyond the standard library. Say the complexity in one sentence.',
+        tracks: ['python'],
+        slots: [
+          MOCK.quickPython,
+          MOCK.quickPython,
+          MOCK.quickPython,
+          MOCK.quickPython,
+          MOCK.quickPython,
+        ],
+      },
+    ],
+  },
 ];
 
 function fromCompany(guide: CompanyGuide): MockLoop {
@@ -213,7 +243,10 @@ export function loopMinutes(loop: MockLoop): number {
 export function slotPool(slot: MockSlot, round: MockRound): Problem[] {
   const tracks = slot.tracks ?? round.tracks;
   return PROBLEMS.filter(
-    (problem) => slot.kinds.includes(problem.kind) && tracks.includes(problem.track),
+    (problem) =>
+      slot.kinds.includes(problem.kind) &&
+      tracks.includes(problem.track) &&
+      (slot.difficulties === undefined || slot.difficulties.includes(problem.difficulty)),
   );
 }
 

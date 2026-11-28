@@ -86,6 +86,8 @@ export interface MockSlot {
   kinds: readonly ProblemKind[];
   /** The tracks to draw from. Default: the round's tracks. */
   tracks?: readonly string[];
+  /** The difficulties to draw from. Default: all of them. A speed screen asks no hard problems. */
+  difficulties?: readonly Difficulty[];
 }
 
 /** A round in a company's interview loop. */

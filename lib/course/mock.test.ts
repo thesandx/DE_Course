@@ -14,8 +14,13 @@ import {
 } from '@/lib/course/mock';
 
 describe('mock loops', () => {
-  it('has the three general loops and one loop per company', () => {
-    expect(MOCK_LOOPS.map((loop) => loop.slug).slice(0, 3)).toEqual(['quick', 'senior', 'staff']);
+  it('has the four general loops and one loop per company', () => {
+    expect(MOCK_LOOPS.map((loop) => loop.slug).slice(0, 4)).toEqual([
+      'quick',
+      'senior',
+      'staff',
+      'speed-screen',
+    ]);
     for (const company of COMPANIES) {
       const loop = getMockLoop(company.slug);
       expect(loop?.company).toBe(company.slug);
@@ -130,5 +135,21 @@ describe('seeds', () => {
     expect(chooseSeed(quick, [7, other ?? 0], (slug) => solvedPlan.has(slug))).toBe(other);
     expect(chooseSeed(quick, [7, 8], () => false)).toBe(7);
     expect(chooseSeed(quick, [], () => false)).toBe(1);
+  });
+});
+
+describe('the speed screen', () => {
+  it('asks five SQL and five Python problems, none of them hard', () => {
+    const loop = getMockLoop('speed-screen');
+    if (loop === undefined) throw new Error('The speed screen is missing.');
+    expect(loopMinutes(loop)).toBe(60);
+    for (const seed of [1, 2, 3, 99, 12345]) {
+      const [sql, python] = planMock(loop, seed);
+      expect(sql?.problems.map((problem) => problem.kind)).toEqual(Array(5).fill('sql'));
+      expect(python?.problems.map((problem) => problem.track)).toEqual(Array(5).fill('python'));
+      const all = [...(sql?.problems ?? []), ...(python?.problems ?? [])];
+      expect(all.filter((problem) => problem.difficulty === 'hard')).toEqual([]);
+      expect(new Set(all.map((problem) => problem.slug)).size).toBe(10);
+    }
   });
 });

@@ -64,7 +64,7 @@ export const COURSES: readonly CourseInfo[] = [
     href: '/de',
     learn: { href: '/de/tracks', label: 'Tracks' },
     practice: { href: '/de/problems', label: 'Problems' },
-    facts: ['19 tracks', '150 lessons', '222 problems', '12 mock loops'],
+    facts: ['19 tracks', '150 lessons', '222 problems', '13 mock loops'],
   },
   {
     slug: 'gcp',

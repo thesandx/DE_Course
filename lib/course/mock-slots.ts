@@ -22,6 +22,15 @@ export const MOCK = {
   /** Pipeline code: Airflow and Prefect tasks, extractors, pandas. */
   pipeline: { label: 'Pipeline code', kinds: ['coding'], tracks: ['orchestration', 'python'] },
   modeling: { label: 'Data modeling', kinds: ['modeling'], tracks: ['modeling', 'cloud'] },
+  /** A short SQL problem for a speed screen: easy or medium, about six minutes. */
+  quickSql: { label: 'SQL', kinds: ['sql'], tracks: ['sql'], difficulties: ['easy', 'medium'] },
+  /** A short Python problem for a speed screen: easy or medium, about six minutes. */
+  quickPython: {
+    label: 'Python',
+    kinds: ['coding'],
+    tracks: ['python'],
+    difficulties: ['easy', 'medium'],
+  },
   /** A design question from the round's tracks. */
   design: { label: 'System design', kinds: ['design'] },
   /** "How does it work underneath": a concept question from the round's tracks. */
