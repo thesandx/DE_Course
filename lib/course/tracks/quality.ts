@@ -1,3 +1,4 @@
+import { qualityDepthProblems } from '@/lib/course/tracks/quality-depth';
 import type { Problem, Track } from '@/types/course';
 
 export const track: Track = {
@@ -968,4 +969,5 @@ export const problems: Problem[] = [
     ],
     followUps: ['How do you stop a planned marketing launch from paging everyone?'],
   },
+  ...qualityDepthProblems,
 ];
