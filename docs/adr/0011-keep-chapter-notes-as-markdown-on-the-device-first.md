@@ -67,3 +67,7 @@ This addition does not change the decision above.
 
 - A note can hold images. ADR-0015 records how they are stored.
 - "Notes with Pip" has a "Revision notes" mode. Pip reads the chapter from the catalogue and writes short revision notes. They go under the learner's own notes, so nothing the learner wrote changes. Undo takes them out.
+
+## Later addition: a note per DE track
+
+Each DE track home page has a notes box too, at the end of the page. It holds what spans the track's lessons: the big picture, links between lessons, and what to revise before a loop. Its key is `de:track:<track>`, such as `de:track:databases`. It is one more chapter in `lib/notes/targets.ts`, so the notebook stays bounded by the catalogue. The floating notes button, Pip's revision notes and the `/notes` page work for it unchanged. Pip writes its revision notes from the track's summary and lesson list.

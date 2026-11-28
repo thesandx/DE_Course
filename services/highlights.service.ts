@@ -43,7 +43,7 @@ const MAX_CLOCK_SKEW_MS = 5 * 60 * 1000;
 
 export const highlightsSchema = z.object({
   course: z.enum(['de', 'gcp', 'k8s']),
-  kind: z.enum(['lesson', 'problem', 'station', 'lab']),
+  kind: z.enum(['lesson', 'problem', 'track', 'station', 'lab']),
   items: textHighlightsSchema,
   editedAt: z.iso.datetime(),
 });

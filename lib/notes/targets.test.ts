@@ -13,6 +13,7 @@ describe('noteTarget', () => {
         track.lessons.map((lesson) => noteKeys.lesson(track.slug, lesson.slug)),
       ),
       ...PROBLEMS.map((problem) => noteKeys.problem(problem.slug)),
+      ...TRACKS.map((track) => noteKeys.track(track.slug)),
       ...allStations().map(({ station }) => noteKeys.station(station.slug)),
       ...allStations()
         .filter(({ station }) => getLab(station.slug) !== undefined)
@@ -44,6 +45,8 @@ describe('noteTarget', () => {
     expect(noteTarget('gcp:lab:nope')).toBeUndefined();
     expect(noteTarget('k8s:lesson:workloads:nope')).toBeUndefined();
     expect(noteTarget('k8s:lesson:workloads')).toBeUndefined();
+    expect(noteTarget('de:track:no-such-track')).toBeUndefined();
+    expect(noteTarget('de:track:sql:extra')).toBeUndefined();
   });
 });
 
@@ -65,6 +68,13 @@ describe('noteKeyForPath', () => {
     expect(noteKeyForPath(`/de/tracks/${track.slug}/${lesson.slug}`)).toBe(
       noteKeys.lesson(track.slug, lesson.slug),
     );
+    expect(noteKeyForPath(`/de/tracks/${track.slug}`)).toBe(noteKeys.track(track.slug));
+    expect(noteTarget(noteKeys.track(track.slug))).toMatchObject({
+      course: 'de',
+      kind: 'track',
+      title: track.title,
+      href: `/de/tracks/${track.slug}`,
+    });
     expect(noteKeyForPath(`/de/problems/${problem.slug}?tab=x`)).toBe(
       noteKeys.problem(problem.slug),
     );
@@ -83,7 +93,8 @@ describe('noteKeyForPath', () => {
 
   it('gives pages without notes no key', () => {
     expect(noteKeyForPath('/de')).toBeUndefined();
-    expect(noteKeyForPath('/de/tracks/sql')).toBeUndefined();
+    expect(noteKeyForPath('/de/tracks')).toBeUndefined();
+    expect(noteKeyForPath('/de/tracks/no-such-track')).toBeUndefined();
     expect(noteKeyForPath(`/gcp/lines/${station?.line.slug ?? 'x'}/boss`)).toBeUndefined();
     expect(noteKeyForPath('/profile')).toBeUndefined();
   });

@@ -1,8 +1,8 @@
 /**
  * Which pages take notes, and the stable key each note is stored under.
  *
- * A note belongs to one chapter: a DE lesson, a DE problem, a GCP station, a
- * GCP lab or a Kubernetes lesson. Its key names the chapter, such as `de:lesson:sql:window-functions`,
+ * A note belongs to one chapter: a DE lesson, a DE problem, a DE track's home
+ * page, a GCP station, a GCP lab or a Kubernetes lesson. Its key names the chapter, such as `de:lesson:sql:window-functions`,
  * and is the Firestore document id under the learner's notebook. The server
  * accepts only keys that resolve here, so a learner has at most one note per
  * chapter and the notebook stays bounded by the catalogue.
@@ -16,7 +16,7 @@ import type { CourseSlug } from '@/lib/course/courses';
 import { allStations, getLab } from '@/lib/course/gcp/catalog';
 import { getLesson as getK8sLesson, lessonHref, portCode } from '@/lib/course/k8s/catalog';
 
-export type NoteKind = 'lesson' | 'problem' | 'station' | 'lab';
+export type NoteKind = 'lesson' | 'problem' | 'track' | 'station' | 'lab';
 
 export interface NoteTarget {
   key: string;
@@ -33,13 +33,14 @@ export interface NoteTarget {
 export const KIND_LABEL: Readonly<Record<NoteKind, string>> = {
   lesson: 'Lesson',
   problem: 'Problem',
+  track: 'Track',
   station: 'Station',
   lab: 'Lab',
 };
 
 /** A key is short, lower-case and colon-separated. Anything else is refused before a lookup. */
 export const NOTE_KEY_PATTERN =
-  /^(de|gcp|k8s):(lesson|problem|station|lab)(:[a-z0-9-]{1,80}){1,2}$/;
+  /^(de|gcp|k8s):(lesson|problem|track|station|lab)(:[a-z0-9-]{1,80}){1,2}$/;
 
 function stationRef(slug: string) {
   return allStations().find((item) => item.station.slug === slug);
@@ -72,6 +73,18 @@ export function noteTarget(key: string): NoteTarget | undefined {
       title: problem.title,
       group: getTrack(problem.track)?.title ?? 'Problems',
       href: `/de/problems/${first}`,
+    };
+  }
+  if (course === 'de' && kind === 'track' && second === undefined) {
+    const track = getTrack(first);
+    if (track === undefined) return undefined;
+    return {
+      key,
+      course: 'de',
+      kind: 'track',
+      title: track.title,
+      group: 'Tracks',
+      href: `/de/tracks/${first}`,
     };
   }
   if (course === 'gcp' && (kind === 'station' || kind === 'lab') && second === undefined) {
@@ -120,6 +133,8 @@ export function noteKeyForPath(path: string): string | undefined {
   let key: string | undefined;
   if (course === 'de' && section === 'tracks' && first !== undefined && second !== undefined) {
     key = `de:lesson:${first}:${second}`;
+  } else if (course === 'de' && section === 'tracks' && first !== undefined) {
+    key = `de:track:${first}`;
   } else if (course === 'de' && section === 'problems' && first !== undefined) {
     key = `de:problem:${first}`;
   } else if (course === 'gcp' && section === 'lines' && second !== undefined && second !== 'boss') {
@@ -141,6 +156,7 @@ export function noteKeyForPath(path: string): string | undefined {
 export const noteKeys = {
   lesson: (track: string, lesson: string): string => `de:lesson:${track}:${lesson}`,
   problem: (slug: string): string => `de:problem:${slug}`,
+  track: (slug: string): string => `de:track:${slug}`,
   station: (slug: string): string => `gcp:station:${slug}`,
   lab: (slug: string): string => `gcp:lab:${slug}`,
   k8sLesson: (port: string, lesson: string): string => `k8s:lesson:${port}:${lesson}`,
