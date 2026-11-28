@@ -1,4 +1,5 @@
 import { pysparkLessons, pysparkProblems } from '@/lib/course/tracks/spark-pyspark';
+import { spark4Lessons } from '@/lib/course/tracks/spark4-databricks';
 import type { Problem, Track } from '@/types/course';
 
 export const track: Track = {
@@ -626,6 +627,7 @@ export const track: Track = {
       ],
     },
     ...pysparkLessons,
+    ...spark4Lessons,
   ],
 };
 

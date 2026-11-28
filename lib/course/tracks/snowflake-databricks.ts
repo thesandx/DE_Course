@@ -1,3 +1,4 @@
+import { databricksTableLessons } from '@/lib/course/tracks/spark4-databricks';
 import type { Problem, Track } from '@/types/course';
 
 export const track: Track = {
@@ -1204,6 +1205,7 @@ export const track: Track = {
         },
       ],
     },
+    ...databricksTableLessons,
     {
       slug: 'choosing-a-platform',
       title: 'Snowflake, Databricks or BigQuery?',
