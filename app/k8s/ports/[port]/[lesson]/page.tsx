@@ -13,6 +13,7 @@ import { Simulator } from '@/components/k8s/sims/Simulator';
 import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/layout/Icon';
 import { ChapterNotes } from '@/components/notes/ChapterNotes';
+import { TextHighlighter } from '@/components/notes/TextHighlighter';
 import { buttonStyles } from '@/components/ui/Button';
 import { hueStyle } from '@/lib/course/hue';
 import { getLesson, lessonHref, lessonId, lessonXp, portCode } from '@/lib/course/k8s/catalog';
@@ -147,7 +148,9 @@ export default async function K8sLessonPage({ params }: Props) {
                 <h2 id="explain-heading" className="text-title">
                   How it works
                 </h2>
-                <Prose source={lesson.body} />
+                <TextHighlighter noteKey={noteKey} scope="body">
+                  <Prose source={lesson.body} />
+                </TextHighlighter>
                 {lesson.note !== undefined && (
                   <div className={cn('bg-sunken rounded-input border-l-4 p-4', hue.rail)}>
                     <p className="eyebrow text-ink-faint">Common wrong idea</p>

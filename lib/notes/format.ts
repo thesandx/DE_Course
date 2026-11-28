@@ -17,7 +17,7 @@ const DIALECT = [
   'Write the notes in this Markdown dialect, and use nothing else:',
   '- `# Heading`, `## Subheading`, `### Small heading`.',
   '- `**bold**`, `*italic*`, `++underline++`, `~~strike~~`, `` `inline code` ``.',
-  '- `==highlight==` for the key terms to remember. Other colours: `=={green}text==`, `=={pink}text==`, `=={purple}text==`.',
+  '- `==highlight==` for the key terms to remember. Other colours: `=={neon}text==` (bright marker yellow, for the one thing never to forget), `=={green}text==`, `=={pink}text==`, `=={purple}text==`.',
   '- `- bullet`, `1. numbered`, `- [ ] to do` and `- [x] done`. Indent two spaces to nest.',
   '- `> quote`, a ``` fenced code block with a language, and `---` for a divider.',
   '- No tables, no links, no images, no HTML.',

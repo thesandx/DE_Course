@@ -288,7 +288,7 @@ function ToolButton({ tool, onRun }: { tool: Tool; onRun: (id: ToolIconName) => 
 
 /**
  * The notes editor: a rich text box that feels like a notes app. Bold,
- * italic, underline, strike, four highlight colours, inline code, code
+ * italic, underline, strike, five highlight colours, inline code, code
  * blocks, headings, bullet, numbered and check lists, and quotes, from the
  * toolbar, from the usual keyboard shortcuts, or by typing Markdown at the
  * start of a line (`- `, `1. `, `[] `, `## `, `> `, ``` ``` ```).

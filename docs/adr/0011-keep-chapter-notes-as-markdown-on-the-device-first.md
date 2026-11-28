@@ -18,7 +18,7 @@ Constraints:
 
 We store each note as Markdown in a small dialect, and edit it in a rich `contenteditable` editor.
 
-- **Format.** `lib/notes/markdown.ts` defines the dialect: standard Markdown plus `++underline++`, `==highlight==` and `=={green}colour==`, and GitHub checklists. It parses, writes and renders the dialect. The renderer escapes every text character and emits only its own tags.
+- **Format.** `lib/notes/markdown.ts` defines the dialect: standard Markdown plus `++underline++`, `==highlight==` and `=={green}colour==` (colours: yellow, neon, green, pink and purple), and GitHub checklists. It parses, writes and renders the dialect. The renderer escapes every text character and emits only its own tags.
 - **Editor.** `components/notes/NoteEditor.tsx` is a `contenteditable` element with a toolbar, keyboard shortcuts and Markdown shortcuts at the start of a line. `lib/notes/dom.ts` reads its document, or pasted HTML, back into the dialect on every change. Undo and redo are the editor's own snapshots, so they also undo the highlighter and an applied Pip format.
 - **Storage.** One document per chapter at `notebooks/{uid}/notes/{key}`. The key names the chapter, such as `de:lesson:sql:window-functions`. The server accepts only keys that `lib/notes/targets.ts` resolves, so a notebook holds at most one note per chapter.
 - **Device first.** `hooks/useNoteSync.ts` writes every change to `localStorage` at once, and saves to the server about a second later, when the browser is back online, and when the tab is hidden. The newer `editedAt` wins on the server. An older save gets the stored note back, and the learner picks one.
