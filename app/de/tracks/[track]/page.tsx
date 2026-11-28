@@ -7,6 +7,7 @@ import { ProblemTable } from '@/components/course/ProblemTable';
 import { ProgressRing } from '@/components/course/ProgressRing';
 import { AppShell } from '@/components/layout/AppShell';
 import { Icon } from '@/components/layout/Icon';
+import { ChapterNotes } from '@/components/notes/ChapterNotes';
 import { buttonStyles } from '@/components/ui/Button';
 import {
   getTrack,
@@ -18,9 +19,12 @@ import {
 import { lessonId, problemId } from '@/lib/course/progress';
 import { trackNumber, trackStyle } from '@/lib/course/track-style';
 import { courseVideo, videoCaptionsHref, videoPosterHref } from '@/lib/course/videos';
+import { env } from '@/lib/env';
+import { noteKeys } from '@/lib/notes/targets';
 import { cn } from '@/lib/utils';
 import { getCourseVideoUrl } from '@/services/course-video.service';
 import { requireDeLearner } from '@/services/learner.service';
+import { getNoteOrNull } from '@/services/notes.service';
 
 /** Tracks whose page links to the learner's own story bank. */
 const STORY_BANK_TRACKS = new Set(['behavioral', 'staff']);
@@ -43,7 +47,11 @@ export default async function TrackPage({ params }: Props) {
   const track = getTrack(slug);
   if (track === undefined) notFound();
 
-  const { progress, shell } = await requireDeLearner(`/de/tracks/${slug}`);
+  const { user, progress, shell } = await requireDeLearner(`/de/tracks/${slug}`);
+  // One note per track, for what spans its lessons: the big picture, links
+  // between lessons, and what to revise before a loop.
+  const noteKey = noteKeys.track(slug);
+  const note = await getNoteOrNull(user.uid, noteKey);
   // The film is optional: with no file in the bucket the URL is null, and the
   // page shows the track without a player.
   const video = courseVideo('de', slug);
@@ -197,6 +205,13 @@ export default async function TrackPage({ params }: Props) {
             />
           </section>
         </div>
+
+        <ChapterNotes
+          noteKey={noteKey}
+          title={track.title}
+          initial={note}
+          pipEnabled={env.assistantEnabled}
+        />
       </main>
     </AppShell>
   );
