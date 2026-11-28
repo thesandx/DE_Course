@@ -1,3 +1,4 @@
+import { modelingDepthLessons, modelingDepthProblems } from '@/lib/course/tracks/modeling-depth';
 import type { Problem, Track } from '@/types/course';
 
 export const track: Track = {
@@ -220,6 +221,7 @@ export const track: Track = {
         },
       ],
     },
+    ...modelingDepthLessons,
     {
       slug: 'layouts-star-to-obt',
       title: 'Star, snowflake, wide tables and nested data',
@@ -1155,4 +1157,5 @@ export const problems: Problem[] = [
     ],
     followUps: ['A new flag arrives. What happens to the junk dimension and the existing facts?'],
   },
+  ...modelingDepthProblems,
 ];

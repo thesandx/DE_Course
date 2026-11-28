@@ -1,4 +1,5 @@
 import { DSA_ANSWERS } from '@/lib/course/runnables/dsa-answers';
+import { MODELING_SQL_ANSWERS } from '@/lib/course/runnables/modeling-sql-answers';
 import { ORCHESTRATION_ANSWERS } from '@/lib/course/runnables/orchestration-answers';
 import { PYTHON_ANSWERS } from '@/lib/course/runnables/python-answers';
 import { SPARK_ANSWERS } from '@/lib/course/runnables/spark-answers';
@@ -20,6 +21,7 @@ export interface SpecAnswers {
 export const TEST_ANSWERS: Readonly<Record<string, SpecAnswers>> = {
   ...SQL_ANSWERS,
   ...WAREHOUSE_SQL_ANSWERS,
+  ...MODELING_SQL_ANSWERS,
   ...DSA_ANSWERS,
   ...SPARK_ANSWERS,
   ...PYTHON_ANSWERS,
